@@ -1,0 +1,29 @@
+spring:
+  flyway:
+    schemas: ${registry.database.schema}
+    url: jdbc:postgresql://${registry.database.base-url}/${registry.database.name}
+    user: ${registry.database.username}
+    password: ${registry.database.password}
+  profiles:
+    group:
+      sgdf-local: sgdf, sgdf-local
+      sgdf-dev: sgdf, sgdf-dev
+      sgdf-prod: sgdf, sgdf-prod
+  main:
+    web-application-type: reactive
+  r2dbc:
+    url: r2dbc:pool:postgresql://${registry.database.base-url}/${registry.database.name}?currentSchema=${registry.database.schema}
+    username: ${registry.database.username}
+    password: ${registry.database.password}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${registry.security.sso.base-url}/realms/${registry.security.sso.realm}/protocol/openid-connect/certs
+server:
+  port: ${registry.deployment.expose-on-port}
+
+logging:
+  level:
+    fr.sgdf.registry: ${registry.logging.level}
+    org.springframework.web: ${registry.logging.level}

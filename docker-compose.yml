@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    networks:
+      - network_sso
+    ports:
+      - '5432:5432'
+    environment:
+      PGUSER: $DB_USERNAME
+      POSTGRES_USER: $DB_USERNAME
+      POSTGRES_PASSWORD: $DB_PASSWORD
+      POSTGRES_MULTIPLE_DATABASES: $DB_REGISTRY,$DB_SSO
+    restart: 'unless-stopped'
+    volumes:
+      - ./docker-volume/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: keycloak
+    networks:
+      - network_sso
+    ports:
+      - '8080:8080'
+    environment:
+      KC_DB: 'postgres'
+      KC_DB_URL: 'jdbc:postgresql://postgres:5432/keycloak'
+      KC_DB_USERNAME: $DB_USERNAME
+      KC_DB_PASSWORD: $DB_PASSWORD
+      KC_DB_SCHEMA: 'public'
+      KEYCLOAK_ADMIN: $KC_ADMIN_USERNAME
+      KEYCLOAK_ADMIN_PASSWORD: $KC_ADMIN_PASSWORD
+      KC_HEALTH_ENABLED: true
+      KC_METRICS_ENABLED: true
+    command:
+      - start-dev
+    restart: 'unless-stopped'
+    volumes:
+      - ./docker-volume/keycloak/realm:/opt/keycloak/data/import
+      - ./docker-volume/keycloak/provider:/opt/keycloak/providers
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  network_sso:
+    name: 'network_sso'
