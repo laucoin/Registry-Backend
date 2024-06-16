@@ -1,3 +1,11 @@
+logging:
+  level:
+    fr.sgdf.registry: ${registry.logging.level}
+    org.springframework.web: ${registry.logging.level}
+
+server:
+  port: ${registry.deployment.expose-on-port}
+
 spring:
   flyway:
     schemas: ${registry.database.schema}
@@ -19,11 +27,19 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${registry.security.sso.base-url}/realms/${registry.security.sso.realm}/protocol/openid-connect/certs
-server:
-  port: ${registry.deployment.expose-on-port}
+          jwk-set-uri: ${registry.security.sso.certs-url}
+  webflux:
+    base-path: /api
+  application:
+    name: ${registry.information.name}
 
-logging:
-  level:
-    fr.sgdf.registry: ${registry.logging.level}
-    org.springframework.web: ${registry.logging.level}
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: ${registry.feature.swagger.enabled:false}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${registry.feature.swagger.enabled:false}
+    oauth:
+      client-id: ${registry.security.sso.client-id}
+      client-secret: ${registry.security.client-secret}

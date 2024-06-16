@@ -30,6 +30,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 @EnableReactiveMethodSecurity
 class SecurityConfig(
     @Value("\${external.frontend.base-url}") private val frontendBaseUrl: String,
+    @Value("\${registry.feature.swagger.enabled:false}") private val enableSwagger: Boolean,
     private val jwtDecoder: ReactiveJwtDecoder,
     private val userService: IUserService,
     private val appManagementProperties: AppManagementProperties,
@@ -38,7 +39,12 @@ class SecurityConfig(
     fun securityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .authorizeExchange { it.anyExchange().authenticated() }
+            .authorizeExchange {
+                if (enableSwagger) {
+                    it.pathMatchers("/api-docs/**", "/swagger-ui.html", "/webjars/swagger-ui/**").permitAll()
+                }
+                it.anyExchange().authenticated()
+            }
             .oauth2ResourceServer {
                 it.jwt { jwtConfigurer ->
                     jwtConfigurer
