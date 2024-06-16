@@ -21,7 +21,7 @@ CREATE TABLE tb_user
     first_name         VARCHAR(50),
     last_name          VARCHAR(50),
     email              VARCHAR(320),
-    role               VARCHAR   NOT NULL,
+    role               VARCHAR,
     default_profile_id uuid,
     create_date        TIMESTAMP NOT NULL,
     create_user_id     uuid,
@@ -30,6 +30,9 @@ CREATE TABLE tb_user
     visible            BOOLEAN   NOT NULL,
     CONSTRAINT tb_user_pkey PRIMARY KEY (id)
 );
+
+CREATE UNIQUE INDEX tb_user_oidc_id ON tb_user (oidc_id);
+CREATE INDEX tb_user_email ON tb_user (email);
 
 -- tb_event definition
 CREATE TABLE tb_event
@@ -188,7 +191,7 @@ ALTER TABLE tb_participant_group
     ADD CONSTRAINT tb_participant_group_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_user (id) ON DELETE CASCADE;
 
 -- tb_user insert service user
-INSERT INTO tb_user(id, oidc_id, last_name, role, create_date, create_user_id, edit_date, edit_user_id, visible)
-VALUES ('3ca811bf-1677-4008-ac11-6e767c44d3c1', uuid_generate_v4(), '', 'service_account',
-        '1998-10-13 00:00:00.000', '3ca811bf-1677-4008-ac11-6e767c44d3c1', '1998-10-13 00:00:00.000',
-        '3ca811bf-1677-4008-ac11-6e767c44d3c1', TRUE)
+INSERT INTO tb_user(id, oidc_id, create_date, create_user_id, edit_date, edit_user_id, visible)
+VALUES ('3ca811bf-1677-4008-ac11-6e767c44d3c1', uuid_generate_v4(), '1998-10-13 00:00:00.000',
+        '3ca811bf-1677-4008-ac11-6e767c44d3c1',
+        '1998-10-13 00:00:00.000', '3ca811bf-1677-4008-ac11-6e767c44d3c1', TRUE)

@@ -1,8 +1,9 @@
 package com.laucoin.registry.core.config
 
-import com.laucoin.registry.core.adapter.AppManagementProperties
 import com.laucoin.registry.core.adapter.KeycloakAdapter
-import com.laucoin.registry.core.service.IUserService
+import com.laucoin.registry.core.adapter.RegistryPermissionEvaluator
+import com.laucoin.registry.core.adapter.SecurityProperties
+import com.laucoin.registry.core.service.IAuthService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -16,6 +17,8 @@ import org.springframework.http.HttpMethod.OPTIONS
 import org.springframework.http.HttpMethod.PATCH
 import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpMethod.PUT
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.ServerHttpSecurity
@@ -29,11 +32,13 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
 class SecurityConfig(
-    @Value("\${external.frontend.base-url}") private val frontendBaseUrl: String,
-    @Value("\${registry.feature.swagger.enabled:false}") private val enableSwagger: Boolean,
+    @Value("\${external.frontend.base-url}")
+    private val frontendBaseUrl: String,
+    @Value("\${registry.feature.swagger.enabled:false}")
+    private val enableSwagger: Boolean,
     private val jwtDecoder: ReactiveJwtDecoder,
-    private val userService: IUserService,
-    private val appManagementProperties: AppManagementProperties,
+    private val service: IAuthService,
+    private val securityProperties: SecurityProperties,
 ) {
     @Bean
     fun securityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
@@ -43,15 +48,23 @@ class SecurityConfig(
                 if (enableSwagger) {
                     it.pathMatchers("/api-docs/**", "/swagger-ui.html", "/webjars/swagger-ui/**").permitAll()
                 }
+
                 it.anyExchange().authenticated()
             }
             .oauth2ResourceServer {
                 it.jwt { jwtConfigurer ->
                     jwtConfigurer
-                        .authenticationManager(KeycloakAdapter(jwtDecoder, userService, appManagementProperties))
+                        .authenticationManager(KeycloakAdapter(jwtDecoder, service, securityProperties))
                 }
             }
             .build()
+    }
+
+    @Bean
+    fun expressionHandler(): MethodSecurityExpressionHandler {
+        val handler = DefaultMethodSecurityExpressionHandler()
+        handler.setPermissionEvaluator(RegistryPermissionEvaluator())
+        return handler
     }
 
     @Bean

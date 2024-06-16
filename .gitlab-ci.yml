@@ -1,0 +1,127 @@
+# .gitlab-ci.yml
+
+stages:
+  - "🧪 Test code 🧪"
+  - "⚙️ Build image ⚙️"
+  - "🆕 Release 🆕"
+  - "🚀 Deploy 🚀"
+
+services:
+  - name: docker:dind
+    command: [ "--tls=false" ]
+
+variables:
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+
+include:
+  - project: "laucoin/gitlab-ci--commons"
+    file: delivery.gitlab-ci.yml
+
+"👨‍💻 Execute `gradle test` 👩‍💻":
+  stage: "🧪 Test code 🧪"
+  image: gradle:8.4-jdk21-alpine
+  services:
+    - docker:dind
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /^\[Gradle Release Plugin\]/ || $CI_COMMIT_REF_SLUG == "main"'
+      when: never
+    - if: '$RELEASE == null && $CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - gradle test
+
+"👨‍💻 Execute `gradle build -x test` 👩‍💻":
+  stage: "🧪 Test code 🧪"
+  image: gradle:8.4-jdk21-alpine
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /^\[Gradle Release Plugin\]/ || $CI_COMMIT_REF_SLUG == "main"'
+      when: never
+    - if: '$RELEASE == null && $CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - gradle build -x test
+
+"👨‍💻 Execute `docker build --pull -t $IMAGE_TAG .` 👩‍💻":
+  stage: "⚙️ Build image ⚙️"
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /^\[Gradle Release Plugin\]/ && $CI_COMMIT_REF_SLUG == "develop"'
+      when: never
+    - if: '$RELEASE != null || $CI_COMMIT_REF_SLUG == "develop"'
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - docker build --pull -t $IMAGE_TAG .
+    - |-
+      if [[ $CI_COMMIT_REF_SLUG == "develop" || $CI_COMMIT_REF_SLUG == "main" ]]; then
+          docker push $IMAGE_TAG
+      fi
+
+"📝 Generate changelog 📝":
+  stage: "🆕 Release 🆕"
+  rules:
+    - if: '$RELEASE =~ /^\d+\.\d+\.\d+$/'
+  extends: .delivery-changelog
+
+"🆕 Create release 🆕":
+  stage: "🆕 Release 🆕"
+  needs:
+    - job: "📝 Generate changelog 📝"
+  image: gradle:8.4-jdk21-alpine
+  rules:
+    - if: '$RELEASE =~ /^\d+\.\d+\.\d+$/'
+  before_script:
+    - cd ..
+    - rm -rf ${CI_PROJECT_NAME}
+    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}.git
+    - cd ${CI_PROJECT_NAME}
+    - git config --global user.email ${GITLAB_USER_EMAIL}
+    - git config --global user.name "Service account"
+  script:
+    - gradle release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=${RELEASE}
+    - git checkout main
+    - git merge -Xtheirs develop
+    - git push
+
+.deploy:
+  stage: "🚀 Deploy 🚀"
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh
+    - mkdir -p ~/.ssh
+    - eval `ssh-agent -s`
+    - echo "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - echo "${SSH_PRIVATE_KEY}" | base64 -d | tr -d '\r' | ssh-add -
+  script:
+    - ssh ${SSH_USER}@${SSH_HOST} "uptime"
+
+"🚀 Development 🚀":
+  environment:
+    name: development
+  needs:
+    - "👨‍💻 Execute `docker build --pull -t $IMAGE_TAG .` 👩‍💻"
+  only:
+    - develop
+  except:
+    variables:
+      - $RELEASE
+  extends: .deploy
+  when: manual
+
+"🚀 Production 🚀":
+  environment:
+    name: production
+  needs:
+    - "👨‍💻 Execute `docker build --pull -t $IMAGE_TAG .` 👩‍💻"
+  only:
+    - main
+  except:
+    variables:
+      - $RELEASE
+  extends: .deploy
+  when: manual

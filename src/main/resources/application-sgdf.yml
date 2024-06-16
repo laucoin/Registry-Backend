@@ -15,14 +15,13 @@ registry:
         last-name: "family_name"
   feature:
     app-management:
-      support-email: laucoin@sgdf.fr
-      ### Make sure to class the roles from the least restrictive to the most restrictive
+      firstName: Luc
+      lastName: AUCOIN
+      email: laucoin@sgdf.fr
       user-authority:
         ROLE_REGISTRY_ROOT:
-          - "ROLE_REGISTRY_SUPPORT_PROFILE"
-          - "ROLE_REGISTRY_USER"
-        ROLE_REGISTRY_USER:
-          - "ROLE_REGISTRY_USER"
+          - "ROLE_REGISTRY_GLOBAL_SUPPORT_PROFILE"
+          - "ROLE_REGISTRY_GLOBAL_USER_MANAGEMENT"
       event-authority:
         ROLE_REGISTRY_EVENT_ADMINISTRATOR:
           - "ROLE_REGISTRY_EVENT_RWD"
@@ -69,3 +68,7 @@ registry:
           - "ROLE_REGISTRY_EVENT_PHONE_COMMUNICATION_RO"
           - "ROLE_REGISTRY_EVENT_ACTIVITY_COMMUNICATION_RO"
           - "ROLE_REGISTRY_EVENT_DEFENSE_AGAINST_FIRE_RO"
+    user:
+      search:
+        email:
+          max-results: 10

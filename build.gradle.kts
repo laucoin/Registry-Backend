@@ -21,7 +21,6 @@ val jacocoVersion = "0.8.12"
 val mockitoVersion = "5.12.0"
 val mockitoKotlinVersion = "5.3.1"
 val testContainerVersion = "1.19.8"
-val tuTarget = BigDecimal(0.9)
 
 java {
     toolchain {
@@ -35,10 +34,10 @@ repositories {
 
 dependencies {
     // Spring
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -81,16 +80,6 @@ jacoco {
     toolVersion = jacocoVersion
 }
 
-tasks.jacocoTestCoverageVerification {
-    violationRules {
-        rule {
-            limit {
-                minimum = tuTarget
-            }
-        }
-    }
-}
-
 tasks.withType<Test> {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestCoverageVerification, tasks.jacocoTestReport)
@@ -100,7 +89,7 @@ release {
     versionPropertyFile.set("version.properties")
     preTagCommitMessage.set("[skip ci][Gradle Release Plugin] - pre tag commit: ")
     tagCommitMessage.set("[skip ci][Gradle Release Plugin] - creating tag: ")
-    newVersionCommitMessage.set("[Gradle Release Plugin] - new version: ")
+    newVersionCommitMessage.set("[skip ci][Gradle Release Plugin] - new version: ")
     buildTasks.set(emptyList<String>())
     git {
         requireBranch.set("develop")

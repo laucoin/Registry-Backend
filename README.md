@@ -170,7 +170,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <table>
   <tbody>
     <tr>
-      <td><div style='text-align: center'><a href="https://luc-aucoin.fr"><img src="https://gitlab.com/uploads/-/system/user/avatar/4656880/avatar.png?width=400" width="100px;" alt="Luc AUCOIN"/><br /><sub><b>Luc AUCOIN</b></sub></a><br /><a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Code">💻</a> <a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Documentation">📖</a> <a href="#" title="Maintenance">🚧</a> <a href="#" title="Project Management">📆</a> <a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Tests">⚠️</a></div></td>
+      <td><div style='text-align: center'><a href="https://laucoin.fr"><img src="https://gitlab.com/uploads/-/system/user/avatar/4656880/avatar.png?width=400" width="100px;" alt="Luc AUCOIN"/><br /><sub><b>Luc AUCOIN</b></sub></a><br /><a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Code">💻</a> <a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Documentation">📖</a> <a href="#" title="Maintenance">🚧</a> <a href="#" title="Project Management">📆</a> <a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Tests">⚠️</a></div></td>
     </tr>
   </tbody>
 </table>
