@@ -1,6 +1,13 @@
 registry:
+  information:
+    name: "SGDF Registry"
+    description: "This application allows virtual registry management. This is a backend which one is called by the frontend."
   security:
     sso:
+      keycloak-url: ${registry.security.sso.base-url}/realms/${registry.security.sso.realm}/protocol/openid-connect
+      auth-url: ${registry.security.sso.keycloak-url}/auth
+      token-url: ${registry.security.sso.keycloak-url}/token
+      certs-url: ${registry.security.sso.keycloak-url}/certs
       claim-keys:
         user-id: "sub"
         email: "email"

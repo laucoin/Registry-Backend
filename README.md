@@ -61,10 +61,19 @@ Install [Java 21 or later](https://www.oracle.com/fr/java/technologies/downloads
        expose-on-port: <port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
      security:
        sso:
-         base-url: <oidc-provider-base-url> # With http(s):// this time
+         base-url: <oidc-provider-base-url> # With http(s)://
          realm: <realm>
+         client-id: <client-id> # Only need for swagger
+         client-secret: <client-secret> # Only need for swagger
      logging:
        level: DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
+     feature:
+       swagger:
+         enabled: false # true only for development
+
+   external:
+     frontend:
+       base-url: <frontend-base-url> # With http(s)://
    ```
 6. Enjoy the following commands 🎉
 

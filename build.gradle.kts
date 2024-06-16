@@ -13,6 +13,9 @@ group = "com.laucoin"
 val apacheCommonVersion = "1.12.0"
 val gsonVersion = "2.11.0"
 
+// Swagger
+val swaggerVersion = "2.5.0"
+
 // Tests versions
 val jacocoVersion = "0.8.12"
 val mockitoVersion = "5.12.0"
@@ -53,6 +56,9 @@ dependencies {
     // Data
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.postgresql:r2dbc-postgresql")
+
+    // Swagger
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
