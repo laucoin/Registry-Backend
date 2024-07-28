@@ -1,9 +1,9 @@
 package com.laucoin.registry.core.config
 
-import com.laucoin.registry.core.adapter.AppManagementProperties
+import com.laucoin.registry.core.adapter.SecurityProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@EnableConfigurationProperties(AppManagementProperties::class)
+@EnableConfigurationProperties(SecurityProperties::class)
 class PropertyConfig

@@ -2,11 +2,10 @@ package com.laucoin.registry.core.model.util
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
-import com.laucoin.registry.core.model.user.HistoryUserModel
 import java.time.LocalDateTime
 
 @JsonInclude(NON_NULL)
 data class HistoryModel(
     var date: LocalDateTime? = null,
-    val user: HistoryUserModel = HistoryUserModel(),
+    var user: HistoryUserModel = HistoryUserModel(),
 )
