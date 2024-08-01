@@ -51,6 +51,7 @@ class SecurityConfig(
 
                 it.anyExchange().authenticated()
             }
+            .httpBasic { it.disable() }
             .oauth2ResourceServer {
                 it.jwt { jwtConfigurer ->
                     jwtConfigurer
