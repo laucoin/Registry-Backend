@@ -1,9 +1,9 @@
 services:
-  registry_v1_database:
-    image: postgres:15-alpine
-    container_name: registry_v1_database
+  registry_database:
+    image: postgres:16-alpine
+    container_name: registry_database
     networks:
-      - registry_network_v1
+      - registry_network
     ports:
       - '5432:5432'
     environment:
@@ -18,16 +18,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  registry_v1_keycloak:
-    image: quay.io/keycloak/keycloak:24.0
-    container_name: registry_v1_keycloak
+  registry_keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: registry_keycloak
     networks:
-      - registry_network_v1
+      - registry_network
     ports:
       - '8080:8080'
     environment:
       KC_DB: 'postgres'
-      KC_DB_URL: 'jdbc:postgresql://registry_v1_database:5432/keycloak'
+      KC_DB_URL: 'jdbc:postgresql://registry_database:5432/keycloak'
       KC_DB_USERNAME: $DB_USERNAME
       KC_DB_PASSWORD: $DB_PASSWORD
       KC_DB_SCHEMA: 'public'
@@ -42,9 +42,9 @@ services:
       - ./docker-volume/keycloak/realm:/opt/keycloak/data/import
       - ./docker-volume/keycloak/provider:/opt/keycloak/providers
     depends_on:
-      registry_v1_database:
+      registry_database:
         condition: service_healthy
 
 networks:
-  registry_network_v1:
-    name: registry_network_v1
+  registry_network:
+    name: registry_network

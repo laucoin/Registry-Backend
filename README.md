@@ -50,30 +50,20 @@ Install [Java 21 or later](https://www.oracle.com/fr/java/technologies/downloads
    > to [docker-compose.yml](docker-compose.yml) for the replacement)
 
    ```
-   registry:
-     database:
-       schema: <schema>
-       base-url: <base-url> # Without http(s)://
-       name: <name>
-       username: <username>
-       password: <password>
-     deployment:
-       expose-on-port: <port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
-     security:
-       sso:
-         base-url: <oidc-provider-base-url> # With http(s)://
-         realm: <realm>
-         client-id: <client-id> # Only need for swagger
-         client-secret: <client-secret> # Only need for swagger
-     logging:
-       level: DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
-     feature:
-       swagger:
-         enabled: false # true only for development
-
-   external:
-     frontend:
-       base-url: <frontend-base-url> # With http(s)://
+   -Dspring.profiles.active=<organization> # For example: laucoin
+   -Dregistry.datasource.schemas=<database-schemas> # For example: public
+   -Dregistry.datasource.base-url=<database-url> # For example: localhost:5432 (Without http(s)://)
+   -Dregistry.datasource.database=<database-name> # For example: postgres
+   -Dregistry.datasource.username=<database-username> # For example: postgres
+   -Dregistry.datasource.password=<database-username> # For example: postgres
+   -Dregistry.security.oauth2.base-url=<oidc-provider-base-url> # For example: http://localhost:8080 (With http(s)://)
+   -Dregistry.security.oauth2.realm=<oidc-provider-realm> # For example: laucoin
+   -Dregistry.security.oauth2.client-id=<oidc-provider-client-id> # For example: registry
+   -Dregistry.security.oauth2.client-secret=<oidc-provider-client-secret> # For example: XXXX
+   -Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
+   -Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
+   -Dregistry.feature.documentation.enabled=false # true only for development
+   -Dexternal.frontend.base-url=<frontend-base-url> # For example: http://localhost:4200 (With http(s)://)
    ```
 6. Enjoy the following commands 🎉
 

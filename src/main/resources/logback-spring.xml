@@ -1,5 +1,5 @@
 <configuration>
-    <conversionRule conversionWord="customLoggerLevel" converterClass="com.laucoin.registry.core.config.LoggerConfig"/>
+    <conversionRule conversionWord="customLoggerLevel" converterClass="fr.laucoin.registry.backend.config.LoggerConfig"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>

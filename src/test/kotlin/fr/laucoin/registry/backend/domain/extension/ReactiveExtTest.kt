@@ -1,0 +1,41 @@
+package fr.laucoin.registry.backend.domain.extension
+
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import java.util.UUID
+import java.util.stream.Stream
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.springframework.http.HttpStatus.NOT_FOUND
+import reactor.core.publisher.Mono
+
+class ReactiveExtTest {
+
+    companion object {
+        @JvmStatic
+        fun `Should notFoundIfEmpty throw a 404`(): Stream<Arguments> = Stream.of(
+            Arguments.of(Mono.empty<String>(), UUID.randomUUID()),
+            Arguments.of(Mono.empty<Int>(), UUID.randomUUID()),
+        )
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>, id: UUID) {
+        // Arrange
+        // Act
+        val result = assertThrows(RegistryExceptionModel::class.java) {
+            value.notFoundIfEmpty(id).block()
+        }
+
+        // Assert
+        assertEquals(NOT_FOUND, result.statusCode)
+        assertEquals(id.toString(), result.args?.get("identifier"))
+        assertEquals(1, result.args?.size)
+        assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
+    }
+}
