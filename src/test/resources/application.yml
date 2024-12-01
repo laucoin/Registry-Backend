@@ -1,0 +1,87 @@
+external:
+  frontend:
+    base-url: https://test.frontend.com
+
+logging:
+  level:
+    fr.laucoin.registry.backend: ${registry.server.logging-level}
+    org.springframework.web: ${registry.server.logging-level}
+
+registry:
+  feature:
+    documentation:
+      enabled: true
+    search:
+      threshold: 0.5
+    user:
+      searched:
+        max-result: 1
+    participant:
+      searched:
+        max-result: 1
+  security:
+    default-role: USER
+    oauth2:
+      base-url: https://test.oidc.com
+      client-id: client-test
+      client-secret: secret-test
+      realm: test
+      url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
+      claims:
+        user-id: "sub"
+        email: "email"
+        first-name: "given_name"
+        last-name: "family_name"
+  server:
+    logging-level: DEBUG
+    prefix: /api
+
+spring:
+  application:
+    name: Registry Test
+  flyway:
+    schemas: ${registry.datasource.schemas}
+    url: jdbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}
+    user: ${registry.datasource.username}
+    password: ${registry.datasource.password}
+    locations:
+      - classpath:db/migration/default
+      - classpath:db/migration/test
+  main:
+    web-application-type: reactive
+  r2dbc:
+    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    username: ${registry.datasource.username}
+    password: ${registry.datasource.password}
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${registry.security.oauth2.client-id}
+            client-secret: ${registry.security.oauth2.client-secret}
+            scope: openid, email
+            authorization-grant-type: authorization_code
+            redirect-uri: ${registry.server.base-url}/login/oauth2/code/keycloak
+            client-name: ${registry.security.oauth2.client-name}
+        provider:
+          keycloak:
+            authorization-uri: ${registry.security.oauth2.url}/auth
+            token-uri: ${registry.security.oauth2.url}/token
+            user-info-uri: ${registry.security.oauth2.url}/userinfo
+            jwk-set-uri: ${registry.security.oauth2.url}/certs
+            user-name-attribute: ${registry.security.oauth2.claims.user-id}
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${registry.security.oauth2.url}/certs
+
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: ${registry.feature.documentation.enabled:false}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${registry.feature.documentation.enabled:false}
+    oauth:
+      client-id: client-id
+      client-secret: client-secret

@@ -1,74 +1,17 @@
 registry:
   information:
+    organization: "SGDF"
     name: "SGDF Registry"
     description: "This application allows virtual registry management. This is a backend which one is called by the frontend."
+    support:
+      name: Luc AUCOIN
+      email: laucoin@sgdf.fr
+      url: https://sgdf.fr
   security:
-    sso:
-      keycloak-url: ${registry.security.sso.base-url}/realms/${registry.security.sso.realm}/protocol/openid-connect
-      auth-url: ${registry.security.sso.keycloak-url}/auth
-      token-url: ${registry.security.sso.keycloak-url}/token
-      certs-url: ${registry.security.sso.keycloak-url}/certs
-      claim-keys:
+    default-role: "USER"
+    oauth2:
+      claims:
         user-id: "sub"
         email: "email"
         first-name: "given_name"
         last-name: "family_name"
-  feature:
-    app-management:
-      firstName: Luc
-      lastName: AUCOIN
-      email: laucoin@sgdf.fr
-      user-authority:
-        ROLE_REGISTRY_ROOT:
-          - "ROLE_REGISTRY_GLOBAL_SUPPORT_PROFILE"
-          - "ROLE_REGISTRY_GLOBAL_USER_MANAGEMENT"
-      event-authority:
-        ROLE_REGISTRY_EVENT_ADMINISTRATOR:
-          - "ROLE_REGISTRY_EVENT_RWD"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_RWD"
-          - "ROLE_REGISTRY_EVENT_VEHICLE_RWD"
-          - "ROLE_REGISTRY_EVENT_PARTICIPANT_RWD"
-          - "ROLE_REGISTRY_EVENT_MOVEMENT_RWD"
-          - "ROLE_REGISTRY_EVENT_PHONE_COMMUNICATION_RWD"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_COMMUNICATION_RWD"
-          - "ROLE_REGISTRY_EVENT_DEFENSE_AGAINST_FIRE_RWD"
-        ROLE_REGISTRY_EVENT_ORGANIZER:
-          - "ROLE_REGISTRY_EVENT_RW"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_RWD"
-          - "ROLE_REGISTRY_EVENT_VEHICLE_RWD"
-          - "ROLE_REGISTRY_EVENT_PARTICIPANT_RWD"
-          - "ROLE_REGISTRY_EVENT_MOVEMENT_RWD"
-          - "ROLE_REGISTRY_EVENT_PHONE_COMMUNICATION_RWD"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_COMMUNICATION_RWD"
-          - "ROLE_REGISTRY_EVENT_DEFENSE_AGAINST_FIRE_RWD"
-        ROLE_REGISTRY_EVENT_MANAGER:
-          - "ROLE_REGISTRY_EVENT_RO"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_RW"
-          - "ROLE_REGISTRY_EVENT_VEHICLE_RW"
-          - "ROLE_REGISTRY_EVENT_PARTICIPANT_RW"
-          - "ROLE_REGISTRY_EVENT_MOVEMENT_RW"
-          - "ROLE_REGISTRY_EVENT_PHONE_COMMUNICATION_RW"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_COMMUNICATION_RW"
-          - "ROLE_REGISTRY_EVENT_DEFENSE_AGAINST_FIRE_RW"
-        ROLE_REGISTRY_EVENT_USER:
-          - "ROLE_REGISTRY_EVENT_RO"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_RO"
-          - "ROLE_REGISTRY_EVENT_VEHICLE_RO"
-          - "ROLE_REGISTRY_EVENT_PARTICIPANT_RO"
-          - "ROLE_REGISTRY_EVENT_MOVEMENT_RW"
-          - "ROLE_REGISTRY_EVENT_PHONE_COMMUNICATION_RW"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_COMMUNICATION_RW"
-          - "ROLE_REGISTRY_EVENT_DEFENSE_AGAINST_FIRE_RW"
-        ROLE_REGISTRY_EVENT_VIEWER:
-          - "ROLE_REGISTRY_EVENT_RO"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_RO"
-          - "ROLE_REGISTRY_EVENT_VEHICLE_RO"
-          - "ROLE_REGISTRY_EVENT_PARTICIPANT_RO"
-          - "ROLE_REGISTRY_EVENT_MOVEMENT_RO"
-          - "ROLE_REGISTRY_EVENT_PHONE_COMMUNICATION_RO"
-          - "ROLE_REGISTRY_EVENT_ACTIVITY_COMMUNICATION_RO"
-          - "ROLE_REGISTRY_EVENT_DEFENSE_AGAINST_FIRE_RO"
-    user:
-      search:
-        email:
-          max-results: 10

@@ -1,26 +1,22 @@
 plugins {
-    id("jacoco")
-    id("org.springframework.boot") version "3.3.0"
-    id("io.spring.dependency-management") version "1.1.5"
+    kotlin("jvm") version "2.1.0"
+    kotlin("plugin.spring") version "2.1.0"
+    id("org.springframework.boot") version "3.4.0"
+    id("io.spring.dependency-management") version "1.1.6"
     id("net.researchgate.release") version "3.0.2"
-    kotlin("jvm") version "2.0.0"
-    kotlin("plugin.spring") version "2.0.0"
+    id("jacoco")
 }
 
-group = "com.laucoin"
+group = "fr.laucoin.registry"
 
-// Features tools versions
+val swaggerVersion = "2.7.0"
 val apacheCommonVersion = "1.12.0"
-val gsonVersion = "2.11.0"
-
-// Swagger
-val swaggerVersion = "2.5.0"
-
-// Tests versions
 val jacocoVersion = "0.8.12"
-val mockitoVersion = "5.12.0"
-val mockitoKotlinVersion = "5.3.1"
-val testContainerVersion = "1.19.8"
+val mockitoVersion = "5.14.2"
+val mockitoKotlinVersion = "5.4.0"
+val testContainerVersion = "1.20.4"
+
+val tuTarget = BigDecimal(0.8)
 
 java {
     toolchain {
@@ -33,36 +29,29 @@ repositories {
 }
 
 dependencies {
-    // Spring
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-    implementation("org.springframework.boot:spring-boot-starter-security")
 
-    // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    // Database migration
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
+
+    implementation("org.apache.commons:commons-text:$apacheCommonVersion")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
-
-    // Feature related
-    implementation("com.google.code.gson:gson:$gsonVersion")
-    implementation("org.apache.commons:commons-text:$apacheCommonVersion")
-
-    // Data
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.postgresql:r2dbc-postgresql")
 
-    // Swagger
-    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
-
-    // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
@@ -78,6 +67,16 @@ kotlin {
 
 jacoco {
     toolVersion = jacocoVersion
+}
+
+tasks.jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = tuTarget
+            }
+        }
+    }
 }
 
 tasks.withType<Test> {

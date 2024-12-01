@@ -6,10 +6,6 @@ build/
 !**/src/test/**/build/
 *.log
 
-### Configs ###
-src/main/resources/application-*-local.yml
-src/main/resources/application-*-local.yaml
-
 ### STS ###
 .apt_generated
 .classpath

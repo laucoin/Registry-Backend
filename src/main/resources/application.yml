@@ -1,45 +1,77 @@
 logging:
   level:
-    fr.sgdf.registry: ${registry.logging.level}
-    org.springframework.web: ${registry.logging.level}
+    fr.laucoin.registry.backend: ${registry.server.logging-level}
+    org.springframework.web: ${registry.server.logging-level}
+    org.springframework.security.oauth2: ${registry.server.logging-level}
+    org.springframework.security.oauth2.client: ${registry.server.logging-level}
 
 server:
-  port: ${registry.deployment.expose-on-port}
+  port: ${registry.server.port}
+
+registry:
+  feature:
+    user:
+      searched:
+        max-result: 10
+    participant:
+      searched:
+        max-result: 10
+    search:
+      threshold: 0.5
+  security:
+    oauth2:
+      url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
+  server:
+    prefix: /api
 
 spring:
+  application:
+    name: ${registry.information.name}
   flyway:
-    schemas: ${registry.database.schema}
-    url: jdbc:postgresql://${registry.database.base-url}/${registry.database.name}
-    user: ${registry.database.username}
-    password: ${registry.database.password}
+    schemas: ${registry.datasource.schemas}
+    url: jdbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}
+    user: ${registry.datasource.username}
+    password: ${registry.datasource.password}
+    locations:
+      - classpath:db/migration/default
+      - classpath:db/migration/${registry.information.organization}
   profiles:
     group:
-      sgdf-local: sgdf, sgdf-local
-      sgdf-dev: sgdf, sgdf-dev
-      sgdf-prod: sgdf, sgdf-prod
+      sgdf: sgdf
   main:
     web-application-type: reactive
   r2dbc:
-    url: r2dbc:pool:postgresql://${registry.database.base-url}/${registry.database.name}?currentSchema=${registry.database.schema}
-    username: ${registry.database.username}
-    password: ${registry.database.password}
+    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    username: ${registry.datasource.username}
+    password: ${registry.datasource.password}
   security:
     oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${registry.security.oauth2.client-id}
+            client-secret: ${registry.security.oauth2.client-secret}
+            scope: openid, email
+            authorization-grant-type: authorization_code
+            redirect-uri: '{baseUrl}/login/oauth2/code/{registrationId}'
+        provider:
+          keycloak:
+            authorization-uri: ${registry.security.oauth2.url}/auth
+            token-uri: ${registry.security.oauth2.url}/token
+            user-info-uri: ${registry.security.oauth2.url}/userinfo
+            jwk-set-uri: ${registry.security.oauth2.url}/certs
+            user-name-attribute: ${registry.security.oauth2.claims.user-id}
       resourceserver:
         jwt:
-          jwk-set-uri: ${registry.security.sso.certs-url}
-  webflux:
-    base-path: /api
-  application:
-    name: ${registry.information.name}
+          jwk-set-uri: ${registry.security.oauth2.url}/certs
 
 springdoc:
   api-docs:
     path: /api-docs
-    enabled: ${registry.feature.swagger.enabled:false}
+    enabled: ${registry.feature.documentation.enabled:false}
   swagger-ui:
     path: /swagger-ui.html
-    enabled: ${registry.feature.swagger.enabled:false}
+    enabled: ${registry.feature.documentation.enabled:false}
     oauth:
-      client-id: ${registry.security.sso.client-id}
-      client-secret: ${registry.security.client-secret}
+      client-id: ${registry.security.oauth2.client-id}
+      client-secret: ${registry.security.oauth2.client-secret}

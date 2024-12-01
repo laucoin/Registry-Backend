@@ -1,0 +1,97 @@
+package fr.laucoin.registry.backend.domain.service.impl
+
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.service.IRoleService
+import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
+import fr.laucoin.registry.backend.domain.service.IUserService
+import java.util.UUID
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.convert.converter.Converter
+import org.springframework.http.HttpStatus.UNAUTHORIZED
+import org.springframework.security.authentication.AbstractAuthenticationToken
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.stereotype.Component
+import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.switchIfEmpty
+
+
+@Component
+class TokenConverterService(
+    private val userService: IUserService,
+    private val profileService: IUserEventProfileService,
+    private val roleService: IRoleService,
+    @Value("\${registry.security.oauth2.claims.user-id}")
+    private val userIdKey: String,
+    @Value("\${registry.security.oauth2.claims.email}")
+    private val emailKey: String,
+    @Value("\${registry.security.oauth2.claims.first-name}")
+    private val firstNameKey: String,
+    @Value("\${registry.security.oauth2.claims.last-name}")
+    private val lastNameKey: String,
+): Converter<Jwt, Mono<AbstractAuthenticationToken>>, LoggerService() {
+
+    override fun convert(jwt: Jwt): Mono<AbstractAuthenticationToken> {
+        if (! jwt.hasClaim(userIdKey) || ! jwt.hasClaim(emailKey)) {
+            log.error("The \"{}\" and \"{}\" keys are not found in the token", userIdKey, emailKey)
+            return Mono.error(RegistryExceptionModel(UNAUTHORIZED, AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN))
+        }
+
+        val oidcId: UUID = jwt.getClaimAsUUID(userIdKey) !!
+        val email: String = jwt.getClaimAsString(emailKey) !!
+        val firstName: String? = jwt.getClaimAsString(firstNameKey)
+        val lastName: String? = jwt.getClaimAsString(lastNameKey)
+
+        return Mono.justOrEmpty(jwt)
+            .fetchUser(oidcId)
+            .throwOnBlockedUser()
+            .updateUserIfPersonalDataChanged(email, firstName, lastName)
+            .createNewUserOnNotFound(oidcId, email, firstName, lastName)
+            .buildAuthorities()
+            .map { UsernamePasswordAuthenticationToken(it, null, it.authorities) }
+    }
+
+    private fun Mono<Jwt>.fetchUser(oidcId: UUID): Mono<CurrentUserModel> =
+        flatMap {
+            userService.findUserByOidcId(oidcId, onlyVisible = false)
+        }
+
+    private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { it, handle ->
+        if (it.isNotVisible()) {
+            log.warn("Signing in attempt blocked for user \"{}\" due to disabled account", it.id)
+            handle.error(RegistryExceptionModel(UNAUTHORIZED, AUTH_BLOCKED_ACCOUNT))
+        } else if (it.isPurged()) {
+            log.warn("Signing in attempt blocked for impersonate user \"{}\"", it.id)
+            handle.error(RegistryExceptionModel(UNAUTHORIZED, AUTH_IMPERSONATED_ACCOUNT))
+        } else handle.next(it)
+    }
+
+    private fun Mono<CurrentUserModel>.updateUserIfPersonalDataChanged(
+        email: String, firstName: String?, lastName: String?
+    ): Mono<CurrentUserModel> = flatMap { user ->
+        userService.updateUserIfPersonalDataChanged(user, email, firstName, lastName)
+            .map { user }
+    }
+
+    private fun Mono<CurrentUserModel>.createNewUserOnNotFound(
+        oidcId: UUID, email: String, firstName: String?, lastName: String?
+    ): Mono<CurrentUserModel> = switchIfEmpty { userService.createUser(oidcId, email, firstName, lastName) }
+
+    private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap {
+        profileService.findAllUserEventProfiles(it.id !!, onlyUsable = true, status = ACCEPTED)
+            .collectList()
+            .map { profiles ->
+                it.promote(roleService.getAuthoritiesByUserRole(it.role))
+                profiles.forEach { profile ->
+                    it.promote(roleService.getAuthoritiesByEventRole(profile.role !!, profile.event?.id !!))
+                }
+                it
+            }
+    }
+}
