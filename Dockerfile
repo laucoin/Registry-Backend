@@ -22,11 +22,12 @@ COPY . .
 # Use an appropriate base image that has Java and Gradle installed
 FROM eclipse-temurin:21-alpine
 
+ENV APP_ARTIFACT_NAME=backend.jar
 ENV ARTIFACT_NAME=registry.jar
 ENV APP_HOME=/usr/app
 WORKDIR $APP_HOME
 
-COPY --from=temp_build_image $APP_HOME/build/libs/$ARTIFACT_NAME $APP_HOME/$ARTIFACT_NAME
+COPY --from=temp_build_image $APP_HOME/build/libs/$APP_ARTIFACT_NAME $APP_HOME/$ARTIFACT_NAME
 
 EXPOSE 8081
 CMD java $JAVA_OPTS -jar $ARTIFACT_NAME
