@@ -71,14 +71,15 @@ class HexagonalArchitectureTest {
             .check(classes)
 
     @ArchTest
-    fun `Services should reside in Domain's or Datasource's Services`(classes: JavaClasses) =
+    fun `Services should reside in Domain's, Datasource's Services or Adapter`(classes: JavaClasses) =
         noClasses()
             .that()
             .areAnnotatedWith(Service::class.java)
             .should()
             .resideOutsideOfPackages(
                 "$DOMAIN.service..",
-                "$INFRASTRUCTURE.external.datasource.."
+                "$INFRASTRUCTURE.external.datasource..",
+                "$INFRASTRUCTURE.external..adapter.."
             )
             .check(classes)
 
@@ -91,6 +92,7 @@ class HexagonalArchitectureTest {
             .resideOutsideOfPackages(
                 "$DOMAIN.service..",
                 "$INFRASTRUCTURE.external.datasource..repository.impl..",
+                "$INFRASTRUCTURE.external..adapter..",
             )
             .check(classes)
 
@@ -173,7 +175,16 @@ class HexagonalArchitectureTest {
         .check(classes)
 
     @ArchTest
-    fun `Model Repository should end with ModelRepository`(classes: JavaClasses) = classes()
+    fun `Port should end with Port`(classes: JavaClasses) = classes()
+        .that()
+        .resideInAPackage("$DOMAIN.port..")
+        .and().areTopLevelClasses()
+        .should()
+        .haveSimpleNameEndingWith("Port")
+        .check(classes)
+
+    @ArchTest
+    fun `Model repository should end with ModelRepository`(classes: JavaClasses) = classes()
         .that()
         .resideInAPackage("$DOMAIN.repository..")
         .and().areTopLevelClasses()
@@ -202,7 +213,7 @@ class HexagonalArchitectureTest {
     @ArchTest
     fun `Entity Repository should end with EntityRepository`(classes: JavaClasses) = classes()
         .that()
-        .resideInAPackage("$INFRASTRUCTURE.external.datasource.postgres.repository..")
+        .resideInAPackage("$INFRASTRUCTURE.external.datasource..repository..")
         .and().areTopLevelClasses()
         .should()
         .haveSimpleNameEndingWith("Repository")
@@ -210,6 +221,15 @@ class HexagonalArchitectureTest {
         .haveSimpleNameEndingWith("Queries")
         .orShould()
         .haveSimpleNameEndingWith("Fields")
+        .check(classes)
+
+    @ArchTest
+    fun `Adapter should end with Adapter`(classes: JavaClasses) = classes()
+        .that()
+        .resideInAPackage("$INFRASTRUCTURE.external..adapter..")
+        .and().areTopLevelClasses()
+        .should()
+        .haveSimpleNameEndingWith("Adapter")
         .check(classes)
 
     @ArchTest

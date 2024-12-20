@@ -10,6 +10,10 @@ registry:
   security:
     default-role: "USER"
     oauth2:
+      base-url: ${external.keycloak.base-url}
+      realm: ${external.keycloak.realm}
+      client-id: ${external.keycloak.client-id}
+      client-secret: ${external.keycloak.client-secret}
       claims:
         user-id: "sub"
         email: "email"

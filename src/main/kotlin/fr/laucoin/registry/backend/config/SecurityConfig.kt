@@ -1,15 +1,13 @@
 package fr.laucoin.registry.backend.config
 
-import fr.laucoin.registry.backend.domain.handler.AuthenticationFailureHandler
-import fr.laucoin.registry.backend.domain.handler.AuthenticationSuccessHandler
 import fr.laucoin.registry.backend.domain.handler.ErrorHandler
-import fr.laucoin.registry.backend.domain.handler.LogoutSuccessHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod.GET
+import org.springframework.http.HttpMethod.POST
 import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
@@ -26,9 +24,6 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
 class SecurityConfig(
-    private val authSuccessHandler: AuthenticationSuccessHandler,
-    private val authFailureHandler: AuthenticationFailureHandler,
-    private val logoutSuccessHandler: LogoutSuccessHandler,
     private val tokenConverter: TokenConverterService,
     private val errorHandler: ErrorHandler,
     @Value("\${external.frontend.base-url}")
@@ -43,7 +38,6 @@ class SecurityConfig(
             .csrf { it.disable() }
             .configureResourceAccess()
             .disableAuthForm()
-            .configureOAuth2Client()
             .configureLogout()
             .configureOAuth2Server()
             .handleException()
@@ -54,6 +48,8 @@ class SecurityConfig(
         if (documentationEnabled) {
             it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**").permitAll()
         }
+        it.pathMatchers(GET, "/api/authentication/login/uri", "/api/authentication/logout/uri").permitAll()
+        it.pathMatchers(POST, "/api/authentication/token", "/api/authentication/token/refresh").permitAll()
         it.anyExchange().authenticated()
     }
 
@@ -63,12 +59,6 @@ class SecurityConfig(
         val logoutUrl = "/logout"
         it.logoutUrl(logoutUrl)
         it.requiresLogout(ServerWebExchangeMatchers.pathMatchers(GET, *arrayOf(logoutUrl)))
-        it.logoutSuccessHandler(logoutSuccessHandler)
-    }
-
-    private fun ServerHttpSecurity.configureOAuth2Client() = oauth2Login {
-        it.authenticationSuccessHandler(authSuccessHandler)
-        it.authenticationFailureHandler(authFailureHandler)
     }
 
     private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { ressourceServer ->

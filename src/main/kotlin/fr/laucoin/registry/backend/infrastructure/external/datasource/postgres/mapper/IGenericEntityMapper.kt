@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel.HistoryUserModel
+import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericEntity
 
 interface IGenericEntityMapper<M: GenericModel, E: GenericEntity>: IEntityMapper<M, E> {
