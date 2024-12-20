@@ -12,8 +12,8 @@ registry:
     oauth2:
       base-url: ${external.keycloak.base-url}
       realm: ${external.keycloak.realm}
-      client-id: ${external.keycloak.client-id}
-      client-secret: ${external.keycloak.client-secret}
+      client-id: ${external.keycloak.swagger.client-id}
+      client-secret: ${external.keycloak.swagger.client-secret}
       claims:
         user-id: "sub"
         email: "email"
