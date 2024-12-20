@@ -32,8 +32,6 @@ import org.springframework.context.annotation.Configuration
     )
 )
 class SwaggerConfig(
-    @Value("\${registry.security.oauth2.client-name:}")
-    private val clientName: String?,
     @Value("\${registry.security.oauth2.url:}/auth")
     private val authUrl: String?,
     @Value("\${registry.security.oauth2.url:}/token")
@@ -41,6 +39,10 @@ class SwaggerConfig(
     @Value("\${registry.server.prefix:''}")
     private val apiPrefix: String,
 ) {
+    companion object {
+        private const val clientName = "OAuth2"
+    }
+
     @Bean
     fun openApi(): OpenAPI {
         val openAPI = OpenAPI()
@@ -77,7 +79,7 @@ class SwaggerConfig(
     @Bean
     fun securitiesApis(): GroupedOpenApi {
         return GroupedOpenApi.builder().group("Security Management")
-            .pathsToMatch("/auth/**").build()
+            .pathsToMatch("/api/authentication/**").build()
     }
 
     @Bean

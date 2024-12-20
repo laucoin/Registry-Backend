@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
+package fr.laucoin.registry.backend.infrastructure.external
 
 interface IEntityMapper<M, E> {
     fun toModel(entity: E): M

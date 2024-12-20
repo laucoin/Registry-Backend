@@ -13,6 +13,8 @@ val swaggerVersion = "2.7.0"
 val apacheCommonVersion = "1.12.0"
 val jacocoVersion = "0.8.12"
 val mockitoVersion = "5.14.2"
+val testArch = "1.3.0"
+val mockWebServer = "5.0.0-alpha.14"
 val mockitoKotlinVersion = "5.4.0"
 val testContainerVersion = "1.20.4"
 
@@ -30,7 +32,6 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -51,7 +52,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:$mockWebServer")
+    testImplementation("com.tngtech.archunit:archunit-junit5:$testArch")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")

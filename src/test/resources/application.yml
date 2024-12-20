@@ -1,6 +1,11 @@
 external:
   frontend:
     base-url: https://test.frontend.com
+  keycloak:
+    base-url: https://test.oidc.com
+    client-id: client-test
+    client-secret: secret-test
+    realm: test
 
 logging:
   level:
@@ -55,22 +60,6 @@ spring:
     password: ${registry.datasource.password}
   security:
     oauth2:
-      client:
-        registration:
-          keycloak:
-            client-id: ${registry.security.oauth2.client-id}
-            client-secret: ${registry.security.oauth2.client-secret}
-            scope: openid, email
-            authorization-grant-type: authorization_code
-            redirect-uri: ${registry.server.base-url}/login/oauth2/code/keycloak
-            client-name: ${registry.security.oauth2.client-name}
-        provider:
-          keycloak:
-            authorization-uri: ${registry.security.oauth2.url}/auth
-            token-uri: ${registry.security.oauth2.url}/token
-            user-info-uri: ${registry.security.oauth2.url}/userinfo
-            jwk-set-uri: ${registry.security.oauth2.url}/certs
-            user-name-attribute: ${registry.security.oauth2.claims.user-id}
       resourceserver:
         jwt:
           jwk-set-uri: ${registry.security.oauth2.url}/certs
