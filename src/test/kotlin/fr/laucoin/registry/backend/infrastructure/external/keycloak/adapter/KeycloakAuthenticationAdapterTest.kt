@@ -1,7 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.external.keycloak.adapter
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_4XX_ERROR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
 import fr.laucoin.registry.backend.infrastructure.external.keycloak.mapper.AuthenticationTokenEntityMapper
 import kotlin.test.assertEquals
@@ -13,8 +14,8 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.spy
-import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
+import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.web.reactive.function.client.WebClient
 
@@ -119,8 +120,8 @@ class KeycloakAuthenticationAdapterTest {
 
         // Assert
         assertNotNull(result)
-        assertEquals(BAD_REQUEST, result.status)
-        assertEquals(AUTH_PROVIDER_4XX_ERROR, result.message)
+        assertEquals(UNAUTHORIZED, result.status)
+        assertEquals(AUTHORIZATION_CODE_OUTDATED, result.message)
     }
 
     @Test
@@ -193,8 +194,8 @@ class KeycloakAuthenticationAdapterTest {
 
         // Assert
         assertNotNull(result)
-        assertEquals(BAD_REQUEST, result.status)
-        assertEquals(AUTH_PROVIDER_4XX_ERROR, result.message)
+        assertEquals(UNAUTHORIZED, result.status)
+        assertEquals(REFRESH_TOKEN_OUTDATED, result.message)
     }
 
     @Test
