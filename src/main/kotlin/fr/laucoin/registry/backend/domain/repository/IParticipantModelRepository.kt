@@ -10,7 +10,10 @@ interface IParticipantModelRepository: IGenericReadEventModelRepository<Particip
     fun findAll(
         eventId: UUID,
         onlyVisible: Boolean,
+        onlyPresent: Boolean,
         startDateTime: ZonedDateTime?,
         endDateTime: ZonedDateTime?,
     ): Flux<ParticipantModel>
+
+    fun findAllByIds(eventId: UUID, ids: List<UUID>, onlyVisible: Boolean): Flux<ParticipantModel>
 }

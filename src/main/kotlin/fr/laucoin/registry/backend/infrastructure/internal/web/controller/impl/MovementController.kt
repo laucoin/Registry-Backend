@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.currentUser
 import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementParticipantsAndGroupsModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageModel.Companion.paginate
 import fr.laucoin.registry.backend.domain.service.IMovementService
@@ -11,6 +12,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.MovementDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.MovementDtoMapper
 import java.time.ZonedDateTime
 import java.util.UUID
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
@@ -19,6 +21,10 @@ import reactor.core.publisher.Mono
 class MovementController(
     private val service: IMovementService,
     private val mapper: MovementDtoMapper,
+    @Value("\${registry.feature.movement.searched.max-participant-result}")
+    private val maxParticipantResult: Int,
+    @Value("\${registry.feature.movement.searched.max-group-result}")
+    private val maxGroupResult: Int,
 ): IMovementController {
     override fun findMovements(
         eventId: UUID,
@@ -37,6 +43,16 @@ class MovementController(
 
     override fun findMovementById(eventId: UUID, id: UUID): Mono<MovementModel> {
         return service.findMovementById(eventId, id, onlyVisible = false)
+    }
+
+    override fun searchParticipantsAndGroups(eventId: UUID, searched: String?): Mono<MovementParticipantsAndGroupsModel> {
+        return service.searchParticipantsAndGroups(eventId, searched)
+            .map {
+                MovementParticipantsAndGroupsModel(
+                    participants = it.participants.take(maxParticipantResult),
+                    groups = it.groups.take(maxGroupResult)
+                )
+            }
     }
 
     override fun createMovement(eventId: UUID, movement: MovementDto): Mono<MovementModel> {

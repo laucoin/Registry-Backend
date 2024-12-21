@@ -40,7 +40,7 @@ class SwaggerConfig(
     private val apiPrefix: String,
 ) {
     companion object {
-        private const val clientName = "OAuth2"
+        private const val CLIENT_NAME = "OAuth2"
     }
 
     @Bean
@@ -50,7 +50,7 @@ class SwaggerConfig(
             openAPI.components(
                 Components()
                     .addSecuritySchemes(
-                        clientName,
+                        CLIENT_NAME,
                         SecurityScheme()
                             .type(OAUTH2)
                             .flows(
@@ -64,7 +64,7 @@ class SwaggerConfig(
                                     )
                             )
                     )
-            ).security(listOf(SecurityRequirement().addList(clientName)))
+            ).security(listOf(SecurityRequirement().addList(CLIENT_NAME)))
         }
         return openAPI
     }
@@ -108,7 +108,10 @@ class SwaggerConfig(
     @Bean
     fun eventParticipantsApis(): GroupedOpenApi {
         return GroupedOpenApi.builder().group("Event's Participants Management")
-            .pathsToMatch("/api/events/{eventId}/participants/**").build()
+            .pathsToMatch(
+                "/api/events/{eventId}/participants/**",
+                "/api/events/{eventId}/groups/**",
+            ).build()
     }
 
     @Bean

@@ -196,14 +196,14 @@ class UserServiceTest {
         val lastName = "DOE"
         val email = "$firstName.$lastName@test.com"
 
-        `when`(repository.save(any())).thenReturn(Mono.just(user0))
+        `when`(repository.create(any())).thenReturn(Mono.just(user0))
         `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(user0))
 
         // Act
         service.createUser(oidcId, email, firstName, lastName).block()
 
         // Assert
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).create(any())
         verify(transactionalOperator, times(1)).transactional(any<Mono<*>>())
     }
 
@@ -215,13 +215,13 @@ class UserServiceTest {
         val lastName = "DOE"
         val email = "$firstName.$lastName@test.com"
 
-        `when`(repository.save(any())).thenReturn(Mono.just(user0))
+        `when`(repository.update(any())).thenReturn(Mono.just(user0))
 
         // Act
         service.updateUserIfPersonalDataChanged(CurrentUserModel(oldUser), email, firstName, lastName).block()
 
         // Assert
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @ParameterizedTest
@@ -241,7 +241,7 @@ class UserServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
         lenient().`when`(repository.findByRoleLevel(any(), any())).thenReturn(Flux.just(user0))
         `when`(roleService.getLevelByUserRole(anyOrNull())).thenReturn(currentRoleLevel)
-        `when`(repository.save(any())).thenReturn(Mono.just(user0))
+        `when`(repository.update(any())).thenReturn(Mono.just(user0))
 
         // Act
         service.updateUserRoleById(currentUser, uuid, roleToAssign).block()
@@ -250,7 +250,7 @@ class UserServiceTest {
         verify(roleService, times(2)).getAssignableUserRoles(currentUser)
         verify(roleService, times(1)).getLevelByUserRole(USER_ROLE)
         verify(repository, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, onlyVisible = true)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @ParameterizedTest
@@ -273,7 +273,7 @@ class UserServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(userToUpdate))
         lenient().`when`(repository.findByRoleLevel(any(), any())).thenReturn(Flux.just(*level0Users))
         `when`(roleService.getLevelByUserRole(anyOrNull())).thenReturn(currentRoleLevel)
-        `when`(repository.save(any())).thenReturn(Mono.just(user0))
+        `when`(repository.update(any())).thenReturn(Mono.just(user0))
 
         // Act
         val result = assertThrows(RegistryExceptionModel::class.java) {
@@ -287,7 +287,7 @@ class UserServiceTest {
         verify(roleService, times(expectedAssignableRole)).getAssignableUserRoles(currentUser)
         verify(roleService, times(expectedGetRoleLevel)).getLevelByUserRole(USER_ROLE)
         verify(repository, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, onlyVisible = true)
-        verify(repository, never()).save(any())
+        verify(repository, never()).update(any())
     }
 
     @Test
@@ -301,7 +301,7 @@ class UserServiceTest {
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
         `when`(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-        `when`(repository.save(any())).thenReturn(Mono.just(user0))
+        `when`(repository.update(any())).thenReturn(Mono.just(user0))
         `when`(
             userEventProfileService.validateNotLastEventRoleLevel0(
                 any(),
@@ -317,7 +317,7 @@ class UserServiceTest {
         // Assert
         verify(roleService, times(1)).getAssignableUserRoles(currentUser)
         verify(roleService, times(1)).getLevelByUserRole(USER_ROLE)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
         verify(userEventProfileService, times(1)).validateNotLastEventRoleLevel0(
             uuid,
             eventId = null,
@@ -336,14 +336,14 @@ class UserServiceTest {
 
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
-        `when`(repository.save(any())).thenReturn(Mono.just(user0))
+        `when`(repository.update(any())).thenReturn(Mono.just(user0))
 
         // Act
         service.unblockUserById(currentUser, uuid).block()
 
         // Assert
         verify(roleService, times(1)).getAssignableUserRoles(currentUser)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test
@@ -357,7 +357,7 @@ class UserServiceTest {
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
         `when`(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-        `when`(repository.save(any())).thenReturn(Mono.just(user0))
+        `when`(repository.update(any())).thenReturn(Mono.just(user0))
         `when`(
             userEventProfileService.validateNotLastEventRoleLevel0(
                 any(),
@@ -373,7 +373,7 @@ class UserServiceTest {
         // Assert
         verify(roleService, times(1)).getAssignableUserRoles(currentUser)
         verify(roleService, times(1)).getLevelByUserRole(USER_ROLE)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
         verify(userEventProfileService, times(1)).validateNotLastEventRoleLevel0(
             uuid,
             eventId = null,

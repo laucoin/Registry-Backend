@@ -203,13 +203,13 @@ class UserEventProfileServiceTest {
     @Test
     fun `Should createUserEventProfileFromEvent create and return a Profile`() {
         // Arrange
-        `when`(repository.save(any())).thenReturn(Mono.just(profile0))
+        `when`(repository.create(any())).thenReturn(Mono.just(profile0))
 
         // Act
         service.createUserEventProfileFromEvent(currentUser(), EventModel()).block()
 
         // Assert
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).create(any())
     }
 
     @Test
@@ -220,13 +220,13 @@ class UserEventProfileServiceTest {
         `when`(repository.findEventProfilesByIdAndUserId(any(), any(), any())).thenReturn(Mono.just(profile0.apply {
             status = INVITED
         }))
-        `when`(repository.save(any())).thenReturn(Mono.just(profile0))
+        `when`(repository.update(any())).thenReturn(Mono.just(profile0))
 
         // Act
         service.updateUserEventProfileStatusById(currentUser, uuid, ACCEPTED).block()
 
         // Assert
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
         verify(repository, times(1)).findEventProfilesByIdAndUserId(currentUser.id !!, uuid, onlyVisible = true)
     }
 
@@ -238,7 +238,7 @@ class UserEventProfileServiceTest {
         `when`(repository.findEventProfilesByIdAndUserId(any(), any(), any())).thenReturn(Mono.just(profile0.apply {
             status = ACCEPTED
         }))
-        `when`(repository.save(any())).thenReturn(Mono.just(profile0))
+        `when`(repository.update(any())).thenReturn(Mono.just(profile0))
 
         // Act
         val result = assertThrows(RegistryExceptionModel::class.java) {
@@ -250,7 +250,7 @@ class UserEventProfileServiceTest {
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
         assertEquals(uuid.toString(), result.args?.get("identifier"))
 
-        verify(repository, never()).save(any())
+        verify(repository, never()).update(any())
         verify(repository, times(1)).findEventProfilesByIdAndUserId(currentUser.id !!, uuid, onlyVisible = true)
     }
 

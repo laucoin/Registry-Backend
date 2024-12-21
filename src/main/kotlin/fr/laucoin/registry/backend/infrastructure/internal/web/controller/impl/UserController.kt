@@ -7,24 +7,16 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IUserController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.UserDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.UserDtoMapper
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RestController
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
 class UserController(
     private val service: IUserService,
     private val roleService: IRoleService,
-    private val userMapper: UserDtoMapper,
-    @Value("\${registry.feature.user.searched.max-result}")
-    private val maxSearchedUserResult: Long,
 ): IUserController {
     override fun findUsers(
         offset: Int,
@@ -38,12 +30,6 @@ class UserController(
     }
 
     override fun findUserById(@PathVariable id: UUID): Mono<UserModel> = service.findUserById(id, onlyVisible = false)
-
-    override fun searchUsers(searched: String?): Flux<UserDto> {
-        return currentUser().flatMapMany { service.findUsers(ASC, onlyVisible = true, searched) }
-            .take(maxSearchedUserResult)
-            .map(userMapper::toDto)
-    }
 
     override fun getAssignableUserRoles(): Mono<List<String>> = currentUser().map { roleService.getAssignableUserRoles(it) }
 

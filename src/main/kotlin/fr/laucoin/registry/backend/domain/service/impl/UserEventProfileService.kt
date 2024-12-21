@@ -28,7 +28,7 @@ import reactor.core.publisher.Mono
 class UserEventProfileService(
     private val repository: IEventProfileModelRepository,
     private val roleService: IRoleService,
-): IUserEventProfileService, GenericService<EventProfileModel>(compareBy { it.event?.name }) {
+): IUserEventProfileService, GenericService() {
     override fun findUserEventProfiles(
         userId: UUID,
         order: Direction,
@@ -40,7 +40,7 @@ class UserEventProfileService(
         endAccess: ZonedDateTime?
     ): Flux<EventProfileModel> {
         return repository.findEventProfilesByUserId(userId, onlyVisible, onlyUsable, status, startAccess, endAccess)
-            .searchAndSort(order, searched)
+            .searchAndSort(order, searched, compareBy { it.event?.name })
     }
 
     override fun findAllUserEventProfiles(userId: UUID, onlyUsable: Boolean, status: ProfileStatusEnum?): Flux<EventProfileModel> {
@@ -82,7 +82,7 @@ class UserEventProfileService(
         }
         profile.create(currentUser)
 
-        return repository.save(profile)
+        return repository.create(profile)
     }
 
     override fun updateUserEventProfileStatusById(
@@ -96,7 +96,7 @@ class UserEventProfileService(
             .flatMap { profile ->
                 profile.status = status
                 profile.update(currentUser)
-                repository.save(profile)
+                repository.update(profile)
             }
     }
 
@@ -107,6 +107,6 @@ class UserEventProfileService(
     }
 
     private fun Mono<EventProfileModel>.validateNotLastEventRoleLevel0(error: String) = flatMap {
-        validateNotLastEventRoleLevel0(it.user?.id !!, it.event?.id !!, it, error)
+        validateNotLastEventRoleLevel0(it.user !!.id !!, it.event !!.id !!, it, error)
     }
 }

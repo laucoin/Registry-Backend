@@ -18,7 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.EventProfi
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.EventProfilesDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
-import fr.laucoin.registry.backend.test.TestContainerDatabase
+import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
@@ -42,9 +42,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
@@ -57,19 +54,15 @@ import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
-import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-@SpringBootTest(webEnvironment = RANDOM_PORT)
-@AutoConfigureWebTestClient
-@ContextConfiguration(initializers = [TestContainerDatabase::class])
 class EventProfileControllerTest(
     @Autowired private val webClient: WebTestClient,
-) {
+): TestContext() {
     @MockitoBean
     private lateinit var service: IEventProfileService
 
@@ -246,7 +239,6 @@ class EventProfileControllerTest(
         // Arrange
         val expectedOrder = order ?: ASC
         val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOnlyUsable = onlyUsable ?: true
         val expectedOffset = offset ?: 0
         val expectedLimit = limit ?: 20
         val expectedSize = 0
@@ -327,6 +319,29 @@ class EventProfileControllerTest(
         verifyNoInteractions(profilesMapper)
         verifyNoInteractions(profileMapper)
         verify(service, times(1)).findEventProfileByEventIdAndId(eventId, uuid, onlyVisible = false)
+    }
+
+    @Test
+    fun `Should searchUsers return 200`() {
+        // Arrange
+        val testConfigMaxResult = 1
+        val searched = "John"
+        val user = UserModel()
+        `when`(service.searchUsers(anyOrNull())).thenReturn(Flux.just(user, user))
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_METADATA_R"))
+            .get()
+            .uri(
+                uriBuilder("${BASE_URL}/search/users", listOf(eventId), listOf(Pair("searched", searched)))
+            )
+            .exchange()
+
+        // Assert
+        val users = result.body<List<*>>(OK)
+        assertEquals(testConfigMaxResult, users?.size)
+        verify(service, times(1)).searchUsers(searched)
     }
 
     @Test

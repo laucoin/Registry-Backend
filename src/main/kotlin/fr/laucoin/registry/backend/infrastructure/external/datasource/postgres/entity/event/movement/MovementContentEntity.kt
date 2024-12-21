@@ -6,15 +6,21 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericEntity
 import java.time.LocalDate
 import java.util.UUID
+import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 
 @Table(MOVEMENT_CONTENT_TABLE)
 data class MovementContentEntity(
+    @Id
+    var id: UUID? = null,
+
+    @Column(MOVEMENT_CONTENT_MOVEMENT_ID)
+    var movementId: UUID? = null,
+
     @Column(MOVEMENT_CONTENT_PARTICIPANT_ID)
     var participantId: UUID? = null,
     @ReadOnlyProperty
@@ -26,7 +32,4 @@ data class MovementContentEntity(
     @ReadOnlyProperty
     @Column(MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY)
     var participantBirthday: LocalDate? = null,
-
-    @Column(MOVEMENT_CONTENT_MOVEMENT_ID)
-    var movementId: UUID? = null,
-): GenericEntity()
+)

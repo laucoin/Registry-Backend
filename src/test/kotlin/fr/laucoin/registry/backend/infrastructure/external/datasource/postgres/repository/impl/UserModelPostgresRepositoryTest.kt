@@ -114,7 +114,7 @@ class UserModelPostgresRepositoryTest {
         `when`(repository.save(any())).thenReturn(Mono.just(userEntity))
 
         // Act
-        modelRepository.save(user).block()
+        modelRepository.create(user).block()
 
         // Assert
         verify(repository, times(1)).save(any())

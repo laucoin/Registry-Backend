@@ -21,6 +21,7 @@ interface IEventProfileService {
     ): Flux<EventProfileModel>
 
     fun findEventProfileByEventIdAndId(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<EventProfileModel>
+    fun searchUsers(searched: String?): Flux<UserModel>
     fun getAssignableEventRoles(currentUser: UserModel, eventId: UUID): Mono<List<String>>
     fun createSupportEventProfile(currentUser: UserModel, eventId: UUID): Mono<EventProfileModel>
     fun createEventProfiles(

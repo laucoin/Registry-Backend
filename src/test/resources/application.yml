@@ -7,23 +7,26 @@ external:
     client-secret: secret-test
     realm: test
 
-logging:
-  level:
-    fr.laucoin.registry.backend: ${registry.server.logging-level}
-    org.springframework.web: ${registry.server.logging-level}
-
 registry:
   feature:
     documentation:
       enabled: true
-    search:
-      threshold: 0.5
-    user:
+    profile:
       searched:
-        max-result: 1
+        max-user-result: 1
     participant:
       searched:
-        max-result: 1
+        max-user-result: 1
+        max-group-result: 1
+    group:
+      searched:
+        max-participant-result: 1
+    movement:
+      searched:
+        max-participant-result: 1
+        max-group-result: 1
+    search:
+      threshold: 0.5
   security:
     default-role: USER
     oauth2:
@@ -54,6 +57,8 @@ spring:
       - classpath:db/migration/test
   main:
     web-application-type: reactive
+    lazy-initialization: true
+    banner-mode: off
   r2dbc:
     url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
     username: ${registry.datasource.username}

@@ -82,7 +82,7 @@ class EventModelPostgresRepositoryTest {
         `when`(repository.save(any())).thenReturn(Mono.just(eventEntity))
 
         // Act
-        modelRepository.save(event).block()
+        modelRepository.create(event).block()
 
         // Assert
         verify(repository, times(1)).save(any())

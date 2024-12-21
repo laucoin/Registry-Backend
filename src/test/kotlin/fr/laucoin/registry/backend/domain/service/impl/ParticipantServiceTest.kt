@@ -1,16 +1,24 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -24,6 +32,9 @@ import org.mockito.kotlin.anyOrNull
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
+import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -31,7 +42,9 @@ import reactor.core.publisher.Mono
 class ParticipantServiceTest {
     private val repository: IParticipantModelRepository = mock()
     private val eventService: IEventService = mock()
-    private val service: IParticipantService = ParticipantService(repository, eventService)
+    private val userService: IUserService = mock()
+    private val groupRepository: IGroupModelRepository = mock()
+    private val service: IParticipantService = ParticipantService(repository, eventService, userService, groupRepository)
 
     companion object {
         private val participant0 = ParticipantModel().apply { lastName = "0" }
@@ -56,6 +69,50 @@ class ParticipantServiceTest {
             Arguments.of(ASC, "QWERTY", emptyList<ParticipantModel>()),
             Arguments.of(DESC, "QWERTY", emptyList<ParticipantModel>()),
         )
+
+        @JvmStatic
+        fun `Participant content`(): Stream<Arguments> = Stream.of(
+            Arguments.of(ParticipantModel().apply { event = EventModel().apply { id = eventId } }, 0, 0),
+            Arguments.of(
+                ParticipantModel().apply {
+                    user = UserModel().apply { id = UUID.randomUUID() }
+                    event = EventModel().apply { id = eventId }
+                },
+                1,
+                0,
+            ),
+            Arguments.of(
+                ParticipantModel().apply {
+                    groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
+                    event = EventModel().apply { id = eventId }
+                },
+                0,
+                1,
+            ),
+            Arguments.of(
+                ParticipantModel().apply {
+                    user = UserModel().apply { id = UUID.randomUUID() }
+                    groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
+                    event = EventModel().apply { id = eventId }
+                },
+                1,
+                1,
+            ),
+        )
+
+        @JvmStatic
+        fun `Should createParticipant failed to valid Group`(): Stream<Arguments> = Stream.of(
+            Arguments.of(
+                Flux.empty<GroupModel>(),
+                NOT_FOUND,
+                PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT,
+            ),
+            Arguments.of(
+                Flux.just(GroupModel().apply { id = UUID.randomUUID(); visible = false }),
+                CONFLICT,
+                PARTICIPANT_GROUPS_NOT_VISIBLE,
+            ),
+        )
     }
 
     @ParameterizedTest
@@ -67,7 +124,7 @@ class ParticipantServiceTest {
     ) {
         // Arrange
         setField(service, "searchThreshold", 0.5)
-        `when`(repository.findAll(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(*participants))
+        `when`(repository.findAll(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(*participants))
 
         // Act
         val result = service.findParticipantsByEventId(
@@ -100,40 +157,104 @@ class ParticipantServiceTest {
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = true)
     }
 
-    @Test
-    fun `Should createParticipant create and return a Participant`() {
+    @ParameterizedTest
+    @MethodSource("Participant content")
+    fun `Should createParticipant create and return a Participant`(
+        participant: ParticipantModel,
+        expectedCallUserVerification: Int,
+        expectedCallGroupVerification: Int,
+    ) {
         // Arrange
-        val participant = ParticipantModel().apply { event = EventModel().apply { id = eventId } }
         `when`(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
-        `when`(repository.save(any())).thenReturn(Mono.just(participant))
+        `when`(repository.findAll(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.empty())
+        `when`(groupRepository.findAllByIds(any(), any(), any())).thenReturn(Flux.just(GroupModel()))
+        `when`(repository.create(any())).thenReturn(Mono.just(participant))
 
         // Act
         service.createParticipant(currentUser(), participant).block()
 
         // Assert
-        verify(repository, times(1)).save(participant)
+        verify(eventService, times(1)).validateDateTimes(eventId, null, null, PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE)
+        verify(repository, times(expectedCallUserVerification)).findAll(
+            eventId,
+            onlyVisible = false,
+            onlyPresent = false,
+            startDateTime = null,
+            endDateTime = null
+        )
+        verify(groupRepository, times(expectedCallGroupVerification)).findAllByIds(
+            eventId,
+            ids = participant.groups.mapNotNull { g -> g.id },
+            onlyVisible = false,
+        )
+        verify(repository, times(1)).create(participant)
     }
 
-    @Test
-    fun `Should updateParticipantById update and return a Participant`() {
+    @ParameterizedTest
+    @MethodSource
+    fun `Should createParticipant failed to valid Group`(
+        groups: Flux<GroupModel>,
+        status: HttpStatus,
+        errorMessage: String,
+    ) {
         // Arrange
-        val uuid = UUID.randomUUID()
-        val updated = ParticipantModel().apply {
-            firstName = "Jane"
-            lastName = "MILLER"
-            birthday = LocalDate.of(2000, 1, 1)
+        val participant = ParticipantModel().apply {
             event = EventModel().apply { id = eventId }
+            this.groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
         }
-        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0))
-        `when`(repository.save(any())).thenReturn(Mono.just(participant0))
         `when`(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        `when`(groupRepository.findAllByIds(any(), any(), any())).thenReturn(groups)
+        `when`(repository.create(any())).thenReturn(Mono.just(participant))
 
         // Act
-        service.updateParticipantById(currentUser(), eventId, uuid, updated).block()
+        val result = assertThrows(RegistryExceptionModel::class.java) {
+            service.createParticipant(currentUser(), participant).block()
+        }
 
         // Assert
-        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
-        verify(repository, times(1)).save(any())
+        assertEquals(status, result.status)
+        assertEquals(errorMessage, result.message)
+        verify(eventService, times(1)).validateDateTimes(eventId, null, null, PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE)
+        verify(groupRepository, times(1)).findAllByIds(
+            eventId,
+            ids = participant.groups.mapNotNull { g -> g.id },
+            onlyVisible = false,
+        )
+    }
+
+    @ParameterizedTest
+    @MethodSource("Participant content")
+    fun `Should updateParticipantById update and return a Participant`(
+        participant: ParticipantModel,
+        expectedCallUserVerification: Int,
+        expectedCallGroupVerification: Int,
+    ) {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0))
+        `when`(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        `when`(repository.findAll(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.empty())
+        `when`(groupRepository.findAllByIds(any(), any(), any())).thenReturn(Flux.just(GroupModel()))
+        `when`(repository.update(any())).thenReturn(Mono.just(participant))
+
+        // Act
+        service.updateParticipantById(currentUser(), eventId, uuid, participant).block()
+
+        // Assert
+        verify(eventService, times(1)).validateDateTimes(eventId, null, null, PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE)
+        verify(repository, times(expectedCallUserVerification)).findAll(
+            eventId,
+            onlyVisible = false,
+            onlyPresent = false,
+            startDateTime = null,
+            endDateTime = null
+        )
+        verify(groupRepository, times(expectedCallGroupVerification)).findAllByIds(
+            eventId,
+            ids = participant.groups.mapNotNull { g -> g.id },
+            onlyVisible = false,
+        )
+        verify(repository, times(1)).update(participant)
     }
 
     @Test
@@ -141,14 +262,14 @@ class ParticipantServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0))
-        `when`(repository.save(any())).thenReturn(Mono.just(participant0))
+        `when`(repository.update(any())).thenReturn(Mono.just(participant0))
 
         // Act
         service.disableParticipantById(currentUser(), eventId, uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = true)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test
@@ -156,14 +277,14 @@ class ParticipantServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0))
-        `when`(repository.save(any())).thenReturn(Mono.just(participant0))
+        `when`(repository.update(any())).thenReturn(Mono.just(participant0))
 
         // Act
         service.enableParticipantById(currentUser(), eventId, uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test

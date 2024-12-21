@@ -29,6 +29,8 @@ class UserModelPostgresRepository(
     override fun findByRoleLevel(roleLevel: Int, onlyVisible: Boolean): Flux<UserModel> =
         repository.findByRoleLevel(roleLevel, onlyVisible).map(userMapper::toModel)
 
-    override fun save(element: UserModel): Mono<UserModel> = repository.save(userMapper.toEntity(element)).map(userMapper::toModel)
+    override fun create(element: UserModel): Mono<UserModel> = save(element)
+    override fun update(element: UserModel): Mono<UserModel> = save(element)
+    private fun save(element: UserModel): Mono<UserModel> = repository.save(userMapper.toEntity(element)).map(userMapper::toModel)
     override fun deleteById(id: UUID): Mono<Void> = repository.deleteById(id)
 }

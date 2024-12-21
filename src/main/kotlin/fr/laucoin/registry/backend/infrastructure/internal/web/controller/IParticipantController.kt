@@ -1,8 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ParticipantDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.UserDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -38,7 +40,7 @@ interface IParticipantController {
         @RequestParam(defaultValue = "20") limit: Int,
         @RequestParam(defaultValue = "ASC") order: Direction,
         @RequestParam(defaultValue = "true") onlyVisible: Boolean,
-        @RequestParam(defaultValue = "true") onlyPresent: Boolean,
+        @RequestParam(defaultValue = "false") onlyPresent: Boolean,
         @RequestParam(required = false) searched: String?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
@@ -55,16 +57,23 @@ interface IParticipantController {
     fun findParticipantById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<ParticipantModel>
 
     @Operation(
-        summary = "Search Participant",
-        description = "Search non blocked Participant first or last name"
+        summary = "Search Users",
+        description = "Search Users to link to a Participant"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_R')")
-    @GetMapping("/search")
-    fun searchParticipants(
+    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
+    @GetMapping("/search/users")
+    fun searchUsers(@PathVariable eventId: UUID, @RequestParam searched: String?): Flux<UserDto>
+
+    @Operation(
+        summary = "Search Groups",
+        description = "Search Groups to add Participant in it"
+    )
+    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
+    @GetMapping("/search/groups")
+    fun searchGroups(
         @PathVariable eventId: UUID,
-        @RequestParam(defaultValue = "true") onlyPresent: Boolean,
-        @RequestParam(required = false) searched: String?,
-    ): Flux<ParticipantModel>
+        @RequestParam searched: String?
+    ): Flux<GroupModel>
 
     @Operation(
         summary = "Create Participant",

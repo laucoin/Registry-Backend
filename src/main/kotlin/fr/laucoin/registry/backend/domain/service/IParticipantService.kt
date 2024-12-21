@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import java.time.ZonedDateTime
@@ -19,7 +20,10 @@ interface IParticipantService {
         endDateTime: ZonedDateTime?,
     ): Flux<ParticipantModel>
 
+    fun findParticipantsByIds(eventId: UUID, ids: List<UUID>, onlyVisible: Boolean): Flux<ParticipantModel>
     fun findParticipantById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<ParticipantModel>
+    fun searchUsers(eventId: UUID, searched: String?): Flux<UserModel>
+    fun searchGroups(eventId: UUID, searched: String?): Flux<GroupModel>
     fun createParticipant(currentUser: UserModel, participant: ParticipantModel): Mono<ParticipantModel>
     fun updateParticipantById(currentUser: UserModel, eventId: UUID, id: UUID, participant: ParticipantModel): Mono<ParticipantModel>
     fun disableParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<ParticipantModel>

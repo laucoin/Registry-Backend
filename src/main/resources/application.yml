@@ -10,12 +10,20 @@ server:
 
 registry:
   feature:
-    user:
+    profile:
       searched:
-        max-result: 10
+        max-user-result: 10
     participant:
       searched:
-        max-result: 10
+        max-user-result: 10
+        max-group-result: 10
+    group:
+      searched:
+        max-participant-result: 10
+    movement:
+      searched:
+        max-participant-result: 10
+        max-group-result: 10
     search:
       threshold: 0.5
   security:
@@ -40,6 +48,7 @@ spring:
       sgdf: sgdf
   main:
     web-application-type: reactive
+    banner-mode: off
   r2dbc:
     url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
     username: ${registry.datasource.username}

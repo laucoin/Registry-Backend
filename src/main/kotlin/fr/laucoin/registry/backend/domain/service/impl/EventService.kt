@@ -28,7 +28,7 @@ class EventService(
     private val userEventProfileService: IUserEventProfileService,
     private val transactionalOperator: TransactionalOperator,
     private val roleService: IRoleService,
-): IEventService, GenericService<EventModel>(compareBy { it.name }) {
+): IEventService, GenericService() {
     override fun findEvents(
         currentUser: CurrentUserModel,
         order: Direction,
@@ -41,7 +41,7 @@ class EventService(
         val eventReader: Boolean = roleService.getAuthoritiesByUserRole(currentUser.role).contains("REGISTRY_EVENT_R")
         return repository.findAll(onlyVisible, startDateTime, endDateTime)
             .filter { eventReader || userEventIds.contains(it.id) }
-            .searchAndSort(order, searched)
+            .searchAndSort(order, searched, compareBy { it.name })
     }
 
     override fun findEventById(id: UUID, onlyVisible: Boolean): Mono<EventModel> {
@@ -97,7 +97,7 @@ class EventService(
     }
 
     override fun createEvent(currentUser: UserModel, event: EventModel): Mono<EventModel> {
-        return repository.save(event.apply { create(currentUser) })
+        return repository.create(event.apply { create(currentUser) })
             .flatMap {
                 userEventProfileService.createUserEventProfileFromEvent(currentUser, it)
                     .thenReturn(it)
@@ -120,7 +120,7 @@ class EventService(
     }
 
     private fun Mono<EventModel>.updateEvent(currentUser: UserModel) = flatMap {
-        repository.save(it.apply { update(currentUser) })
+        repository.update(it.apply { update(currentUser) })
     }
 
     private fun Mono<EventModel>.validateBeginDate(event: EventModel): Mono<EventModel> = flatMap {

@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
+import com.nimbusds.jose.shaded.gson.Gson
+import com.nimbusds.jose.shaded.gson.reflect.TypeToken
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantEntity
@@ -7,7 +10,9 @@ import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
-class ParticipantEntityMapper: IGenericEventEntityMapper<ParticipantModel, ParticipantEntity> {
+class ParticipantEntityMapper(private val gson: Gson): IGenericEventEntityMapper<ParticipantModel, ParticipantEntity> {
+    private val listType = object: TypeToken<List<GroupModel>>() {}.type
+
     override fun toModel(entity: ParticipantEntity): ParticipantModel {
         val formattedUser: UserModel? = if (Objects.nonNull(entity.userId)) {
             UserModel().apply {
@@ -22,6 +27,7 @@ class ParticipantEntityMapper: IGenericEventEntityMapper<ParticipantModel, Parti
             firstName = entity.firstName
             lastName = entity.lastName
             birthday = entity.birthday
+            groups = gson.fromJson<List<GroupModel>?>(entity.groups, listType).filter { Objects.nonNull(it.id) }
             begin = entity.begin
             end = entity.end
             user = formattedUser

@@ -16,7 +16,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 class PreferencesService(
     private val repository: IPreferencesModelRepository,
     private val eventProfileService: IUserEventProfileService,
-): IPreferencesService, GenericService<PreferencesModel>() {
+): IPreferencesService, GenericService() {
     override fun findByUser(currentUser: UserModel): Mono<PreferencesModel> {
         return repository.findByUserId(currentUser.id !!, onlyVisible = true)
             .switchIfEmpty {

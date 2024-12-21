@@ -89,7 +89,7 @@ class TokenConverterService(
             .map { profiles ->
                 it.promote(roleService.getAuthoritiesByUserRole(it.role))
                 profiles.forEach { profile ->
-                    it.promote(roleService.getAuthoritiesByEventRole(profile.role !!, profile.event?.id !!))
+                    it.promote(roleService.getAuthoritiesByEventRole(profile.role !!, profile.event !!.id !!))
                 }
                 it
             }

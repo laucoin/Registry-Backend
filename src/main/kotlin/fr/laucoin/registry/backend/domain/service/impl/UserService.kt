@@ -37,7 +37,7 @@ class UserService(
     private val userEventProfileService: IUserEventProfileService,
     private val transactionalOperator: TransactionalOperator,
     private val roleService: IRoleService,
-): ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService<UserModel>(compareBy { it.lastName }) {
+): ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
     private lateinit var serviceAccount: UserModel
 
     override fun onApplicationEvent(event: ContextRefreshedEvent) {
@@ -48,7 +48,7 @@ class UserService(
     override fun findUsers(order: Direction, onlyVisible: Boolean, searched: String?): Flux<UserModel> {
         return repository.findAll(onlyVisible)
             .filter { isNotServiceAccount(it) }
-            .searchAndSort(order, searched)
+            .searchAndSort(order, searched, compareBy { it.lastName })
     }
 
     override fun findUserById(id: UUID, onlyVisible: Boolean): Mono<UserModel> {
@@ -83,7 +83,7 @@ class UserService(
         )
         user.create(serviceAccount)
 
-        return repository.save(user)
+        return repository.create(user)
             .map { CurrentUserModel(it) }
             .flatMap { createdUser ->
                 preferencesService.findByUser(createdUser)
@@ -96,7 +96,7 @@ class UserService(
     }
 
     private fun updateUser(currentUser: UserModel, user: UserModel): Mono<UserModel> {
-        return repository.save(user.apply { update(currentUser) })
+        return repository.update(user.apply { update(currentUser) })
     }
 
     override fun updateUserIfPersonalDataChanged(

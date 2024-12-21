@@ -79,7 +79,15 @@ class EventProfileModelPostgresRepository(
         return repository.findLevel0EventProfileRoleByEventId(eventId, onlyVisible).map(mapper::toModel)
     }
 
-    override fun save(element: EventProfileModel): Mono<EventProfileModel> {
+    override fun create(element: EventProfileModel): Mono<EventProfileModel> {
+        return save(element)
+    }
+
+    override fun update(element: EventProfileModel): Mono<EventProfileModel> {
+        return save(element)
+    }
+
+    private fun save(element: EventProfileModel): Mono<EventProfileModel> {
         return repository.save(mapper.toEntity(element)).map(mapper::toModel)
     }
 

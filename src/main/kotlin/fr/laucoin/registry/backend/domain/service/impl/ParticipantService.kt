@@ -1,21 +1,27 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.domain.service.IUserService
 import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -24,7 +30,9 @@ import reactor.core.publisher.Mono
 class ParticipantService(
     private val repository: IParticipantModelRepository,
     private val eventService: IEventService,
-): IParticipantService, GenericService<ParticipantModel>(compareBy { it.lastName }) {
+    private val userService: IUserService,
+    private val groupRepository: IGroupModelRepository,
+): IParticipantService, GenericService() {
     override fun findParticipantsByEventId(
         eventId: UUID,
         order: Direction,
@@ -34,13 +42,35 @@ class ParticipantService(
         startDateTime: ZonedDateTime?,
         endDateTime: ZonedDateTime?
     ): Flux<ParticipantModel> {
-        return repository.findAll(eventId, onlyVisible, startDateTime, endDateTime)
-            .searchAndSort(order, searched)
+        return repository.findAll(eventId, onlyVisible, onlyPresent, startDateTime, endDateTime)
+            .searchAndSort(order, searched, compareBy { it.lastName })
+    }
+
+    override fun findParticipantsByIds(eventId: UUID, ids: List<UUID>, onlyVisible: Boolean): Flux<ParticipantModel> {
+        return repository.findAllByIds(eventId, ids, onlyVisible)
     }
 
     override fun findParticipantById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<ParticipantModel> {
         return repository.findById(eventId, id, onlyVisible)
             .notFoundIfEmpty(id)
+    }
+
+    override fun searchUsers(eventId: UUID, searched: String?): Flux<UserModel> {
+        return userService.findUsers(
+            order = ASC,
+            onlyVisible = true,
+            searched
+        )
+    }
+
+    override fun searchGroups(eventId: UUID, searched: String?): Flux<GroupModel> {
+        return groupRepository.findAll(
+            eventId,
+            onlyVisible = true,
+            onlyPresent = false,
+            startDateTime = null,
+            endDateTime = null
+        ).searchAndSort(order = ASC, searched, compareBy { it.name })
     }
 
     override fun createParticipant(currentUser: UserModel, participant: ParticipantModel): Mono<ParticipantModel> {
@@ -57,16 +87,21 @@ class ParticipantService(
                     Mono.just(emptyList())
                 }
             }
-            .flatMap { repository.save(participant.apply { create(currentUser) }) }
+            .flatMap {
+                if (participant.groups.isEmpty()) {
+                    Mono.just(participant)
+                } else {
+                    validateGroups(participant.event !!.id !!, participant, participant.groups.mapNotNull { g -> g.id })
+                }
+            }
+            .flatMap { repository.create(participant.apply { create(currentUser) }) }
     }
 
     private fun validateNoParticipantForUser(eventId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
-        return findParticipantsByEventId(
+        return repository.findAll(
             eventId,
-            ASC,
             onlyVisible = false,
             onlyPresent = false,
-            searched = null,
             startDateTime = null,
             endDateTime = null
         )
@@ -102,17 +137,50 @@ class ParticipantService(
                     Mono.just(toUpdate)
                 }
             }
+            .flatMap {
+                val newGroup: List<UUID> = it.getNewGroupIds(participant)
+                if (newGroup.isEmpty()) {
+                    Mono.just(it)
+                } else {
+                    validateGroups(participant.event !!.id !!, it, newGroup)
+                }
+            }
             .map {
                 it.apply {
                     firstName = participant.firstName
                     lastName = participant.lastName
                     birthday = participant.birthday
+                    groups = participant.groups
                     user = participant.user
                     begin = participant.begin
                     end = participant.end
                 }
             }
             .updateParticipant(currentUser)
+    }
+
+    private fun validateGroups(eventId: UUID, participant: ParticipantModel, newGroupIds: List<UUID>): Mono<ParticipantModel> {
+        return groupRepository.findAllByIds(eventId, newGroupIds, onlyVisible = false)
+            .collectList()
+            .handle { it, handle ->
+                when {
+                    it.size != newGroupIds.size -> handle.error(
+                        RegistryExceptionModel(
+                            NOT_FOUND,
+                            PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT,
+                        )
+                    )
+
+                    it.any { m -> m.isNotVisible() } -> handle.error(
+                        RegistryExceptionModel(
+                            CONFLICT,
+                            PARTICIPANT_GROUPS_NOT_VISIBLE,
+                        )
+                    )
+
+                    else -> handle.next(participant)
+                }
+            }
     }
 
     override fun disableParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<ParticipantModel> {
@@ -133,6 +201,6 @@ class ParticipantService(
     }
 
     private fun Mono<ParticipantModel>.updateParticipant(currentUser: UserModel) = flatMap {
-        repository.save(it.apply { update(currentUser) })
+        repository.update(it.apply { update(currentUser) })
     }
 }
