@@ -1,10 +1,17 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.repository.IMovementContentModelRepository
+import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
+import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.test.ModelExt.eventId
@@ -14,6 +21,7 @@ import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -24,20 +32,23 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
+import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
-import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class MovementServiceTest {
     private val repository: IMovementModelRepository = mock()
-    private val contentRepository: IMovementContentModelRepository = mock()
     private val eventService: IEventService = mock()
-    private val transactionalOperator: TransactionalOperator = mock()
-    private val service: IMovementService = MovementService(repository, contentRepository, transactionalOperator, eventService)
+    private val participantRepository: IParticipantModelRepository = mock()
+    private val groupRepository: IGroupModelRepository = mock()
+    private val service: IMovementService = MovementService(repository, eventService, participantRepository, groupRepository)
 
     companion object {
         private val event0 = EventModel().apply {
@@ -86,6 +97,39 @@ class MovementServiceTest {
             Arguments.of(ASC, "QWERTY", emptyList<MovementModel>()),
             Arguments.of(DESC, "QWERTY", emptyList<MovementModel>()),
         )
+
+        @JvmStatic
+        fun `Should updateMovementById update and return a Movement`(): Stream<Arguments> = Stream.of(
+            Arguments.of(
+                MovementModel().apply {
+                    content = emptyList()
+                    event = EventModel().apply { id = eventId }
+                },
+                0,
+            ),
+            Arguments.of(
+                MovementModel().apply {
+                    content =
+                        listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = UUID.randomUUID() } })
+                    event = EventModel().apply { id = eventId }
+                },
+                1,
+            )
+        )
+
+        @JvmStatic
+        fun `Should updateMovementById failed to valid Participant`(): Stream<Arguments> = Stream.of(
+            Arguments.of(
+                Flux.empty<GroupModel>(),
+                NOT_FOUND,
+                MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT,
+            ),
+            Arguments.of(
+                Flux.just(ParticipantModel().apply { id = UUID.randomUUID(); visible = false }),
+                CONFLICT,
+                MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
+            ),
+        )
     }
 
     @ParameterizedTest
@@ -133,32 +177,86 @@ class MovementServiceTest {
     @Test
     fun `Should createMovement create and return a Movement`() {
         // Arrange
-        val currentUser = currentUser()
-        `when`(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
-        `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(movement0))
+        val participantId: UUID = UUID.randomUUID()
+        val movement = MovementModel().apply {
+            dateTime = ZonedDateTime.now()
+            content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
+            event = event0
+        }
+        `when`(eventService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        `when`(participantRepository.findAllByIds(any(), any(), any())).thenReturn(Flux.just(ParticipantModel()))
+        `when`(repository.create(any())).thenReturn(Mono.just(movement0))
 
         // Act
-        service.createMovement(currentUser, movement0).block()
+        service.createMovement(currentUser(), movement).block()
 
         // Assert
-        verify(eventService, times(1)).validateDateTime(eventId, movement0.dateTime, MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE)
-        verify(transactionalOperator, times(1)).transactional(any<Mono<*>>())
+        verify(eventService, times(1)).validateDateTime(eventId, movement.dateTime, MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE)
+        verify(participantRepository, times(1)).findAllByIds(eventId, listOf(participantId), onlyVisible = false)
+        verify(repository, times(1)).create(any())
     }
 
-    @Test
-    fun `Should updateMovementById update and return an Movement`() {
+    @ParameterizedTest
+    @MethodSource
+    fun `Should updateMovementById update and return a Movement`(
+        movement: MovementModel,
+        expectedCallParticipantVerification: Int,
+    ) {
         // Arrange
         val uuid = UUID.randomUUID()
-        val currentUser = currentUser()
-        `when`(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
-        `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(movement0))
+        `when`(eventService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        `when`(participantRepository.findAllByIds(any(), any(), any())).thenReturn(Flux.just(ParticipantModel()))
+        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(MovementModel()))
+        `when`(repository.update(any())).thenReturn(Mono.just(movement))
 
         // Act
-        service.updateMovementById(currentUser, eventId, uuid, movement0).block()
+        service.updateMovementById(currentUser(), eventId, uuid, movement).block()
 
         // Assert
-        verify(eventService, times(1)).validateDateTime(eventId, movement0.dateTime, MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE)
-        verify(transactionalOperator, times(1)).transactional(any<Mono<*>>())
+        verify(eventService, times(1)).validateDateTime(eventId, movement.dateTime, MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE)
+        verify(participantRepository, times(expectedCallParticipantVerification)).findAllByIds(
+            eq(eventId),
+            any(),
+            onlyVisible = eq(false)
+        )
+        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
+        verify(repository, times(1)).update(any())
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should updateMovementById failed to valid Participant`(
+        participants: Flux<ParticipantModel>,
+        status: HttpStatus,
+        errorMessage: String,
+    ) {
+        // Arrange
+        val movement: MovementModel = MovementModel().apply {
+            dateTime = ZonedDateTime.now()
+            event = EventModel().apply { id = eventId }
+            content =
+                listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = UUID.randomUUID() } })
+        }
+        val uuid = UUID.randomUUID()
+        `when`(eventService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        `when`(participantRepository.findAllByIds(any(), any(), any())).thenReturn(participants)
+        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(MovementModel()))
+        `when`(repository.update(any())).thenReturn(Mono.just(movement))
+
+        // Act
+        val result = assertThrows(RegistryExceptionModel::class.java) {
+            service.updateMovementById(currentUser(), eventId, uuid, movement).block()
+        }
+
+        // Assert
+        assertEquals(status, result.status)
+        assertEquals(errorMessage, result.message)
+        verify(eventService, times(1)).validateDateTime(eventId, movement.dateTime, MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE)
+        verify(participantRepository, times(1)).findAllByIds(
+            eventId,
+            ids = movement.content.mapNotNull { c -> c.participant?.id },
+            onlyVisible = false,
+        )
     }
 
     @Test
@@ -166,14 +264,14 @@ class MovementServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(movement0))
-        `when`(repository.save(any())).thenReturn(Mono.just(movement0))
+        `when`(repository.update(any())).thenReturn(Mono.just(movement0))
 
         // Act
         service.disableMovementById(currentUser(), eventId, uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = true)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test
@@ -181,14 +279,14 @@ class MovementServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(movement0))
-        `when`(repository.save(any())).thenReturn(Mono.just(movement0))
+        `when`(repository.update(any())).thenReturn(Mono.just(movement0))
 
         // Act
         service.enableMovementById(currentUser(), eventId, uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test

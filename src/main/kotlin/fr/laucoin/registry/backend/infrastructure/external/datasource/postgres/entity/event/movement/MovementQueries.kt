@@ -33,7 +33,6 @@ object MovementQueries {
     const val SELECT_CONTENT = """
         JSON_AGG(
             JSON_BUILD_OBJECT(
-                'id', $MOVEMENT_CONTENT_TABLE.$ID,
                 'participant', JSON_BUILD_OBJECT(
                     'id', $PARTICIPANT_TABLE.$ID,
                     'firstName', $PARTICIPANT_TABLE.$PARTICIPANT_FIRST_NAME,
@@ -43,9 +42,7 @@ object MovementQueries {
                     'end', $PARTICIPANT_TABLE.$PARTICIPANT_END,
                     'user', NULL,
                     'purged', $PARTICIPANT_TABLE.$PARTICIPANT_PURGED
-                ),
-                'movementId', t.$ID,
-                'visible', $MOVEMENT_CONTENT_TABLE.$VISIBLE
+                )
             )
         ) AS $MOVEMENT_CONTENT
     """
@@ -53,7 +50,6 @@ object MovementQueries {
     const val CONTENT_JOIN = """
         LEFT JOIN $MOVEMENT_CONTENT_TABLE
             ON t.$ID = $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID
-            AND $MOVEMENT_CONTENT_TABLE.$VISIBLE IS TRUE
         LEFT JOIN $PARTICIPANT_TABLE
             ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
             AND $PARTICIPANT_TABLE.$PARTICIPANT_PURGED IS FALSE

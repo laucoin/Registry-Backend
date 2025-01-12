@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.CreatedEventProfilesDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.EventProfileDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.EventProfilesDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.UserDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Event's Profiles management", description = "API for Event's Profiles-related operations")
@@ -56,6 +58,14 @@ interface IEventProfileController {
     @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_R')")
     @GetMapping("/{id}")
     fun findEventProfileById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<EventProfileModel>
+
+    @Operation(
+        summary = "Search Users",
+        description = "Search Users to invite to an Event"
+    )
+    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_METADATA_R')")
+    @GetMapping("/search/users")
+    fun searchUsers(@PathVariable eventId: UUID, @RequestParam searched: String?): Flux<UserDto>
 
     @Operation(
         summary = "Get assignable Roles",

@@ -25,6 +25,7 @@ data class ParticipantDto(
     @field:PastOrPresent(message = PARTICIPANT_BIRTHDAY_FUTURE)
     var birthday: LocalDate? = null,
     var userId: UUID? = null,
+    var groupIds: List<UUID> = emptyList(),
     var begin: ZonedDateTime? = null,
     var end: ZonedDateTime? = null,
 )

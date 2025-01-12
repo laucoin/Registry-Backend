@@ -4,15 +4,15 @@ import fr.laucoin.registry.backend.domain.model.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementContentEntity
 import java.util.Objects
+import java.util.UUID
 import org.springframework.stereotype.Component
 
 @Component
-class MovementContentEntityMapper: IGenericEntityMapper<MovementContentModel, MovementContentEntity> {
-    override fun toModel(entity: MovementContentEntity): MovementContentModel {
-        return MovementContentModel().apply {
-            participant = mapParticipantEntity(entity)
-            movementId = entity.movementId
-        }
+class MovementContentEntityMapper {
+    fun toModel(entity: MovementContentEntity): MovementContentModel {
+        return MovementContentModel(
+            participant = mapParticipantEntity(entity),
+        )
     }
 
     private fun mapParticipantEntity(entity: MovementContentEntity): ParticipantModel? {
@@ -25,10 +25,10 @@ class MovementContentEntityMapper: IGenericEntityMapper<MovementContentModel, Mo
         }
     }
 
-    override fun toEntity(model: MovementContentModel): MovementContentEntity {
+    fun toEntity(movementId: UUID, model: MovementContentModel): MovementContentEntity {
         return MovementContentEntity().apply {
+            this.movementId = movementId
             participantId = model.participant?.id
-            movementId = model.movementId
-        }.fillWithModel(model)
+        }
     }
 }

@@ -12,7 +12,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.MovementDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.MovementDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
-import fr.laucoin.registry.backend.test.TestContainerDatabase
+import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
@@ -35,9 +35,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
@@ -48,19 +45,15 @@ import org.springframework.http.HttpMethod.PATCH
 import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
-import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-@SpringBootTest(webEnvironment = RANDOM_PORT)
-@AutoConfigureWebTestClient
-@ContextConfiguration(initializers = [TestContainerDatabase::class])
 class MovementControllerTest(
     @Autowired private val webClient: WebTestClient,
-) {
+): TestContext() {
     @MockitoBean
     private lateinit var service: IMovementService
 

@@ -6,14 +6,16 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_START_LATER_THAN_END
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ParticipantDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.ParticipantDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
-import fr.laucoin.registry.backend.test.TestContainerDatabase
+import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
@@ -24,6 +26,7 @@ import java.time.ZonedDateTime.now
 import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -37,9 +40,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
@@ -50,19 +50,15 @@ import org.springframework.http.HttpMethod.PATCH
 import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
-import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-@SpringBootTest(webEnvironment = RANDOM_PORT)
-@AutoConfigureWebTestClient
-@ContextConfiguration(initializers = [TestContainerDatabase::class])
 class ParticipantControllerTest(
     @Autowired private val webClient: WebTestClient,
-) {
+): TestContext() {
     @MockitoBean
     private lateinit var service: IParticipantService
 
@@ -228,7 +224,7 @@ class ParticipantControllerTest(
         // Arrange
         val expectedOrder = order ?: ASC
         val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOnlyPresent = onlyPresent ?: true
+        val expectedOnlyPresent = onlyPresent ?: false
         val expectedOffset = offset ?: 0
         val expectedLimit = limit ?: 20
         val expectedSize = 0
@@ -306,6 +302,58 @@ class ParticipantControllerTest(
         result.body<ParticipantModel>(OK)
         verifyNoInteractions(mapper)
         verify(service, times(1)).findParticipantById(eventId, uuid, onlyVisible = false)
+    }
+
+    @Test
+    fun `Should searchUsers return 200`() {
+        // Arrange
+        val testConfigMaxResult = 1
+        val searched = "John"
+        val user = UserModel()
+        `when`(service.searchUsers(any(), anyOrNull())).thenReturn(Flux.just(user, user))
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority("REGISTRY_EVENT_PARTICIPANT_METADATA_R"))
+            .get()
+            .uri(
+                uriBuilder("$BASE_URL/search/users", listOf(eventId), listOf(Pair("searched", searched)))
+            )
+            .exchange()
+
+        // Assert
+        val users = result.body<List<*>>(OK)
+        assertEquals(testConfigMaxResult, users?.size)
+        verify(service, times(1)).searchUsers(
+            eventId,
+            searched,
+        )
+    }
+
+    @Test
+    fun `Should searchGroups return 200`() {
+        // Arrange
+        val testConfigMaxResult = 1
+        val searched = "Group"
+        val group = GroupModel()
+        `when`(service.searchGroups(any(), anyOrNull())).thenReturn(Flux.just(group, group))
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority("REGISTRY_EVENT_PARTICIPANT_METADATA_R"))
+            .get()
+            .uri(
+                uriBuilder("$BASE_URL/search/groups", listOf(eventId), listOf(Pair("searched", searched)))
+            )
+            .exchange()
+
+        // Assert
+        val groups = result.body<List<*>>(OK)
+        assertEquals(testConfigMaxResult, groups?.size)
+        verify(service, times(1)).searchGroups(
+            eventId,
+            searched,
+        )
     }
 
     @Test

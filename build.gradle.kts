@@ -1,16 +1,16 @@
 plugins {
     kotlin("jvm") version "2.1.0"
     kotlin("plugin.spring") version "2.1.0"
-    id("org.springframework.boot") version "3.4.0"
-    id("io.spring.dependency-management") version "1.1.6"
-    id("net.researchgate.release") version "3.0.2"
+    id("org.springframework.boot") version "3.4.1"
+    id("io.spring.dependency-management") version "1.1.7"
+    id("net.researchgate.release") version "3.1.0"
     id("jacoco")
 }
 
 group = "fr.laucoin.registry"
 
 val swaggerVersion = "2.7.0"
-val apacheCommonVersion = "1.12.0"
+val apacheCommonVersion = "1.13.0"
 val jacocoVersion = "0.8.12"
 val mockitoVersion = "5.14.2"
 val testArch = "1.3.0"
@@ -83,6 +83,7 @@ tasks.jacocoTestCoverageVerification {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    maxParallelForks = Runtime.getRuntime().availableProcessors()
     finalizedBy(tasks.jacocoTestCoverageVerification, tasks.jacocoTestReport)
 }
 

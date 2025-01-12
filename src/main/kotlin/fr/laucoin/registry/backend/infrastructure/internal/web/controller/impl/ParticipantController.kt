@@ -1,18 +1,20 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.currentUser
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageModel.Companion.paginate
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IParticipantController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ParticipantDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.UserDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.ParticipantDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.UserDtoMapper
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -21,8 +23,11 @@ import reactor.core.publisher.Mono
 class ParticipantController(
     private val service: IParticipantService,
     private val mapper: ParticipantDtoMapper,
-    @Value("\${registry.feature.participant.searched.max-result}")
-    private val maxSearchedParticipantResult: Long,
+    private val userMapper: UserDtoMapper,
+    @Value("\${registry.feature.participant.searched.max-user-result}")
+    private val maxUserResult: Long,
+    @Value("\${registry.feature.participant.searched.max-group-result}")
+    private val maxGroupResult: Long,
 ): IParticipantController {
     override fun findParticipants(
         eventId: UUID,
@@ -50,18 +55,15 @@ class ParticipantController(
         return service.findParticipantById(eventId, id, onlyVisible = false)
     }
 
-    override fun searchParticipants(eventId: UUID, onlyPresent: Boolean, searched: String?): Flux<ParticipantModel> {
-        return currentUser().flatMapMany {
-            service.findParticipantsByEventId(
-                eventId,
-                ASC,
-                onlyVisible = true,
-                onlyPresent,
-                searched,
-                startDateTime = null,
-                endDateTime = null
-            )
-        }.take(maxSearchedParticipantResult)
+    override fun searchUsers(eventId: UUID, searched: String?): Flux<UserDto> {
+        return service.searchUsers(eventId, searched)
+            .take(maxUserResult)
+            .map(userMapper::toDto)
+    }
+
+    override fun searchGroups(eventId: UUID, searched: String?): Flux<GroupModel> {
+        return service.searchGroups(eventId, searched)
+            .take(maxGroupResult)
     }
 
     override fun createParticipant(eventId: UUID, participant: ParticipantDto): Mono<ParticipantModel> {

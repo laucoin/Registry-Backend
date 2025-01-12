@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_END
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_PURGED
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_TABLE
@@ -27,6 +28,9 @@ data class ParticipantEntity(
     var lastName: String? = null,
     @Column(PARTICIPANT_BIRTHDAY)
     var birthday: LocalDate? = null,
+    @ReadOnlyProperty
+    @Column(PARTICIPANT_GROUPS)
+    var groups: String = "[]",
     @Column(PARTICIPANT_BEGIN)
     var begin: ZonedDateTime? = null,
     @Column(PARTICIPANT_END)

@@ -1,8 +1,10 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
@@ -10,6 +12,7 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
+import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
@@ -31,6 +34,7 @@ import org.mockito.kotlin.never
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.publisher.Flux
@@ -40,7 +44,8 @@ class EventProfileServiceTest {
     private val repository: IEventProfileModelRepository = mock()
     private val profileService: IUserEventProfileService = mock()
     private val roleService: IRoleService = mock()
-    private val service = EventProfileService(repository, profileService, roleService)
+    private val userService: IUserService = mock()
+    private val service = EventProfileService(repository, profileService, roleService, userService)
 
     companion object {
         private const val OTHER_EVENT_ROLE = "OTHER_EVENT_ROLE"
@@ -142,6 +147,19 @@ class EventProfileServiceTest {
     }
 
     @Test
+    fun `Should searchUsers return the searched User`() {
+        // Arrange
+        val searched = "John"
+        `when`(userService.findUsers(any(), any(), any())).thenReturn(Flux.empty())
+
+        // Act
+        service.searchUsers(searched).collectList().block()
+
+        // Assert
+        verify(userService, times(1)).findUsers(order = ASC, onlyVisible = true, searched)
+    }
+
+    @Test
     fun `Should getAssignableEventRoles return the list of assignable role`() {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -187,7 +205,7 @@ class EventProfileServiceTest {
             )
         ).thenReturn(Flux.empty())
         `when`(roleService.getLevel0RoleFromEventRoles()).thenReturn(EVENT_ROLE)
-        `when`(repository.save(any())).thenReturn(Mono.just(profile0))
+        `when`(repository.create(any())).thenReturn(Mono.just(profile0))
 
         // Act
         service.createSupportEventProfile(currentUser, eventId).block()
@@ -202,7 +220,7 @@ class EventProfileServiceTest {
             endAccess = any()
         )
         verify(roleService, times(1)).getLevel0RoleFromEventRoles()
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).create(any())
     }
 
     @Test
@@ -237,6 +255,96 @@ class EventProfileServiceTest {
             endAccess = null
         )
         verify(repository, times(1)).saveAll(any())
+    }
+
+    @Test
+    fun `Should createEventProfiles succeed partially`() {
+        // Arrange
+        val uuid1 = UUID.randomUUID()
+        val uuid2 = UUID.randomUUID()
+        val profiles = listOf(EventProfileModel().apply {
+            user = UserModel().apply { id = uuid1 }
+            role = EVENT_ROLE; event = EventModel().apply { name = "0" }
+        })
+        `when`(
+            repository.findEventProfilesByEventId(
+                any(),
+                any(),
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                anyOrNull()
+            )
+        ).thenReturn(
+            Flux.just(
+                EventProfileModel().apply { user = UserModel().apply { id = uuid1 }; status = REJECTED },
+                EventProfileModel().apply { user = UserModel().apply { id = uuid1 }; status = ACCEPTED },
+            )
+        )
+        `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
+
+        // Act
+        val result = service.createEventProfiles(currentUser(), eventId, listOf(uuid1, uuid2), profiles)
+            .collectList()
+            .block()
+
+        // Assert
+        assertEquals(1, result?.size)
+        verify(repository, times(1)).findEventProfilesByEventId(
+            eventId,
+            onlyVisible = false,
+            onlyUsable = false,
+            status = null,
+            startAccess = null,
+            endAccess = null
+        )
+        verify(repository, times(1)).saveAll(any())
+    }
+
+    @Test
+    fun `Should createEventProfiles failed due to date conflict`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        val profiles = listOf(EventProfileModel().apply {
+            user = UserModel().apply { id = uuid }
+            role = EVENT_ROLE; event = EventModel().apply { name = "0" }
+        })
+        `when`(
+            repository.findEventProfilesByEventId(
+                any(),
+                any(),
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                anyOrNull()
+            )
+        ).thenReturn(
+            Flux.just(
+                EventProfileModel().apply { user = UserModel().apply { id = uuid }; status = REJECTED },
+                EventProfileModel().apply { user = UserModel().apply { id = uuid }; status = ACCEPTED },
+            )
+        )
+        `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
+
+        // Act
+        val result = assertThrows(RegistryExceptionModel::class.java) {
+            service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles)
+                .collectList()
+                .block()
+        }
+
+        // Assert
+        assertEquals(CONFLICT, result.status)
+        assertEquals(EVENT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
+        verify(repository, times(1)).findEventProfilesByEventId(
+            eventId,
+            onlyVisible = false,
+            onlyUsable = false,
+            status = null,
+            startAccess = null,
+            endAccess = null
+        )
+        verify(repository, times(0)).saveAll(any())
     }
 
     @Test
@@ -286,7 +394,7 @@ class EventProfileServiceTest {
             )
         ).thenReturn(Mono.just(profile))
         `when`(roleService.getAssignableEventRoles(any())).thenReturn(listOf(EVENT_ROLE))
-        `when`(repository.save(any())).thenReturn(Mono.just(profile))
+        `when`(repository.update(any())).thenReturn(Mono.just(profile))
 
         // Act
         service.updateEventProfileById(currentUser, eventId, profileId, profile).block()
@@ -309,7 +417,7 @@ class EventProfileServiceTest {
             status = ACCEPTED,
         )
         verify(roleService, times(1)).getAssignableEventRoles(userProfile)
-        verify(repository, times(1)).save(profile)
+        verify(repository, times(1)).update(profile)
     }
 
     @ParameterizedTest
@@ -379,7 +487,7 @@ class EventProfileServiceTest {
             status = ACCEPTED,
         )
         verify(roleService, times(1)).getAssignableEventRoles(userProfile)
-        verify(repository, never()).save(any())
+        verify(repository, never()).create(any())
     }
 
     @Test
@@ -391,7 +499,7 @@ class EventProfileServiceTest {
             event = EventModel().apply { id = eventId }
         }
         `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(profile))
-        `when`(repository.save(any())).thenReturn(Mono.just(profile))
+        `when`(repository.update(any())).thenReturn(Mono.just(profile))
         `when`(
             profileService.validateNotLastEventRoleLevel0(
                 any(),
@@ -406,7 +514,7 @@ class EventProfileServiceTest {
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = true)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test
@@ -414,14 +522,14 @@ class EventProfileServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(profile0))
-        `when`(repository.save(any())).thenReturn(Mono.just(profile0))
+        `when`(repository.update(any())).thenReturn(Mono.just(profile0))
 
         // Act
         service.unblockEventProfileById(currentUser(), eventId, uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test
@@ -429,7 +537,7 @@ class EventProfileServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         val profile = EventProfileModel().apply {
-            id = uuid;
+            id = uuid
             user = UserModel().apply { id = uuid }
             event = EventModel().apply { id = eventId }
         }

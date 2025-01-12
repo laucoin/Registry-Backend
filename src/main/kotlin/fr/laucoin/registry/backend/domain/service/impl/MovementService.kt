@@ -1,30 +1,38 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementParticipantsAndGroupsModel
+import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.repository.IMovementContentModelRepository
+import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
+import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.domain.Sort.Direction
+import org.springframework.data.domain.Sort.Direction.ASC
+import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.stereotype.Service
-import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Mono.zip
 
 @Service
 class MovementService(
     private val repository: IMovementModelRepository,
-    private val contentRepository: IMovementContentModelRepository,
-    private val transactionalOperator: TransactionalOperator,
     private val eventService: IEventService,
-): IMovementService, GenericService<MovementModel>(compareBy { it.dateTime }) {
+    private val participantRepository: IParticipantModelRepository,
+    private val groupRepository: IGroupModelRepository,
+): IMovementService, GenericService() {
     override fun findMovements(
         eventId: UUID,
         order: Direction,
@@ -35,7 +43,7 @@ class MovementService(
         endDateTime: ZonedDateTime?
     ): Flux<MovementModel> {
         return repository.findAll(eventId, onlyVisible, type, startDateTime, endDateTime)
-            .searchAndSort(order, searched)
+            .searchAndSort(order, searched, compareBy { it.dateTime })
     }
 
     override fun findMovementById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<MovementModel> {
@@ -43,59 +51,82 @@ class MovementService(
             .notFoundIfEmpty(id)
     }
 
+    override fun searchParticipantsAndGroups(eventId: UUID, searched: String?): Mono<MovementParticipantsAndGroupsModel> {
+        return zip(
+            participantRepository.findAll(
+                eventId,
+                onlyVisible = true,
+                onlyPresent = false,
+                startDateTime = null,
+                endDateTime = null
+            ).searchAndSort(ASC, searched, compareBy { it.lastName })
+                .collectList(),
+            groupRepository.findAll(
+                eventId,
+                onlyVisible = true,
+                onlyPresent = true,
+                startDateTime = null,
+                endDateTime = null
+            ).searchAndSort(ASC, searched, compareBy { it.name })
+                .collectList(),
+        ).map { MovementParticipantsAndGroupsModel(participants = it.t1, groups = it.t2) }
+    }
+
     override fun createMovement(currentUser: UserModel, movement: MovementModel): Mono<MovementModel> {
         return eventService.validateDateTime(movement.event !!.id !!, movement.dateTime, MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE)
-            .flatMap { repository.save(movement.apply { create(currentUser) }) }
             .flatMap {
-                val now = ZonedDateTime.now()
-                contentRepository.saveAll(movement.content.map { content ->
-                    content.apply {
-                        movementId = it.id
-                        create(currentUser, now)
-                    }
-                })
-                    .collectList()
-                    .map { newContent -> movement.apply { content = newContent } }
+                validateParticipants(
+                    movement.event !!.id !!,
+                    movement,
+                    movement.content.mapNotNull { c -> c.participant?.id })
             }
-            .`as`(transactionalOperator::transactional)
+            .flatMap { repository.create(movement.apply { create(currentUser) }) }
     }
 
     override fun updateMovementById(currentUser: UserModel, eventId: UUID, id: UUID, movement: MovementModel): Mono<MovementModel> {
         return eventService.validateDateTime(movement.event !!.id !!, movement.dateTime, MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE)
             .flatMap { findMovementById(eventId, id, onlyVisible = false) }
             .flatMap {
-                if (it.changed(movement)) {
-                    it.apply {
-                        dateTime = movement.dateTime
-                        update(currentUser)
-                    }
-                    repository.save(it).thenReturn(it)
-                } else Mono.just(it)
+                val newParticipantIds: List<UUID> = it.getNewContentParticipantIds(movement)
+                if (newParticipantIds.isEmpty()) Mono.just(it)
+                else validateParticipants(eventId, it, newParticipantIds)
             }
             .flatMap {
-                val newContent = it.getNewContent(movement).map { content -> content.apply { create(currentUser) } }
-                if (newContent.isNotEmpty()) {
-                    contentRepository.saveAll(newContent)
-                        .collectList()
-                        .map { savedContent -> it.apply { content.plus(savedContent) } }
-                } else Mono.just(it)
-            }
-            .flatMap {
-                val removedContent = it.getRemovedContent(movement).map { content ->
-                    content.apply {
-                        visible = false
-                        update(currentUser)
-                    }
+                it.let {
+                    it.dateTime = movement.dateTime
+                    it.content = movement.content
+                    it.update(currentUser)
                 }
-                contentRepository.saveAll(removedContent)
-                    .collectList()
-                    .map { content -> it.apply { content.minus(content.toSet()) } }
+                repository.update(it)
             }
-            .`as`(transactionalOperator::transactional)
     }
 
     private fun Mono<MovementModel>.updateMovement(currentUser: UserModel) = flatMap {
-        repository.save(it.apply { update(currentUser) })
+        repository.update(it.apply { update(currentUser) })
+    }
+
+    private fun validateParticipants(eventId: UUID, movement: MovementModel, newParticipantIds: List<UUID>): Mono<MovementModel> {
+        return participantRepository.findAllByIds(eventId, newParticipantIds, onlyVisible = false)
+            .collectList()
+            .handle { it, handle ->
+                when {
+                    it.size != newParticipantIds.size -> handle.error(
+                        RegistryExceptionModel(
+                            NOT_FOUND,
+                            MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT,
+                        )
+                    )
+
+                    it.any { m -> m.isNotVisible() || m.purged == true } -> handle.error(
+                        RegistryExceptionModel(
+                            CONFLICT,
+                            MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
+                        )
+                    )
+
+                    else -> handle.next(movement)
+                }
+            }
     }
 
     override fun disableMovementById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<MovementModel> {

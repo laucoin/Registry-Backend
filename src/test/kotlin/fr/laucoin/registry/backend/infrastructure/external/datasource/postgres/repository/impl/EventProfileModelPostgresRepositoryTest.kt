@@ -206,7 +206,7 @@ class EventProfileModelPostgresRepositoryTest {
         `when`(repository.save(any())).thenReturn(Mono.just(profileEntity))
 
         // Act
-        modelRepository.save(profile).block()
+        modelRepository.create(profile).block()
 
         // Assert
         verify(repository, times(1)).save(any())

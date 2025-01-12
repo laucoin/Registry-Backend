@@ -18,11 +18,13 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
+import fr.laucoin.registry.backend.domain.service.IUserService
 import java.time.ZonedDateTime
 import java.time.ZonedDateTime.now
 import java.util.Objects
 import java.util.UUID
 import org.springframework.data.domain.Sort.Direction
+import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
@@ -33,8 +35,9 @@ import reactor.core.publisher.Mono
 class EventProfileService(
     private val repository: IEventProfileModelRepository,
     private val profileService: IUserEventProfileService,
-    private val roleService: IRoleService
-): IEventProfileService, GenericService<EventProfileModel>(compareBy { it.user?.lastName }) {
+    private val roleService: IRoleService,
+    private val userService: IUserService,
+): IEventProfileService, GenericService() {
     override fun findEventProfilesByEventId(
         eventId: UUID,
         order: Direction,
@@ -45,12 +48,20 @@ class EventProfileService(
         endAccess: ZonedDateTime?
     ): Flux<EventProfileModel> {
         return repository.findEventProfilesByEventId(eventId, onlyVisible, onlyUsable = false, status, startAccess, endAccess)
-            .searchAndSort(order, searched)
+            .searchAndSort(order, searched, compareBy { it.user?.lastName })
     }
 
     override fun findEventProfileByEventIdAndId(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<EventProfileModel> {
         return repository.findById(eventId, id, onlyVisible)
             .notFoundIfEmpty(id)
+    }
+
+    override fun searchUsers(searched: String?): Flux<UserModel> {
+        return userService.findUsers(
+            order = ASC,
+            onlyVisible = true,
+            searched
+        )
     }
 
     override fun getAssignableEventRoles(currentUser: UserModel, eventId: UUID): Mono<List<String>> {
@@ -77,7 +88,7 @@ class EventProfileService(
         }
 
         return validateNoProfileConflict(eventId, listOf(currentUser.id !!), profileId = null, profile.startAccess, profile.endAccess)
-            .flatMap { repository.save(profile) }
+            .flatMap { repository.create(profile) }
     }
 
     override fun createEventProfiles(
@@ -102,7 +113,7 @@ class EventProfileService(
     ): Mono<EventProfileModel> {
         return findEventProfileByEventIdAndId(eventId, id, onlyVisible = false)
             .flatMap {
-                validateNoProfileConflict(eventId, listOf(it.user?.id !!), it.id, profile.endAccess, profile.endAccess)
+                validateNoProfileConflict(eventId, listOf(it.user !!.id !!), it.id, profile.endAccess, profile.endAccess)
                     .map { _ -> it }
             }
             .validateRole(currentUser, eventId, profile)
@@ -137,7 +148,7 @@ class EventProfileService(
     }
 
     private fun Mono<EventProfileModel>.validateNotLastEventRoleLevel0(error: String) = flatMap {
-        profileService.validateNotLastEventRoleLevel0(it.user?.id !!, it.event?.id !!, it, error)
+        profileService.validateNotLastEventRoleLevel0(it.user !!.id !!, it.event !!.id !!, it, error)
     }
 
     private fun Mono<EventProfileModel>.validateRole(
@@ -169,7 +180,7 @@ class EventProfileService(
     }
 
     private fun Mono<EventProfileModel>.updateEventProfile(currentUser: UserModel) = flatMap {
-        repository.save(it.apply { update(currentUser) })
+        repository.update(it.apply { update(currentUser) })
     }
 
     private fun validateNoProfileConflict(

@@ -314,14 +314,14 @@ class EventServiceTest {
     fun `Should createEvent create and return a Event`() {
         // Arrange
         val currentUser = currentUser()
-        `when`(repository.save(any())).thenReturn(Mono.just(event0))
+        `when`(repository.create(any())).thenReturn(Mono.just(event0))
         `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(event0))
 
         // Act
         service.createEvent(currentUser, event0).block()
 
         // Assert
-        verify(repository, times(1)).save(event0)
+        verify(repository, times(1)).create(event0)
         verify(transactionalOperator, times(1)).transactional(any<Mono<*>>())
     }
 
@@ -349,7 +349,7 @@ class EventServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(oldEvent))
         lenient().`when`(repository.validDateTime(any(), anyOrNull(), anyOrNull()))
             .thenReturn(Mono.just(true))
-        `when`(repository.save(any())).thenReturn(Mono.just(newEvent))
+        `when`(repository.update(any())).thenReturn(Mono.just(newEvent))
 
         // Act
         service.updateEventById(currentUser, uuid, newEvent).block()
@@ -361,7 +361,7 @@ class EventServiceTest {
             begin = newBegin,
             end = newFinish,
         )
-        verify(repository, times(1)).save(newEvent)
+        verify(repository, times(1)).update(newEvent)
     }
 
     @ParameterizedTest
@@ -385,7 +385,7 @@ class EventServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(oldEvent))
         lenient().`when`(repository.validDateTime(any(), anyOrNull(), anyOrNull()))
             .thenReturn(Mono.just(false))
-        `when`(repository.save(any())).thenReturn(Mono.just(newEvent))
+        `when`(repository.update(any())).thenReturn(Mono.just(newEvent))
 
         // Act
         val result = assertThrows(RegistryExceptionModel::class.java) {
@@ -402,7 +402,7 @@ class EventServiceTest {
             begin = newBegin,
             end = newFinish,
         )
-        verify(repository, never()).save(any())
+        verify(repository, never()).update(any())
     }
 
     @Test
@@ -410,14 +410,14 @@ class EventServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(event0))
-        `when`(repository.save(any())).thenReturn(Mono.just(event0))
+        `when`(repository.update(any())).thenReturn(Mono.just(event0))
 
         // Act
         service.disableEventById(currentUser(), uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(uuid, onlyVisible = true)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test
@@ -425,14 +425,14 @@ class EventServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(event0))
-        `when`(repository.save(any())).thenReturn(Mono.just(event0))
+        `when`(repository.update(any())).thenReturn(Mono.just(event0))
 
         // Act
         service.enableEventById(currentUser(), uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(uuid, onlyVisible = false)
-        verify(repository, times(1)).save(any())
+        verify(repository, times(1)).update(any())
     }
 
     @Test

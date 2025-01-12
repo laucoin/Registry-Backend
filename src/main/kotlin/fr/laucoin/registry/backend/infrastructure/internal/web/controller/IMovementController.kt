@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementParticipantsAndGroupsModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.MovementDto
 import io.swagger.v3.oas.annotations.Operation
@@ -53,6 +54,17 @@ interface IMovementController {
     @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_MOVEMENT_R')")
     @GetMapping("/{id}")
     fun findMovementById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<MovementModel>
+
+    @Operation(
+        summary = "Search Participants and/or Groups",
+        description = "Search Participants and/or Groups to add in a Movement"
+    )
+    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @GetMapping("/search/participants-and-groups")
+    fun searchParticipantsAndGroups(
+        @PathVariable eventId: UUID,
+        @RequestParam searched: String?
+    ): Mono<MovementParticipantsAndGroupsModel>
 
     @Operation(
         summary = "Create Movement",

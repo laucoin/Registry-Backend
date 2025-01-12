@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 import java.util.Objects.isNull
 
 object DateExt {
-    fun ZonedDateTime?.inRange(start: ZonedDateTime?, end: ZonedDateTime?): Boolean {
+    private fun ZonedDateTime?.inRange(start: ZonedDateTime?, end: ZonedDateTime?): Boolean {
         return isNull(this) ||
                (
                        (isNull(start) || ! this !!.isBefore(start))

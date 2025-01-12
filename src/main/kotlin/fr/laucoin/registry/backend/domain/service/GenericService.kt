@@ -12,15 +12,13 @@ import org.springframework.data.domain.Sort.Direction.DESC
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-open class GenericService<T: GenericModel>(
-    private val comparator: Comparator<T>? = null,
-): LoggerService() {
+open class GenericService: LoggerService() {
     @Value("\${registry.feature.search.threshold}")
     private val searchThreshold: Double? = null
 
     private val textSearcher: JaroWinklerSimilarity = JaroWinklerSimilarity()
 
-    fun Flux<T>.searchAndSort(order: Direction, searched: String?): Flux<T> {
+    fun <T: GenericModel> Flux<T>.searchAndSort(order: Direction, searched: String?, comparator: Comparator<T>? = null): Flux<T> {
         return if (searched.isNullOrBlank() && Objects.nonNull(comparator)) {
             this.sort(comparator !!.let { if (order == DESC) it.reversed() else it })
         } else {
@@ -46,7 +44,7 @@ open class GenericService<T: GenericModel>(
         return normalized.replace("[^\\p{ASCII}]".toRegex(), "")
     }
 
-    fun Mono<T>.updateVisibility(visibility: Boolean): Mono<T> {
+    fun <T: GenericModel> Mono<T>.updateVisibility(visibility: Boolean): Mono<T> {
         return this.map { it.apply { visible = visibility } }
     }
 }

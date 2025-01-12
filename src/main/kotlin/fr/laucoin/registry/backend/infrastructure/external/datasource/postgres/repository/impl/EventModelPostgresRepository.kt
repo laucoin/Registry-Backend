@@ -28,7 +28,15 @@ class EventModelPostgresRepository(
         return repository.findById(id, onlyVisible).map(mapper::toModel)
     }
 
-    override fun save(element: EventModel): Mono<EventModel> {
+    override fun create(element: EventModel): Mono<EventModel> {
+        return save(element)
+    }
+
+    override fun update(element: EventModel): Mono<EventModel> {
+        return save(element)
+    }
+
+    private fun save(element: EventModel): Mono<EventModel> {
         return repository.save(mapper.toEntity(element)).map(mapper::toModel)
     }
 

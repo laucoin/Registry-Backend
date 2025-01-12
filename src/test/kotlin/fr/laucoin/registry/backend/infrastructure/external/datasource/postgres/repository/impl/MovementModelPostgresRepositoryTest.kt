@@ -7,7 +7,9 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.MovementEntityMapper
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementEntityRepository
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import java.time.ZonedDateTime
@@ -25,15 +27,19 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class MovementModelPostgresRepositoryTest {
-    private val repository: IMovementEntityRepository = mock()
     private val gson: Gson = GsonConfig().gson()
+    private val repository: IMovementEntityRepository = mock()
+    private val contentRepository: IMovementContentEntityRepository = mock()
+    private val transactionalOperator: TransactionalOperator = mock()
     private val mapper: MovementEntityMapper = spy(MovementEntityMapper(gson))
+    private val contentMapper: MovementContentEntityMapper = spy()
     private val modelRepository: MovementModelPostgresRepository =
-        MovementModelPostgresRepository(repository, mapper)
+        MovementModelPostgresRepository(repository, contentRepository, transactionalOperator, mapper, contentMapper)
 
     companion object {
         @JvmStatic
@@ -89,14 +95,14 @@ class MovementModelPostgresRepositoryTest {
         val movement = MovementModel()
         val movementEntity = MovementEntity()
         `when`(repository.save(any())).thenReturn(Mono.just(movementEntity))
+        `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(movement))
 
         // Act
-        modelRepository.save(movement).block()
+        modelRepository.create(movement).block()
 
         // Assert
         verify(repository, times(1)).save(any())
         verify(mapper, times(1)).toEntity(movement)
-        verify(mapper, times(1)).toModel(movementEntity)
     }
 
     @Test

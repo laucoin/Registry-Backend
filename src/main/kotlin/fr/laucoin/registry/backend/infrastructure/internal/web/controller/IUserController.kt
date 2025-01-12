@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.UserDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import java.util.UUID
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Users management", description = "API for Users-related operations")
@@ -41,13 +39,6 @@ interface IUserController {
     @PreAuthorize("hasAuthority('REGISTRY_USER_R')")
     @GetMapping("/{id}")
     fun findUserById(@PathVariable id: UUID): Mono<UserModel>
-
-    @Operation(
-        summary = "Search User",
-        description = "Search non blocked User by email, first or last name"
-    )
-    @GetMapping("/search")
-    fun searchUsers(@RequestParam(required = false) searched: String?): Flux<UserDto>
 
     @Operation(
         summary = "Get assignable Roles",
