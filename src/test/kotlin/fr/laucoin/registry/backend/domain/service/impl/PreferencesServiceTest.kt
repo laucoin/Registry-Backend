@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIV
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
@@ -107,7 +107,7 @@ class PreferencesServiceTest {
         `when`(eventProfileService.findUserEventProfileById(any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId).block()
         }
 

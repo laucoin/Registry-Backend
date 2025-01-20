@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMP
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -173,7 +173,7 @@ class UserService(
             .handle { it, handle ->
                 if (it.isEmpty()) {
                     log.warn("The user {} is the last administrator of the application", userToUpdate.id)
-                    handle.error(RegistryExceptionModel(FORBIDDEN, error))
+                    handle.error(RegistryException(FORBIDDEN, error))
                 } else handle.next(userToUpdate)
             }
     }
@@ -188,7 +188,7 @@ class UserService(
         val eligibleRoles = roleService.getAssignableUserRoles(currentUser)
         if (Objects.nonNull(role) && ! eligibleRoles.contains(role)) {
             log.warn("The role {} is not assignable by the user {}", role, currentUser.id)
-            handle.error(RegistryExceptionModel(FORBIDDEN, error))
+            handle.error(RegistryException(FORBIDDEN, error))
         } else handle.next(it)
     }
 }

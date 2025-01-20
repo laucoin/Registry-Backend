@@ -9,6 +9,13 @@ server:
   port: ${registry.server.port}
 
 registry:
+  information:
+    name: "Registry"
+    description: "This application allows virtual registry management. This is a backend which one is called by the frontend."
+    support:
+      name: Luc AUCOIN
+      email: luc.aucoin1998@gmail.com
+      url: https://laucoin.fr
   feature:
     profile:
       searched:
@@ -27,8 +34,18 @@ registry:
     search:
       threshold: 0.5
   security:
+    default-role: "USER"
     oauth2:
+      base-url: ${external.keycloak.base-url}
+      realm: ${external.keycloak.realm}
+      client-id: ${external.keycloak.swagger.client-id}
+      client-secret: ${external.keycloak.swagger.client-secret}
       url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
+      claims:
+        user-id: "sub"
+        email: "email"
+        first-name: "given_name"
+        last-name: "family_name"
   server:
     prefix: /api
 
@@ -41,11 +58,7 @@ spring:
     user: ${registry.datasource.username}
     password: ${registry.datasource.password}
     locations:
-      - classpath:db/migration/default
-      - classpath:db/migration/${registry.information.organization}
-  profiles:
-    group:
-      sgdf: sgdf
+      - classpath:db/migrations
   main:
     web-application-type: reactive
     banner-mode: off

@@ -5,10 +5,10 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
-import fr.laucoin.registry.backend.domain.model.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
@@ -244,7 +244,7 @@ class MovementServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(movement))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.updateMovementById(currentUser(), eventId, uuid, movement).block()
         }
 

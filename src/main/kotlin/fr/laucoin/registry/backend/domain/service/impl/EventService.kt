@@ -1,11 +1,12 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_DATE_CONFLICT_WITH_ELEMENTS
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_R
 import fr.laucoin.registry.backend.domain.extension.DateExt.notInRange
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -38,7 +39,7 @@ class EventService(
         endDateTime: ZonedDateTime?
     ): Flux<EventModel> {
         val userEventIds: List<UUID> = roleService.getEventIdFromCurrentUserProfiles(currentUser)
-        val eventReader: Boolean = roleService.getAuthoritiesByUserRole(currentUser.role).contains("REGISTRY_EVENT_R")
+        val eventReader: Boolean = roleService.getAuthoritiesByUserRole(currentUser.role).contains(REGISTRY_EVENT_R)
         return repository.findAll(onlyVisible, startDateTime, endDateTime)
             .filter { eventReader || userEventIds.contains(it.id) }
             .searchAndSort(order, searched, compareBy { it.name })
@@ -55,7 +56,7 @@ class EventService(
                 if (dateTime.notInRange(it.begin, it.end)) {
                     log.warn("Failed to editing, date {} is out of event range [{}, {}]", dateTime, it.begin, it.end)
                     handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             status = CONFLICT,
                             message = message,
                             args = mapOf(
@@ -81,7 +82,7 @@ class EventService(
                         it.end
                     )
                     handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             status = CONFLICT,
                             message = message,
                             args = mapOf(
@@ -132,7 +133,7 @@ class EventService(
                 .handle { valid, handle ->
                     if (! valid) {
                         log.warn("Failed, {} is out of event range [{}, {}]", it, it.begin, it.end)
-                        handle.error(RegistryExceptionModel(CONFLICT, EVENT_DATE_CONFLICT_WITH_ELEMENTS))
+                        handle.error(RegistryException(CONFLICT, EVENT_DATE_CONFLICT_WITH_ELEMENTS))
                     } else handle.next(it)
                 }
         } else Mono.just(it)

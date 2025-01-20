@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
@@ -94,7 +94,7 @@ class TokenConverterServiceTest {
         `when`(jwt.hasClaim(EMAIL_KEY)).thenReturn(hasEmail)
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.convert(jwt).block()
         }
 
@@ -135,7 +135,7 @@ class TokenConverterServiceTest {
         `when`(userService.findUserByOidcId(any(), any())).thenReturn(Mono.just(currentUser))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.convert(jwt).block()
         }
 

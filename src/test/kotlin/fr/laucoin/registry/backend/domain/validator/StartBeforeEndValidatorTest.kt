@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.domain.validator
 import fr.laucoin.registry.backend.domain.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import jakarta.validation.ConstraintValidatorContext
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -73,7 +73,7 @@ class StartBeforeEndValidatorTest {
         dateValidator.initialize(StartBeforeEnd(startField = startField, endField = endField, message = "TEST_MESSAGE"))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             dateValidator.isValid(data, context)
         }
 
@@ -96,7 +96,7 @@ class StartBeforeEndValidatorTest {
         )
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             dateValidator.isValid(data, context)
         }
 

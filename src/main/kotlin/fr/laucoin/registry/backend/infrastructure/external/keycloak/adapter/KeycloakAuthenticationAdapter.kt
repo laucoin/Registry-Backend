@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZ
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
 import fr.laucoin.registry.backend.infrastructure.external.keycloak.entity.KeycloakTokenEntity
@@ -78,8 +78,8 @@ class KeycloakAuthenticationAdapter(
             .retrieve()
             .onStatus(
                 { it.is4xxClientError },
-                { Mono.error(RegistryExceptionModel(UNAUTHORIZED, errorMessage)) })
-            .onStatus({ it.is5xxServerError }, { Mono.error(RegistryExceptionModel(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
+                { Mono.error(RegistryException(UNAUTHORIZED, errorMessage)) })
+            .onStatus({ it.is5xxServerError }, { Mono.error(RegistryException(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
             .bodyToMono(KeycloakTokenEntity::class.java)
             .map(mapper::toModel)
     }

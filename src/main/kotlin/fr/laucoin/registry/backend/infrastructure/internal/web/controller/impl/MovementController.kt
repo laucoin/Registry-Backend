@@ -1,15 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.currentUser
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementParticipantsAndGroupsModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageModel.Companion.paginate
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IMovementController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.MovementDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.MovementDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.MovementWriterDtoMapper
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -20,7 +22,8 @@ import reactor.core.publisher.Mono
 @RestController
 class MovementController(
     private val service: IMovementService,
-    private val mapper: MovementDtoMapper,
+    private val readerMapper: MovementReaderDtoMapper,
+    private val writerMapper: MovementWriterDtoMapper,
     @Value("\${registry.feature.movement.searched.max-participant-result}")
     private val maxParticipantResult: Int,
     @Value("\${registry.feature.movement.searched.max-group-result}")
@@ -36,13 +39,15 @@ class MovementController(
         type: MovementTypeEnum?,
         startDateTime: ZonedDateTime?,
         endDateTime: ZonedDateTime?
-    ): Mono<PageModel<MovementModel>> {
+    ): Mono<PageDto<MovementReaderDto>> {
         return service.findMovements(eventId, order, onlyVisible, searched, type, startDateTime, endDateTime)
+            .map(readerMapper::toDto)
             .paginate(offset, limit)
     }
 
-    override fun findMovementById(eventId: UUID, id: UUID): Mono<MovementModel> {
+    override fun findMovementById(eventId: UUID, id: UUID): Mono<MovementReaderDto> {
         return service.findMovementById(eventId, id, onlyVisible = false)
+            .map(readerMapper::toDto)
     }
 
     override fun searchParticipantsAndGroups(eventId: UUID, searched: String?): Mono<MovementParticipantsAndGroupsModel> {
@@ -55,20 +60,25 @@ class MovementController(
             }
     }
 
-    override fun createMovement(eventId: UUID, movement: MovementDto): Mono<MovementModel> {
-        return currentUser().flatMap { service.createMovement(it, mapper.toModel(movement, eventId)) }
+    override fun createMovement(currentUser: CurrentUserModel, eventId: UUID, movement: MovementWriterDto): Mono<MovementModel> {
+        return service.createMovement(currentUser, writerMapper.toModel(movement, eventId))
     }
 
-    override fun updateMovementById(eventId: UUID, id: UUID, movement: MovementDto): Mono<MovementModel> {
-        return currentUser().flatMap { service.updateMovementById(it, eventId, id, mapper.toModel(movement, eventId)) }
+    override fun updateMovementById(
+        currentUser: CurrentUserModel,
+        eventId: UUID,
+        id: UUID,
+        movement: MovementWriterDto
+    ): Mono<MovementModel> {
+        return service.updateMovementById(currentUser, eventId, id, writerMapper.toModel(movement, eventId))
     }
 
-    override fun disableMovementById(eventId: UUID, id: UUID): Mono<MovementModel> {
-        return currentUser().flatMap { service.disableMovementById(it, eventId, id) }
+    override fun disableMovementById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<MovementModel> {
+        return service.disableMovementById(currentUser, eventId, id)
     }
 
-    override fun enableMovementById(eventId: UUID, id: UUID): Mono<MovementModel> {
-        return currentUser().flatMap { service.enableMovementById(it, eventId, id) }
+    override fun enableMovementById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<MovementModel> {
+        return service.enableMovementById(currentUser, eventId, id)
     }
 
     override fun deleteMovementById(eventId: UUID, id: UUID): Mono<Void> {

@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMP
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
@@ -40,7 +40,7 @@ class TokenConverterService(
     override fun convert(jwt: Jwt): Mono<AbstractAuthenticationToken> {
         if (! jwt.hasClaim(userIdKey) || ! jwt.hasClaim(emailKey)) {
             log.error("The \"{}\" and \"{}\" keys are not found in the token", userIdKey, emailKey)
-            return Mono.error(RegistryExceptionModel(UNAUTHORIZED, AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN))
+            return Mono.error(RegistryException(UNAUTHORIZED, AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN))
         }
 
         val oidcId: UUID = jwt.getClaimAsUUID(userIdKey) !!
@@ -65,10 +65,10 @@ class TokenConverterService(
     private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { it, handle ->
         if (it.isNotVisible()) {
             log.warn("Signing in attempt blocked for user \"{}\" due to disabled account", it.id)
-            handle.error(RegistryExceptionModel(UNAUTHORIZED, AUTH_BLOCKED_ACCOUNT))
+            handle.error(RegistryException(UNAUTHORIZED, AUTH_BLOCKED_ACCOUNT))
         } else if (it.isPurged()) {
             log.warn("Signing in attempt blocked for impersonate user \"{}\"", it.id)
-            handle.error(RegistryExceptionModel(UNAUTHORIZED, AUTH_IMPERSONATED_ACCOUNT))
+            handle.error(RegistryException(UNAUTHORIZED, AUTH_IMPERSONATED_ACCOUNT))
         } else handle.next(it)
     }
 

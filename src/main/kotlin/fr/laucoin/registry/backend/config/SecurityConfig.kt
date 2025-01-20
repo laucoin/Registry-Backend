@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.config
 
-import fr.laucoin.registry.backend.domain.handler.ErrorHandler
+import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
@@ -25,7 +25,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 @EnableReactiveMethodSecurity
 class SecurityConfig(
     private val tokenConverter: TokenConverterService,
-    private val errorHandler: ErrorHandler,
+    private val authorizationErrorHandler: AuthorizationErrorHandler,
     @Value("\${external.frontend.base-url}")
     private val frontendUrl: String,
     @Value("\${registry.feature.documentation.enabled:false}")
@@ -66,8 +66,8 @@ class SecurityConfig(
     }
 
     private fun ServerHttpSecurity.handleException() = exceptionHandling {
-        it.accessDeniedHandler(errorHandler.accessDeniedHandler())
-        it.authenticationEntryPoint(errorHandler.unauthorizedHandler())
+        it.accessDeniedHandler(authorizationErrorHandler.accessDeniedHandler())
+        it.authenticationEntryPoint(authorizationErrorHandler.unauthorizedHandler())
     }
 
     @Bean

@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DEL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
@@ -276,7 +276,7 @@ class UserServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(user0))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.updateUserRoleById(currentUser, userToUpdate.id !!, roleToAssign).block()
         }
 

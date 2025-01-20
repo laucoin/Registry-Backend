@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.domain.extension
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -28,7 +28,7 @@ class ReactiveExtTest {
     fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>, id: UUID) {
         // Arrange
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             value.notFoundIfEmpty(id).block()
         }
 

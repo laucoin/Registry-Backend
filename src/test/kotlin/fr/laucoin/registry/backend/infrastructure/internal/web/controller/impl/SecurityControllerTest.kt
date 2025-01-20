@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RefreshAuthenticationInfoModel
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.CurrentUserDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.CurrentUserReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -33,14 +33,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
 
-class SecurityControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class SecurityControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var authenticationPort: IAuthenticationPort
 
     @MockitoSpyBean
-    private lateinit var mapper: CurrentUserDtoMapper
+    private lateinit var mapper: CurrentUserReaderDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/authentication"
@@ -56,10 +54,10 @@ class SecurityControllerTest(
         @JvmStatic
         fun `Should fetchToken return 400`(): Stream<Arguments> {
             return Stream.of(
-                Arguments.of("redirectUri", null, AUTHORIZATION_CODE_BLANK),
-                Arguments.of("redirectUri", "", AUTHORIZATION_CODE_BLANK),
-                Arguments.of(null, "code", REDIRECT_URI_BLANK),
-                Arguments.of("", "code", REDIRECT_URI_BLANK),
+                Arguments.of("redirectUri", null, AUTHORIZATION_CODE_BLANK, AUTHORIZATION_CODE_BLANK),
+                Arguments.of("redirectUri", "", AUTHORIZATION_CODE_BLANK, AUTHORIZATION_CODE_BLANK),
+                Arguments.of(null, "code", REDIRECT_URI_BLANK, REDIRECT_URI_BLANK),
+                Arguments.of("", "code", REDIRECT_URI_BLANK, REDIRECT_URI_BLANK),
             )
         }
 
@@ -99,7 +97,7 @@ class SecurityControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK)
+        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK, REDIRECT_URI_BLANK)
         verifyNoInteractions(authenticationPort)
     }
 
@@ -130,7 +128,7 @@ class SecurityControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK)
+        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK, REDIRECT_URI_BLANK)
         verifyNoInteractions(authenticationPort)
     }
 
@@ -170,6 +168,7 @@ class SecurityControllerTest(
     fun `Should fetchToken return 400`(
         redirectUri: String?,
         authorizationCode: String?,
+        expectedCode: String,
         expectedMessage: String,
     ) {
         // Arrange
@@ -183,7 +182,7 @@ class SecurityControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(authenticationPort)
     }
 
@@ -229,7 +228,7 @@ class SecurityControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, REFRESH_TOKEN_BLANK)
+        result.assertError(BAD_REQUEST, REFRESH_TOKEN_BLANK, REFRESH_TOKEN_BLANK)
         verifyNoInteractions(authenticationPort)
     }
 

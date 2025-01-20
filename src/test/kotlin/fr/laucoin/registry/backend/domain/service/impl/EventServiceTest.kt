@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_DATE_CONFLICT_WITH_ELEMENTS
 import fr.laucoin.registry.backend.domain.model.EventModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IEventModelRepository
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IRoleService
@@ -222,7 +222,7 @@ class EventServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.validateDateTime(eventId, now, message).block()
         }
 
@@ -273,7 +273,7 @@ class EventServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.validateDateTimes(eventId, newStart, newEnd, message).block()
         }
 
@@ -388,7 +388,7 @@ class EventServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(newEvent))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.updateEventById(currentUser, uuid, newEvent).block()
         }
 

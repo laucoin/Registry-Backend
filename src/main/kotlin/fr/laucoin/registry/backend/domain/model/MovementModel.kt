@@ -9,6 +9,12 @@ data class MovementModel(
     var type: MovementTypeEnum? = null,
     var content: List<MovementContentModel> = emptyList(),
 ): GenericEventModel() {
+    data class MovementContentModel(
+        var participant: ParticipantModel? = null,
+    ): GenericModel() {
+        override fun getSearchableValues(): List<String> = participant?.getSearchableValues() ?: emptyList()
+    }
+
     override fun getSearchableValues(): List<String> =
         event?.getSearchableValues().orEmpty() + content.flatMap { it.getSearchableValues() }
 

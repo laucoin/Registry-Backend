@@ -172,6 +172,8 @@ class HexagonalArchitectureTest {
         .and().areTopLevelClasses()
         .should()
         .haveSimpleNameEndingWith("Model")
+        .orShould()
+        .haveSimpleNameEndingWith("Exception")
         .check(classes)
 
     @ArchTest

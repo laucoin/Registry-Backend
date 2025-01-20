@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.EventProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.GenericModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -68,7 +68,7 @@ class UserEventProfileService(
             .handle { it, handle ->
                 if (it.isNotEmpty()) {
                     log.warn("The user {} is the last administrator of {} event(s)", userId, it.size)
-                    handle.error(RegistryExceptionModel(FORBIDDEN, error))
+                    handle.error(RegistryException(FORBIDDEN, error))
                 } else handle.next(result)
             }
     }

@@ -3,13 +3,17 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANT_NULL
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_C
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.service.IMovementService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.MovementContentDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.MovementDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.MovementDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto.MovementContentWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.MovementWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
@@ -51,14 +55,12 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class MovementControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class MovementControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IMovementService
 
     @MockitoSpyBean
-    private lateinit var mapper: MovementDtoMapper
+    private lateinit var mapper: MovementWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/movements"
@@ -80,31 +82,36 @@ class MovementControllerTest(
         @JvmStatic
         fun `Wrong MovementDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                MovementDto(dateTime = null, type = IN, content = listOf(MovementContentDto(participantId = UUID.randomUUID()))),
+                MovementWriterDto(
+                    dateTime = null,
+                    type = IN,
+                    content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
+                ),
                 MOVEMENT_DATETIME_NULL,
-                emptyMap<String, String>(),
+                MOVEMENT_DATETIME_NULL,
             ),
             Arguments.of(
-                MovementDto(dateTime = now(), type = IN, content = null),
+                MovementWriterDto(dateTime = now(), type = IN, content = null),
                 MOVEMENT_CONTENT_EMPTY,
-                emptyMap<String, String>(),
-            ),
-            Arguments.of(
-                MovementDto(dateTime = now(), type = IN, content = emptyList()),
                 MOVEMENT_CONTENT_EMPTY,
-                emptyMap<String, String>(),
             ),
             Arguments.of(
-                MovementDto(dateTime = now(), type = IN, content = listOf(MovementContentDto(participantId = null))),
+                MovementWriterDto(dateTime = now(), type = IN, content = emptyList()),
+                MOVEMENT_CONTENT_EMPTY,
+                MOVEMENT_CONTENT_EMPTY,
+            ),
+            Arguments.of(
+                MovementWriterDto(dateTime = now(), type = IN, content = listOf(MovementContentWriterDto(participantId = null))),
                 MOVEMENT_PARTICIPANT_NULL,
-                emptyMap<String, String>(),
+                MOVEMENT_PARTICIPANT_NULL,
             ),
         )
 
         @JvmStatic
         fun `Movement management routes`(): Stream<Arguments> {
             val uuid = UUID.randomUUID()
-            val movement = MovementDto(dateTime = now(), type = IN, content = listOf(MovementContentDto(participantId = uuid)))
+            val movement =
+                MovementWriterDto(dateTime = now(), type = IN, content = listOf(MovementContentWriterDto(participantId = uuid)))
             return Stream.of(
                 Arguments.of(GET, BASE_URL, listOf(eventId), null),
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
@@ -196,7 +203,7 @@ class MovementControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_MOVEMENT_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_R))
             .get()
             .uri(
                 uriBuilder(
@@ -216,7 +223,7 @@ class MovementControllerTest(
             .exchange()
 
         // Assert
-        val body = result.body<PageModel<*>>(OK)
+        val body = result.body<PageDto<*>>(OK)
 
         assertNotNull(body)
         body !!.assertPage(
@@ -245,7 +252,7 @@ class MovementControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_MOVEMENT_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_R))
             .get()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -260,12 +267,12 @@ class MovementControllerTest(
     fun `Should createMovement return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val movement = MovementDto(dateTime = now(), type = IN, content = listOf(MovementContentDto(participantId = uuid)))
+        val movement = MovementWriterDto(dateTime = now(), type = IN, content = listOf(MovementContentWriterDto(participantId = uuid)))
         `when`(service.createMovement(any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_MOVEMENT_C"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_C))
             .post()
             .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
             .bodyValue(movement)
@@ -280,9 +287,9 @@ class MovementControllerTest(
     @ParameterizedTest
     @MethodSource("Wrong MovementDto")
     fun `Should createMovement return 400`(
-        movement: MovementDto,
+        movement: MovementWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         // Act
@@ -294,7 +301,7 @@ class MovementControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(mapper)
         verifyNoInteractions(service)
     }
@@ -303,13 +310,13 @@ class MovementControllerTest(
     fun `Should updateEventProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val movement = MovementDto(dateTime = now(), type = IN, content = listOf(MovementContentDto(participantId = uuid)))
+        val movement = MovementWriterDto(dateTime = now(), type = IN, content = listOf(MovementContentWriterDto(participantId = uuid)))
 
         `when`(service.updateMovementById(any(), any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_MOVEMENT_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .bodyValue(movement)
@@ -324,9 +331,9 @@ class MovementControllerTest(
     @ParameterizedTest
     @MethodSource("Wrong MovementDto")
     fun `Should updateMovementById return 400`(
-        movement: MovementDto,
+        movement: MovementWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -340,7 +347,7 @@ class MovementControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(mapper)
         verifyNoInteractions(service)
     }
@@ -354,7 +361,7 @@ class MovementControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_MOVEMENT_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -374,7 +381,7 @@ class MovementControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_MOVEMENT_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -394,7 +401,7 @@ class MovementControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_MOVEMENT_D"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_D))
             .delete()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()

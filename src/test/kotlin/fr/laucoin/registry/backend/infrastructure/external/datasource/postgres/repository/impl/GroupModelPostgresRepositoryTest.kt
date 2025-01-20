@@ -46,6 +46,12 @@ class GroupModelPostgresRepositoryTest {
             Arguments.of(true, true, null, now()),
             Arguments.of(true, true, now(), now()),
         )
+
+        @JvmStatic
+        fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> = Stream.of(
+            Arguments.of(emptyList<UUID>(), 0),
+            Arguments.of(listOf(UUID.randomUUID()), 1),
+        )
     }
 
     @ParameterizedTest
@@ -68,6 +74,20 @@ class GroupModelPostgresRepositoryTest {
         verify(mapper, times(1)).toModel(group)
     }
 
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findAllByIds call repository findAllByIds`(ids: List<UUID>, expectedCall: Int) {
+        // Arrange
+        val onlyVisible = true
+        `when`(repository.findAllByIds(any(), any(), any())).thenReturn(Flux.empty())
+
+        // Act
+        modelRepository.findAllByIds(eventId, ids, onlyVisible).blockFirst()
+
+        // Assert
+        verify(repository, times(expectedCall)).findAllByIds(eventId, ids, onlyVisible)
+    }
+
     @Test
     fun `Should findById call repository findById`() {
         // Arrange
@@ -85,7 +105,7 @@ class GroupModelPostgresRepositoryTest {
     }
 
     @Test
-    fun `Should save call repository save`() {
+    fun `Should create call repository save`() {
         // Arrange
         val group = GroupModel()
         val groupEntity = GroupEntity()
@@ -94,6 +114,22 @@ class GroupModelPostgresRepositoryTest {
 
         // Act
         modelRepository.create(group).block()
+
+        // Assert
+        verify(repository, times(1)).save(any())
+        verify(mapper, times(1)).toEntity(group)
+    }
+
+    @Test
+    fun `Should update call repository save`() {
+        // Arrange
+        val group = GroupModel()
+        val groupEntity = GroupEntity()
+        `when`(repository.save(any())).thenReturn(Mono.just(groupEntity))
+        `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(group))
+
+        // Act
+        modelRepository.update(group).block()
 
         // Assert
         verify(repository, times(1)).save(any())

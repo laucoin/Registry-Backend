@@ -199,7 +199,7 @@ class EventProfileModelPostgresRepositoryTest {
     }
 
     @Test
-    fun `Should save call repository save`() {
+    fun `Should create call repository save`() {
         // Arrange
         val profile = EventProfileModel()
         val profileEntity = EventProfileEntity()

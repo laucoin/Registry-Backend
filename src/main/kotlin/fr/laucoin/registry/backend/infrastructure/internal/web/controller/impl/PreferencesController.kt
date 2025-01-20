@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.currentUser
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IPreferencesController
@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono
 class PreferencesController(
     private val service: IPreferencesService,
 ): IPreferencesController {
-    override fun updateSelectedEventProfile(profileId: UUID): Mono<PreferencesModel> {
-        return currentUser().flatMap { service.updateUserPreferenceSelectedEventProfileById(it, profileId) }
+    override fun updateSelectedEventProfile(currentUser: CurrentUserModel, profileId: UUID): Mono<PreferencesModel> {
+        return service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId)
     }
 }

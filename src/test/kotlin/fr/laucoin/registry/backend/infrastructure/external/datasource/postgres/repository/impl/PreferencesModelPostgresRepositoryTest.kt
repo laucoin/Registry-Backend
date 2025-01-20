@@ -37,7 +37,7 @@ class PreferencesModelPostgresRepositoryTest {
     }
 
     @Test
-    fun `Should save call repository save`() {
+    fun `Should create call repository save`() {
         // Arrange
         val preferences = PreferencesModel()
         val preferencesEntity = PreferencesEntity()

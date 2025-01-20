@@ -1,12 +1,20 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_C
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_U
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROFILE_C
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.CreatedEventProfilesDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.EventProfileDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.EventProfilesDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.UserDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CreatedEventProfilesReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfileWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfilesWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -17,6 +25,7 @@ import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -35,7 +44,7 @@ interface IEventProfileController {
         summary = "Find Event's Profiles",
         description = "Find or get paginated Event's Profiles"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_R')")
     @GetMapping
     fun findEventProfiles(
         @PathVariable eventId: UUID,
@@ -49,84 +58,104 @@ interface IEventProfileController {
         @DateTimeFormat(iso = DATE_TIME) startAccess: ZonedDateTime?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) endAccess: ZonedDateTime?,
-    ): Mono<PageModel<EventProfileModel>>
+    ): Mono<PageDto<EventProfileReaderDto>>
 
     @Operation(
         summary = "Find Event's Profile",
         description = "Find Event's Profile by ID"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_R')")
     @GetMapping("/{id}")
-    fun findEventProfileById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<EventProfileModel>
+    fun findEventProfileById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<EventProfileReaderDto>
 
     @Operation(
         summary = "Search Users",
         description = "Search Users to invite to an Event"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_METADATA_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_METADATA_R')")
     @GetMapping("/search/users")
-    fun searchUsers(@PathVariable eventId: UUID, @RequestParam searched: String?): Flux<UserDto>
+    fun searchUsers(@PathVariable eventId: UUID, @RequestParam searched: String?): Flux<PartialUserReaderDto>
 
     @Operation(
         summary = "Get assignable Roles",
         description = "Get all the roles you are allowed to assign"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_METADATA_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_METADATA_R')")
     @GetMapping("/roles")
-    fun getAssignableEventProfileRoles(@PathVariable eventId: UUID): Mono<List<String>>
+    fun getAssignableEventProfileRoles(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+    ): Mono<List<String>>
 
     @Operation(
         summary = "Create Event's Profiles",
         description = "Create Event's Profiles (multiple Users)"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_C')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_C')")
     @PostMapping
     fun createEventProfiles(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
         @PathVariable eventId: UUID,
-        @RequestBody @Valid profiles: EventProfilesDto,
-    ): Mono<ResponseEntity<CreatedEventProfilesDto>>
+        @RequestBody @Valid profiles: EventProfilesWriterDto,
+    ): Mono<ResponseEntity<CreatedEventProfilesReaderDto>>
 
     @Operation(
         summary = "Create support Event's Profile",
         description = "Support profile is a temporary Profile for an User to access an Event to help the administration"
     )
-    @PreAuthorize("hasAuthority('REGISTRY_PROFILE_C')")
+    @PreAuthorize("hasAuthority('$REGISTRY_PROFILE_C')")
     @PostMapping("/support")
-    fun createSupportEventProfile(@PathVariable eventId: UUID): Mono<EventProfileModel>
+    fun createSupportEventProfile(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+    ): Mono<EventProfileModel>
 
     @Operation(
         summary = "Update Event's Profile",
         description = "Update Event's Profile"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_U')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_U')")
     @PatchMapping("/{id}")
     fun updateEventProfile(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
-        @RequestBody @Valid profile: EventProfileDto,
+        @RequestBody @Valid profile: EventProfileWriterDto,
     ): Mono<EventProfileModel>
 
     @Operation(
         summary = "Block Event's Profile",
         description = "Prevent a User from using it"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_U')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_U')")
     @PatchMapping("/{id}/block")
-    fun blockEventProfileById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<EventProfileModel>
+    fun blockEventProfileById(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+    ): Mono<EventProfileModel>
 
     @Operation(
         summary = "Unblock Event's Profile",
         description = "Re-authorize a User to use it"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_U')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_U')")
     @PatchMapping("/{id}/unblock")
-    fun unblockEventProfileById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<EventProfileModel>
+    fun unblockEventProfileById(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+    ): Mono<EventProfileModel>
 
     @Operation(
         summary = "Delete Event's Profile",
         description = "Delete Event's Profile"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PROFILE_D')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PROFILE_D')")
     @DeleteMapping("/{id}")
-    fun deleteEventProfileById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<Void>
+    fun deleteEventProfileById(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID
+    ): Mono<Void>
 }

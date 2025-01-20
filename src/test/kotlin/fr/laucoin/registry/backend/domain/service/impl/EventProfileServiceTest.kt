@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
@@ -327,7 +327,7 @@ class EventProfileServiceTest {
         `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles)
                 .collectList()
                 .block()
@@ -462,7 +462,7 @@ class EventProfileServiceTest {
         `when`(roleService.getAssignableEventRoles(any())).thenReturn(assignableRoles)
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.updateEventProfileById(currentUser, eventId, profileId, nextProfile).block()
         }
 
