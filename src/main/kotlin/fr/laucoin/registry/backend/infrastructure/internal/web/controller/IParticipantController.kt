@@ -1,10 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
-import fr.laucoin.registry.backend.domain.model.GroupModel
-import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_C
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ParticipantDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.UserDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -14,6 +21,7 @@ import org.springframework.data.domain.Sort.Direction
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -32,7 +40,7 @@ interface IParticipantController {
         summary = "Find Participants",
         description = "Find or get paginated Participants"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_R')")
     @GetMapping
     fun findParticipants(
         @PathVariable eventId: UUID,
@@ -46,74 +54,93 @@ interface IParticipantController {
         @DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
-    ): Mono<PageModel<ParticipantModel>>
+    ): Mono<PageDto<ParticipantReaderDto>>
 
     @Operation(
         summary = "Find Participant",
         description = "Find Participant by ID"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_R')")
     @GetMapping("/{id}")
-    fun findParticipantById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<ParticipantModel>
+    fun findParticipantById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Search Users",
         description = "Search Users to link to a Participant"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
     @GetMapping("/search/users")
-    fun searchUsers(@PathVariable eventId: UUID, @RequestParam searched: String?): Flux<UserDto>
+    fun searchUsers(@PathVariable eventId: UUID, @RequestParam searched: String?): Flux<PartialUserReaderDto>
 
     @Operation(
         summary = "Search Groups",
         description = "Search Groups to add Participant in it"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
     @GetMapping("/search/groups")
     fun searchGroups(
         @PathVariable eventId: UUID,
         @RequestParam searched: String?
-    ): Flux<GroupModel>
+    ): Flux<GroupReaderDto>
 
     @Operation(
         summary = "Create Participant",
         description = "Create Participant linked to the Event"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_C')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_C')")
     @PostMapping
-    fun createParticipant(@PathVariable eventId: UUID, @RequestBody @Valid participant: ParticipantDto): Mono<ParticipantModel>
+    fun createParticipant(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @RequestBody @Valid participant: ParticipantWriterDto,
+    ): Mono<ParticipantModel>
 
     @Operation(
         summary = "Update Participant",
         description = "Update Participant"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_U')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
     @PatchMapping("/{id}")
     fun updateParticipantById(
-        @PathVariable eventId: UUID, @PathVariable id: UUID, @RequestBody @Valid participant: ParticipantDto,
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+        @RequestBody @Valid participant: ParticipantWriterDto,
     ): Mono<ParticipantModel>
 
     @Operation(
         summary = "Disable Participant",
         description = "Disable Participant, it will not visible anymore in the Event"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_U')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
     @PatchMapping("/{id}/disable")
-    fun disableParticipantById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<ParticipantModel>
+    fun disableParticipantById(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+    ): Mono<ParticipantModel>
 
     @Operation(
         summary = "Enable Participant",
         description = "Enable Participant, obviously it will be visible again in the Event"
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_U')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
     @PatchMapping("/{id}/enable")
-    fun enableParticipantById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<ParticipantModel>
+    fun enableParticipantById(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+    ): Mono<ParticipantModel>
 
     @Operation(
         summary = "Delete Participant",
         description = "Delete all Participant data."
     )
-    @PreAuthorize("hasPermission(#eventId, 'REGISTRY_EVENT_PARTICIPANT_D')")
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_D')")
     @DeleteMapping("/{id}")
-    fun deleteParticipantById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<Void>
+    fun deleteParticipantById(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+    ): Mono<Void>
 }

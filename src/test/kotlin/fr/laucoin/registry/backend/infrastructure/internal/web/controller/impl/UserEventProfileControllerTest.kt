@@ -6,8 +6,8 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
@@ -44,9 +44,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class UserEventProfileControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class UserEventProfileControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IUserEventProfileService
 
@@ -171,7 +169,7 @@ class UserEventProfileControllerTest(
             .exchange()
 
         // Assert
-        val body = result.body<PageModel<*>>(OK)
+        val body = result.body<PageDto<*>>(OK)
 
         assertNotNull(body)
         body !!.assertPage(
@@ -242,7 +240,7 @@ class UserEventProfileControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED, mapOf("constraint_0" to INVITED.name))
+        result.assertError(BAD_REQUEST, EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED, EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED)
         verifyNoInteractions(service)
     }
 

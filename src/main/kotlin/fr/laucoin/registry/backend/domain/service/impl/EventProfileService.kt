@@ -11,7 +11,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -168,13 +168,13 @@ class EventProfileService(
                         "User \"{}\" cannot update event profile with a role higher up the breast.",
                         currentUser.id,
                     )
-                    handle.error(RegistryExceptionModel(FORBIDDEN, EVENT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER))
+                    handle.error(RegistryException(FORBIDDEN, EVENT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER))
                 } else if (! eligibleRoles.contains(profile.role)) {
                     log.warn(
                         "User \"{}\" tried to update event profile with a role higher up the breast.",
                         currentUser.id,
                     )
-                    handle.error(RegistryExceptionModel(FORBIDDEN, EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER))
+                    handle.error(RegistryException(FORBIDDEN, EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER))
                 } else handle.next(profileToUpdate)
             }
     }
@@ -206,7 +206,7 @@ class EventProfileService(
                     profiles.size == userIds.size -> {
                         log.warn("Another profile already exist for the user(s) \"{}\" on the event \"{}\".", userIds, eventId)
                         handle.error(
-                            RegistryExceptionModel(
+                            RegistryException(
                                 CONFLICT,
                                 EVENT_PROFILE_ALREADY_EXIST_ON_RANGE
                             )

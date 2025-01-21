@@ -1,15 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.currentUser
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageModel.Companion.paginate
-import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IGroupController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.AddedGroupMembersDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.GroupDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.GroupDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.AddedGroupMembersReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.GroupWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.GroupWriterDtoMapper
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -24,7 +27,9 @@ import reactor.core.publisher.Mono
 @RestController
 class GroupController(
     private val service: IGroupService,
-    private val mapper: GroupDtoMapper,
+    private val readerMapper: GroupReaderDtoMapper,
+    private val participantReaderMapper: ParticipantReaderDtoMapper,
+    private val writerMapper: GroupWriterDtoMapper,
     @Value("\${registry.feature.group.searched.max-participant-result}")
     private val maxParticipantResult: Long,
 ): IGroupController {
@@ -38,8 +43,9 @@ class GroupController(
         searched: String?,
         startDateTime: ZonedDateTime?,
         endDateTime: ZonedDateTime?
-    ): Mono<PageModel<GroupModel>> {
+    ): Mono<PageDto<GroupReaderDto>> {
         return service.findGroups(eventId, order, onlyVisible, onlyPresent, searched, startDateTime, endDateTime)
+            .map(readerMapper::toDto)
             .paginate(offset, limit)
     }
 
@@ -54,31 +60,44 @@ class GroupController(
         searched: String?,
         startDateTime: ZonedDateTime?,
         endDateTime: ZonedDateTime?
-    ): Mono<PageModel<ParticipantModel>> {
+    ): Mono<PageDto<ParticipantReaderDto>> {
         return service.findGroupMembersByGroupId(eventId, id, order, onlyVisible, onlyPresent, searched, startDateTime, endDateTime)
+            .map(participantReaderMapper::toDto)
             .paginate(offset, limit)
     }
 
-    override fun findGroupById(eventId: UUID, id: UUID): Mono<GroupModel> {
+    override fun findGroupById(eventId: UUID, id: UUID): Mono<GroupReaderDto> {
         return service.findGroupById(eventId, id, onlyVisible = false)
+            .map(readerMapper::toDto)
     }
 
-    override fun searchParticipants(eventId: UUID, searched: String?): Flux<ParticipantModel> {
+    override fun searchParticipants(eventId: UUID, searched: String?): Flux<ParticipantReaderDto> {
         return service.searchParticipants(eventId, searched)
             .take(maxParticipantResult)
+            .map(participantReaderMapper::toDto)
     }
 
-    override fun createGroup(eventId: UUID, group: GroupDto): Mono<GroupModel> {
-        return currentUser().flatMap { service.createGroup(it, mapper.toModel(group, eventId)) }
+    override fun createGroup(currentUser: CurrentUserModel, eventId: UUID, group: GroupWriterDto): Mono<GroupModel> {
+        return service.createGroup(currentUser, writerMapper.toModel(group, eventId))
     }
 
-    override fun updateGroupById(eventId: UUID, id: UUID, group: GroupDto): Mono<GroupModel> {
-        return currentUser().flatMap { service.updateGroupById(it, eventId, id, mapper.toModel(group, eventId)) }
+    override fun updateGroupById(
+        currentUser: CurrentUserModel,
+        eventId: UUID,
+        id: UUID,
+        group: GroupWriterDto,
+    ): Mono<GroupModel> {
+        return service.updateGroupById(currentUser, eventId, id, writerMapper.toModel(group, eventId))
     }
 
-    override fun addMembersToGroupById(eventId: UUID, id: UUID, memberIds: List<UUID>): Mono<ResponseEntity<AddedGroupMembersDto>> {
-        return currentUser().flatMap { service.addMembersToGroupById(it, eventId, id, memberIds) }
-            .map { AddedGroupMembersDto(members = it) }
+    override fun addMembersToGroupById(
+        currentUser: CurrentUserModel,
+        eventId: UUID,
+        id: UUID,
+        memberIds: List<UUID>,
+    ): Mono<ResponseEntity<AddedGroupMembersReaderDto>> {
+        return service.addMembersToGroupById(currentUser, eventId, id, memberIds)
+            .map { AddedGroupMembersReaderDto(members = it) }
             .map { body ->
                 if (body.members.size == memberIds.size) {
                     ResponseEntity.status(OK).body(body)
@@ -89,16 +108,16 @@ class GroupController(
             }
     }
 
-    override fun removeMemberFromGroupById(eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel> {
-        return currentUser().flatMap { service.removeMemberFromGroupById(it, eventId, id, memberId) }
+    override fun removeMemberFromGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel> {
+        return service.removeMemberFromGroupById(currentUser, eventId, id, memberId)
     }
 
-    override fun disableGroupById(eventId: UUID, id: UUID): Mono<GroupModel> {
-        return currentUser().flatMap { service.disableGroupById(it, eventId, id) }
+    override fun disableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
+        return service.disableGroupById(currentUser, eventId, id)
     }
 
-    override fun enableGroupById(eventId: UUID, id: UUID): Mono<GroupModel> {
-        return currentUser().flatMap { service.enableGroupById(it, eventId, id) }
+    override fun enableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
+        return service.enableGroupById(currentUser, eventId, id)
     }
 
     override fun deleteGroupById(eventId: UUID, id: UUID): Mono<Void> {

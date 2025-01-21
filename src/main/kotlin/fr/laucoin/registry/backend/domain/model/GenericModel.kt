@@ -14,7 +14,7 @@ abstract class GenericModel(
     var visible: Boolean = true,
 
     var creation: HistoryModel = HistoryModel(),
-    var lastEdition: HistoryModel = HistoryModel()
+    var lastEdition: HistoryModel = HistoryModel(),
 ) {
     @JsonIgnore
     abstract fun getSearchableValues(): List<String>

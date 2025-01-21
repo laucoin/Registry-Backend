@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_P
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.IEventService
@@ -300,7 +300,7 @@ class GroupServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.updateGroupById(currentUser(), eventId, uuid, group).block()
         }
 
@@ -347,7 +347,7 @@ class GroupServiceTest {
         }))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.addMembersToGroupById(currentUser(), eventId, uuid, memberIds).block()
         }
 
@@ -383,7 +383,7 @@ class GroupServiceTest {
         }))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.removeMemberFromGroupById(currentUser(), eventId, uuid, uuid).block()
         }
 

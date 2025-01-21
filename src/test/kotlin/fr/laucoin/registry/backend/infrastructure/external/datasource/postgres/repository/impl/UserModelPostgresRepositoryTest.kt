@@ -107,7 +107,7 @@ class UserModelPostgresRepositoryTest {
     }
 
     @Test
-    fun `Should save call repository save`() {
+    fun `Should create call repository save`() {
         // Arrange
         val user = UserModel()
         val userEntity = UserEntity()

@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.model
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -16,17 +15,6 @@ data class ParticipantModel(
     var purged: Boolean? = null,
 ): GenericEventModel() {
     override fun getSearchableValues(): List<String> = listOfNotNull(firstName, lastName)
-
-    @get:JsonProperty
-    val major: Boolean
-        get() {
-            val now = LocalDate.now()
-            val minBirthday = now.minusYears(18)
-            return birthday?.let {
-                minBirthday.isAfter(it)
-                || minBirthday.isEqual(it)
-            } ?: false
-        }
 
     fun getNewGroups(participant: ParticipantModel): List<GroupModel> {
         val currentGroups = groups.mapNotNull { it.id }

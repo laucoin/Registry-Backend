@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_P
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
@@ -123,7 +123,7 @@ class GroupService(
             .handle { it, handle ->
                 if (it.second.isEmpty()) {
                     handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             CONFLICT,
                             GROUP_MEMBERS_ALREADY_ADDED,
                         )
@@ -147,7 +147,7 @@ class GroupService(
             .handle { it, handle ->
                 if (it.members.isEmpty()) {
                     handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             FORBIDDEN,
                             GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED,
                         )
@@ -169,14 +169,14 @@ class GroupService(
             .handle { it, handle ->
                 when {
                     it.size != newMemberIds.size -> handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             NOT_FOUND,
                             GROUP_MEMBERS_NOT_FOUND_IN_GROUP_EVENT,
                         )
                     )
 
                     it.any { m -> m.isNotVisible() || m.purged == true } -> handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             CONFLICT,
                             GROUP_MEMBERS_NOT_VISIBLE,
                         )

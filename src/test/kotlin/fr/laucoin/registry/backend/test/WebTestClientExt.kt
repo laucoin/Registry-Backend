@@ -2,13 +2,13 @@ package fr.laucoin.registry.backend.test
 
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ErrorDto
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import java.net.URI
 import java.util.Objects
 import java.util.UUID
 import java.util.function.Function
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -86,18 +86,13 @@ object WebTestClientExt {
     }
 
     fun ResponseSpec.assertError(
-        expectedStatus: HttpStatus, expectedMessage: String, expectedArgs: Map<String, String> = emptyMap()
+        expectedStatus: HttpStatus, expectedCode: String, expectedMessage: String
     ): ResponseSpec {
         val error = body<Map<*, *>>(expectedStatus)
-        assertEquals(expectedStatus.value(), error?.get("status"))
-        assertEquals(expectedStatus.name, error?.get("error"))
-        assertEquals(expectedMessage, error?.get("message"))
-        assertTrue(error?.get("args") is Map<*, *>)
-        val args = error?.get("args") as Map<*, *>
-        expectedArgs.forEach { (key, value) ->
-            assertTrue(args.containsKey(key))
-            assertEquals(value, args[key])
-        }
+        assertEquals(expectedStatus.value(), error?.get(ErrorDto::statusCode.name))
+        assertEquals(expectedStatus.name, error?.get(ErrorDto::statusName.name))
+        assertEquals(expectedCode, error?.get(ErrorDto::code.name))
+        assertEquals(expectedMessage, error?.get(ErrorDto::message.name))
         return this
     }
 }

@@ -6,8 +6,18 @@ external:
     client-id: client-test
     client-secret: secret-test
     realm: test
+    swagger:
+      client-id: client-swagger
+      client-secret: client-swagger-secret
 
 registry:
+  information:
+    name: "Registry Test"
+    description: "This is the Registry Test application instance."
+    support:
+      name: John DOE
+      email: john.doe@test.com
+      url: https://test.com
   feature:
     documentation:
       enabled: true
@@ -28,12 +38,12 @@ registry:
     search:
       threshold: 0.5
   security:
-    default-role: USER
+    default-role: "USER"
     oauth2:
-      base-url: https://test.oidc.com
-      client-id: client-test
-      client-secret: secret-test
-      realm: test
+      base-url: ${external.keycloak.base-url}
+      realm: ${external.keycloak.realm}
+      client-id: ${external.keycloak.swagger.client-id}
+      client-secret: ${external.keycloak.swagger.client-secret}
       url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
       claims:
         user-id: "sub"
@@ -41,23 +51,21 @@ registry:
         first-name: "given_name"
         last-name: "family_name"
   server:
-    logging-level: DEBUG
+    logging-level: INFO
     prefix: /api
 
 spring:
   application:
-    name: Registry Test
+    name: ${registry.information.name}
   flyway:
     schemas: ${registry.datasource.schemas}
     url: jdbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}
     user: ${registry.datasource.username}
     password: ${registry.datasource.password}
     locations:
-      - classpath:db/migration/default
-      - classpath:db/migration/test
+      - classpath:db/migrations
   main:
     web-application-type: reactive
-    lazy-initialization: true
     banner-mode: off
   r2dbc:
     url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
@@ -77,5 +85,5 @@ springdoc:
     path: /swagger-ui.html
     enabled: ${registry.feature.documentation.enabled:false}
     oauth:
-      client-id: client-id
-      client-secret: client-secret
+      client-id: ${registry.security.oauth2.client-id}
+      client-secret: ${registry.security.oauth2.client-secret}

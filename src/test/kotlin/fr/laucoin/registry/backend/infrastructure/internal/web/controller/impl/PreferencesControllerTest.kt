@@ -27,9 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
 
-class PreferencesControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class PreferencesControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IPreferencesService
 

@@ -4,12 +4,17 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_START_LATER_THAN_END
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_C
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_U
 import fr.laucoin.registry.backend.domain.model.GroupModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.service.IGroupService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.GroupDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.GroupDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.GroupWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.GroupWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
@@ -52,14 +57,12 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class GroupControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class GroupControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IGroupService
 
     @MockitoSpyBean
-    private lateinit var mapper: GroupDtoMapper
+    private lateinit var mapper: GroupWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/groups"
@@ -83,45 +86,45 @@ class GroupControllerTest(
         @JvmStatic
         fun `Wrong GroupDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                GroupDto(name = null, members = listOf(UUID.randomUUID())),
+                GroupWriterDto(name = null, members = listOf(UUID.randomUUID())),
                 GROUP_NAME_BLANK,
-                emptyMap<String, String>(),
+                GROUP_NAME_BLANK,
             ),
             Arguments.of(
-                GroupDto().apply {
+                GroupWriterDto().apply {
                     name =
                         "azertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazertyazerty"
                     members = listOf(UUID.randomUUID())
                 },
                 GROUP_NAME_TOO_LONG,
-                emptyMap<String, String>(),
+                GROUP_NAME_TOO_LONG,
             ),
             Arguments.of(
-                GroupDto(
+                GroupWriterDto(
                     name = "name",
                     begin = now().plusDays(1),
                     end = now(),
                     members = listOf(UUID.randomUUID())
                 ),
                 GROUP_START_LATER_THAN_END,
-                emptyMap<String, String>(),
+                GROUP_START_LATER_THAN_END,
             ),
             Arguments.of(
-                GroupDto().apply { name = "name"; members = null },
+                GroupWriterDto().apply { name = "name"; members = null },
                 GROUP_MEMBERS_EMPTY,
-                emptyMap<String, String>(),
+                GROUP_MEMBERS_EMPTY,
             ),
             Arguments.of(
-                GroupDto().apply { name = "name"; members = emptyList() },
+                GroupWriterDto().apply { name = "name"; members = emptyList() },
                 GROUP_MEMBERS_EMPTY,
-                emptyMap<String, String>(),
+                GROUP_MEMBERS_EMPTY,
             ),
         )
 
         @JvmStatic
         fun `Group management routes`(): Stream<Arguments> {
             val uuid = UUID.randomUUID()
-            val group = GroupDto(name = "name", members = listOf(UUID.randomUUID()))
+            val group = GroupWriterDto(name = "name", members = listOf(UUID.randomUUID()))
             return Stream.of(
                 Arguments.of(GET, BASE_URL, listOf(eventId), null),
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
@@ -215,7 +218,7 @@ class GroupControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
             .get()
             .uri(
                 uriBuilder(
@@ -236,7 +239,7 @@ class GroupControllerTest(
             .exchange()
 
         // Assert
-        val body = result.body<PageModel<*>>(OK)
+        val body = result.body<PageDto<*>>(OK)
 
         assertNotNull(body)
         body !!.assertPage(
@@ -265,7 +268,7 @@ class GroupControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
             .get()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -286,7 +289,7 @@ class GroupControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_METADATA_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_METADATA_R))
             .get()
             .uri(
                 uriBuilder("${BASE_URL}/search/participants", listOf(eventId), listOf(Pair("searched", searched)))
@@ -306,12 +309,12 @@ class GroupControllerTest(
     fun `Should createGroup return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val group = GroupDto(name = "name", members = listOf(uuid))
+        val group = GroupWriterDto(name = "name", members = listOf(uuid))
         `when`(service.createGroup(any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_C"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_C))
             .post()
             .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
             .bodyValue(group)
@@ -326,9 +329,9 @@ class GroupControllerTest(
     @ParameterizedTest
     @MethodSource("Wrong GroupDto")
     fun `Should createGroup return 400`(
-        group: GroupDto,
+        group: GroupWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         // Act
@@ -340,7 +343,7 @@ class GroupControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(mapper)
         verifyNoInteractions(service)
     }
@@ -349,13 +352,13 @@ class GroupControllerTest(
     fun `Should updateEventProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val group = GroupDto(name = "name", members = listOf(uuid))
+        val group = GroupWriterDto(name = "name", members = listOf(uuid))
 
         `when`(service.updateGroupById(any(), any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .bodyValue(group)
@@ -370,9 +373,9 @@ class GroupControllerTest(
     @ParameterizedTest
     @MethodSource("Wrong GroupDto")
     fun `Should updateGroupById return 400`(
-        group: GroupDto,
+        group: GroupWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -386,7 +389,7 @@ class GroupControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(mapper)
         verifyNoInteractions(service)
     }
@@ -400,7 +403,7 @@ class GroupControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -420,7 +423,7 @@ class GroupControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -440,7 +443,7 @@ class GroupControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_GROUP_D"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_D))
             .delete()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()

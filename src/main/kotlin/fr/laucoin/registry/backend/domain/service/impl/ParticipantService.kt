@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
@@ -109,7 +109,7 @@ class ParticipantService(
             .collectList()
             .handle { it, handle ->
                 if (it.isNotEmpty()) {
-                    val exception = RegistryExceptionModel(CONFLICT, PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER)
+                    val exception = RegistryException(CONFLICT, PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER)
                     log.error("Attempt to link an already link user to a participant", exception)
                     handle.error(exception)
                 } else handle.next(it)
@@ -165,14 +165,14 @@ class ParticipantService(
             .handle { it, handle ->
                 when {
                     it.size != newGroupIds.size -> handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             NOT_FOUND,
                             PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT,
                         )
                     )
 
                     it.any { m -> m.isNotVisible() } -> handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             CONFLICT,
                             PARTICIPANT_GROUPS_NOT_VISIBLE,
                         )

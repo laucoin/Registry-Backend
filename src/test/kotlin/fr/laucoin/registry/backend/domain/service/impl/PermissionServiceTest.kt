@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_IMPLEMENTED_YET
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import java.util.UUID
 import java.util.stream.Stream
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
+import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
 
 class PermissionServiceTest {
     private val service: PermissionService = PermissionService()
@@ -62,12 +62,12 @@ class PermissionServiceTest {
     fun `Should hasPermission throw not implemented exception`() {
         // Arrange
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.hasPermission(null, null, null, null)
         }
 
         // Assert
-        assertEquals(INTERNAL_SERVER_ERROR, result.status)
+        assertEquals(NOT_IMPLEMENTED, result.status)
         assertEquals(NOT_IMPLEMENTED_YET, result.message)
     }
 }

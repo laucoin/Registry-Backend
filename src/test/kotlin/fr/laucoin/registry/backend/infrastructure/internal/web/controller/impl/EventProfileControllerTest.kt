@@ -3,19 +3,25 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ROLE_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_USERS_EMPTY
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_C
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PROFILE_U
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROFILE_C
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IEventProfileService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.CreatedEventProfilesDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.EventProfileDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.EventProfilesDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.EventProfileDtoMapper
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.EventProfilesDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CreatedEventProfilesReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfileWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfilesWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfileWriterDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfilesWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
@@ -60,17 +66,15 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class EventProfileControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class EventProfileControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IEventProfileService
 
     @MockitoSpyBean
-    private lateinit var profilesMapper: EventProfilesDtoMapper
+    private lateinit var profilesMapper: EventProfilesWriterDtoMapper
 
     @MockitoSpyBean
-    private lateinit var profileMapper: EventProfileDtoMapper
+    private lateinit var profileMapper: EventProfileWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/profiles"
@@ -97,70 +101,70 @@ class EventProfileControllerTest(
         @JvmStatic
         fun `Should createEventProfiles return 400`(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                EventProfilesDto(userIds = null, role = "ROLE"),
+                EventProfilesWriterDto(userIds = null, role = "ROLE"),
                 EVENT_PROFILE_USERS_EMPTY,
-                emptyMap<String, String>(),
+                EVENT_PROFILE_USERS_EMPTY,
             ),
             Arguments.of(
-                EventProfilesDto(userIds = emptyList(), role = "ROLE"),
+                EventProfilesWriterDto(userIds = emptyList(), role = "ROLE"),
                 EVENT_PROFILE_USERS_EMPTY,
-                emptyMap<String, String>(),
+                EVENT_PROFILE_USERS_EMPTY,
             ),
             Arguments.of(
-                EventProfilesDto(role = "ROLE"),
+                EventProfilesWriterDto(role = "ROLE"),
                 EVENT_PROFILE_USERS_EMPTY,
-                emptyMap<String, String>(),
+                EVENT_PROFILE_USERS_EMPTY,
             ),
             Arguments.of(
-                EventProfilesDto(userIds = listOf(UUID.randomUUID()), role = ""),
+                EventProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = ""),
                 EVENT_PROFILE_ROLE_BLANK,
-                emptyMap<String, String>(),
-            ),
-            Arguments.of(
-                EventProfilesDto(userIds = listOf(UUID.randomUUID())),
                 EVENT_PROFILE_ROLE_BLANK,
-                emptyMap<String, String>(),
             ),
             Arguments.of(
-                EventProfilesDto(
+                EventProfilesWriterDto(userIds = listOf(UUID.randomUUID())),
+                EVENT_PROFILE_ROLE_BLANK,
+                EVENT_PROFILE_ROLE_BLANK,
+            ),
+            Arguments.of(
+                EventProfilesWriterDto(
                     userIds = listOf(UUID.randomUUID()),
                     role = "ROLE",
                     startAccess = now().plusDays(1),
                     endAccess = now()
                 ),
                 EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
-                emptyMap<String, String>(),
+                EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
             ),
         )
 
         @JvmStatic
         fun `Should updateEventProfile return 400`(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                EventProfileDto(role = ""),
+                EventProfileWriterDto(role = ""),
                 EVENT_PROFILE_ROLE_BLANK,
-                emptyMap<String, String>(),
+                EVENT_PROFILE_ROLE_BLANK,
             ),
             Arguments.of(
-                EventProfileDto(),
+                EventProfileWriterDto(),
                 EVENT_PROFILE_ROLE_BLANK,
-                emptyMap<String, String>(),
+                EVENT_PROFILE_ROLE_BLANK,
             ),
             Arguments.of(
-                EventProfileDto(
+                EventProfileWriterDto(
                     role = "ROLE",
                     startAccess = now().plusDays(1),
                     endAccess = now()
                 ),
                 EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
-                emptyMap<String, String>(),
+                EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
             ),
         )
 
         @JvmStatic
         fun `Event Profile management routes`(): Stream<Arguments> {
             val uuid = UUID.randomUUID()
-            val profiles = EventProfilesDto(userIds = listOf(uuid), role = "ROLE")
-            val profile = EventProfileDto(role = "ROLE")
+            val profiles = EventProfilesWriterDto(userIds = listOf(uuid), role = "ROLE")
+            val profile = EventProfileWriterDto(role = "ROLE")
             return Stream.of(
                 Arguments.of(GET, BASE_URL, listOf(eventId), null),
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
@@ -257,7 +261,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_R))
             .get()
             .uri(
                 uriBuilder(
@@ -279,7 +283,7 @@ class EventProfileControllerTest(
             .exchange()
 
         // Assert
-        val body = result.body<PageModel<*>>(OK)
+        val body = result.body<PageDto<*>>(OK)
 
         assertNotNull(body)
         body !!.assertPage(
@@ -309,7 +313,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_R))
             .get()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -331,7 +335,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_METADATA_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_METADATA_R))
             .get()
             .uri(
                 uriBuilder("${BASE_URL}/search/users", listOf(eventId), listOf(Pair("searched", searched)))
@@ -351,7 +355,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_METADATA_R"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_METADATA_R))
             .get()
             .uri(uriBuilder("$BASE_URL/roles", listOf(eventId), emptyList()))
             .exchange()
@@ -367,19 +371,19 @@ class EventProfileControllerTest(
     fun `Should createEventProfiles return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val profiles = EventProfilesDto(userIds = listOf(uuid), role = "ROLE")
+        val profiles = EventProfilesWriterDto(userIds = listOf(uuid), role = "ROLE")
         `when`(service.createEventProfiles(any(), any(), any(), any())).thenReturn(Flux.just(EventProfileModel()))
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_C"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_C))
             .post()
             .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
             .bodyValue(profiles)
             .exchange()
 
         // Assert
-        result.body<CreatedEventProfilesDto>(OK)
+        result.body<CreatedEventProfilesReaderDto>(OK)
         verifyNoInteractions(profileMapper)
         verify(profilesMapper, times(1)).toModels(profiles, eventId)
         verify(service, times(1)).createEventProfiles(
@@ -395,7 +399,7 @@ class EventProfileControllerTest(
         // Arrange
         val uuid = UUID.randomUUID()
         val uuid2 = UUID.randomUUID()
-        val profiles = EventProfilesDto(userIds = listOf(uuid, uuid2), role = "ROLE")
+        val profiles = EventProfilesWriterDto(userIds = listOf(uuid, uuid2), role = "ROLE")
         `when`(
             service.createEventProfiles(
                 any(),
@@ -407,14 +411,14 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_C"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_C))
             .post()
             .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
             .bodyValue(profiles)
             .exchange()
 
         // Assert
-        val body = result.body<CreatedEventProfilesDto>(MULTI_STATUS)
+        val body = result.body<CreatedEventProfilesReaderDto>(MULTI_STATUS)
         assertEquals(uuid, body?.notCreatedUserIds?.first())
         assertEquals(uuid2, body?.profiles?.first()?.user?.id)
 
@@ -431,9 +435,9 @@ class EventProfileControllerTest(
     @ParameterizedTest
     @MethodSource
     fun `Should createEventProfiles return 400`(
-        profile: EventProfilesDto,
+        profile: EventProfilesWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         // Act
@@ -445,7 +449,7 @@ class EventProfileControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(profilesMapper)
         verifyNoInteractions(profileMapper)
         verifyNoInteractions(service)
@@ -458,7 +462,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_PROFILE_C")
+            .authenticate(REGISTRY_PROFILE_C)
             .post()
             .uri(uriBuilder("$BASE_URL/support", listOf(eventId), emptyList()))
             .exchange()
@@ -474,13 +478,13 @@ class EventProfileControllerTest(
     fun `Should updateEventProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val profile = EventProfileDto(role = "ROLE")
+        val profile = EventProfileWriterDto(role = "ROLE")
 
         `when`(service.updateEventProfileById(any(), any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .bodyValue(profile)
@@ -496,9 +500,9 @@ class EventProfileControllerTest(
     @ParameterizedTest
     @MethodSource
     fun `Should updateEventProfile return 400`(
-        profile: EventProfileDto,
+        profile: EventProfileWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -512,7 +516,7 @@ class EventProfileControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(profilesMapper)
         verifyNoInteractions(profileMapper)
         verifyNoInteractions(service)
@@ -527,7 +531,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/block", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -548,7 +552,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -569,7 +573,7 @@ class EventProfileControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_PROFILE_D"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_D))
             .delete()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()

@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_IMPLEMENTED_YET
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import java.io.Serializable
 import java.util.Objects
 import java.util.UUID
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
+import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
 import org.springframework.security.access.PermissionEvaluator
 import org.springframework.security.core.Authentication
 
@@ -29,8 +29,8 @@ class PermissionService: PermissionEvaluator {
         targetType: String?,
         permission: Any?
     ): Boolean {
-        val exception = RegistryExceptionModel(
-            status = INTERNAL_SERVER_ERROR,
+        val exception = RegistryException(
+            status = NOT_IMPLEMENTED,
             message = NOT_IMPLEMENTED_YET,
         )
         log.error(

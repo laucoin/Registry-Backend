@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import com.nimbusds.jose.shaded.gson.Gson
 import com.nimbusds.jose.shaded.gson.reflect.TypeToken
-import fr.laucoin.registry.backend.domain.model.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementEntity
 import java.time.ZonedDateTime
 import org.springframework.stereotype.Component

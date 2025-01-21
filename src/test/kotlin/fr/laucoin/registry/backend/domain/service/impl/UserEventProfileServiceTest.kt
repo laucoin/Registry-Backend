@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.EventProfileRoleCountModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
@@ -189,7 +189,7 @@ class UserEventProfileServiceTest {
         ).thenReturn(Flux.just(EventProfileRoleCountModel(level0 = 0)))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.validateNotLastEventRoleLevel0(uuid, eventId = null, UserModel(), errorMessage).block()
         }
 
@@ -241,7 +241,7 @@ class UserEventProfileServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(profile0))
 
         // Act
-        val result = assertThrows(RegistryExceptionModel::class.java) {
+        val result = assertThrows(RegistryException::class.java) {
             service.updateUserEventProfileStatusById(currentUser, uuid, ACCEPTED).block()
         }
 

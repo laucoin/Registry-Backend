@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.external.keycloak.adapter
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.external.keycloak.mapper.AuthenticationTokenEntityMapper
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -114,7 +114,7 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryExceptionModel::class.java) {
+        val result = Assertions.assertThrows(RegistryException::class.java) {
             adapter.getAuthenticationToken(authorizationCode, redirectUri).block()
         }
 
@@ -136,7 +136,7 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryExceptionModel::class.java) {
+        val result = Assertions.assertThrows(RegistryException::class.java) {
             adapter.getAuthenticationToken(authorizationCode, redirectUri).block()
         }
 
@@ -188,7 +188,7 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryExceptionModel::class.java) {
+        val result = Assertions.assertThrows(RegistryException::class.java) {
             adapter.refreshAuthenticationToken(refreshToken).block()
         }
 
@@ -209,7 +209,7 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryExceptionModel::class.java) {
+        val result = Assertions.assertThrows(RegistryException::class.java) {
             adapter.refreshAuthenticationToken(refreshToken).block()
         }
 

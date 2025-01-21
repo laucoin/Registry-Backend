@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementParticipantsAndGroupsModel
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
@@ -111,14 +111,14 @@ class MovementService(
             .handle { it, handle ->
                 when {
                     it.size != newParticipantIds.size -> handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             NOT_FOUND,
                             MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT,
                         )
                     )
 
                     it.any { m -> m.isNotVisible() || m.purged == true } -> handle.error(
-                        RegistryExceptionModel(
+                        RegistryException(
                             CONFLICT,
                             MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
                         )

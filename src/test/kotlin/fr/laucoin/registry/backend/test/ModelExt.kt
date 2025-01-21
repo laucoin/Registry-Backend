@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.test
 
-import fr.laucoin.registry.backend.domain.model.GenericModel
-import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import java.time.ZonedDateTime.now
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,7 +10,7 @@ object ModelExt {
 
     val eventId: UUID = UUID.randomUUID()
 
-    fun <T: GenericModel> PageModel<T>.assertPage(
+    fun <T> PageDto<T>.assertPage(
         expectedTotalElements: Int,
         expectedOffset: Int = 0,
         expectedLimit: Int = 20,

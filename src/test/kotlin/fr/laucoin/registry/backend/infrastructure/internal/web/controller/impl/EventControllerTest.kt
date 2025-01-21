@@ -4,15 +4,19 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_B
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_NAME_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_OPTIONS_MISSING
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_U
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_EVENT_C
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_EVENT_R
 import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.ACTIVITY_COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.MOVEMENT_REPORT
 import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.SMOKE_REPORT
 import fr.laucoin.registry.backend.domain.model.EventModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.service.IEventService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.EventDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.EventDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
@@ -55,14 +59,12 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class EventControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class EventControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IEventService
 
     @MockitoSpyBean
-    private lateinit var mapper: EventDtoMapper
+    private lateinit var mapper: EventWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events"
@@ -84,48 +86,46 @@ class EventControllerTest(
         @JvmStatic
         fun `Wrong EventDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                EventDto(name = "", begin = now(), end = now().plusDays(1), options = emptyList()),
+                EventWriterDto(name = "", begin = now(), end = now().plusDays(1), options = emptyList()),
                 EVENT_NAME_BLANK,
-                emptyMap<String, String>(),
+                EVENT_NAME_BLANK,
             ),
             Arguments.of(
-                EventDto(
+                EventWriterDto(
                     name = "azertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiop",
                     begin = now(),
                     end = now().plusDays(1),
                     options = emptyList()
                 ),
                 EVENT_NAME_TOO_LONG,
-                mapOf(
-                    "constraint_0" to "150",
-                ),
+                EVENT_NAME_TOO_LONG,
             ),
             Arguments.of(
-                EventDto(name = "event", begin = now().plusDays(1), end = now(), options = emptyList()),
+                EventWriterDto(name = "event", begin = now().plusDays(1), end = now(), options = emptyList()),
                 EVENT_BEGIN_LATER_THAN_END_TIME,
-                emptyMap<String, String>(),
+                EVENT_BEGIN_LATER_THAN_END_TIME,
             ),
             Arguments.of(
-                EventDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY_COMMUNICATION)),
+                EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY_COMMUNICATION)),
                 EVENT_OPTIONS_MISSING,
-                emptyMap<String, String>(),
+                EVENT_OPTIONS_MISSING,
             ),
             Arguments.of(
-                EventDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(MOVEMENT_REPORT)),
+                EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(MOVEMENT_REPORT)),
                 EVENT_OPTIONS_MISSING,
-                emptyMap<String, String>(),
+                EVENT_OPTIONS_MISSING,
             ),
             Arguments.of(
-                EventDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(SMOKE_REPORT)),
+                EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(SMOKE_REPORT)),
                 EVENT_OPTIONS_MISSING,
-                emptyMap<String, String>(),
+                EVENT_OPTIONS_MISSING,
             ),
         )
 
         @JvmStatic
         fun `Event management routes`(): Stream<Arguments> {
             val uuid = UUID.randomUUID()
-            val event = EventDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
+            val event = EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
             return Stream.of(
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(uuid), null),
                 Arguments.of(POST, BASE_URL, emptyList<String>(), event),
@@ -226,7 +226,7 @@ class EventControllerTest(
             .exchange()
 
         // Assert
-        val body = result.body<PageModel<*>>(OK)
+        val body = result.body<PageDto<*>>(OK)
 
         assertNotNull(body)
         body !!.assertPage(
@@ -254,7 +254,7 @@ class EventControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_EVENT_R")
+            .authenticate(REGISTRY_EVENT_R)
             .get()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(uuid), emptyList()))
             .exchange()
@@ -268,12 +268,12 @@ class EventControllerTest(
     @Test
     fun `Should createEvent return 200`() {
         // Arrange
-        val event = EventDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
+        val event = EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
         `when`(service.createEvent(any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_EVENT_C")
+            .authenticate(REGISTRY_EVENT_C)
             .post()
             .uri(BASE_URL)
             .bodyValue(event)
@@ -288,9 +288,9 @@ class EventControllerTest(
     @ParameterizedTest
     @MethodSource("Wrong EventDto")
     fun `Should createEvent return 400`(
-        event: EventDto,
+        event: EventWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         // Act
@@ -302,7 +302,7 @@ class EventControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(mapper)
         verifyNoInteractions(service)
     }
@@ -310,13 +310,13 @@ class EventControllerTest(
     @Test
     fun `Should updateEventById return 200`() {
         // Arrange
-        val event = EventDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
+        val event = EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
 
         `when`(service.updateEventById(any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId), emptyList()))
             .bodyValue(event)
@@ -331,9 +331,9 @@ class EventControllerTest(
     @ParameterizedTest
     @MethodSource("Wrong EventDto")
     fun `Should updateEventById return 400`(
-        event: EventDto,
+        event: EventWriterDto,
+        expectedCode: String,
         expectedMessage: String,
-        expectedArgs: Map<String, String>
     ) {
         // Arrange
         // Act
@@ -345,7 +345,7 @@ class EventControllerTest(
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedMessage, expectedArgs)
+        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
         verifyNoInteractions(mapper)
         verifyNoInteractions(service)
     }
@@ -357,7 +357,7 @@ class EventControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId), emptyList()))
             .exchange()
@@ -375,7 +375,7 @@ class EventControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_U"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_U))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId), emptyList()))
             .exchange()
@@ -393,7 +393,7 @@ class EventControllerTest(
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority("REGISTRY_EVENT_D"))
+            .authenticate(buildAuthority(REGISTRY_EVENT_D))
             .delete()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId), emptyList()))
             .exchange()

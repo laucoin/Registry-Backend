@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.domain.validator
 import fr.laucoin.registry.backend.domain.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME
-import fr.laucoin.registry.backend.domain.model.RegistryExceptionModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 import java.time.LocalDate
@@ -30,7 +30,7 @@ class StartBeforeEndValidator: ConstraintValidator<StartBeforeEnd, Any> {
         val endFieldProperty = properties.firstOrNull { it.name == endField }
 
         if (Objects.isNull(startFieldProperty) || Objects.isNull(endFieldProperty)) {
-            val exception = RegistryExceptionModel(INTERNAL_SERVER_ERROR, NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME)
+            val exception = RegistryException(INTERNAL_SERVER_ERROR, NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME)
             log.error(
                 "One of the given field names ({}, {}) don't exist for the object ({})",
                 startField,
@@ -49,7 +49,7 @@ class StartBeforeEndValidator: ConstraintValidator<StartBeforeEnd, Any> {
             startValue is LocalDate && endValue is LocalDate -> startValue.isBefore(endValue)
             Objects.isNull(startValue) || Objects.isNull(endValue) -> true
             else -> {
-                val exception = RegistryExceptionModel(INTERNAL_SERVER_ERROR, COMPARING_WRONG_PARAMETER_TYPE)
+                val exception = RegistryException(INTERNAL_SERVER_ERROR, COMPARING_WRONG_PARAMETER_TYPE)
                 log.error(
                     "The two fields ({}, {}) are not of the same type or the type is not supported (we support only nullable ZonedDateTime and ZonedDateTime).",
                     startValue,

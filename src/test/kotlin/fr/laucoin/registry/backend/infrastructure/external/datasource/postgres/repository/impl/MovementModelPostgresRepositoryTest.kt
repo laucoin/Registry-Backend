@@ -90,7 +90,7 @@ class MovementModelPostgresRepositoryTest {
     }
 
     @Test
-    fun `Should save call repository save`() {
+    fun `Should create call repository save`() {
         // Arrange
         val movement = MovementModel()
         val movementEntity = MovementEntity()
@@ -99,6 +99,22 @@ class MovementModelPostgresRepositoryTest {
 
         // Act
         modelRepository.create(movement).block()
+
+        // Assert
+        verify(repository, times(1)).save(any())
+        verify(mapper, times(1)).toEntity(movement)
+    }
+
+    @Test
+    fun `Should update call repository save`() {
+        // Arrange
+        val movement = MovementModel()
+        val movementEntity = MovementEntity()
+        `when`(repository.save(any())).thenReturn(Mono.just(movementEntity))
+        `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(movement))
+
+        // Act
+        modelRepository.update(movement).block()
 
         // Assert
         verify(repository, times(1)).save(any())

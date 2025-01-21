@@ -1,10 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
-import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.UserDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -40,9 +44,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class UserControllerTest(
-    @Autowired private val webClient: WebTestClient,
-): TestContext() {
+class UserControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IUserService
 
@@ -50,7 +52,7 @@ class UserControllerTest(
     private lateinit var roleService: IRoleService
 
     @MockitoSpyBean
-    private lateinit var mapper: UserDtoMapper
+    private lateinit var mapper: PartialUserReaderDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/users"
@@ -173,7 +175,7 @@ class UserControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_R")
+            .authenticate(REGISTRY_USER_R)
             .get()
             .uri(
                 uriBuilder(
@@ -191,7 +193,7 @@ class UserControllerTest(
             .exchange()
 
         // Assert
-        val body = result.body<PageModel<*>>(OK)
+        val body = result.body<PageDto<*>>(OK)
 
         assertNotNull(body)
         body !!.assertPage(
@@ -217,7 +219,7 @@ class UserControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_R")
+            .authenticate(REGISTRY_USER_R)
             .get()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(uuid), emptyList()))
             .exchange()
@@ -234,7 +236,7 @@ class UserControllerTest(
         // Arrange
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_METADATA_R")
+            .authenticate(REGISTRY_USER_METADATA_R)
             .get()
             .uri(uriBuilder("$BASE_URL/roles", emptyList(), emptyList()))
             .exchange()
@@ -258,7 +260,7 @@ class UserControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_U")
+            .authenticate(REGISTRY_USER_U)
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/role", listOf(uuid), queryParams))
             .exchange()
@@ -277,7 +279,7 @@ class UserControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_U")
+            .authenticate(REGISTRY_USER_U)
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/block", listOf(uuid), emptyList()))
             .exchange()
@@ -297,7 +299,7 @@ class UserControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_U")
+            .authenticate(REGISTRY_USER_U)
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(uuid), emptyList()))
             .exchange()
@@ -317,7 +319,7 @@ class UserControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_U")
+            .authenticate(REGISTRY_USER_U)
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/impersonate", listOf(uuid), emptyList()))
             .exchange()
@@ -337,7 +339,7 @@ class UserControllerTest(
 
         // Act
         val result = webClient
-            .authenticate("REGISTRY_USER_D")
+            .authenticate(REGISTRY_USER_D)
             .delete()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(uuid), emptyList()))
             .exchange()

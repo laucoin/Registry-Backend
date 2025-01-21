@@ -1,21 +1,21 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.currentUser
 import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RefreshAuthenticationInfoModel
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.ISecurityController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.CurrentUserDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.CurrentUserDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CurrentUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.CurrentUserReaderDtoMapper
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
 @RestController
 class SecurityController(
     private val authenticationPort: IAuthenticationPort,
-    private val mapper: CurrentUserDtoMapper,
+    private val mapper: CurrentUserReaderDtoMapper,
 ): ISecurityController {
     override fun getLoginUri(redirectUri: String?): AuthenticationUriModel {
         return authenticationPort.getLoginUri(redirectUri !!)
@@ -33,7 +33,7 @@ class SecurityController(
         return authenticationPort.refreshAuthenticationToken(refreshAuthenticationInfo.refreshToken !!)
     }
 
-    override fun findCurrentUser(): Mono<CurrentUserDto> {
-        return currentUser().map(mapper::toDto)
+    override fun findCurrentUser(currentUser: CurrentUserModel): CurrentUserReaderDto {
+        return mapper.toDto(currentUser)
     }
 }

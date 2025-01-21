@@ -46,6 +46,12 @@ class ParticipantModelPostgresRepositoryTest {
             Arguments.of(true, true, null, now()),
             Arguments.of(true, true, now(), now()),
         )
+
+        @JvmStatic
+        fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> = Stream.of(
+            Arguments.of(emptyList<UUID>(), 0),
+            Arguments.of(listOf(UUID.randomUUID()), 1),
+        )
     }
 
     @ParameterizedTest
@@ -68,6 +74,20 @@ class ParticipantModelPostgresRepositoryTest {
         verify(mapper, times(1)).toModel(participant)
     }
 
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findAllByIds call repository findAllByIds`(ids: List<UUID>, expectedCall: Int) {
+        // Arrange
+        val onlyVisible = true
+        `when`(repository.findAllByIds(any(), any(), any())).thenReturn(Flux.empty())
+
+        // Act
+        modelRepository.findAllByIds(eventId, ids, onlyVisible).blockFirst()
+
+        // Assert
+        verify(repository, times(expectedCall)).findAllByIds(eventId, ids, onlyVisible)
+    }
+
     @Test
     fun `Should findById call repository findById`() {
         // Arrange
@@ -85,7 +105,7 @@ class ParticipantModelPostgresRepositoryTest {
     }
 
     @Test
-    fun `Should save call repository save`() {
+    fun `Should create call repository save`() {
         // Arrange
         val participant = ParticipantModel()
         val participantEntity = ParticipantEntity()
@@ -94,6 +114,22 @@ class ParticipantModelPostgresRepositoryTest {
 
         // Act
         modelRepository.create(participant).block()
+
+        // Assert
+        verify(repository, times(1)).save(any())
+        verify(mapper, times(1)).toEntity(participant)
+    }
+
+    @Test
+    fun `Should update call repository save`() {
+        // Arrange
+        val participant = ParticipantModel()
+        val participantEntity = ParticipantEntity()
+        `when`(repository.save(any())).thenReturn(Mono.just(participantEntity))
+        `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(participant))
+
+        // Act
+        modelRepository.update(participant).block()
 
         // Assert
         verify(repository, times(1)).save(any())
