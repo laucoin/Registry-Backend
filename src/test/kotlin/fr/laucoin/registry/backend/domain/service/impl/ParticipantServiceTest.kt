@@ -36,6 +36,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -207,9 +208,9 @@ class ParticipantServiceTest {
         `when`(repository.create(any())).thenReturn(Mono.just(participant))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.createParticipant(currentUser(), participant).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(status, result.status)

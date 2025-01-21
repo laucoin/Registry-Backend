@@ -3,12 +3,15 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferencesEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithModel
 import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
-class PreferencesEntityMapper: IGenericEntityMapper<PreferencesModel, PreferencesEntity> {
+class PreferencesEntityMapper: IEntityMapper<PreferencesModel, PreferencesEntity> {
     override fun toModel(entity: PreferencesEntity): PreferencesModel {
         return PreferencesModel().apply {
             userId = entity.userId

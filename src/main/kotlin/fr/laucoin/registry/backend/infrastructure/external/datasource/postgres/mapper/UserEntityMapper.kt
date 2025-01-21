@@ -1,11 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithModel
 import org.springframework.stereotype.Component
 
 @Component
-class UserEntityMapper: IGenericEntityMapper<UserModel, UserEntity> {
+class UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
     override fun toModel(entity: UserEntity): UserModel {
         return UserModel().apply {
             oidcId = entity.oidcId

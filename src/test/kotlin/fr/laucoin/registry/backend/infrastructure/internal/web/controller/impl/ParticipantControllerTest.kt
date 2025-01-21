@@ -16,7 +16,11 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupWithoutMemberReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
@@ -66,7 +70,16 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     private lateinit var service: IParticipantService
 
     @MockitoSpyBean
-    private lateinit var mapper: ParticipantWriterDtoMapper
+    private lateinit var readerMapper: ParticipantReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var groupReaderMapper: GroupWithoutMemberReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var partialUserReaderMapper: PartialUserReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var writerMapper: ParticipantWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/participants"
@@ -92,11 +105,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             Arguments.of(
                 ParticipantWriterDto(lastName = "DOE", birthday = LocalDate.now()),
                 PARTICIPANT_FIRST_NAME_BLANK,
-                PARTICIPANT_FIRST_NAME_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(firstName = "", lastName = "DOE", birthday = LocalDate.now()),
-                PARTICIPANT_FIRST_NAME_BLANK,
                 PARTICIPANT_FIRST_NAME_BLANK,
             ),
             Arguments.of(
@@ -106,16 +117,13 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
                     birthday = LocalDate.now()
                 ),
                 PARTICIPANT_FIRST_NAME_TOO_LONG,
-                PARTICIPANT_FIRST_NAME_TOO_LONG,
             ),
             Arguments.of(
                 ParticipantWriterDto(firstName = "John", birthday = LocalDate.now()),
                 PARTICIPANT_LAST_NAME_BLANK,
-                PARTICIPANT_LAST_NAME_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(firstName = "John", lastName = "", birthday = LocalDate.now()),
-                PARTICIPANT_LAST_NAME_BLANK,
                 PARTICIPANT_LAST_NAME_BLANK,
             ),
             Arguments.of(
@@ -125,11 +133,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
                     birthday = LocalDate.now()
                 ),
                 PARTICIPANT_LAST_NAME_TOO_LONG,
-                PARTICIPANT_LAST_NAME_TOO_LONG,
             ),
             Arguments.of(
                 ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now().plusDays(1)),
-                PARTICIPANT_BIRTHDAY_FUTURE,
                 PARTICIPANT_BIRTHDAY_FUTURE,
             ),
             Arguments.of(
@@ -140,7 +146,6 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
                     begin = now().plusDays(1),
                     end = now()
                 ),
-                PARTICIPANT_START_LATER_THAN_END,
                 PARTICIPANT_START_LATER_THAN_END,
             ),
         )
@@ -180,7 +185,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Assert
         result.expectStatus().isUnauthorized
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
@@ -204,7 +212,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Assert
         result.expectStatus().isForbidden
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
@@ -272,7 +283,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             expectedLimit = expectedLimit,
         )
 
-        verifyNoInteractions(mapper)
+        verify(readerMapper, times(1)).toDtoPage(any(), any())
+        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).findParticipantsByEventId(
             eventId = eq(eventId),
             order = eq(expectedOrder),
@@ -288,7 +302,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     fun `Should findParticipantById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findParticipantById(any(), any(), any())).thenReturn(Mono.empty())
+        `when`(service.findParticipantById(any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
 
         // Act
         val result = webClient
@@ -298,8 +312,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.body<ParticipantModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<ParticipantReaderDto>(OK)
+
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).findParticipantById(eventId, uuid, onlyVisible = false)
     }
 
@@ -322,6 +339,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Assert
         val users = result.body<List<*>>(OK)
+
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(groupReaderMapper)
+        verify(partialUserReaderMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(writerMapper)
         assertEquals(testConfigMaxResult, users?.size)
         verify(service, times(1)).searchUsers(
             eventId,
@@ -348,6 +370,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Assert
         val groups = result.body<List<*>>(OK)
+
+        verifyNoInteractions(readerMapper)
+        verify(groupReaderMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         assertEquals(testConfigMaxResult, groups?.size)
         verify(service, times(1)).searchGroups(
             eventId,
@@ -359,7 +386,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     fun `Should createParticipant return 200`() {
         // Arrange
         val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now())
-        `when`(service.createParticipant(any(), any())).thenReturn(Mono.empty())
+        `when`(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
 
         // Act
         val result = webClient
@@ -370,8 +397,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.body<ParticipantModel>(OK)
-        verify(mapper, times(1)).toModel(participant, eventId)
+        result.body<ParticipantReaderDto>(OK)
+
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verify(writerMapper, times(1)).toModel(participant, eventId)
         verify(service, times(1)).createParticipant(any(), any())
     }
 
@@ -385,7 +415,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             userId = UUID.randomUUID(),
             groupIds = listOf(UUID.randomUUID(), UUID.randomUUID())
         )
-        `when`(service.createParticipant(any(), any())).thenReturn(Mono.empty())
+        `when`(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
 
         // Act
         val result = webClient
@@ -396,8 +426,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.body<ParticipantModel>(OK)
-        verify(mapper, times(1)).toModel(participant, eventId)
+        result.body<ParticipantReaderDto>(OK)
+
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verify(writerMapper, times(1)).toModel(participant, eventId)
         verify(service, times(1)).createParticipant(any(), any())
     }
 
@@ -406,7 +439,6 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     fun `Should createParticipant return 400`(
         participant: ParticipantWriterDto,
         expectedCode: String,
-        expectedMessage: String,
     ) {
         // Arrange
         // Act
@@ -418,8 +450,12 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
-        verifyNoInteractions(mapper)
+        result.assertError(BAD_REQUEST, expectedCode)
+
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
@@ -430,7 +466,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         val uuid = UUID.randomUUID()
         val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now())
 
-        `when`(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.empty())
+        `when`(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
 
         // Act
         val result = webClient
@@ -441,8 +477,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.body<ParticipantModel>(OK)
-        verify(mapper, times(1)).toModel(participant, eventId)
+        result.body<ParticipantReaderDto>(OK)
+
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verify(writerMapper, times(1)).toModel(participant, eventId)
         verify(service, times(1)).updateParticipantById(any(), eq(eventId), eq(uuid), any())
     }
 
@@ -451,7 +490,6 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     fun `Should updateParticipantById return 400`(
         participant: ParticipantWriterDto,
         expectedCode: String,
-        expectedMessage: String,
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -465,8 +503,12 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
-        verifyNoInteractions(mapper)
+        result.assertError(BAD_REQUEST, expectedCode)
+
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
@@ -475,7 +517,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.disableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.empty())
+        `when`(service.disableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
 
         // Act
         val result = webClient
@@ -485,8 +527,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.body<ParticipantModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<ParticipantReaderDto>(OK)
+
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).disableParticipantById(any(), eq(eventId), eq(uuid))
     }
 
@@ -495,7 +540,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.enableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.empty())
+        `when`(service.enableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
 
         // Act
         val result = webClient
@@ -505,8 +550,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             .exchange()
 
         // Assert
-        result.body<ParticipantModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<ParticipantReaderDto>(OK)
+
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).enableParticipantById(any(), eq(eventId), eq(uuid))
     }
 
@@ -526,7 +574,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Assert
         result.body<Void>(OK)
-        verifyNoInteractions(mapper)
+
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).deleteParticipantById(any(), eq(eventId), eq(uuid))
     }
 }

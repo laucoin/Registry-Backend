@@ -2,21 +2,23 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
 import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
-class EventProfileEntityMapper: IGenericEventEntityMapper<EventProfileModel, EventProfileEntity> {
+class EventProfileEntityMapper: IEntityMapper<EventProfileModel, EventProfileEntity> {
     override fun toModel(entity: EventProfileEntity): EventProfileModel {
         return EventProfileModel().apply {
             user = mapUserEntity(entity)
-            event = mapEventEntity(entity)
             role = entity.role
             status = entity.status
             startAccess = entity.startAccess
             endAccess = entity.endAccess
-        }.fillWithEntity(entity)
+        }.fillWithEventAndEntity(entity)
     }
 
     private fun mapUserEntity(entity: EventProfileEntity): UserModel? {
@@ -34,11 +36,10 @@ class EventProfileEntityMapper: IGenericEventEntityMapper<EventProfileModel, Eve
     override fun toEntity(model: EventProfileModel): EventProfileEntity {
         return EventProfileEntity().apply {
             userId = model.user?.id
-            eventId = model.event?.id
             role = model.role
             status = model.status
             startAccess = model.startAccess
             endAccess = model.endAccess
-        }.fillWithModel(model)
+        }.fillWithEventAndModel(model)
     }
 }

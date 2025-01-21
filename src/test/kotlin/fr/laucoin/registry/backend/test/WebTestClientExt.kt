@@ -8,6 +8,7 @@ import java.net.URI
 import java.util.Objects
 import java.util.UUID
 import java.util.function.Function
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
@@ -85,14 +86,13 @@ object WebTestClientExt {
             .responseBody
     }
 
-    fun ResponseSpec.assertError(
-        expectedStatus: HttpStatus, expectedCode: String, expectedMessage: String
-    ): ResponseSpec {
+    fun ResponseSpec.assertError(expectedStatus: HttpStatus, expectedCode: String): ResponseSpec {
         val error = body<Map<*, *>>(expectedStatus)
         assertEquals(expectedStatus.value(), error?.get(ErrorDto::statusCode.name))
         assertEquals(expectedStatus.name, error?.get(ErrorDto::statusName.name))
         assertEquals(expectedCode, error?.get(ErrorDto::code.name))
-        assertEquals(expectedMessage, error?.get(ErrorDto::message.name))
+        assertNotNull(error?.get(ErrorDto::title.name))
+        assertNotNull(error?.get(ErrorDto::message.name))
         return this
     }
 }

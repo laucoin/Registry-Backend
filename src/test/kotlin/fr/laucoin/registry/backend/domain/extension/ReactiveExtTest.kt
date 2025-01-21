@@ -11,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.http.HttpStatus.NOT_FOUND
+import reactor.core.Exceptions
 import reactor.core.publisher.Mono
 
 class ReactiveExtTest {
@@ -28,13 +29,13 @@ class ReactiveExtTest {
     fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>, id: UUID) {
         // Arrange
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             value.notFoundIfEmpty(id).block()
-        }
+        }) as RegistryException
 
         // Assert
-        assertEquals(NOT_FOUND, result.statusCode)
-        assertEquals(id.toString(), result.args?.get("identifier"))
+        assertEquals(NOT_FOUND, result.status)
+        assertEquals(id.toString(), result.args?.first())
         assertEquals(1, result.args?.size)
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
     }

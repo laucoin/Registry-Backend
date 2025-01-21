@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_DATE_CONFLICT_WITH_ELEMENTS
+import fr.laucoin.registry.backend.domain.constant.EventOptionsConst.optionsRules
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_R
+import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.notInRange
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -50,7 +52,11 @@ class EventService(
             .notFoundIfEmpty(id)
     }
 
-    override fun validateDateTime(id: UUID, dateTime: ZonedDateTime?, message: String): Mono<UUID> {
+    override fun availableEventOptions(): Flux<Pair<EventOptionEnum, Collection<EventOptionEnum>>> {
+        return Flux.fromIterable(optionsRules.map { Pair(it.key, it.value) })
+    }
+
+    override fun validateDateTime(id: UUID, dateTime: ZonedDateTime?, errorCode: String): Mono<UUID> {
         return findEventById(id, onlyVisible = false)
             .handle { it, handle ->
                 if (dateTime.notInRange(it.begin, it.end)) {
@@ -58,19 +64,15 @@ class EventService(
                     handle.error(
                         RegistryException(
                             status = CONFLICT,
-                            message = message,
-                            args = mapOf(
-                                "begin" to it.begin.toString(),
-                                "end" to it.end.toString(),
-                                "actual" to dateTime.toString(),
-                            )
+                            code = errorCode,
+                            args = arrayListOf(dateTime.toString(), it.begin.toString(), it.end.toString()),
                         )
                     )
                 } else handle.next(id)
             }
     }
 
-    override fun validateDateTimes(id: UUID, start: ZonedDateTime?, end: ZonedDateTime?, message: String): Mono<UUID> {
+    override fun validateDateTimes(id: UUID, start: ZonedDateTime?, end: ZonedDateTime?, errorCode: String): Mono<UUID> {
         return findEventById(id, onlyVisible = false)
             .handle { it, handle ->
                 if (start.notInRange(it.begin, it.end) || end.notInRange(it.begin, it.end)) {
@@ -84,13 +86,8 @@ class EventService(
                     handle.error(
                         RegistryException(
                             status = CONFLICT,
-                            message = message,
-                            args = mapOf(
-                                "begin" to it.begin.toString(),
-                                "end" to it.end.toString(),
-                                "actualBegin" to start.toString(),
-                                "actualEnd" to end.toString(),
-                            )
+                            code = errorCode,
+                            args = arrayListOf(start.toString(), end.toString(), it.begin.toString(), it.end.toString()),
                         )
                     )
                 } else handle.next(id)

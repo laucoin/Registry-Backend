@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
-import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -11,12 +10,12 @@ import java.util.UUID
 @JsonInclude(NON_NULL)
 data class ParticipantReaderDto(
     var id: UUID? = null,
-    var event: EventModel? = null,
+    var event: EventReaderDto? = null,
     var firstName: String? = null,
     var lastName: String? = null,
     var birthday: LocalDate? = null,
     var major: Boolean? = null,
-    var groups: List<GroupReaderDto> = emptyList(),
+    var groups: List<GroupWithoutMemberReaderDto> = emptyList(),
     var begin: ZonedDateTime? = null,
     var end: ZonedDateTime? = null,
     var user: PartialUserReaderDto? = null,

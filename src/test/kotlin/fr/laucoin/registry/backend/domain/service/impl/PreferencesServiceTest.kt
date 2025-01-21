@@ -23,6 +23,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.springframework.http.HttpStatus.NOT_FOUND
+import reactor.core.Exceptions
 import reactor.core.publisher.Mono
 
 class PreferencesServiceTest {
@@ -107,13 +108,13 @@ class PreferencesServiceTest {
         `when`(eventProfileService.findUserEventProfileById(any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
-        assertEquals(profileId.toString(), result.args?.get("identifier"))
+        assertEquals(profileId.toString(), result.args?.first())
     }
 }

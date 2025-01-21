@@ -40,6 +40,7 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -300,9 +301,9 @@ class GroupServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.updateGroupById(currentUser(), eventId, uuid, group).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(status, result.status)
@@ -347,9 +348,9 @@ class GroupServiceTest {
         }))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.addMembersToGroupById(currentUser(), eventId, uuid, memberIds).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
@@ -383,9 +384,9 @@ class GroupServiceTest {
         }))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.removeMemberFromGroupById(currentUser(), eventId, uuid, uuid).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(FORBIDDEN, result.status)

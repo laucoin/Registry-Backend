@@ -35,6 +35,7 @@ import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.transaction.reactive.TransactionalOperator
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -276,9 +277,9 @@ class UserServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(user0))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.updateUserRoleById(currentUser, userToUpdate.id !!, roleToAssign).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(FORBIDDEN, result.status)

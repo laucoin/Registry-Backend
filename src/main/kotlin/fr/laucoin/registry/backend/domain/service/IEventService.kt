@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.UserModel
@@ -20,8 +21,9 @@ interface IEventService {
     ): Flux<EventModel>
 
     fun findEventById(id: UUID, onlyVisible: Boolean): Mono<EventModel>
-    fun validateDateTime(id: UUID, dateTime: ZonedDateTime?, message: String): Mono<UUID>
-    fun validateDateTimes(id: UUID, start: ZonedDateTime?, end: ZonedDateTime?, message: String): Mono<UUID>
+    fun availableEventOptions(): Flux<Pair<EventOptionEnum, Collection<EventOptionEnum>>>
+    fun validateDateTime(id: UUID, dateTime: ZonedDateTime?, errorCode: String): Mono<UUID>
+    fun validateDateTimes(id: UUID, start: ZonedDateTime?, end: ZonedDateTime?, errorCode: String): Mono<UUID>
     fun createEvent(currentUser: UserModel, event: EventModel): Mono<EventModel>
     fun updateEventById(currentUser: UserModel, id: UUID, event: EventModel): Mono<EventModel>
     fun disableEventById(currentUser: UserModel, id: UUID): Mono<EventModel>

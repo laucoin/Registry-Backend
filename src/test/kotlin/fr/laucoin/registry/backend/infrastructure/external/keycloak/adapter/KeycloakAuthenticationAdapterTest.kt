@@ -10,7 +10,7 @@ import kotlin.test.assertNotNull
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.spy
@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.Exceptions
 
 class KeycloakAuthenticationAdapterTest {
     private val mockWebServer: MockWebServer = MockWebServer()
@@ -114,9 +115,9 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             adapter.getAuthenticationToken(authorizationCode, redirectUri).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertNotNull(result)
@@ -136,9 +137,9 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             adapter.getAuthenticationToken(authorizationCode, redirectUri).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertNotNull(result)
@@ -188,9 +189,9 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             adapter.refreshAuthenticationToken(refreshToken).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertNotNull(result)
@@ -209,9 +210,9 @@ class KeycloakAuthenticationAdapterTest {
         )
 
         // Act
-        val result = Assertions.assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             adapter.refreshAuthenticationToken(refreshToken).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertNotNull(result)

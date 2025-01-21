@@ -5,8 +5,9 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.MovementParticipantsAndGroupsModel
+import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.zip
+import reactor.util.function.Tuple2
 
 @Service
 class MovementService(
@@ -51,7 +53,10 @@ class MovementService(
             .notFoundIfEmpty(id)
     }
 
-    override fun searchParticipantsAndGroups(eventId: UUID, searched: String?): Mono<MovementParticipantsAndGroupsModel> {
+    override fun searchParticipantsAndGroups(
+        eventId: UUID,
+        searched: String?
+    ): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>> {
         return zip(
             participantRepository.findAll(
                 eventId,
@@ -69,7 +74,11 @@ class MovementService(
                 endDateTime = null
             ).searchAndSort(ASC, searched, compareBy { it.name })
                 .collectList(),
-        ).map { MovementParticipantsAndGroupsModel(participants = it.t1, groups = it.t2) }
+        )
+    }
+
+    override fun availableMovementTypes(): Flux<MovementTypeEnum> {
+        return Flux.just(*MovementTypeEnum.entries.toTypedArray())
     }
 
     override fun createMovement(currentUser: UserModel, movement: MovementModel): Mono<MovementModel> {

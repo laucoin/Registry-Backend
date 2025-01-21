@@ -33,6 +33,7 @@ import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.transaction.reactive.TransactionalOperator
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -222,16 +223,17 @@ class EventServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.validateDateTime(eventId, now, message).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(message, result.message)
-        assertEquals(event.begin.toString(), result.args !!["begin"])
-        assertEquals(event.end.toString(), result.args !!["end"])
-        assertEquals(now.toString(), result.args !!["actual"])
+        assertEquals(3, result.args?.size)
+        assertEquals(now.toString(), result.args?.first())
+        assertEquals(event.begin.toString(), result.args?.get(1))
+        assertEquals(event.end.toString(), result.args?.get(2))
 
         verify(repository, times(1)).findById(eventId, onlyVisible = false)
     }
@@ -273,17 +275,18 @@ class EventServiceTest {
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.validateDateTimes(eventId, newStart, newEnd, message).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(message, result.message)
-        assertEquals(event.begin.toString(), result.args !!["begin"])
-        assertEquals(event.end.toString(), result.args !!["end"])
-        assertEquals(newStart.toString(), result.args !!["actualBegin"])
-        assertEquals(newEnd.toString(), result.args !!["actualEnd"])
+        assertEquals(4, result.args?.size)
+        assertEquals(newStart.toString(), result.args?.first())
+        assertEquals(newEnd.toString(), result.args?.get(1))
+        assertEquals(event.begin.toString(), result.args?.get(2))
+        assertEquals(event.end.toString(), result.args?.get(3))
 
         verify(repository, times(1)).findById(eventId, onlyVisible = false)
     }
@@ -388,9 +391,9 @@ class EventServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(newEvent))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.updateEventById(currentUser, uuid, newEvent).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)

@@ -12,8 +12,11 @@ external:
 
 registry:
   information:
-    name: "Registry Test"
-    description: "This is the Registry Test application instance."
+    name: Registry Test
+    description: This is the Registry Test application instance.
+    locale:
+      default: en-US
+      supported: en-US, fr-FR
     support:
       name: John DOE
       email: john.doe@test.com

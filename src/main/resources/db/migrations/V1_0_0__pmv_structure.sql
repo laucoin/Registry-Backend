@@ -15,11 +15,11 @@ DROP TABLE IF EXISTS tb_movement_content CASCADE;
 -- uuid-ossp definition
 CREATE EXTENSION "uuid-ossp";
 
--- tb_permission definition
-CREATE TABLE tb_permission
+-- tb_user_permission definition
+CREATE TABLE tb_user_permission
 (
     name VARCHAR NOT NULL,
-    CONSTRAINT tb_permission_pkey PRIMARY KEY (name)
+    CONSTRAINT tb_user_permission_pkey PRIMARY KEY (name)
 );
 
 -- tb_user_role definition
@@ -215,7 +215,7 @@ CREATE UNIQUE INDEX tb_user_role_permission_unique ON tb_user_role_permission (r
 ALTER TABLE tb_user_role_permission
     ADD CONSTRAINT tb_user_role_permission_role_fkey FOREIGN KEY (role) REFERENCES tb_user_role (name) ON DELETE CASCADE;
 ALTER TABLE tb_user_role_permission
-    ADD CONSTRAINT tb_user_role_permission_permission_fkey FOREIGN KEY (permission) REFERENCES tb_permission (name) ON DELETE CASCADE;
+    ADD CONSTRAINT tb_user_role_permission_permission_fkey FOREIGN KEY (permission) REFERENCES tb_user_permission (name) ON DELETE CASCADE;
 
 -- tb_event_role_permission foreign keys and indexes
 CREATE UNIQUE INDEX tb_event_role_permission_unique ON tb_event_role_permission (role, permission);
@@ -339,15 +339,16 @@ ALTER TABLE tb_movement_content
 INSERT INTO tb_user(type)
 VALUES ('SERVICE_ACCOUNT');
 
--- tb_permission insert service user
-INSERT INTO tb_permission(name)
+-- tb_user_permission insert service user
+INSERT INTO tb_user_permission(name)
 VALUES ('REGISTRY_USER_R'),
        ('REGISTRY_USER_U'),
        ('REGISTRY_USER_D'),
+       ('REGISTRY_USER_METADATA_R'),
        ('REGISTRY_EVENT_C'),
        ('REGISTRY_EVENT_R'),
-       ('REGISTRY_PROFILE_C'),
-       ('REGISTRY_USER_METADATA_R')
+       ('REGISTRY_EVENT_METADATA_R'),
+       ('REGISTRY_PROFILE_C')
 ;
 
 -- tb_event_permission insert service user

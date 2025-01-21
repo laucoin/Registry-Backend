@@ -64,7 +64,7 @@ class EventProfileService(
         )
     }
 
-    override fun getAssignableEventRoles(currentUser: UserModel, eventId: UUID): Mono<List<String>> {
+    override fun getAssignableEventRoles(currentUser: UserModel, eventId: UUID): Flux<String> {
         return repository.findEventProfileByEventAndUserId(
             eventId,
             currentUser.id !!,
@@ -74,6 +74,30 @@ class EventProfileService(
         )
             .notFoundIfEmpty(Pair(eventId, currentUser.id !!))
             .map { roleService.getAssignableEventRoles(it) }
+            .flatMapMany { Flux.fromIterable(it) }
+    }
+
+    override fun getAvailableEventStatus(eventId: UUID): Flux<ProfileStatusEnum> {
+        return Flux.fromIterable(ProfileStatusEnum.entries)
+    }
+
+    override fun createEventProfiles(
+        currentUser: UserModel,
+        eventId: UUID,
+        userIds: List<UUID>,
+        profiles: List<EventProfileModel>
+    ): Mono<Pair<List<UUID>, List<UUID>>> {
+        return validateNoProfileConflict(eventId, userIds, profileId = null, profiles.first().startAccess, profiles.first().endAccess)
+            .map { allowedUsers ->
+                profiles.filter { allowedUsers.contains(it.user?.id) }
+                    .map { it.apply { create(currentUser) } }
+            }
+            .flatMapMany { repository.saveAll(it) }
+            .collectList()
+            .map {
+                val savedUserId = it.mapNotNull { profile -> profile.user?.id }
+                Pair(savedUserId, userIds.minus(savedUserId.toSet()))
+            }
     }
 
     override fun createSupportEventProfile(currentUser: UserModel, eventId: UUID): Mono<EventProfileModel> {
@@ -89,20 +113,6 @@ class EventProfileService(
 
         return validateNoProfileConflict(eventId, listOf(currentUser.id !!), profileId = null, profile.startAccess, profile.endAccess)
             .flatMap { repository.create(profile) }
-    }
-
-    override fun createEventProfiles(
-        currentUser: UserModel,
-        eventId: UUID,
-        userIds: List<UUID>,
-        profiles: List<EventProfileModel>
-    ): Flux<EventProfileModel> {
-        return validateNoProfileConflict(eventId, userIds, profileId = null, profiles.first().startAccess, profiles.first().endAccess)
-            .map { allowedUsers ->
-                profiles.filter { allowedUsers.contains(it.user?.id) }
-                    .map { it.apply { create(currentUser) } }
-            }
-            .flatMapMany { repository.saveAll(it) }
     }
 
     override fun updateEventProfileById(
@@ -205,12 +215,7 @@ class EventProfileService(
                 when {
                     profiles.size == userIds.size -> {
                         log.warn("Another profile already exist for the user(s) \"{}\" on the event \"{}\".", userIds, eventId)
-                        handle.error(
-                            RegistryException(
-                                CONFLICT,
-                                EVENT_PROFILE_ALREADY_EXIST_ON_RANGE
-                            )
-                        )
+                        handle.error(RegistryException(CONFLICT, EVENT_PROFILE_ALREADY_EXIST_ON_RANGE))
                     }
 
                     profiles.isNotEmpty() -> {
