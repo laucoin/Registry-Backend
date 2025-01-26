@@ -35,6 +35,7 @@ import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -189,9 +190,9 @@ class UserEventProfileServiceTest {
         ).thenReturn(Flux.just(EventProfileRoleCountModel(level0 = 0)))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.validateNotLastEventRoleLevel0(uuid, eventId = null, UserModel(), errorMessage).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(FORBIDDEN, result.status)
@@ -241,14 +242,14 @@ class UserEventProfileServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(profile0))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.updateUserEventProfileStatusById(currentUser, uuid, ACCEPTED).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
-        assertEquals(uuid.toString(), result.args?.get("identifier"))
+        assertEquals(uuid.toString(), result.args?.first())
 
         verify(repository, never()).update(any())
         verify(repository, times(1)).findEventProfilesByIdAndUserId(currentUser.id !!, uuid, onlyVisible = true)

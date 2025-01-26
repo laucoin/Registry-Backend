@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import java.util.Locale
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
@@ -21,10 +22,10 @@ class MovementContentReaderDtoMapperTest {
         }
 
         // Act
-        mapper.toDto(content)
+        mapper.toDto(content, Locale.getDefault())
 
         // Assert
-        verify(participantMapper, times(1)).toDto(content.participant !!)
+        verify(participantMapper, times(1)).toDto(content.participant !!, Locale.getDefault())
     }
 
     @Test
@@ -33,10 +34,10 @@ class MovementContentReaderDtoMapperTest {
         val content = MovementContentModel()
 
         // Act
-        val result = mapper.toDto(content)
+        val result = mapper.toDto(content, Locale.getDefault())
 
         // Assert
-        verify(participantMapper, times(0)).toDto(any())
+        verify(participantMapper, times(0)).toDto(any(), any())
 
         assertNull(result.participant)
     }

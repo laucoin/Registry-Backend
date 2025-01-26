@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.ISecurityController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CurrentUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.CurrentUserReaderDtoMapper
+import java.util.Locale
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
@@ -33,7 +34,7 @@ class SecurityController(
         return authenticationPort.refreshAuthenticationToken(refreshAuthenticationInfo.refreshToken !!)
     }
 
-    override fun findCurrentUser(currentUser: CurrentUserModel): CurrentUserReaderDto {
-        return mapper.toDto(currentUser)
+    override fun findCurrentUser(currentUser: CurrentUserModel, locale: Locale): CurrentUserReaderDto {
+        return mapper.toDto(currentUser, locale)
     }
 }

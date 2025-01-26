@@ -7,24 +7,29 @@ import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.support.WebExchangeBindException
 import org.springframework.web.method.annotation.HandlerMethodValidationException
+import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.server.ServerWebInputException
+import reactor.core.publisher.Mono
 
 interface IRegistryControllerAdvice {
     @ExceptionHandler(RegistryException::class)
-    fun handleRegistryException(exception: RegistryException): ResponseEntity<ErrorDto>
+    fun handleRegistryException(exception: RegistryException): Mono<ResponseEntity<ErrorDto>>
 
     @ExceptionHandler(WebExchangeBindException::class)
-    fun handleWebExchangeBindException(exception: WebExchangeBindException): ResponseEntity<ErrorDto>
+    fun handleWebExchangeBindException(exception: WebExchangeBindException): Mono<ResponseEntity<ErrorDto>>
 
     @ExceptionHandler(ServerWebInputException::class)
-    fun handleServerWebInputException(exception: ServerWebInputException): ResponseEntity<ErrorDto>
+    fun handleServerWebInputException(exception: ServerWebInputException): Mono<ResponseEntity<ErrorDto>>
 
     @ExceptionHandler(HandlerMethodValidationException::class)
-    fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): ResponseEntity<ErrorDto>
+    fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): Mono<ResponseEntity<ErrorDto>>
 
     @ExceptionHandler(AuthorizationDeniedException::class)
-    fun handleHandlerAuthorizationDeniedException(exception: AuthorizationDeniedException): ResponseEntity<ErrorDto>
+    fun handleHandlerAuthorizationDeniedException(exception: AuthorizationDeniedException): Mono<ResponseEntity<ErrorDto>>
+
+    @ExceptionHandler(ResponseStatusException::class)
+    fun handleException(exception: ResponseStatusException): Mono<ResponseEntity<ErrorDto>>
 
     @ExceptionHandler(Exception::class)
-    fun handleException(exception: Exception): ResponseEntity<ErrorDto>
+    fun handleException(exception: Exception): Mono<ResponseEntity<ErrorDto>>
 }

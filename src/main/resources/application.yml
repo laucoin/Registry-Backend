@@ -10,8 +10,11 @@ server:
 
 registry:
   information:
-    name: "Registry"
-    description: "This application allows virtual registry management. This is a backend which one is called by the frontend."
+    name: Registry
+    description: This application allows virtual registry management. This is a backend which one is called by the frontend.
+    locale:
+      default: en-US
+      supported: en-US, fr-FR
     support:
       name: Luc AUCOIN
       email: luc.aucoin1998@gmail.com
@@ -34,7 +37,7 @@ registry:
     search:
       threshold: 0.5
   security:
-    default-role: "USER"
+    default-role: USER
     oauth2:
       base-url: ${external.keycloak.base-url}
       realm: ${external.keycloak.realm}
@@ -42,10 +45,10 @@ registry:
       client-secret: ${external.keycloak.swagger.client-secret}
       url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
       claims:
-        user-id: "sub"
-        email: "email"
-        first-name: "given_name"
-        last-name: "family_name"
+        user-id: sub
+        email: email
+        first-name: given_name
+        last-name: family_name
   server:
     prefix: /api
 

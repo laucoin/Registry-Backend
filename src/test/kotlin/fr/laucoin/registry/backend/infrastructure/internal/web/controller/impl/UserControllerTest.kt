@@ -5,10 +5,11 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.UserReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UserReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UserRoleReaderDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -49,10 +50,10 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
     private lateinit var service: IUserService
 
     @MockitoSpyBean
-    private lateinit var roleService: IRoleService
+    private lateinit var readerMapper: UserReaderDtoMapper
 
     @MockitoSpyBean
-    private lateinit var mapper: PartialUserReaderDtoMapper
+    private lateinit var userRoleReaderMapper: UserRoleReaderDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/users"
@@ -126,7 +127,8 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
 
         // Assert
         result.expectStatus().isUnauthorized
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(userRoleReaderMapper)
         verifyNoInteractions(service)
     }
 
@@ -150,9 +152,9 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
 
         // Assert
         result.expectStatus().isForbidden
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(userRoleReaderMapper)
         verifyNoInteractions(service)
-        verifyNoInteractions(roleService)
     }
 
     @ParameterizedTest
@@ -169,9 +171,9 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
         val expectedOnlyVisible = onlyVisible ?: true
         val expectedOffset = offset ?: 0
         val expectedLimit = limit ?: 20
-        val expectedSize = 0
+        val expectedSize = 1
 
-        `when`(service.findUsers(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+        `when`(service.findUsers(any(), any(), anyOrNull())).thenReturn(Flux.just(UserModel()))
 
         // Act
         val result = webClient
@@ -202,20 +204,20 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
             expectedLimit = expectedLimit,
         )
 
-        verifyNoInteractions(mapper)
+        verify(readerMapper, times(1)).toDtoPage(any(), any())
+        verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).findUsers(
             order = expectedOrder,
             onlyVisible = expectedOnlyVisible,
             searched = searched,
         )
-        verifyNoInteractions(roleService)
     }
 
     @Test
     fun `Should findUserById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findUserById(any(), any())).thenReturn(Mono.empty())
+        `when`(service.findUserById(any(), any())).thenReturn(Mono.just(UserModel()))
 
         // Act
         val result = webClient
@@ -225,15 +227,17 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
             .exchange()
 
         // Assert
-        result.body<UserModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<UserReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).findUserById(uuid, onlyVisible = false)
-        verifyNoInteractions(roleService)
     }
 
     @Test
     fun `Should getAssignableUserRoles return 200`() {
         // Arrange
+        `when`(service.getAssignableUserRoles(any())).thenReturn(Flux.just("USER_ROLE"))
+
         // Act
         val result = webClient
             .authenticate(REGISTRY_USER_METADATA_R)
@@ -243,9 +247,9 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
 
         // Assert
         result.body<List<*>>(OK)
-        verifyNoInteractions(mapper)
-        verifyNoInteractions(service)
-        verify(roleService, times(1)).getAssignableUserRoles(any())
+        verifyNoInteractions(readerMapper)
+        verify(userRoleReaderMapper, times(1)).toDto(any(), any())
+        verify(service, times(1)).getAssignableUserRoles(any())
     }
 
     @ParameterizedTest
@@ -256,7 +260,7 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
         // Arrange
         val uuid = UUID.randomUUID()
         val queryParams = if (Objects.nonNull(role)) listOf(Pair("role", role)) else emptyList()
-        `when`(service.updateUserRoleById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+        `when`(service.updateUserRoleById(any(), any(), anyOrNull())).thenReturn(Mono.just(UserModel()))
 
         // Act
         val result = webClient
@@ -266,8 +270,9 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
             .exchange()
 
         // Assert
-        result.body<UserModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<UserReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).updateUserRoleById(any(), eq(uuid), eq(role))
     }
 
@@ -275,7 +280,7 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
     fun `Should blockUserById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.blockUserById(any(), eq(uuid))).thenReturn(Mono.empty())
+        `when`(service.blockUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
 
         // Act
         val result = webClient
@@ -285,17 +290,17 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
             .exchange()
 
         // Assert
-        result.body<UserModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<UserReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).blockUserById(any(), eq(uuid))
-        verifyNoInteractions(roleService)
     }
 
     @Test
     fun `Should unblockUserById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.unblockUserById(any(), eq(uuid))).thenReturn(Mono.empty())
+        `when`(service.unblockUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
 
         // Act
         val result = webClient
@@ -305,17 +310,17 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
             .exchange()
 
         // Assert
-        result.body<UserModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<UserReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).unblockUserById(any(), eq(uuid))
-        verifyNoInteractions(roleService)
     }
 
     @Test
     fun `Should impersonateUserById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.impersonateUserById(any(), eq(uuid))).thenReturn(Mono.empty())
+        `when`(service.impersonateUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
 
         // Act
         val result = webClient
@@ -325,10 +330,10 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
             .exchange()
 
         // Assert
-        result.body<UserModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<UserReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).impersonateUserById(any(), eq(uuid))
-        verifyNoInteractions(roleService)
     }
 
     @Test
@@ -346,8 +351,8 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
 
         // Assert
         result.body<Void>(OK)
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).deleteUserById(any(), eq(uuid))
-        verifyNoInteractions(roleService)
     }
 }

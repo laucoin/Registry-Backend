@@ -2,14 +2,15 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.infrastructure.external.IEntityReaderMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementContentEntity
 import java.util.Objects
 import java.util.UUID
 import org.springframework.stereotype.Component
 
 @Component
-class MovementContentEntityMapper {
-    fun toModel(entity: MovementContentEntity): MovementContentModel {
+class MovementContentEntityMapper: IEntityReaderMapper<MovementContentModel, MovementContentEntity> {
+    override fun toModel(entity: MovementContentEntity): MovementContentModel {
         return MovementContentModel(
             participant = mapParticipantEntity(entity),
         )

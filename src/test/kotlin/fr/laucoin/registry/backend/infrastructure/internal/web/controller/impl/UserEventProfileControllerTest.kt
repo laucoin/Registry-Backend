@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -8,9 +7,10 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileReaderDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.TestContext
-import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
@@ -37,9 +37,9 @@ import org.springframework.http.HttpMethod
 import org.springframework.http.HttpMethod.DELETE
 import org.springframework.http.HttpMethod.GET
 import org.springframework.http.HttpMethod.POST
-import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -47,6 +47,9 @@ import reactor.core.publisher.Mono
 class UserEventProfileControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IUserEventProfileService
+
+    @MockitoSpyBean
+    private lateinit var readerMapper: EventProfileReaderDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/users/profiles"
@@ -71,9 +74,9 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
         )
 
         @JvmStatic
-        fun `Should acceptEventProfile return 200`(): Stream<Arguments> = Stream.of(
-            Arguments.of(ACCEPTED),
-            Arguments.of(REJECTED)
+        fun `Should manageUserEventProfileAcceptance return 200`(): Stream<Arguments> = Stream.of(
+            Arguments.of(true),
+            Arguments.of(false)
         )
 
         @JvmStatic
@@ -108,6 +111,8 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
 
         // Assert
         result.expectStatus().isUnauthorized
+
+        verifyNoInteractions(readerMapper)
         verifyNoInteractions(service)
     }
 
@@ -130,7 +135,7 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
         val expectedOnlyUsable = onlyUsable ?: true
         val expectedOffset = offset ?: 0
         val expectedLimit = limit ?: 20
-        val expectedSize = 0
+        val expectedSize = 1
 
         `when`(
             service.findUserEventProfiles(
@@ -143,7 +148,7 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
                 anyOrNull(),
                 anyOrNull()
             )
-        ).thenReturn(Flux.empty())
+        ).thenReturn(Flux.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -178,6 +183,7 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
             expectedLimit = expectedLimit,
         )
 
+        verify(readerMapper, times(1)).toDtoPage(any(), any())
         verify(service, times(1)).findUserEventProfiles(
             userId = any(),
             order = eq(expectedOrder),
@@ -194,7 +200,7 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
     fun `Should findUserEventProfileById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findUserEventProfileById(any(), any(), any())).thenReturn(Mono.empty())
+        `when`(service.findUserEventProfileById(any(), any(), any())).thenReturn(Mono.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -204,44 +210,31 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
             .exchange()
 
         // Assert
-        result.body<EventProfileModel>(OK)
+        result.body<EventProfileReaderDto>(OK)
+
+        verify(readerMapper, times(1)).toDto(any(), any())
         verify(service, times(1)).findUserEventProfileById(any(), eq(uuid), onlyVisible = eq(false))
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should acceptEventProfile return 200`(status: ProfileStatusEnum) {
+    fun `Should manageUserEventProfileAcceptance return 200`(accepted: Boolean) {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.updateUserEventProfileStatusById(any(), any(), any())).thenReturn(Mono.empty())
+        `when`(service.updateUserEventProfileStatusById(any(), any(), any())).thenReturn(Mono.just(EventProfileModel()))
 
         // Act
         val result = webClient
             .authenticate()
             .post()
-            .uri(uriBuilder("$BASE_URL/{id}/status/{status}", listOf(uuid, status), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/accept/{accepted}", listOf(uuid, accepted), emptyList()))
             .exchange()
 
         // Assert
-        result.body<EventProfileModel>(OK)
-        verify(service, times(1)).updateUserEventProfileStatusById(any(), eq(uuid), eq(status))
-    }
+        result.body<EventProfileReaderDto>(OK)
 
-    @Test
-    fun `Should acceptEventProfile return 400`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-
-        // Act
-        val result = webClient
-            .authenticate()
-            .post()
-            .uri(uriBuilder("$BASE_URL/{id}/status/{status}", listOf(uuid, INVITED), emptyList()))
-            .exchange()
-
-        // Assert
-        result.assertError(BAD_REQUEST, EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED, EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED)
-        verifyNoInteractions(service)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(service, times(1)).updateUserEventProfileStatusById(any(), eq(uuid), eq(if (accepted) ACCEPTED else REJECTED))
     }
 
     @Test
@@ -260,6 +253,7 @@ class UserEventProfileControllerTest(@Autowired private val webClient: WebTestCl
 
         // Assert
         result.body<Void>(OK)
+
         verify(service, times(1)).deleteUserEventProfileById(any(), eq(uuid))
     }
 }

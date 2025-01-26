@@ -22,14 +22,16 @@ interface IEventProfileService {
 
     fun findEventProfileByEventIdAndId(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<EventProfileModel>
     fun searchUsers(searched: String?): Flux<UserModel>
-    fun getAssignableEventRoles(currentUser: UserModel, eventId: UUID): Mono<List<String>>
-    fun createSupportEventProfile(currentUser: UserModel, eventId: UUID): Mono<EventProfileModel>
+    fun getAssignableEventRoles(currentUser: UserModel, eventId: UUID): Flux<String>
+    fun getAvailableEventStatus(eventId: UUID): Flux<ProfileStatusEnum>
     fun createEventProfiles(
         currentUser: UserModel,
         eventId: UUID,
         userIds: List<UUID>,
         profiles: List<EventProfileModel>
-    ): Flux<EventProfileModel>
+    ): Mono<Pair<List<UUID>, List<UUID>>>
+
+    fun createSupportEventProfile(currentUser: UserModel, eventId: UUID): Mono<EventProfileModel>
 
     fun updateEventProfileById(currentUser: UserModel, eventId: UUID, id: UUID, profile: EventProfileModel): Mono<EventProfileModel>
     fun blockEventProfileById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<EventProfileModel>

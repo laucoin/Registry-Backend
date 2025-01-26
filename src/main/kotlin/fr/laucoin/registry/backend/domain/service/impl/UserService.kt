@@ -71,6 +71,10 @@ class UserService(
 
     override fun getServiceAccount(): UserModel = serviceAccount
 
+    override fun getAssignableUserRoles(currentUser: CurrentUserModel): Flux<String> {
+        return Flux.fromIterable(roleService.getAssignableUserRoles(currentUser))
+    }
+
     override fun createUser(oidcId: UUID, email: String, firstName: String?, lastName: String?): Mono<CurrentUserModel> {
         log.info("Saving new user (OIDC ID \"{}\") in database", oidcId)
         val user = UserModel(

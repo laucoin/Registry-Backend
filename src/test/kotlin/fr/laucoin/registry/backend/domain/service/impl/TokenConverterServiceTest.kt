@@ -29,6 +29,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.verifyNoInteractions
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.security.oauth2.jwt.Jwt
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -94,9 +95,9 @@ class TokenConverterServiceTest {
         `when`(jwt.hasClaim(EMAIL_KEY)).thenReturn(hasEmail)
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.convert(jwt).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(UNAUTHORIZED, result.status)
@@ -135,9 +136,9 @@ class TokenConverterServiceTest {
         `when`(userService.findUserByOidcId(any(), any())).thenReturn(Mono.just(currentUser))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.convert(jwt).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(UNAUTHORIZED, result.status)

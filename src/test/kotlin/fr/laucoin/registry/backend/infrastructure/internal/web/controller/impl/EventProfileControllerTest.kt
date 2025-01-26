@@ -18,8 +18,13 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IEventProfileService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CreatedEventProfilesReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfilesWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileRoleReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfilesWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
@@ -59,7 +64,6 @@ import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
-import org.springframework.http.ResponseEntity
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -71,10 +75,22 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
     private lateinit var service: IEventProfileService
 
     @MockitoSpyBean
-    private lateinit var profilesMapper: EventProfilesWriterDtoMapper
+    private lateinit var readerMapper: EventProfileReaderDtoMapper
 
     @MockitoSpyBean
-    private lateinit var profileMapper: EventProfileWriterDtoMapper
+    private lateinit var partialUserReaderMapper: PartialUserReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var eventProfileRoleReaderMapper: EventProfileRoleReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var eventProfileStatusReaderMapper: EventProfileStatusReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var writerMapper: EventProfileWriterDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var profilesWriterMapper: EventProfilesWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/profiles"
@@ -108,21 +124,17 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             Arguments.of(
                 EventProfilesWriterDto(userIds = emptyList(), role = "ROLE"),
                 EVENT_PROFILE_USERS_EMPTY,
-                EVENT_PROFILE_USERS_EMPTY,
             ),
             Arguments.of(
                 EventProfilesWriterDto(role = "ROLE"),
-                EVENT_PROFILE_USERS_EMPTY,
                 EVENT_PROFILE_USERS_EMPTY,
             ),
             Arguments.of(
                 EventProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = ""),
                 EVENT_PROFILE_ROLE_BLANK,
-                EVENT_PROFILE_ROLE_BLANK,
             ),
             Arguments.of(
                 EventProfilesWriterDto(userIds = listOf(UUID.randomUUID())),
-                EVENT_PROFILE_ROLE_BLANK,
                 EVENT_PROFILE_ROLE_BLANK,
             ),
             Arguments.of(
@@ -133,7 +145,6 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
                     endAccess = now()
                 ),
                 EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
-                EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
             ),
         )
 
@@ -142,11 +153,9 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             Arguments.of(
                 EventProfileWriterDto(role = ""),
                 EVENT_PROFILE_ROLE_BLANK,
-                EVENT_PROFILE_ROLE_BLANK,
             ),
             Arguments.of(
                 EventProfileWriterDto(),
-                EVENT_PROFILE_ROLE_BLANK,
                 EVENT_PROFILE_ROLE_BLANK,
             ),
             Arguments.of(
@@ -155,7 +164,6 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
                     startAccess = now().plusDays(1),
                     endAccess = now()
                 ),
-                EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
                 EVENT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
             ),
         )
@@ -197,8 +205,12 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
 
         // Assert
         result.expectStatus().isUnauthorized
-        verifyNoInteractions(profileMapper)
-        verifyNoInteractions(profilesMapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verifyNoInteractions(service)
     }
 
@@ -222,8 +234,12 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
 
         // Assert
         result.expectStatus().isForbidden
-        verifyNoInteractions(profileMapper)
-        verifyNoInteractions(profilesMapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verifyNoInteractions(service)
     }
 
@@ -245,7 +261,7 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
         val expectedOnlyVisible = onlyVisible ?: true
         val expectedOffset = offset ?: 0
         val expectedLimit = limit ?: 20
-        val expectedSize = 0
+        val expectedSize = 1
 
         `when`(
             service.findEventProfilesByEventId(
@@ -257,7 +273,7 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
                 anyOrNull(),
                 anyOrNull()
             )
-        ).thenReturn(Flux.empty())
+        ).thenReturn(Flux.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -292,8 +308,12 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             expectedLimit = expectedLimit,
         )
 
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        verify(readerMapper, times(1)).toDtoPage(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).findEventProfilesByEventId(
             eventId = eq(eventId),
             order = eq(expectedOrder),
@@ -309,7 +329,7 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
     fun `Should findEventProfileById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findEventProfileByEventIdAndId(any(), any(), any())).thenReturn(Mono.empty())
+        `when`(service.findEventProfileByEventIdAndId(any(), any(), any())).thenReturn(Mono.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -319,9 +339,13 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             .exchange()
 
         // Assert
-        result.body<EventProfileModel>(OK)
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        result.body<EventProfileReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).findEventProfileByEventIdAndId(eventId, uuid, onlyVisible = false)
     }
 
@@ -351,7 +375,7 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
     @Test
     fun `Should getAssignableEventProfileRoles return 200`() {
         // Arrange
-        `when`(service.getAssignableEventRoles(any(), any())).thenReturn(Mono.empty())
+        `when`(service.getAssignableEventRoles(any(), any())).thenReturn(Flux.just("role"))
 
         // Act
         val result = webClient
@@ -362,9 +386,36 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
 
         // Assert
         result.body<List<*>>(OK)
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verify(eventProfileRoleReaderMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).getAssignableEventRoles(any(), eq(eventId))
+    }
+
+    @Test
+    fun `Should getAvailableEventStatus return 200`() {
+        // Arrange
+        `when`(service.getAvailableEventStatus(any())).thenReturn(Flux.just(ACCEPTED))
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_PROFILE_METADATA_R))
+            .get()
+            .uri(uriBuilder("$BASE_URL/status", listOf(eventId), emptyList()))
+            .exchange()
+
+        // Assert
+        result.body<List<*>>(OK)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verify(eventProfileStatusReaderMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
+        verify(service, times(1)).getAvailableEventStatus(eq(eventId))
     }
 
     @Test
@@ -372,7 +423,9 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
         // Arrange
         val uuid = UUID.randomUUID()
         val profiles = EventProfilesWriterDto(userIds = listOf(uuid), role = "ROLE")
-        `when`(service.createEventProfiles(any(), any(), any(), any())).thenReturn(Flux.just(EventProfileModel()))
+        `when`(service.createEventProfiles(any(), any(), any(), any())).thenReturn(
+            Mono.just(Pair(listOf(UUID.randomUUID()), emptyList()))
+        )
 
         // Act
         val result = webClient
@@ -384,8 +437,12 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
 
         // Assert
         result.body<CreatedEventProfilesReaderDto>(OK)
-        verifyNoInteractions(profileMapper)
-        verify(profilesMapper, times(1)).toModels(profiles, eventId)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verify(profilesWriterMapper, times(1)).toModels(profiles, eventId)
         verify(service, times(1)).createEventProfiles(
             any(),
             eq(eventId),
@@ -407,7 +464,9 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
                 any(),
                 any()
             )
-        ).thenReturn(Flux.just(EventProfileModel(user = UserModel().apply { id = uuid2 })))
+        ).thenReturn(
+            Mono.just(Pair(listOf(uuid2), listOf(uuid)))
+        )
 
         // Act
         val result = webClient
@@ -419,11 +478,15 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
 
         // Assert
         val body = result.body<CreatedEventProfilesReaderDto>(MULTI_STATUS)
+        assertEquals(uuid2, body?.createdUserIds?.first())
         assertEquals(uuid, body?.notCreatedUserIds?.first())
-        assertEquals(uuid2, body?.profiles?.first()?.user?.id)
 
-        verifyNoInteractions(profileMapper)
-        verify(profilesMapper, times(1)).toModels(profiles, eventId)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verify(profilesWriterMapper, times(1)).toModels(profiles, eventId)
         verify(service, times(1)).createEventProfiles(
             any(),
             eq(eventId),
@@ -437,7 +500,6 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
     fun `Should createEventProfiles return 400`(
         profile: EventProfilesWriterDto,
         expectedCode: String,
-        expectedMessage: String,
     ) {
         // Arrange
         // Act
@@ -449,16 +511,20 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        result.assertError(BAD_REQUEST, expectedCode)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verifyNoInteractions(service)
     }
 
     @Test
     fun `Should createSupportEventProfile return 200`() {
         // Arrange
-        `when`(service.createSupportEventProfile(any(), any())).thenReturn(Mono.empty())
+        `when`(service.createSupportEventProfile(any(), any())).thenReturn(Mono.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -468,9 +534,13 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             .exchange()
 
         // Assert
-        result.body<ResponseEntity<*>>(OK)
-        verifyNoInteractions(profileMapper)
-        verifyNoInteractions(profilesMapper)
+        result.body<EventProfileReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).createSupportEventProfile(any(), eq(eventId))
     }
 
@@ -480,7 +550,7 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
         val uuid = UUID.randomUUID()
         val profile = EventProfileWriterDto(role = "ROLE")
 
-        `when`(service.updateEventProfileById(any(), any(), any(), any())).thenReturn(Mono.empty())
+        `when`(service.updateEventProfileById(any(), any(), any(), any())).thenReturn(Mono.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -491,9 +561,13 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             .exchange()
 
         // Assert
-        result.body<EventProfileModel>(OK)
-        verifyNoInteractions(profilesMapper)
-        verify(profileMapper, times(1)).toModel(profile, eventId)
+        result.body<EventProfileReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verify(writerMapper, times(1)).toModel(profile, eventId)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).updateEventProfileById(any(), eq(eventId), eq(uuid), any())
     }
 
@@ -502,7 +576,6 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
     fun `Should updateEventProfile return 400`(
         profile: EventProfileWriterDto,
         expectedCode: String,
-        expectedMessage: String,
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -516,9 +589,13 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        result.assertError(BAD_REQUEST, expectedCode)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verifyNoInteractions(service)
     }
 
@@ -527,7 +604,7 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.blockEventProfileById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.empty())
+        `when`(service.blockEventProfileById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -537,9 +614,13 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             .exchange()
 
         // Assert
-        result.body<EventProfileModel>(OK)
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        result.body<EventProfileReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).blockEventProfileById(any(), eq(eventId), eq(uuid))
     }
 
@@ -548,7 +629,7 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.unblockEventProfileById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.empty())
+        `when`(service.unblockEventProfileById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(EventProfileModel()))
 
         // Act
         val result = webClient
@@ -558,9 +639,13 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             .exchange()
 
         // Assert
-        result.body<EventProfileModel>(OK)
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        result.body<EventProfileReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).unblockEventProfileById(any(), eq(eventId), eq(uuid))
     }
 
@@ -580,8 +665,12 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
 
         // Assert
         result.body<Void>(OK)
-        verifyNoInteractions(profilesMapper)
-        verifyNoInteractions(profileMapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(eventProfileRoleReaderMapper)
+        verifyNoInteractions(eventProfileStatusReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(profilesWriterMapper)
         verify(service, times(1)).deleteEventProfileById(any(), eq(eventId), eq(uuid))
     }
 }

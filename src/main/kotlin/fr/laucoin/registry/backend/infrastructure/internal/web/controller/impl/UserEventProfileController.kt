@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IUserEventProfileController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
@@ -10,6 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Compa
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileReaderDtoMapper
 import java.time.ZonedDateTime
+import java.util.Locale
 import java.util.UUID
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.web.bind.annotation.RestController
@@ -22,6 +22,7 @@ class UserEventProfileController(
 ): IUserEventProfileController {
     override fun findUserEventProfiles(
         currentUser: CurrentUserModel,
+        locale: Locale,
         offset: Int,
         limit: Int,
         order: Direction,
@@ -35,21 +36,26 @@ class UserEventProfileController(
         return service.findUserEventProfiles(
             currentUser.id !!, order, onlyVisible, onlyUsable, status, searched, startAccess, endAccess
         )
-            .map(readerMapper::toDto)
             .paginate(offset, limit)
+            .map { readerMapper.toDtoPage(it, locale) }
     }
 
-    override fun findUserEventProfileById(currentUser: CurrentUserModel, id: UUID): Mono<EventProfileReaderDto> {
+    override fun findUserEventProfileById(currentUser: CurrentUserModel, locale: Locale, id: UUID): Mono<EventProfileReaderDto> {
         return service.findUserEventProfileById(currentUser, id, onlyVisible = false)
-            .map(readerMapper::toDto)
+            .map { readerMapper.toDto(it, locale) }
     }
 
     override fun manageUserEventProfileAcceptance(
         currentUser: CurrentUserModel,
+        locale: Locale,
         id: UUID,
-        status: ProfileStatusEnum,
-    ): Mono<EventProfileModel> {
-        return service.updateUserEventProfileStatusById(currentUser, id, status)
+        accepted: Boolean,
+    ): Mono<EventProfileReaderDto> {
+        return service.updateUserEventProfileStatusById(
+            currentUser,
+            id,
+            if (accepted) ProfileStatusEnum.ACCEPTED else ProfileStatusEnum.REJECTED
+        ).map { readerMapper.toDto(it, locale) }
     }
 
     override fun deleteUserProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {

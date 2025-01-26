@@ -37,6 +37,7 @@ import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.test.util.ReflectionTestUtils.setField
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -176,7 +177,7 @@ class EventProfileServiceTest {
         `when`(roleService.getAssignableEventRoles(any())).thenReturn(listOf(EVENT_ROLE))
 
         // Act
-        service.getAssignableEventRoles(currentUser, eventId).block()
+        service.getAssignableEventRoles(currentUser, eventId).blockFirst()
 
         // Assert
         verify(repository, times(1)).findEventProfileByEventAndUserId(
@@ -241,9 +242,7 @@ class EventProfileServiceTest {
         `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
 
         // Act
-        service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles)
-            .collectList()
-            .block()
+        service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles).block()
 
         // Assert
         verify(repository, times(1)).findEventProfilesByEventId(
@@ -281,15 +280,13 @@ class EventProfileServiceTest {
                 EventProfileModel().apply { user = UserModel().apply { id = uuid1 }; status = ACCEPTED },
             )
         )
-        `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
+        `when`(repository.saveAll(any())).thenReturn(Flux.just(EventProfileModel().apply { user = UserModel().apply { id = uuid2 } }))
 
         // Act
-        val result = service.createEventProfiles(currentUser(), eventId, listOf(uuid1, uuid2), profiles)
-            .collectList()
-            .block()
+        val result = service.createEventProfiles(currentUser(), eventId, listOf(uuid1, uuid2), profiles).block()
 
         // Assert
-        assertEquals(1, result?.size)
+        assertEquals(1, result?.first?.size)
         verify(repository, times(1)).findEventProfilesByEventId(
             eventId,
             onlyVisible = false,
@@ -327,11 +324,9 @@ class EventProfileServiceTest {
         `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
-            service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles)
-                .collectList()
-                .block()
-        }
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+            service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles).block()
+        }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
@@ -462,12 +457,12 @@ class EventProfileServiceTest {
         `when`(roleService.getAssignableEventRoles(any())).thenReturn(assignableRoles)
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.updateEventProfileById(currentUser, eventId, profileId, nextProfile).block()
-        }
+        }) as RegistryException
 
         // Assert
-        assertEquals(FORBIDDEN, result.statusCode)
+        assertEquals(FORBIDDEN, result.status)
         assertEquals(message, result.message)
 
         verify(repository, times(1)).findEventProfilesByEventId(

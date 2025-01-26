@@ -109,7 +109,11 @@ class ParticipantService(
             .collectList()
             .handle { it, handle ->
                 if (it.isNotEmpty()) {
-                    val exception = RegistryException(CONFLICT, PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER)
+                    val exception = RegistryException(
+                        CONFLICT,
+                        PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER,
+                        arrayListOf("${it.first().firstName} ${it.first().lastName}")
+                    )
                     log.error("Attempt to link an already link user to a participant", exception)
                     handle.error(exception)
                 } else handle.next(it)

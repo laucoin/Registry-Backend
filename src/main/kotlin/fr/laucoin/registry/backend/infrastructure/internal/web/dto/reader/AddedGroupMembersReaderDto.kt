@@ -7,5 +7,5 @@ import java.util.UUID
 @JsonInclude(NON_NULL)
 data class AddedGroupMembersReaderDto(
     var members: List<UUID>,
-    var notAddedMemberIds: List<UUID>? = null,
+    var notAddedMemberIds: List<UUID>,
 )

@@ -31,7 +31,7 @@ class PermissionService: PermissionEvaluator {
     ): Boolean {
         val exception = RegistryException(
             status = NOT_IMPLEMENTED,
-            message = NOT_IMPLEMENTED_YET,
+            code = NOT_IMPLEMENTED_YET,
         )
         log.error(
             "Prefer to use `hasPermission(authentication: Authentication?, targetObject: Any?, permission: Any?)`",

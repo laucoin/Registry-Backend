@@ -117,7 +117,12 @@ class GroupService(
             }
     }
 
-    override fun addMembersToGroupById(currentUser: UserModel, eventId: UUID, id: UUID, memberIds: List<UUID>): Mono<List<UUID>> {
+    override fun addMembersToGroupById(
+        currentUser: UserModel,
+        eventId: UUID,
+        id: UUID,
+        memberIds: List<UUID>
+    ): Mono<Pair<List<UUID>, List<UUID>>> {
         return findGroupById(eventId, id, onlyVisible = false)
             .map { Pair(it, it.getNewMemberIds(memberIds)) }
             .handle { it, handle ->
@@ -137,7 +142,7 @@ class GroupService(
                     .map { _ -> newMemberIds.map { ParticipantModel().apply { this.id = it } } }
                     .map { group.apply { members = members.plus(it) } }
                     .updateGroup(currentUser)
-                    .map { newMemberIds }
+                    .map { Pair(newMemberIds, memberIds.minus(newMemberIds.toSet())) }
             }
     }
 

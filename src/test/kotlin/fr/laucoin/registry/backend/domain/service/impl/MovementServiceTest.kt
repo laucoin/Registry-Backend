@@ -40,6 +40,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
+import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -244,9 +245,9 @@ class MovementServiceTest {
         `when`(repository.update(any())).thenReturn(Mono.just(movement))
 
         // Act
-        val result = assertThrows(RegistryException::class.java) {
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             service.updateMovementById(currentUser(), eventId, uuid, movement).block()
-        }
+        }) as RegistryException
 
         // Assert
         assertEquals(status, result.status)

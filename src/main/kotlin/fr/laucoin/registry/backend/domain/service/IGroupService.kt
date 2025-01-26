@@ -35,7 +35,13 @@ interface IGroupService {
     fun searchParticipants(eventId: UUID, searched: String?): Flux<ParticipantModel>
     fun createGroup(currentUser: UserModel, group: GroupModel): Mono<GroupModel>
     fun updateGroupById(currentUser: UserModel, eventId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
-    fun addMembersToGroupById(currentUser: UserModel, eventId: UUID, id: UUID, memberIds: List<UUID>): Mono<List<UUID>>
+    fun addMembersToGroupById(
+        currentUser: UserModel,
+        eventId: UUID,
+        id: UUID,
+        memberIds: List<UUID>
+    ): Mono<Pair<List<UUID>, List<UUID>>>
+
     fun removeMemberFromGroupById(currentUser: UserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel>
     fun disableGroupById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<GroupModel>
     fun enableGroupById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<GroupModel>

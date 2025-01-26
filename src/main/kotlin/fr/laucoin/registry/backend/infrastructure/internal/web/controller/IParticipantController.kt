@@ -6,20 +6,23 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import java.time.ZonedDateTime
+import java.util.Locale
 import java.util.UUID
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
+import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -28,6 +31,7 @@ import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
@@ -38,11 +42,19 @@ import reactor.core.publisher.Mono
 interface IParticipantController {
     @Operation(
         summary = "Find Participants",
-        description = "Find or get paginated Participants"
+        description = "Find or get paginated Participants",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_R')")
     @GetMapping
     fun findParticipants(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @RequestParam(defaultValue = "0") offset: Int,
         @RequestParam(defaultValue = "20") limit: Int,
@@ -58,83 +70,152 @@ interface IParticipantController {
 
     @Operation(
         summary = "Find Participant",
-        description = "Find Participant by ID"
+        description = "Find Participant by ID",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_R')")
     @GetMapping("/{id}")
-    fun findParticipantById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<ParticipantReaderDto>
+    fun findParticipantById(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+    ): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Search Users",
-        description = "Search Users to link to a Participant"
+        description = "Search Users to link to a Participant",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
     @GetMapping("/search/users")
-    fun searchUsers(@PathVariable eventId: UUID, @RequestParam searched: String?): Flux<PartialUserReaderDto>
+    fun searchUsers(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @RequestParam searched: String?,
+    ): Flux<PartialUserReaderDto>
 
     @Operation(
         summary = "Search Groups",
-        description = "Search Groups to add Participant in it"
+        description = "Search Groups to add Participant in it",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
     @GetMapping("/search/groups")
     fun searchGroups(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @RequestParam searched: String?
-    ): Flux<GroupReaderDto>
+    ): Flux<GroupWithoutMemberReaderDto>
 
     @Operation(
         summary = "Create Participant",
-        description = "Create Participant linked to the Event"
+        description = "Create Participant linked to the Event",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_C')")
     @PostMapping
     fun createParticipant(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @RequestBody @Valid participant: ParticipantWriterDto,
-    ): Mono<ParticipantModel>
+    ): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Update Participant",
-        description = "Update Participant"
+        description = "Update Participant",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
     @PatchMapping("/{id}")
     fun updateParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid participant: ParticipantWriterDto,
-    ): Mono<ParticipantModel>
+    ): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Disable Participant",
-        description = "Disable Participant, it will not visible anymore in the Event"
+        description = "Disable Participant, it will not visible anymore in the Event",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
     @PatchMapping("/{id}/disable")
     fun disableParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
-    ): Mono<ParticipantModel>
+    ): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Enable Participant",
-        description = "Enable Participant, obviously it will be visible again in the Event"
+        description = "Enable Participant, obviously it will be visible again in the Event",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
     @PatchMapping("/{id}/enable")
     fun enableParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
-    ): Mono<ParticipantModel>
+    ): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Delete Participant",
-        description = "Delete all Participant data."
+        description = "Delete all Participant data.",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_D')")
     @DeleteMapping("/{id}")

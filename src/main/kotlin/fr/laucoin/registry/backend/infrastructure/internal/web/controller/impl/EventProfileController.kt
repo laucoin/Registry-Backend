@@ -2,9 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.service.IEventProfileService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IEventProfileController
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CreatedEventProfilesReaderDto
@@ -12,12 +12,15 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventP
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventProfilesWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.CreatedEventProfilesReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileRoleReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfilesWriterDtoMapper
 import java.time.ZonedDateTime
-import java.util.Objects
+import java.util.Locale
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Sort.Direction
@@ -31,14 +34,18 @@ import reactor.core.publisher.Mono
 @RestController
 class EventProfileController(
     private val service: IEventProfileService,
-    private val userMapper: PartialUserReaderDtoMapper,
-    private val profileReaderMapper: EventProfileReaderDtoMapper,
+    private val readerMapper: EventProfileReaderDtoMapper,
+    private val partialUserReaderMapper: PartialUserReaderDtoMapper,
+    private val eventProfileRoleReaderMapper: EventProfileRoleReaderDtoMapper,
+    private val eventProfileStatusReaderMapper: EventProfileStatusReaderDtoMapper,
+    private val createdEventProfilesReaderMapper: CreatedEventProfilesReaderDtoMapper,
+    private val writerMapper: EventProfileWriterDtoMapper,
     private val profilesWriterMapper: EventProfilesWriterDtoMapper,
-    private val profileWriterMapper: EventProfileWriterDtoMapper,
     @Value("\${registry.feature.profile.searched.max-user-result}")
     private val maxUserResult: Long,
 ): IEventProfileController {
     override fun findEventProfiles(
+        locale: Locale,
         eventId: UUID,
         offset: Int,
         limit: Int,
@@ -58,64 +65,76 @@ class EventProfileController(
             startAccess,
             endAccess
         )
-            .map(profileReaderMapper::toDto)
             .paginate(offset, limit)
+            .map { readerMapper.toDtoPage(it, locale) }
     }
 
-    override fun findEventProfileById(eventId: UUID, id: UUID): Mono<EventProfileReaderDto> {
+    override fun findEventProfileById(locale: Locale, eventId: UUID, id: UUID): Mono<EventProfileReaderDto> {
         return service.findEventProfileByEventIdAndId(eventId, id, onlyVisible = false)
-            .map(profileReaderMapper::toDto)
+            .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun searchUsers(eventId: UUID, searched: String?): Flux<PartialUserReaderDto> {
+    override fun searchUsers(locale: Locale, eventId: UUID, searched: String?): Flux<PartialUserReaderDto> {
         return service.searchUsers(searched)
             .take(maxUserResult)
-            .map(userMapper::toDto)
+            .map { partialUserReaderMapper.toDto(it, locale) }
     }
 
-    override fun getAssignableEventProfileRoles(currentUser: CurrentUserModel, eventId: UUID): Mono<List<String>> {
+    override fun getAssignableEventProfileRoles(currentUser: CurrentUserModel, locale: Locale, eventId: UUID): Flux<LabelDto> {
         return service.getAssignableEventRoles(currentUser, eventId)
+            .map { eventProfileRoleReaderMapper.toDto(it, locale) }
+    }
+
+    override fun getAvailableEventProfileStatus(locale: Locale, eventId: UUID): Flux<LabelDto> {
+        return service.getAvailableEventStatus(eventId)
+            .map { eventProfileStatusReaderMapper.toDto(it, locale) }
     }
 
     override fun createEventProfiles(
         currentUser: CurrentUserModel,
+        locale: Locale,
         eventId: UUID,
         profiles: EventProfilesWriterDto
     ): Mono<ResponseEntity<CreatedEventProfilesReaderDto>> {
         return service.createEventProfiles(currentUser, eventId, profiles.userIds !!, profilesWriterMapper.toModels(profiles, eventId))
-            .collectList()
-            .map { CreatedEventProfilesReaderDto(it) }
-            .map { body ->
-                if (body.profiles.size == profiles.userIds !!.size) {
-                    ResponseEntity.status(OK).body(body)
-                } else {
-                    body.notCreatedUserIds = profiles.userIds !!.filter {
-                        Objects.isNull(body.profiles.find { profile -> profile.user !!.id == it })
-                    }
-                    ResponseEntity.status(MULTI_STATUS).body(body)
-                }
-            }
+            .map { createdEventProfilesReaderMapper.toDto(it, locale) }
+            .map { ResponseEntity.status(if (it.notCreatedUserIds.isEmpty()) OK else MULTI_STATUS).body(it) }
     }
 
-    override fun createSupportEventProfile(currentUser: CurrentUserModel, eventId: UUID): Mono<EventProfileModel> {
+    override fun createSupportEventProfile(currentUser: CurrentUserModel, locale: Locale, eventId: UUID): Mono<EventProfileReaderDto> {
         return service.createSupportEventProfile(currentUser, eventId)
+            .map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateEventProfile(
         currentUser: CurrentUserModel,
+        locale: Locale,
         eventId: UUID,
         id: UUID,
         profile: EventProfileWriterDto,
-    ): Mono<EventProfileModel> {
-        return service.updateEventProfileById(currentUser, eventId, id, profileWriterMapper.toModel(profile, eventId))
+    ): Mono<EventProfileReaderDto> {
+        return service.updateEventProfileById(currentUser, eventId, id, writerMapper.toModel(profile, eventId))
+            .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun blockEventProfileById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<EventProfileModel> {
+    override fun blockEventProfileById(
+        currentUser: CurrentUserModel,
+        locale: Locale,
+        eventId: UUID,
+        id: UUID,
+    ): Mono<EventProfileReaderDto> {
         return service.blockEventProfileById(currentUser, eventId, id)
+            .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun unblockEventProfileById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<EventProfileModel> {
+    override fun unblockEventProfileById(
+        currentUser: CurrentUserModel,
+        locale: Locale,
+        eventId: UUID,
+        id: UUID,
+    ): Mono<EventProfileReaderDto> {
         return service.unblockEventProfileById(currentUser, eventId, id)
+            .map { readerMapper.toDto(it, locale) }
     }
 
     override fun deleteEventProfileById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void> {

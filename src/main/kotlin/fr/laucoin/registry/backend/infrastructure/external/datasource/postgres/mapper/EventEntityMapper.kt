@@ -1,11 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
 import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithModel
 import org.springframework.stereotype.Component
 
 @Component
-class EventEntityMapper: IGenericEntityMapper<EventModel, EventEntity> {
+class EventEntityMapper: IEntityMapper<EventModel, EventEntity> {
     override fun toModel(entity: EventEntity): EventModel {
         return EventModel().apply {
             name = entity.name

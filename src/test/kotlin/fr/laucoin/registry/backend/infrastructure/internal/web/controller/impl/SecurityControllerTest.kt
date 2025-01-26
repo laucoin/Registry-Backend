@@ -54,10 +54,10 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
         @JvmStatic
         fun `Should fetchToken return 400`(): Stream<Arguments> {
             return Stream.of(
-                Arguments.of("redirectUri", null, AUTHORIZATION_CODE_BLANK, AUTHORIZATION_CODE_BLANK),
-                Arguments.of("redirectUri", "", AUTHORIZATION_CODE_BLANK, AUTHORIZATION_CODE_BLANK),
-                Arguments.of(null, "code", REDIRECT_URI_BLANK, REDIRECT_URI_BLANK),
-                Arguments.of("", "code", REDIRECT_URI_BLANK, REDIRECT_URI_BLANK),
+                Arguments.of("redirectUri", null, AUTHORIZATION_CODE_BLANK),
+                Arguments.of("redirectUri", "", AUTHORIZATION_CODE_BLANK),
+                Arguments.of(null, "code", REDIRECT_URI_BLANK),
+                Arguments.of("", "code", REDIRECT_URI_BLANK),
             )
         }
 
@@ -97,7 +97,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK, REDIRECT_URI_BLANK)
+        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK)
         verifyNoInteractions(authenticationPort)
     }
 
@@ -128,7 +128,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK, REDIRECT_URI_BLANK)
+        result.assertError(BAD_REQUEST, REDIRECT_URI_BLANK)
         verifyNoInteractions(authenticationPort)
     }
 
@@ -169,7 +169,6 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
         redirectUri: String?,
         authorizationCode: String?,
         expectedCode: String,
-        expectedMessage: String,
     ) {
         // Arrange
         val body = AuthenticationInfoModel(redirectUri, authorizationCode)
@@ -182,7 +181,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
+        result.assertError(BAD_REQUEST, expectedCode)
         verifyNoInteractions(authenticationPort)
     }
 
@@ -228,7 +227,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, REFRESH_TOKEN_BLANK, REFRESH_TOKEN_BLANK)
+        result.assertError(BAD_REQUEST, REFRESH_TOKEN_BLANK)
         verifyNoInteractions(authenticationPort)
     }
 
@@ -244,6 +243,6 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Assert
         result.body<CurrentUserModel>(OK)
-        verify(mapper, times(1)).toDto(any())
+        verify(mapper, times(1)).toDto(any(), any())
     }
 }

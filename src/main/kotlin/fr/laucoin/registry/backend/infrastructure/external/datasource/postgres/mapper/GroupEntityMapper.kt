@@ -4,11 +4,14 @@ import com.nimbusds.jose.shaded.gson.Gson
 import com.nimbusds.jose.shaded.gson.reflect.TypeToken
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
 import org.springframework.stereotype.Component
 
 @Component
-class GroupEntityMapper(private val gson: Gson): IGenericEventEntityMapper<GroupModel, GroupEntity> {
+class GroupEntityMapper(private val gson: Gson): IEntityMapper<GroupModel, GroupEntity> {
     private val listType = object: TypeToken<List<ParticipantModel>>() {}.type
 
     override fun toModel(entity: GroupEntity): GroupModel {
@@ -17,8 +20,7 @@ class GroupEntityMapper(private val gson: Gson): IGenericEventEntityMapper<Group
             begin = entity.begin
             end = entity.end
             members = gson.fromJson(entity.members, listType)
-            event = mapEventEntity(entity)
-        }.fillWithEntity(entity)
+        }.fillWithEventAndEntity(entity)
     }
 
     override fun toEntity(model: GroupModel): GroupEntity {
@@ -26,7 +28,6 @@ class GroupEntityMapper(private val gson: Gson): IGenericEventEntityMapper<Group
             name = model.name
             begin = model.begin
             end = model.end
-            eventId = model.event?.id
-        }.fillWithModel(model)
+        }.fillWithEventAndModel(model)
     }
 }

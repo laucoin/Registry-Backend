@@ -7,19 +7,23 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.MovementParticipantsAndGroupsModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import java.time.ZonedDateTime
+import java.util.Locale
 import java.util.UUID
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
+import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -28,8 +32,10 @@ import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Movements management", description = "API for Movements-related operations")
@@ -37,11 +43,19 @@ import reactor.core.publisher.Mono
 interface IMovementController {
     @Operation(
         summary = "Find Movements",
-        description = "Find or get paginated Movements"
+        description = "Find or get paginated Movements",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_R')")
     @GetMapping
     fun findMovements(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @RequestParam(defaultValue = "0") offset: Int,
         @RequestParam(defaultValue = "20") limit: Int,
@@ -57,75 +71,151 @@ interface IMovementController {
 
     @Operation(
         summary = "Find Movement",
-        description = "Find Movement by ID"
+        description = "Find Movement by ID",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_R')")
     @GetMapping("/{id}")
-    fun findMovementById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<MovementReaderDto>
+    fun findMovementById(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+    ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Search Participants and/or Groups",
-        description = "Search Participants and/or Groups to add in a Movement"
+        description = "Search Participants and/or Groups to add in a Movement",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
     @GetMapping("/search/participants-and-groups")
     fun searchParticipantsAndGroups(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @RequestParam searched: String?
-    ): Mono<MovementParticipantsAndGroupsModel>
+    ): Mono<MovementParticipantsAndGroupsReaderDto>
+
+    @Operation(
+        summary = "Get available Movement Type",
+        description = "Get all movement type you are allowed to assign",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @GetMapping("/types")
+    fun getAvailableMovementTypes(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+    ): Flux<LabelDto>
 
     @Operation(
         summary = "Create Movement",
-        description = "Create Movement and related Movement Content"
+        description = "Create Movement and related Movement Content",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_C')")
     @PostMapping
     fun createMovement(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @RequestBody @Valid movement: MovementWriterDto,
-    ): Mono<MovementModel>
+    ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Update Movement",
-        description = "Update Movement"
+        description = "Update Movement",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
     @PatchMapping("/{id}")
     fun updateMovementById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid movement: MovementWriterDto,
-    ): Mono<MovementModel>
+    ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Disable Movement",
-        description = "Disable Movement, it will not visible anymore in the Event"
+        description = "Disable Movement, it will not visible anymore in the Event",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
     @PatchMapping("/{id}/disable")
     fun disableMovementById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
-    ): Mono<MovementModel>
+    ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Enable Movement",
-        description = "Enable Movement, obviously it will be visible again in the Event"
+        description = "Enable Movement, obviously it will be visible again in the Event",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
     @PatchMapping("/{id}/enable")
     fun enableMovementById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
-    ): Mono<MovementModel>
+    ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Delete Movement",
-        description = "Delete all Movement data."
+        description = "Delete all Movement data.",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
     )
     @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_D')")
     @DeleteMapping("/{id}")

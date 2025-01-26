@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_O
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_D
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_EVENT_C
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_EVENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_EVENT_R
 import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.ACTIVITY_COMMUNICATION
@@ -15,7 +16,10 @@ import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.SMOKE_REPO
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventOptionsReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
@@ -64,7 +68,13 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
     private lateinit var service: IEventService
 
     @MockitoSpyBean
-    private lateinit var mapper: EventWriterDtoMapper
+    private lateinit var readerMapper: EventReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var optionsReaderMapper: EventOptionsReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var writerMapper: EventWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events"
@@ -88,7 +98,6 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             Arguments.of(
                 EventWriterDto(name = "", begin = now(), end = now().plusDays(1), options = emptyList()),
                 EVENT_NAME_BLANK,
-                EVENT_NAME_BLANK,
             ),
             Arguments.of(
                 EventWriterDto(
@@ -98,26 +107,21 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
                     options = emptyList()
                 ),
                 EVENT_NAME_TOO_LONG,
-                EVENT_NAME_TOO_LONG,
             ),
             Arguments.of(
                 EventWriterDto(name = "event", begin = now().plusDays(1), end = now(), options = emptyList()),
-                EVENT_BEGIN_LATER_THAN_END_TIME,
                 EVENT_BEGIN_LATER_THAN_END_TIME,
             ),
             Arguments.of(
                 EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY_COMMUNICATION)),
                 EVENT_OPTIONS_MISSING,
-                EVENT_OPTIONS_MISSING,
             ),
             Arguments.of(
                 EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(MOVEMENT_REPORT)),
                 EVENT_OPTIONS_MISSING,
-                EVENT_OPTIONS_MISSING,
             ),
             Arguments.of(
                 EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(SMOKE_REPORT)),
-                EVENT_OPTIONS_MISSING,
                 EVENT_OPTIONS_MISSING,
             ),
         )
@@ -156,7 +160,9 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.expectStatus().isUnauthorized
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
@@ -180,7 +186,9 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.expectStatus().isForbidden
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
@@ -200,9 +208,9 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
         val expectedOnlyVisible = onlyVisible ?: true
         val expectedOffset = offset ?: 0
         val expectedLimit = limit ?: 20
-        val expectedSize = 0
+        val expectedSize = 1
 
-        `when`(service.findEvents(any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Flux.empty())
+        `when`(service.findEvents(any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(EventModel()))
 
         // Act
         val result = webClient
@@ -235,7 +243,8 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             expectedLimit = expectedLimit,
         )
 
-        verifyNoInteractions(mapper)
+        verify(readerMapper, times(1)).toDtoPage(any(), any())
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).findEvents(
             currentUser = eq(currentUser()),
             order = eq(expectedOrder),
@@ -250,7 +259,7 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
     fun `Should findEventById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findEventById(any(), any())).thenReturn(Mono.empty())
+        `when`(service.findEventById(any(), any())).thenReturn(Mono.just(EventModel()))
 
         // Act
         val result = webClient
@@ -260,16 +269,38 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             .exchange()
 
         // Assert
-        result.body<EventModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<EventReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).findEventById(uuid, onlyVisible = false)
+    }
+
+    @Test
+    fun `Should getAvailableEventOptions return 200`() {
+        // Arrange
+        `when`(service.availableEventOptions()).thenReturn(Flux.just(Pair(ACTIVITY_COMMUNICATION, listOf(ACTIVITY))))
+
+        // Act
+        val result = webClient
+            .authenticate(REGISTRY_EVENT_METADATA_R)
+            .get()
+            .uri(uriBuilder("$BASE_URL/options", listOf(eventId), emptyList()))
+            .exchange()
+
+        // Assert
+        result.body<List<*>>(OK)
+        verifyNoInteractions(readerMapper)
+        verify(optionsReaderMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(writerMapper)
+        verify(service, times(1)).availableEventOptions()
     }
 
     @Test
     fun `Should createEvent return 200`() {
         // Arrange
         val event = EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
-        `when`(service.createEvent(any(), any())).thenReturn(Mono.empty())
+        `when`(service.createEvent(any(), any())).thenReturn(Mono.just(EventModel()))
 
         // Act
         val result = webClient
@@ -280,8 +311,9 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             .exchange()
 
         // Assert
-        result.body<EventModel>(OK)
-        verify(mapper, times(1)).toModel(any())
+        result.body<EventReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(writerMapper, times(1)).toModel(any())
         verify(service, times(1)).createEvent(any(), any())
     }
 
@@ -290,7 +322,6 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
     fun `Should createEvent return 400`(
         event: EventWriterDto,
         expectedCode: String,
-        expectedMessage: String,
     ) {
         // Arrange
         // Act
@@ -302,8 +333,10 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
-        verifyNoInteractions(mapper)
+        result.assertError(BAD_REQUEST, expectedCode)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
@@ -312,7 +345,7 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val event = EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
 
-        `when`(service.updateEventById(any(), any(), any())).thenReturn(Mono.empty())
+        `when`(service.updateEventById(any(), any(), any())).thenReturn(Mono.just(EventModel()))
 
         // Act
         val result = webClient
@@ -323,8 +356,9 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             .exchange()
 
         // Assert
-        result.body<EventModel>(OK)
-        verify(mapper, times(1)).toModel(any())
+        result.body<EventReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(writerMapper, times(1)).toModel(any())
         verify(service, times(1)).updateEventById(any(), eq(eventId), any())
     }
 
@@ -333,7 +367,6 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
     fun `Should updateEventById return 400`(
         event: EventWriterDto,
         expectedCode: String,
-        expectedMessage: String,
     ) {
         // Arrange
         // Act
@@ -345,15 +378,17 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             .exchange()
 
         // Assert
-        result.assertError(BAD_REQUEST, expectedCode, expectedMessage)
-        verifyNoInteractions(mapper)
+        result.assertError(BAD_REQUEST, expectedCode)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
         verifyNoInteractions(service)
     }
 
     @Test
     fun `Should disableEventById return 200`() {
         // Arrange
-        `when`(service.disableEventById(any(), any())).thenReturn(Mono.empty())
+        `when`(service.disableEventById(any(), any())).thenReturn(Mono.just(EventModel()))
 
         // Act
         val result = webClient
@@ -363,15 +398,16 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             .exchange()
 
         // Assert
-        result.body<EventModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<EventReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).disableEventById(any(), eq(eventId))
     }
 
     @Test
     fun `Should enableEventById return 200`() {
         // Arrange
-        `when`(service.enableEventById(any(), any())).thenReturn(Mono.empty())
+        `when`(service.enableEventById(any(), any())).thenReturn(Mono.just(EventModel()))
 
         // Act
         val result = webClient
@@ -381,8 +417,10 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             .exchange()
 
         // Assert
-        result.body<EventModel>(OK)
-        verifyNoInteractions(mapper)
+        result.body<EventReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).enableEventById(any(), eq(eventId))
     }
 
@@ -400,7 +438,9 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<Void>(OK)
-        verifyNoInteractions(mapper)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
         verify(service, times(1)).deleteEventById(eq(eventId))
     }
 }

@@ -12,6 +12,7 @@ interface IUserService {
     fun findUserById(id: UUID, onlyVisible: Boolean): Mono<UserModel>
     fun findUserByOidcId(id: UUID, onlyVisible: Boolean): Mono<CurrentUserModel>
     fun getServiceAccount(): UserModel
+    fun getAssignableUserRoles(currentUser: CurrentUserModel): Flux<String>
     fun createUser(oidcId: UUID, email: String, firstName: String?, lastName: String?): Mono<CurrentUserModel>
     fun updateUserIfPersonalDataChanged(
         user: CurrentUserModel,

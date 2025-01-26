@@ -16,8 +16,8 @@ object ReactiveExt {
             )
             throw RegistryException(
                 status = NOT_FOUND,
-                message = NOT_FOUND_WITH_GIVEN_IDENTIFIER,
-                args = mapOf(Pair("identifier", identifier.toString())),
+                code = NOT_FOUND_WITH_GIVEN_IDENTIFIER,
+                args = arrayListOf(identifier.toString()),
             )
         }
     }

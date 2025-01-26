@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.config
 
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
+import fr.laucoin.registry.backend.domain.handler.HeadersHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
@@ -12,6 +13,7 @@ import org.springframework.security.access.expression.method.DefaultMethodSecuri
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
@@ -26,6 +28,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 class SecurityConfig(
     private val tokenConverter: TokenConverterService,
     private val authorizationErrorHandler: AuthorizationErrorHandler,
+    private val headersHandler: HeadersHandler,
     @Value("\${external.frontend.base-url}")
     private val frontendUrl: String,
     @Value("\${registry.feature.documentation.enabled:false}")
@@ -35,7 +38,8 @@ class SecurityConfig(
     @Bean
     fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         return http
-            .csrf { it.disable() }
+            .disableCsrf()
+            .handleHeaders()
             .configureResourceAccess()
             .disableAuthForm()
             .configureLogout()
@@ -43,6 +47,10 @@ class SecurityConfig(
             .handleException()
             .build()
     }
+
+    private fun ServerHttpSecurity.disableCsrf() = csrf { it.disable() }
+
+    private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
 
     private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
         if (documentationEnabled) {

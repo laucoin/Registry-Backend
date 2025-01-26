@@ -6,16 +6,24 @@ import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import java.time.ZonedDateTime
+import java.util.Locale
 import java.util.UUID
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
+import org.springframework.context.MessageSource
 
 class EventProfileReaderDtoMapperTest {
+    private val translateService: MessageSource = Mockito.mock()
+    private val eventMapper: EventReaderDtoMapper = mock()
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
-    private val mapper: EventProfileReaderDtoMapper = EventProfileReaderDtoMapper(partialUserMapper)
+    private val mapper: EventProfileReaderDtoMapper = EventProfileReaderDtoMapper(translateService, eventMapper, partialUserMapper)
 
     @Test
     fun `Should toDto convert EventProfileModel to EventProfileReaderDto`() {
@@ -32,17 +40,21 @@ class EventProfileReaderDtoMapperTest {
             creation = HistoryModel()
             lastEdition = HistoryModel()
         }
+        val translated = "translated"
+        `when`(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(translated)
 
         // Act
-        val result = mapper.toDto(profile)
+        val result = mapper.toDto(profile, Locale.getDefault())
 
         // Assert
-        verify(partialUserMapper, times(1)).toDto(profile.user !!)
+        verify(eventMapper, times(1)).toDto(profile.event !!, Locale.getDefault())
+        verify(partialUserMapper, times(1)).toDto(profile.user !!, Locale.getDefault())
 
         assertEquals(profile.id, result.id)
-        assertEquals(profile.event, result.event)
-        assertEquals(profile.role, result.role)
-        assertEquals(profile.status, result.status)
+        assertEquals(translated, result.role?.label)
+        assertEquals(profile.role, result.role?.value)
+        assertEquals(translated, result.status?.label)
+        assertEquals(profile.status?.name, result.status?.value)
         assertEquals(profile.startAccess, profile.startAccess)
         assertEquals(profile.endAccess, profile.endAccess)
         assertEquals(profile.visible, result.visible)
