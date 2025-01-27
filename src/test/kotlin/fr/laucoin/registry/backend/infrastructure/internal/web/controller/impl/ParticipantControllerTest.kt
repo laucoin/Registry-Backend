@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_BIRTHDAY_FUTURE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_FIRST_NAME_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_FIRST_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_FIRST_NAME_TOO_LONG
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_START_LATER_THAN_END
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_C
@@ -104,11 +104,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         fun `Wrong ParticipantDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
                 ParticipantWriterDto(lastName = "DOE", birthday = LocalDate.now()),
-                PARTICIPANT_FIRST_NAME_BLANK,
+                PARTICIPANT_FIRST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(firstName = "", lastName = "DOE", birthday = LocalDate.now()),
-                PARTICIPANT_FIRST_NAME_BLANK,
+                PARTICIPANT_FIRST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(
@@ -120,11 +120,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             ),
             Arguments.of(
                 ParticipantWriterDto(firstName = "John", birthday = LocalDate.now()),
-                PARTICIPANT_LAST_NAME_BLANK,
+                PARTICIPANT_LAST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(firstName = "John", lastName = "", birthday = LocalDate.now()),
-                PARTICIPANT_LAST_NAME_BLANK,
+                PARTICIPANT_LAST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(

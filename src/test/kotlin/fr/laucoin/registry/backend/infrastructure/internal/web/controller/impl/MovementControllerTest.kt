@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANT_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_PARTICIPANT_ID_NULL
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_D
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_METADATA_R
@@ -118,7 +118,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
             ),
             Arguments.of(
                 MovementWriterDto(dateTime = now(), type = IN, content = listOf(MovementContentWriterDto(participantId = null))),
-                MOVEMENT_PARTICIPANT_NULL,
+                MOVEMENT_CONTENT_PARTICIPANT_ID_NULL,
             ),
         )
 

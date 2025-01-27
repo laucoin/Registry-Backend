@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_BEGIN_LATER_THAN_END_TIME
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_NAME_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_OPTIONS_MISSING
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_D
@@ -97,7 +97,7 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
         fun `Wrong EventDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
                 EventWriterDto(name = "", begin = now(), end = now().plusDays(1), options = emptyList()),
-                EVENT_NAME_BLANK,
+                EVENT_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 EventWriterDto(

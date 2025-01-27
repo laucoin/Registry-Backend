@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_EMPTY
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_START_LATER_THAN_END
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_C
@@ -98,7 +98,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         fun `Wrong GroupDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
                 GroupWriterDto(name = null, members = listOf(UUID.randomUUID())),
-                GROUP_NAME_BLANK,
+                GROUP_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 GroupWriterDto().apply {
