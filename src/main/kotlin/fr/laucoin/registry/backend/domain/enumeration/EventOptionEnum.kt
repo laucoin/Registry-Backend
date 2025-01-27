@@ -13,14 +13,13 @@ enum class EventOptionEnum {
     FIRE_RISK;
 
     companion object {
-        fun List<EventOptionEnum>.missingOptions(): List<EventOptionEnum> {
-            val missingOptions = arrayListOf<EventOptionEnum>()
+        fun List<EventOptionEnum>.missingOptions(): Pair<EventOptionEnum, List<EventOptionEnum>>? {
             this.forEach {
                 if (! this.containsAll(optionsRules[it] !!)) {
-                    missingOptions.addAll(optionsRules[it] !!.minus(this.toSet()))
+                    return Pair(it, optionsRules[it] !!.minus(this.toSet()))
                 }
             }
-            return missingOptions
+            return null
         }
     }
 }

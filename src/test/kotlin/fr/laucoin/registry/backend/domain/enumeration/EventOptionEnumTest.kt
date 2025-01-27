@@ -19,17 +19,17 @@ class EventOptionEnumTest {
     companion object {
         @JvmStatic
         fun `Should missingOptions evaluate if missing any option`(): Stream<Arguments> = Stream.of(
-            Arguments.of(listOf(ACTIVITY), emptyList<EventOptionEnum>()),
-            Arguments.of(listOf(PHONE_COMMUNICATION), emptyList<EventOptionEnum>()),
-            Arguments.of(listOf(ACTIVITY, ACTIVITY_COMMUNICATION), emptyList<EventOptionEnum>()),
-            Arguments.of(listOf(ACTIVITY_COMMUNICATION), listOf(ACTIVITY)),
-            Arguments.of(listOf(SMOKE_REPORT), listOf(ACTIVITY_COMMUNICATION)),
-            Arguments.of(listOf(ACTIVITY_COMMUNICATION, SMOKE_REPORT), listOf(ACTIVITY)),
-            Arguments.of(listOf(MOVEMENT_REPORT), listOf(ACTIVITY_COMMUNICATION)),
-            Arguments.of(listOf(ACTIVITY_COMMUNICATION, MOVEMENT_REPORT), listOf(ACTIVITY)),
-            Arguments.of(listOf(TICKETING), emptyList<EventOptionEnum>()),
-            Arguments.of(listOf(VEHICLE), emptyList<EventOptionEnum>()),
-            Arguments.of(listOf(FIRE_RISK), emptyList<EventOptionEnum>()),
+            Arguments.of(listOf(ACTIVITY), null),
+            Arguments.of(listOf(PHONE_COMMUNICATION), null),
+            Arguments.of(listOf(ACTIVITY, ACTIVITY_COMMUNICATION), null),
+            Arguments.of(listOf(ACTIVITY_COMMUNICATION), Pair(ACTIVITY_COMMUNICATION, listOf(ACTIVITY))),
+            Arguments.of(listOf(SMOKE_REPORT), Pair(SMOKE_REPORT, listOf(ACTIVITY_COMMUNICATION))),
+            Arguments.of(listOf(ACTIVITY_COMMUNICATION, SMOKE_REPORT), Pair(ACTIVITY_COMMUNICATION, listOf(ACTIVITY))),
+            Arguments.of(listOf(MOVEMENT_REPORT), Pair(MOVEMENT_REPORT, listOf(ACTIVITY_COMMUNICATION))),
+            Arguments.of(listOf(ACTIVITY_COMMUNICATION, MOVEMENT_REPORT), Pair(ACTIVITY_COMMUNICATION, listOf(ACTIVITY))),
+            Arguments.of(listOf(TICKETING), null),
+            Arguments.of(listOf(VEHICLE), null),
+            Arguments.of(listOf(FIRE_RISK), null),
         )
     }
 
@@ -37,7 +37,7 @@ class EventOptionEnumTest {
     @MethodSource
     fun `Should missingOptions evaluate if missing any option`(
         eventOptions: List<EventOptionEnum>,
-        expected: List<EventOptionEnum>,
+        expected: Pair<EventOptionEnum, List<EventOptionEnum>>?,
     ) {
         // Arrange
         // Act

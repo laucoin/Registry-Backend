@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ACCESS_OUT_OF_EVENT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_DELETE_LAST_EVENT_ADMINISTRATOR
@@ -16,6 +17,7 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventProfileService
+import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
@@ -35,6 +37,7 @@ import reactor.core.publisher.Mono
 class EventProfileService(
     private val repository: IEventProfileModelRepository,
     private val profileService: IUserEventProfileService,
+    private val eventService: IEventService,
     private val roleService: IRoleService,
     private val userService: IUserService,
 ): IEventProfileService, GenericService() {
@@ -87,7 +90,20 @@ class EventProfileService(
         userIds: List<UUID>,
         profiles: List<EventProfileModel>
     ): Mono<Pair<List<UUID>, List<UUID>>> {
-        return validateNoProfileConflict(eventId, userIds, profileId = null, profiles.first().startAccess, profiles.first().endAccess)
+        return eventService.validateDateTimes(
+            eventId,
+            profiles.first().startAccess,
+            profiles.first().endAccess,
+            EVENT_PROFILE_ACCESS_OUT_OF_EVENT_DATE_RANGE,
+        ).flatMap {
+            validateNoProfileConflict(
+                eventId,
+                userIds,
+                profileId = null,
+                profiles.first().startAccess,
+                profiles.first().endAccess
+            )
+        }
             .map { allowedUsers ->
                 profiles.filter { allowedUsers.contains(it.user?.id) }
                     .map { it.apply { create(currentUser) } }
@@ -121,7 +137,12 @@ class EventProfileService(
         id: UUID,
         profile: EventProfileModel
     ): Mono<EventProfileModel> {
-        return findEventProfileByEventIdAndId(eventId, id, onlyVisible = false)
+        return eventService.validateDateTimes(
+            eventId,
+            profile.startAccess,
+            profile.endAccess,
+            EVENT_PROFILE_ACCESS_OUT_OF_EVENT_DATE_RANGE,
+        ).flatMap { findEventProfileByEventIdAndId(eventId, id, onlyVisible = false) }
             .flatMap {
                 validateNoProfileConflict(eventId, listOf(it.user !!.id !!), it.id, profile.endAccess, profile.endAccess)
                     .map { _ -> it }

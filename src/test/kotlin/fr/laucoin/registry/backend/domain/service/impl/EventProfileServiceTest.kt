@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
+import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
@@ -44,9 +45,10 @@ import reactor.core.publisher.Mono
 class EventProfileServiceTest {
     private val repository: IEventProfileModelRepository = mock()
     private val profileService: IUserEventProfileService = mock()
+    private val eventService: IEventService = mock()
     private val roleService: IRoleService = mock()
     private val userService: IUserService = mock()
-    private val service = EventProfileService(repository, profileService, roleService, userService)
+    private val service = EventProfileService(repository, profileService, eventService, roleService, userService)
 
     companion object {
         private const val OTHER_EVENT_ROLE = "OTHER_EVENT_ROLE"
@@ -230,6 +232,14 @@ class EventProfileServiceTest {
         val uuid = UUID.randomUUID()
         val profiles = listOf(EventProfileModel())
         `when`(
+            eventService.validateDateTimes(
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                any(),
+            )
+        ).thenReturn(Mono.just(UUID.randomUUID()))
+        `when`(
             repository.findEventProfilesByEventId(
                 any(),
                 any(),
@@ -265,6 +275,14 @@ class EventProfileServiceTest {
             user = UserModel().apply { id = uuid1 }
             role = EVENT_ROLE; event = EventModel().apply { name = "0" }
         })
+        `when`(
+            eventService.validateDateTimes(
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                any(),
+            )
+        ).thenReturn(Mono.just(UUID.randomUUID()))
         `when`(
             repository.findEventProfilesByEventId(
                 any(),
@@ -306,6 +324,14 @@ class EventProfileServiceTest {
             user = UserModel().apply { id = uuid }
             role = EVENT_ROLE; event = EventModel().apply { name = "0" }
         })
+        `when`(
+            eventService.validateDateTimes(
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                any(),
+            )
+        ).thenReturn(Mono.just(UUID.randomUUID()))
         `when`(
             repository.findEventProfilesByEventId(
                 any(),
@@ -354,6 +380,14 @@ class EventProfileServiceTest {
             event = EventModel().apply { id = eventId }
             role = EVENT_ROLE
         }
+        `when`(
+            eventService.validateDateTimes(
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                any(),
+            )
+        ).thenReturn(Mono.just(UUID.randomUUID()))
         `when`(
             repository.findEventProfilesByEventId(
                 any(),
@@ -428,6 +462,14 @@ class EventProfileServiceTest {
         val userProfile = EventProfileModel()
         val currentProfile = EventProfileModel().apply { user = currentUser; role = EVENT_ROLE }
         val nextProfile = EventProfileModel().apply { user = currentUser; role = OTHER_EVENT_ROLE }
+        `when`(
+            eventService.validateDateTimes(
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                any(),
+            )
+        ).thenReturn(Mono.just(UUID.randomUUID()))
         `when`(
             repository.findEventProfilesByEventId(
                 any(),
