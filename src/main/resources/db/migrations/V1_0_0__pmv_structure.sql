@@ -197,6 +197,7 @@ CREATE TABLE tb_movement_content
 (
     id             uuid NOT NULL DEFAULT uuid_generate_v4(),
     movement_id    uuid NOT NULL,
+    pool_name      VARCHAR,
     participant_id uuid NOT NULL,
     CONSTRAINT tb_movement_content_pkey PRIMARY KEY (movement_id, participant_id)
 );

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component
 class MovementContentWriterDtoMapper: IGenericWriterDtoMapper<MovementContentModel, MovementContentWriterDto> {
     override fun toModel(dto: MovementContentWriterDto): MovementContentModel {
         return MovementContentModel().apply {
+            poolName = dto.poolName
             participant = ParticipantModel().apply { id = dto.participantId }
         }
     }

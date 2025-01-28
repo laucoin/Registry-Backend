@@ -44,8 +44,8 @@ class MovementModelPostgresRepository(
     override fun update(element: MovementModel): Mono<MovementModel> {
         return save(element)
             .flatMap { findById(element.event?.id !!, element.id !!, onlyVisible = false) }
-            .saveNewContent(element)
             .removeDeletedContent(element)
+            .saveNewContent(element)
             .`as`(transactionalOperator::transactional)
     }
 
@@ -64,10 +64,10 @@ class MovementModelPostgresRepository(
     @Transactional
     fun Mono<MovementModel>.removeDeletedContent(element: MovementModel): Mono<MovementModel> {
         return flatMap { movement ->
-            val removedContent = movement.getRemovedContentParticipantIds(element)
-            if (removedContent.isEmpty()) return@flatMap Mono.just(movement)
-            contentRepository.deleteAllByMovementIdAndParticipantId(movement.id !!, removedContent)
-                .then(Mono.fromCallable { movement.apply { content = content.filter { removedContent.contains(it.id) } } })
+            val removedIds = movement.getRemovedContentIds(element)
+            if (removedIds.isEmpty()) return@flatMap Mono.just(movement)
+            contentRepository.deleteAllById(removedIds)
+                .then(Mono.fromCallable { movement.apply { content = content.filter { ! removedIds.contains(it.id) } } })
         }
     }
 

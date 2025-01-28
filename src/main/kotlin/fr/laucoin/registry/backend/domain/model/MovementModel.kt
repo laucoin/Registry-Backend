@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.model
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import java.time.ZonedDateTime
+import java.util.Objects
 import java.util.UUID
 
 data class MovementModel(
@@ -10,28 +11,29 @@ data class MovementModel(
     var content: List<MovementContentModel> = emptyList(),
 ): GenericEventModel() {
     data class MovementContentModel(
+        var id: UUID? = null,
+        var poolName: String? = null,
         var participant: ParticipantModel? = null,
-    ): GenericModel() {
-        override fun getSearchableValues(): List<String> = participant?.getSearchableValues() ?: emptyList()
+    ) {
+        fun getSearchableValues(): List<String> =
+            participant?.getSearchableValues().orEmpty() + (if (Objects.nonNull(poolName)) listOf(poolName !!) else emptyList())
     }
 
     override fun getSearchableValues(): List<String> =
         event?.getSearchableValues().orEmpty() + content.flatMap { it.getSearchableValues() }
 
     fun getNewContent(movement: MovementModel): List<MovementContentModel> {
-        val currentParticipants = content.mapNotNull { it.participant?.id }
         return movement.content
-            .filter { ! currentParticipants.contains(it.participant?.id) }
+            .filter { new -> Objects.isNull(content.find { new.participant?.id == it.participant?.id && new.poolName == it.poolName }) }
     }
 
     fun getNewContentParticipantIds(movement: MovementModel): List<UUID> {
         return getNewContent(movement).mapNotNull { it.participant?.id }
     }
 
-    fun getRemovedContentParticipantIds(movement: MovementModel): List<UUID> {
-        val newParticipants = movement.content.mapNotNull { it.participant?.id }
+    fun getRemovedContentIds(movement: MovementModel): List<UUID> {
         return content
-            .filter { ! newParticipants.contains(it.participant?.id) }
-            .mapNotNull { it.participant?.id }
+            .filter { old -> Objects.isNull(movement.content.find { old.participant?.id == it.participant?.id && old.poolName == it.poolName }) }
+            .mapNotNull(MovementContentModel::id)
     }
 }

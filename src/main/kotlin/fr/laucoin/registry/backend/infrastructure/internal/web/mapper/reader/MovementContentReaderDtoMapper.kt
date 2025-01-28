@@ -12,6 +12,7 @@ class MovementContentReaderDtoMapper(
 ): IGenericReaderDtoMapper<MovementContentModel, MovementContentReaderDto> {
     override fun toDto(model: MovementContentModel, locale: Locale): MovementContentReaderDto {
         return MovementContentReaderDto(
+            poolName = model.poolName,
             participant = if (Objects.nonNull(model.participant)) participantMapper.toDto(model.participant !!, locale) else null,
         )
     }

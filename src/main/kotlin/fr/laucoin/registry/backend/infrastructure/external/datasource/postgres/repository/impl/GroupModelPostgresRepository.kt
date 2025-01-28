@@ -48,8 +48,8 @@ class GroupModelPostgresRepository(
     override fun update(element: GroupModel): Mono<GroupModel> {
         return save(element)
             .flatMap { findById(element.event !!.id !!, element.id !!, onlyVisible = false) }
-            .saveNewMembers(element)
             .removeDeletedMembers(element)
+            .saveNewMembers(element)
             .`as`(transactionalOperator::transactional)
     }
 

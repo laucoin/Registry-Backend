@@ -30,7 +30,7 @@ class HeadersHandler(
     }
 
     private fun getLocaleOrThrow(headers: Map<String, String>): Locale {
-        val requestedLanguages: List<String> = headers[ACCEPT_LANGUAGE]?.split(",") ?: emptyList()
+        val requestedLanguages: List<String> = headers[ACCEPT_LANGUAGE]?.split(",").orEmpty()
 
         var locale: Locale? = null
         requestedLanguages.forEach {

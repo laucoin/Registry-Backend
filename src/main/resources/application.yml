@@ -1,6 +1,7 @@
 logging:
   level:
     fr.laucoin.registry.backend: ${registry.server.logging-level}
+    org.springframework.r2dbc: ${registry.server.logging-level}
     org.springframework.web: ${registry.server.logging-level}
     org.springframework.security.oauth2: ${registry.server.logging-level}
     org.springframework.security.oauth2.client: ${registry.server.logging-level}
