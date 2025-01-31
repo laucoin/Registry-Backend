@@ -1,7 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer
 
-import fr.laucoin.registry.backend.domain.model.GenericModel
-
-interface IGenericWriterDtoMapper<M: GenericModel, D> {
+interface IGenericWriterDtoMapper<M, D> {
     fun toModel(dto: D): M
 }

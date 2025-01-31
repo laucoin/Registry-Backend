@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component
 class MovementContentEntityMapper: IEntityReaderMapper<MovementContentModel, MovementContentEntity> {
     override fun toModel(entity: MovementContentEntity): MovementContentModel {
         return MovementContentModel(
+            id = entity.id,
+            poolName = entity.poolName,
             participant = mapParticipantEntity(entity),
         )
     }
@@ -29,6 +31,7 @@ class MovementContentEntityMapper: IEntityReaderMapper<MovementContentModel, Mov
     fun toEntity(movementId: UUID, model: MovementContentModel): MovementContentEntity {
         return MovementContentEntity().apply {
             this.movementId = movementId
+            poolName = model.poolName
             participantId = model.participant?.id
         }
     }

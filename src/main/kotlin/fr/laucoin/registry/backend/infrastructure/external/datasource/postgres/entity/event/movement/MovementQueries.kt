@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_POOL_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantFields.PARTICIPANT_BEGIN
@@ -33,6 +34,8 @@ object MovementQueries {
     const val SELECT_CONTENT = """
         JSON_AGG(
             JSON_BUILD_OBJECT(
+                'id', $MOVEMENT_CONTENT_TABLE.$ID,
+                'poolName', $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_POOL_NAME,
                 'participant', JSON_BUILD_OBJECT(
                     'id', $PARTICIPANT_TABLE.$ID,
                     'firstName', $PARTICIPANT_TABLE.$PARTICIPANT_FIRST_NAME,

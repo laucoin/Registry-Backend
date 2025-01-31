@@ -19,6 +19,7 @@ data class MovementReaderDto(
     var lastEdition: HistoryModel = HistoryModel()
 ) {
     data class MovementContentReaderDto(
+        var poolName: String? = null,
         var participant: ParticipantReaderDto? = null,
     )
 }

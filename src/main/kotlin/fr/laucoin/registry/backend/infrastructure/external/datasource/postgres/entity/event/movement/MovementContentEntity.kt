@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_POOL_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import java.time.LocalDate
 import java.util.UUID
@@ -20,6 +21,9 @@ data class MovementContentEntity(
 
     @Column(MOVEMENT_CONTENT_MOVEMENT_ID)
     var movementId: UUID? = null,
+
+    @Column(MOVEMENT_CONTENT_POOL_NAME)
+    var poolName: String? = null,
 
     @Column(MOVEMENT_CONTENT_PARTICIPANT_ID)
     var participantId: UUID? = null,

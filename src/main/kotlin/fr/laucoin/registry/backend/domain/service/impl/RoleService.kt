@@ -47,10 +47,10 @@ class RoleService(
         } else roles.first()
     }
 
-    override fun getAuthoritiesByUserRole(role: String?): List<String> = userRoles[role]?.second ?: emptyList()
+    override fun getAuthoritiesByUserRole(role: String?): List<String> = userRoles[role]?.second.orEmpty()
 
     override fun getAuthoritiesByEventRole(role: String, eventId: UUID): List<String> =
-        eventRoles[role]?.second?.map { "${eventId}_$it" } ?: emptyList()
+        eventRoles[role]?.second?.map { "${eventId}_$it" }.orEmpty()
 
     override fun getEventIdFromCurrentUserProfiles(currentUser: CurrentUserModel): List<UUID> {
         return currentUser.authorities
