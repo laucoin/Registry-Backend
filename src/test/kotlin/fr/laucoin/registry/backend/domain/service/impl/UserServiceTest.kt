@@ -94,7 +94,7 @@ class UserServiceTest {
         )
 
         @JvmStatic
-        fun `Should updateUserRoleById throw RegistryExceptionModel`(): Stream<Arguments> {
+        fun `Should updateUserRoleById throw RegistryException`(): Stream<Arguments> {
             val uuid = UUID.randomUUID()
             val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
             return Stream.of(
@@ -236,7 +236,7 @@ class UserServiceTest {
         val uuid = UUID.randomUUID()
         val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
         val currentUserId = UUID.randomUUID()
-        val currentUser = UserModel().apply { id = currentUserId; role = USER_ROLE }
+        val currentUser = CurrentUserModel().apply { id = currentUserId; role = USER_ROLE }
 
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
@@ -256,7 +256,7 @@ class UserServiceTest {
 
     @ParameterizedTest
     @MethodSource
-    fun `Should updateUserRoleById throw RegistryExceptionModel`(
+    fun `Should updateUserRoleById throw RegistryException`(
         currentRoleLevel: Int,
         roleToAssign: String?,
         userToUpdate: UserModel,
@@ -268,7 +268,7 @@ class UserServiceTest {
     ) {
         // Arrange
         val currentUserId = UUID.randomUUID()
-        val currentUser = UserModel().apply { id = currentUserId; role = USER_ROLE }
+        val currentUser = CurrentUserModel().apply { id = currentUserId; role = USER_ROLE }
 
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(userToUpdate))
@@ -297,7 +297,7 @@ class UserServiceTest {
         val uuid = UUID.randomUUID()
         val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
         val currentUserId = UUID.randomUUID()
-        val currentUser = UserModel().apply { id = currentUserId; role = USER_ROLE }
+        val currentUser = CurrentUserModel().apply { id = currentUserId; role = USER_ROLE }
 
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
@@ -333,7 +333,7 @@ class UserServiceTest {
         val uuid = UUID.randomUUID()
         val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
         val currentUserId = UUID.randomUUID()
-        val currentUser = UserModel().apply { id = currentUserId; role = USER_ROLE }
+        val currentUser = CurrentUserModel().apply { id = currentUserId; role = USER_ROLE }
 
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
@@ -353,7 +353,7 @@ class UserServiceTest {
         val uuid = UUID.randomUUID()
         val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
         val currentUserId = UUID.randomUUID()
-        val currentUser = UserModel().apply { id = currentUserId; role = USER_ROLE }
+        val currentUser = CurrentUserModel().apply { id = currentUserId; role = USER_ROLE }
 
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))
@@ -389,7 +389,7 @@ class UserServiceTest {
         val uuid = UUID.randomUUID()
         val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
         val currentUserId = UUID.randomUUID()
-        val currentUser = UserModel().apply { id = currentUserId; role = USER_ROLE }
+        val currentUser = CurrentUserModel().apply { id = currentUserId; role = USER_ROLE }
 
         `when`(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
         `when`(repository.findById(any(), any())).thenReturn(Mono.just(foundUser))

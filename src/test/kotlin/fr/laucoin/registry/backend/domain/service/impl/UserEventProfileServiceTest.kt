@@ -178,7 +178,7 @@ class UserEventProfileServiceTest {
     }
 
     @Test
-    fun `Should validateNotLastEventRoleLevel0 throw RegistryExceptionModel`() {
+    fun `Should validateNotLastEventRoleLevel0 throw RegistryException`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val errorMessage = "ERROR_MESSAGE"
@@ -232,7 +232,7 @@ class UserEventProfileServiceTest {
     }
 
     @Test
-    fun `Should updateUserEventProfileStatusById throw RegistryExceptionModel`() {
+    fun `Should updateUserEventProfileStatusById throw RegistryException`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val currentUser = currentUser()

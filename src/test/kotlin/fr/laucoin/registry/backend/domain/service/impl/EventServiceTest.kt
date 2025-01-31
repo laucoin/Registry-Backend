@@ -74,7 +74,7 @@ class EventServiceTest {
         )
 
         @JvmStatic
-        fun `Should validateDateTimes throw RegistryExceptionModel for datetime out of range`(): Stream<Arguments> = Stream.of(
+        fun `Should validateDateTimes throw RegistryException for datetime out of range`(): Stream<Arguments> = Stream.of(
             Arguments.of(
                 ZonedDateTime.of(1999, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
                 ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
@@ -152,7 +152,7 @@ class EventServiceTest {
         )
 
         @JvmStatic
-        fun `Should updateEventById throw RegistryExceptionModel`(): Stream<Arguments> = Stream.of(
+        fun `Should updateEventById throw RegistryException`(): Stream<Arguments> = Stream.of(
             Arguments.of(
                 ZonedDateTime.of(2024, 9, 24, 0, 0, 0, 0, ZoneId.of("UTC")),
                 ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
@@ -211,7 +211,7 @@ class EventServiceTest {
     }
 
     @Test
-    fun `Should validateDateTime throw RegistryExceptionModel for datetime out of range`() {
+    fun `Should validateDateTime throw RegistryException for datetime out of range`() {
         // Arrange
         val message = "MESSAGE"
         val now = ZonedDateTime.now()
@@ -261,7 +261,7 @@ class EventServiceTest {
 
     @ParameterizedTest
     @MethodSource
-    fun `Should validateDateTimes throw RegistryExceptionModel for datetime out of range`(
+    fun `Should validateDateTimes throw RegistryException for datetime out of range`(
         newStart: ZonedDateTime,
         newEnd: ZonedDateTime,
     ) {
@@ -369,7 +369,7 @@ class EventServiceTest {
 
     @ParameterizedTest
     @MethodSource
-    fun `Should updateEventById throw RegistryExceptionModel`(
+    fun `Should updateEventById throw RegistryException`(
         newBegin: ZonedDateTime?,
         newFinish: ZonedDateTime?,
     ) {

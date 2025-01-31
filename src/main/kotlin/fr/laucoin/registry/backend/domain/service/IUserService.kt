@@ -21,9 +21,9 @@ interface IUserService {
         lastName: String?
     ): Mono<CurrentUserModel>
 
-    fun updateUserRoleById(currentUser: UserModel, id: UUID, role: String?): Mono<UserModel>
-    fun blockUserById(currentUser: UserModel, id: UUID): Mono<UserModel>
-    fun unblockUserById(currentUser: UserModel, id: UUID): Mono<UserModel>
-    fun impersonateUserById(currentUser: UserModel, id: UUID): Mono<UserModel>
-    fun deleteUserById(currentUser: UserModel, id: UUID): Mono<Void>
+    fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel>
+    fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+    fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+    fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+    fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Void>
 }

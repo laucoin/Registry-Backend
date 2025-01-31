@@ -1,10 +1,13 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
@@ -124,7 +127,7 @@ class UserService(
             .map { user }
     }
 
-    override fun updateUserRoleById(currentUser: UserModel, id: UUID, role: String?): Mono<UserModel> {
+    override fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel> {
         return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = true)
             .validateRole(currentUser, role, USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN)
             .validateNotLastRoleLevel0(USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE)
@@ -134,22 +137,24 @@ class UserService(
             }
     }
 
-    override fun blockUserById(currentUser: UserModel, id: UUID): Mono<UserModel> {
+    override fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
         return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = true)
+            .validateNotCurrentUser(currentUser, USER_BLOCK_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR)
             .validateNotLastEventRoleLevel0(USER_BLOCK_LAST_EVENT_ADMINISTRATOR)
             .updateVisibility(visibility = false)
             .flatMap { updateUser(currentUser, it) }
     }
 
-    override fun unblockUserById(currentUser: UserModel, id: UUID): Mono<UserModel> {
+    override fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
         return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = false)
             .updateVisibility(visibility = true)
             .flatMap { updateUser(currentUser, it) }
     }
 
-    override fun impersonateUserById(currentUser: UserModel, id: UUID): Mono<UserModel> {
+    override fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
         return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = false)
+            .validateNotCurrentUser(currentUser, USER_IMPERSONATE_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR)
             .validateNotLastEventRoleLevel0(USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR)
             .flatMap {
@@ -158,11 +163,19 @@ class UserService(
             }
     }
 
-    override fun deleteUserById(currentUser: UserModel, id: UUID): Mono<Void> {
+    override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {
         return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = false)
+            .validateNotCurrentUser(currentUser, USER_DELETE_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
             .validateNotLastEventRoleLevel0(USER_DELETE_LAST_EVENT_ADMINISTRATOR)
             .flatMap { repository.deleteById(it.id !!) }
+    }
+
+    private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) = handle { it, handle ->
+        if (it.id == currentUser.id) {
+            log.warn("The user {} is the current user", currentUser.id)
+            handle.error(RegistryException(FORBIDDEN, error))
+        } else handle.next(it)
     }
 
     private fun Mono<UserModel>.validateNotLastRoleLevel0(error: String) = flatMap { userToUpdate ->

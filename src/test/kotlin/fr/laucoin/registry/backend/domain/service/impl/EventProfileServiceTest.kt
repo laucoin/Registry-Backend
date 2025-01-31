@@ -77,7 +77,7 @@ class EventProfileServiceTest {
         )
 
         @JvmStatic
-        fun `Should updateEventProfileById throw RegistryExceptionModel`(): Stream<Arguments> = Stream.of(
+        fun `Should updateEventProfileById throw RegistryException`(): Stream<Arguments> = Stream.of(
             Arguments.of(listOf(OTHER_EVENT_ROLE), EVENT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER),
             Arguments.of(listOf(EVENT_ROLE), EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER),
         )
@@ -451,7 +451,7 @@ class EventProfileServiceTest {
 
     @ParameterizedTest
     @MethodSource
-    fun `Should updateEventProfileById throw RegistryExceptionModel`(
+    fun `Should updateEventProfileById throw RegistryException`(
         assignableRoles: List<String>,
         message: String,
     ) {

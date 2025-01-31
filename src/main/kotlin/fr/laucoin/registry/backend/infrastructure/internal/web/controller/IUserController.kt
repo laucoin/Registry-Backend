@@ -155,12 +155,29 @@ interface IUserController {
             ),
         ],
     )
-    @PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
+    @PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
     @PatchMapping("/{id}/impersonate")
     fun impersonateUserById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable id: UUID,
+    ): Mono<UserReaderDto>
+
+    @Operation(
+        summary = "Impersonate Current User",
+        description = "Impersonate all Current User data",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PatchMapping("/impersonate")
+    fun impersonateCurrentUser(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
     ): Mono<UserReaderDto>
 
     @Operation(

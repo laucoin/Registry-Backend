@@ -100,7 +100,7 @@ class PreferencesServiceTest {
     }
 
     @Test
-    fun `Should updateUserPreferenceSelectedEventProfileById throw RegistryExceptionModel`() {
+    fun `Should updateUserPreferenceSelectedEventProfileById throw RegistryException`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val profileId = UUID.randomUUID()
