@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import java.time.ZonedDateTime
@@ -24,6 +26,17 @@ interface IParticipantService {
     fun findParticipantById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<ParticipantModel>
     fun searchUsers(eventId: UUID, searched: String?): Flux<UserModel>
     fun searchGroups(eventId: UUID, searched: String?): Flux<GroupModel>
+    fun findParticipantMovements(
+        eventId: UUID,
+        id: UUID,
+        order: Direction,
+        onlyVisible: Boolean,
+        searched: String?,
+        type: MovementTypeEnum?,
+        startDateTime: ZonedDateTime?,
+        endDateTime: ZonedDateTime?
+    ): Flux<MovementModel>
+
     fun createParticipant(currentUser: UserModel, participant: ParticipantModel): Mono<ParticipantModel>
     fun updateParticipantById(currentUser: UserModel, eventId: UUID, id: UUID, participant: ParticipantModel): Mono<ParticipantModel>
     fun disableParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<ParticipantModel>
