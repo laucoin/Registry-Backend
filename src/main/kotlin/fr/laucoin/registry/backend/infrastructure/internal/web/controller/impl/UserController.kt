@@ -65,6 +65,11 @@ class UserController(
             .map { readerMapper.toDto(it, locale) }
     }
 
+    override fun impersonateCurrentUser(currentUser: CurrentUserModel, locale: Locale): Mono<UserReaderDto> {
+        return service.impersonateUserById(currentUser, currentUser.id !!)
+            .map { readerMapper.toDto(it, locale) }
+    }
+
     override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {
         return service.deleteUserById(currentUser, id)
     }

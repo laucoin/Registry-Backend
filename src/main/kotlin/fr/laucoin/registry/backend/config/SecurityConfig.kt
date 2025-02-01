@@ -69,8 +69,11 @@ class SecurityConfig(
         it.requiresLogout(ServerWebExchangeMatchers.pathMatchers(GET, *arrayOf(logoutUrl)))
     }
 
-    private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { ressourceServer ->
-        ressourceServer.jwt { it.jwtAuthenticationConverter(tokenConverter) }
+    private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
+        resourceServer.authenticationFailureHandler(authorizationErrorHandler)
+        resourceServer.jwt {
+            it.jwtAuthenticationConverter(tokenConverter)
+        }
     }
 
     private fun ServerHttpSecurity.handleException() = exceptionHandling {

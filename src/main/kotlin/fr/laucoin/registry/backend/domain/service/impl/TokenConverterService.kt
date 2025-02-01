@@ -6,13 +6,15 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMP
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.convert.converter.Converter
+import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.LOCKED
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.security.authentication.AbstractAuthenticationToken
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -40,7 +42,7 @@ class TokenConverterService(
     override fun convert(jwt: Jwt): Mono<AbstractAuthenticationToken> {
         if (! jwt.hasClaim(userIdKey) || ! jwt.hasClaim(emailKey)) {
             log.error("The \"{}\" and \"{}\" keys are not found in the token", userIdKey, emailKey)
-            return Mono.error(RegistryException(UNAUTHORIZED, AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN))
+            return Mono.error(JwtConversionException(UNAUTHORIZED, AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN))
         }
 
         val oidcId: UUID = jwt.getClaimAsUUID(userIdKey) !!
@@ -65,10 +67,10 @@ class TokenConverterService(
     private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { it, handle ->
         if (it.isNotVisible()) {
             log.warn("Signing in attempt blocked for user \"{}\" due to disabled account", it.id)
-            handle.error(RegistryException(UNAUTHORIZED, AUTH_BLOCKED_ACCOUNT))
+            handle.error(JwtConversionException(LOCKED, AUTH_BLOCKED_ACCOUNT))
         } else if (it.isPurged()) {
             log.warn("Signing in attempt blocked for impersonate user \"{}\"", it.id)
-            handle.error(RegistryException(UNAUTHORIZED, AUTH_IMPERSONATED_ACCOUNT))
+            handle.error(JwtConversionException(CONFLICT, AUTH_IMPERSONATED_ACCOUNT))
         } else handle.next(it)
     }
 

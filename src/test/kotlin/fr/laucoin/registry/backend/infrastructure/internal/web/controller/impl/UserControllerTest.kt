@@ -324,7 +324,7 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
 
         // Act
         val result = webClient
-            .authenticate(REGISTRY_USER_U)
+            .authenticate(REGISTRY_USER_D)
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/impersonate", listOf(uuid), emptyList()))
             .exchange()
@@ -334,6 +334,25 @@ class UserControllerTest(@Autowired private val webClient: WebTestClient): TestC
         verify(readerMapper, times(1)).toDto(any(), any())
         verifyNoInteractions(userRoleReaderMapper)
         verify(service, times(1)).impersonateUserById(any(), eq(uuid))
+    }
+
+    @Test
+    fun `Should impersonateCurrentUser return 200`() {
+        // Arrange
+        `when`(service.impersonateUserById(any(), any())).thenReturn(Mono.just(UserModel()))
+
+        // Act
+        val result = webClient
+            .authenticate()
+            .patch()
+            .uri(uriBuilder("$BASE_URL/impersonate", emptyList(), emptyList()))
+            .exchange()
+
+        // Assert
+        result.body<UserReaderDto>(OK)
+        verify(readerMapper, times(1)).toDto(any(), any())
+        verifyNoInteractions(userRoleReaderMapper)
+        verify(service, times(1)).impersonateUserById(any(), any())
     }
 
     @Test

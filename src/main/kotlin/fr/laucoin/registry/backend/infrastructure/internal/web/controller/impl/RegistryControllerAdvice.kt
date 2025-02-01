@@ -19,14 +19,14 @@ import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.validation.method.ParameterValidationResult
-import org.springframework.web.bind.annotation.ControllerAdvice
+import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.bind.support.WebExchangeBindException
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 
-@ControllerAdvice
+@RestControllerAdvice
 class RegistryControllerAdvice(
     @Qualifier("errorsSource") private val translateService: MessageSource
 ): IRegistryControllerAdvice {

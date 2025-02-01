@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_LAST_GROUP_MEMBER
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DISABLE_LAST_GROUP_MEMBER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER
@@ -21,6 +23,7 @@ import java.util.UUID
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -189,6 +192,7 @@ class ParticipantService(
 
     override fun disableParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<ParticipantModel> {
         return findParticipantById(eventId, id, onlyVisible = true)
+            .validateNotLastGroupMember(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER)
             .updateVisibility(visibility = false)
             .updateParticipant(currentUser)
     }
@@ -201,10 +205,31 @@ class ParticipantService(
 
     override fun deleteParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<Void> {
         return findParticipantById(eventId, id, onlyVisible = false)
+            .validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
             .flatMap { repository.deleteById(it.id !!) }
     }
 
     private fun Mono<ParticipantModel>.updateParticipant(currentUser: UserModel) = flatMap {
         repository.update(it.apply { update(currentUser) })
+    }
+
+    private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String) = flatMap { participantToUpdate ->
+        if (participantToUpdate.groups.isEmpty()) {
+            return@flatMap Mono.just(participantToUpdate)
+        }
+
+        groupRepository.findAllByIds(
+            participantToUpdate.event !!.id !!,
+            participantToUpdate.groups.mapNotNull { it.id },
+            onlyVisible = false
+        )
+            .filter { it.members.size == 1 }
+            .collectList()
+            .handle { it, handle ->
+                if (it.isNotEmpty()) {
+                    log.warn("The participant {} is the last member of the group(s)", participantToUpdate.id)
+                    handle.error(RegistryException(FORBIDDEN, error))
+                } else handle.next(participantToUpdate)
+            }
     }
 }
