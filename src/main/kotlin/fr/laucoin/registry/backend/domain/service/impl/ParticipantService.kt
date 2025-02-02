@@ -1,17 +1,21 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_LAST_GROUP_MEMBER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DISABLE_LAST_GROUP_MEMBER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
+import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventService
@@ -34,6 +38,7 @@ class ParticipantService(
     private val repository: IParticipantModelRepository,
     private val eventService: IEventService,
     private val userService: IUserService,
+    private val movementRepository: IMovementModelRepository,
     private val groupRepository: IGroupModelRepository,
 ): IParticipantService, GenericService() {
     override fun findParticipantsByEventId(
@@ -74,6 +79,27 @@ class ParticipantService(
             startDateTime = null,
             endDateTime = null
         ).searchAndSort(order = ASC, searched, compareBy { it.name })
+    }
+
+    override fun findParticipantMovements(
+        eventId: UUID,
+        id: UUID,
+        order: Direction,
+        onlyVisible: Boolean,
+        searched: String?,
+        type: MovementTypeEnum?,
+        startDateTime: ZonedDateTime?,
+        endDateTime: ZonedDateTime?
+    ): Flux<MovementModel> {
+        return movementRepository.findAll(
+            eventId,
+            onlyVisible,
+            type,
+            startDateTime,
+            endDateTime
+        )
+            .filter { it.content.any { c -> c.participant?.id == id } }
+            .searchAndSort(order, searched, compareBy { it.dateTime })
     }
 
     override fun createParticipant(currentUser: UserModel, participant: ParticipantModel): Mono<ParticipantModel> {
@@ -205,12 +231,33 @@ class ParticipantService(
 
     override fun deleteParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<Void> {
         return findParticipantById(eventId, id, onlyVisible = false)
+            .validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
             .validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
             .flatMap { repository.deleteById(it.id !!) }
     }
 
     private fun Mono<ParticipantModel>.updateParticipant(currentUser: UserModel) = flatMap {
         repository.update(it.apply { update(currentUser) })
+    }
+
+    private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String) = flatMap { participantToUpdate ->
+        findParticipantMovements(
+            participantToUpdate.event !!.id !!,
+            participantToUpdate.id !!,
+            order = ASC,
+            onlyVisible = false,
+            searched = null,
+            type = null,
+            startDateTime = null,
+            endDateTime = null
+        )
+            .collectList()
+            .handle { it, handle ->
+                if (it.isNotEmpty()) {
+                    log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)
+                    handle.error(RegistryException(FORBIDDEN, error))
+                } else handle.next(participantToUpdate)
+            }
     }
 
     private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String) = flatMap { participantToUpdate ->

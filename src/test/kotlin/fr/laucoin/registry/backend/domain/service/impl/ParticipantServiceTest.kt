@@ -1,14 +1,18 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
+import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
@@ -34,6 +38,7 @@ import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.Exceptions
@@ -44,14 +49,16 @@ class ParticipantServiceTest {
     private val repository: IParticipantModelRepository = mock()
     private val eventService: IEventService = mock()
     private val userService: IUserService = mock()
+    private val movementRepository: IMovementModelRepository = mock()
     private val groupRepository: IGroupModelRepository = mock()
-    private val service: IParticipantService = ParticipantService(repository, eventService, userService, groupRepository)
+    private val service: IParticipantService =
+        ParticipantService(repository, eventService, userService, movementRepository, groupRepository)
 
     companion object {
-        private val participant0 = ParticipantModel().apply { lastName = "0" }
-        private val participant1 = ParticipantModel().apply { lastName = "1" }
-        private val participant2 = ParticipantModel().apply { lastName = "2" }
-        private val participant3 = ParticipantModel().apply { lastName = "3" }
+        private val participant0 = ParticipantModel().apply { lastName = "0"; event = EventModel().apply { id = eventId } }
+        private val participant1 = ParticipantModel().apply { lastName = "1"; event = EventModel().apply { id = eventId } }
+        private val participant2 = ParticipantModel().apply { lastName = "2"; event = EventModel().apply { id = eventId } }
+        private val participant3 = ParticipantModel().apply { lastName = "3"; event = EventModel().apply { id = eventId } }
 
         private val participants = arrayOf(participant0, participant1, participant2, participant3)
 
@@ -294,12 +301,66 @@ class ParticipantServiceTest {
         val uuid = UUID.randomUUID()
         `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0.apply { id = uuid }))
         `when`(repository.deleteById(any())).thenReturn(Mono.empty())
+        `when`(
+            movementRepository.findAll(
+                any(),
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                anyOrNull()
+            )
+        ).thenReturn(Flux.empty())
 
         // Act
         service.deleteParticipantById(currentUser(), eventId, uuid).block()
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
+        verify(movementRepository, times(1)).findAll(
+            eventId,
+            onlyVisible = false,
+            type = null,
+            startDateTime = null,
+            endDateTime = null
+        )
         verify(repository, times(1)).deleteById(uuid)
+    }
+
+    @Test
+    fun `Should deleteParticipantById throw RegistryException because Participant already has Movement`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0.apply { id = uuid }))
+        `when`(repository.deleteById(any())).thenReturn(Mono.empty())
+        `when`(
+            movementRepository.findAll(
+                any(),
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                anyOrNull()
+            )
+        ).thenReturn(Flux.just(MovementModel().apply {
+            content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = uuid } })
+        }))
+
+        // Act
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+            service.deleteParticipantById(currentUser(), eventId, uuid).block()
+        }) as RegistryException
+
+        // Assert
+        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
+        verify(movementRepository, times(1)).findAll(
+            eventId,
+            onlyVisible = false,
+            type = null,
+            startDateTime = null,
+            endDateTime = null
+        )
+        verify(repository, times(0)).deleteById(any())
+
+        assertEquals(FORBIDDEN, result.status)
+        assertEquals(PARTICIPANT_DELETE_HAS_MOVEMENT, result.code)
     }
 }

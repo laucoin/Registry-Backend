@@ -2,12 +2,15 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_HISTORY_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
@@ -124,6 +127,35 @@ interface IParticipantController {
         @PathVariable eventId: UUID,
         @RequestParam searched: String?
     ): Flux<GroupWithoutMemberReaderDto>
+
+    @Operation(
+        summary = "Find Participant Movements",
+        description = "Find or get paginated participant Movements",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_HISTORY_R')")
+    @GetMapping("/{id}/movements")
+    fun findParticipantMovements(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+        @RequestParam(defaultValue = "0") offset: Int,
+        @RequestParam(defaultValue = "20") limit: Int,
+        @RequestParam(defaultValue = "DESC") order: Direction,
+        @RequestParam(defaultValue = "true") onlyVisible: Boolean,
+        @RequestParam(required = false) searched: String?,
+        @RequestParam(required = false) type: MovementTypeEnum?,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
+    ): Mono<PageDto<MovementReaderDto>>
 
     @Operation(
         summary = "Create Participant",

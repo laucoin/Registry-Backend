@@ -1,15 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IParticipantController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupWithoutMemberReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantWriterDtoMapper
@@ -27,6 +30,7 @@ class ParticipantController(
     private val service: IParticipantService,
     private val readerMapper: ParticipantReaderDtoMapper,
     private val groupReaderMapper: GroupWithoutMemberReaderDtoMapper,
+    private val movementReaderMapper: MovementReaderDtoMapper,
     private val partialUserReaderMapper: PartialUserReaderDtoMapper,
     private val writerMapper: ParticipantWriterDtoMapper,
     @Value("\${registry.feature.participant.searched.max-user-result}")
@@ -74,6 +78,24 @@ class ParticipantController(
         return service.searchGroups(eventId, searched)
             .take(maxGroupResult)
             .map { groupReaderMapper.toDto(it, locale) }
+    }
+
+    override fun findParticipantMovements(
+        locale: Locale,
+        eventId: UUID,
+        id: UUID,
+        offset: Int,
+        limit: Int,
+        order: Direction,
+        onlyVisible: Boolean,
+        searched: String?,
+        type: MovementTypeEnum?,
+        startDateTime: ZonedDateTime?,
+        endDateTime: ZonedDateTime?
+    ): Mono<PageDto<MovementReaderDto>> {
+        return service.findParticipantMovements(eventId, id, order, onlyVisible, searched, type, startDateTime, endDateTime)
+            .paginate(offset, limit)
+            .map { movementReaderMapper.toDtoPage(it, locale) }
     }
 
     override fun createParticipant(

@@ -334,7 +334,7 @@ CREATE UNIQUE INDEX tb_movement_content_index_movement_and_participant_id ON tb_
 ALTER TABLE tb_movement_content
     ADD CONSTRAINT tb_movement_content_movement_fkey FOREIGN KEY (movement_id) REFERENCES tb_movement (id) ON DELETE CASCADE;
 ALTER TABLE tb_movement_content
-    ADD CONSTRAINT tb_movement_content_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_participant (id) ON DELETE CASCADE;
+    ADD CONSTRAINT tb_movement_content_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_participant (id);
 
 -- tb_user insert service user
 INSERT INTO tb_user(type)
@@ -364,6 +364,7 @@ VALUES ('REGISTRY_EVENT_R'),
        ('REGISTRY_EVENT_PROFILE_METADATA_R'),
        ('REGISTRY_EVENT_PARTICIPANT_C'),
        ('REGISTRY_EVENT_PARTICIPANT_R'),
+       ('REGISTRY_EVENT_PARTICIPANT_HISTORY_R'),
        ('REGISTRY_EVENT_PARTICIPANT_U'),
        ('REGISTRY_EVENT_PARTICIPANT_D'),
        ('REGISTRY_EVENT_PARTICIPANT_METADATA_R'),
