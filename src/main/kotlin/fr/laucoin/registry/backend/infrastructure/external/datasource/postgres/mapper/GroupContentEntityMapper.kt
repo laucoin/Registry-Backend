@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityReaderMapper
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupContentEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupContentEntity
 import java.util.UUID
 import org.springframework.stereotype.Component
 

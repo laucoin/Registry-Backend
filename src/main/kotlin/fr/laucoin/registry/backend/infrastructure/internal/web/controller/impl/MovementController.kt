@@ -9,10 +9,12 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.MovementWriterDtoMapper
 import java.time.ZonedDateTime
 import java.util.Locale
@@ -29,11 +31,14 @@ class MovementController(
     private val readerMapper: MovementReaderDtoMapper,
     private val movementTypeReaderMapper: MovementTypeReaderDtoMapper,
     private val movementParticipantsAndGroupsMapper: MovementParticipantsAndGroupsReaderDtoMapper,
+    private val vehiclesMapper: VehicleReaderDtoMapper,
     private val writerMapper: MovementWriterDtoMapper,
     @Value("\${registry.feature.movement.searched.max-participant-result}")
     private val maxParticipantResult: Int,
     @Value("\${registry.feature.movement.searched.max-group-result}")
     private val maxGroupResult: Int,
+    @Value("\${registry.feature.movement.searched.max-vehicle-result}")
+    private val maxVehicleResult: Long,
 ): IMovementController {
     override fun findMovements(
         locale: Locale,
@@ -65,6 +70,16 @@ class MovementController(
         return service.searchParticipantsAndGroups(eventId, searched)
             .map { Pair(it.t1.take(maxParticipantResult), it.t2.take(maxGroupResult)) }
             .map { movementParticipantsAndGroupsMapper.toDto(it, locale) }
+    }
+
+    override fun searchVehicles(
+        locale: Locale,
+        eventId: UUID,
+        searched: String?
+    ): Flux<VehicleReaderDto> {
+        return service.searchVehicles(eventId, searched)
+            .take(maxVehicleResult)
+            .map { vehiclesMapper.toDto(it, locale) }
     }
 
     override fun getAvailableMovementTypes(locale: Locale, eventId: UUID): Flux<LabelDto> {

@@ -1,14 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementFields.MOVEMENT_TYPE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementQueries.CONTENT_JOIN
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementQueries.GROUP_BY_MOVEMENT
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementQueries.IN_DATE_RANGE_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementQueries.SELECT_CONTENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.CONTENT_JOIN
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.GROUP_BY_MOVEMENT
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.IN_DATE_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.SELECT_CONTENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_JOIN

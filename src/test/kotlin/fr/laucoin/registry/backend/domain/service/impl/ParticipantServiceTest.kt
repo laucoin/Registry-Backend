@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_LAST_GROUP_MEMBER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
@@ -153,6 +154,19 @@ class ParticipantServiceTest {
     }
 
     @Test
+    fun `Should findParticipantsByIds return Flux of Participants`() {
+        // Arrange
+        val uuids = listOf(UUID.randomUUID())
+        `when`(repository.findAllByIds(any(), any(), any())).thenReturn(Flux.just(participant0))
+
+        // Act
+        service.findParticipantsByIds(eventId, uuids, onlyVisible = true).blockFirst()
+
+        // Assert
+        verify(repository, times(1)).findAllByIds(eventId, uuids, onlyVisible = true)
+    }
+
+    @Test
     fun `Should findParticipantById return the Participant`() {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -163,6 +177,79 @@ class ParticipantServiceTest {
 
         // Assert
         verify(repository, times(1)).findById(eventId, uuid, onlyVisible = true)
+    }
+
+    @Test
+    fun `Should searchUsers return Flux of Users`() {
+        // Arrange
+        val searched = "searched"
+        `when`(userService.findUsers(any(), any(), any())).thenReturn(Flux.just(UserModel()))
+
+        // Act
+        service.searchUsers(eventId, searched).blockFirst()
+
+        // Assert
+        verify(userService, times(1)).findUsers(ASC, onlyVisible = true, searched)
+    }
+
+    @Test
+    fun `Should searchGroups return Flux of Users`() {
+        // Arrange
+        val searched = "searched"
+        `when`(groupRepository.findAll(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(GroupModel()))
+
+        // Act
+        service.searchGroups(eventId, searched).blockFirst()
+
+        // Assert
+        verify(groupRepository, times(1)).findAll(
+            eventId,
+            onlyVisible = true,
+            onlyPresent = false,
+            startDateTime = null,
+            endDateTime = null,
+        )
+    }
+
+    @Test
+    fun `Should findParticipantMovements return Flux of Movements`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        val movement1 = MovementModel().apply { content = listOf(MovementContentModel()) }
+        val movement2 = MovementModel().apply {
+            content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = uuid } })
+        }
+        val movement3 = MovementModel().apply {
+            content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = UUID.randomUUID() } })
+        }
+        `when`(movementRepository.findAll(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+            Flux.just(
+                movement1,
+                movement2,
+                movement3
+            )
+        )
+
+        // Act
+        service.findParticipantMovements(
+            eventId,
+            uuid,
+            order = ASC,
+            onlyVisible = true,
+            searched = null,
+            type = null,
+            startDateTime = null,
+            endDateTime = null,
+        ).blockFirst()
+
+        // Assert
+        verify(movementRepository, times(1)).findAll(
+            eventId,
+            onlyVisible = true,
+            type = null,
+            startDateTime = null,
+            endDateTime = null,
+        )
     }
 
     @ParameterizedTest
@@ -299,7 +386,14 @@ class ParticipantServiceTest {
     fun `Should deleteParticipantById delete a Participant`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0.apply { id = uuid }))
+        val groupId = UUID.randomUUID()
+        val participant = ParticipantModel().apply {
+            id = uuid; lastName = "0"; groups = listOf(GroupModel().apply { id = groupId }); event =
+            EventModel().apply { id = eventId }
+        }
+        `when`(repository.findById(any(), any(), any())).thenReturn(
+            Mono.just(participant)
+        )
         `when`(repository.deleteById(any())).thenReturn(Mono.empty())
         `when`(
             movementRepository.findAll(
@@ -307,9 +401,12 @@ class ParticipantServiceTest {
                 any(),
                 anyOrNull(),
                 anyOrNull(),
-                anyOrNull()
+                anyOrNull(),
             )
         ).thenReturn(Flux.empty())
+        `when`(
+            groupRepository.findAllByIds(any(), any(), any())
+        ).thenReturn(Flux.just(GroupModel().apply { members = listOf(participant, participant0) }))
 
         // Act
         service.deleteParticipantById(currentUser(), eventId, uuid).block()
@@ -330,7 +427,8 @@ class ParticipantServiceTest {
     fun `Should deleteParticipantById throw RegistryException because Participant already has Movement`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant0.apply { id = uuid }))
+        val participant = ParticipantModel().apply { id = uuid; lastName = "0"; event = EventModel().apply { id = eventId } }
+        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(participant))
         `when`(repository.deleteById(any())).thenReturn(Mono.empty())
         `when`(
             movementRepository.findAll(
@@ -341,7 +439,7 @@ class ParticipantServiceTest {
                 anyOrNull()
             )
         ).thenReturn(Flux.just(MovementModel().apply {
-            content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = uuid } })
+            content = listOf(MovementContentModel().apply { this.participant = ParticipantModel().apply { id = uuid } })
         }))
 
         // Act
@@ -362,5 +460,56 @@ class ParticipantServiceTest {
 
         assertEquals(FORBIDDEN, result.status)
         assertEquals(PARTICIPANT_DELETE_HAS_MOVEMENT, result.code)
+    }
+
+    @Test
+    fun `Should deleteParticipantById throw RegistryException because Participant is the last of a Group`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        val groupId = UUID.randomUUID()
+        val participant = ParticipantModel().apply {
+            id = uuid; lastName = "0"; groups = listOf(GroupModel().apply { id = groupId }); event =
+            EventModel().apply { id = eventId }
+        }
+        `when`(repository.findById(any(), any(), any())).thenReturn(
+            Mono.just(participant)
+        )
+        `when`(repository.deleteById(any())).thenReturn(Mono.empty())
+        `when`(
+            movementRepository.findAll(
+                any(),
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                anyOrNull(),
+            )
+        ).thenReturn(Flux.empty())
+        `when`(
+            groupRepository.findAllByIds(any(), any(), any())
+        ).thenReturn(Flux.just(GroupModel().apply { members = listOf(participant) }))
+
+        // Act
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+            service.deleteParticipantById(currentUser(), eventId, uuid).block()
+        }) as RegistryException
+
+        // Assert
+        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
+        verify(movementRepository, times(1)).findAll(
+            eventId,
+            onlyVisible = false,
+            type = null,
+            startDateTime = null,
+            endDateTime = null
+        )
+        verify(groupRepository, times(1)).findAllByIds(
+            eventId,
+            ids = listOf(groupId),
+            onlyVisible = false,
+        )
+        verify(repository, times(0)).deleteById(any())
+
+        assertEquals(FORBIDDEN, result.status)
+        assertEquals(PARTICIPANT_DELETE_LAST_GROUP_MEMBER, result.code)
     }
 }

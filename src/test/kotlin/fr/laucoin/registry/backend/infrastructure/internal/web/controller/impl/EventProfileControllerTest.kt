@@ -176,6 +176,9 @@ class EventProfileControllerTest(@Autowired private val webClient: WebTestClient
             return Stream.of(
                 Arguments.of(GET, BASE_URL, listOf(eventId), null),
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
+                Arguments.of(GET, "$BASE_URL/status", listOf(eventId), null),
+                Arguments.of(GET, "$BASE_URL/roles", listOf(eventId), null),
+                Arguments.of(GET, "$BASE_URL/search/users", listOf(eventId), null),
                 Arguments.of(POST, BASE_URL, listOf(eventId), profiles),
                 Arguments.of(POST, "$BASE_URL/support", listOf(eventId), null),
                 Arguments.of(PATCH, "$BASE_URL/{id}", listOf(eventId, uuid), profile),

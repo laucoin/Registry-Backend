@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.config.GsonConfig
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant.ParticipantEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ParticipantEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupContentEntityRepository

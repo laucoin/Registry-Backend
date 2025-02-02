@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.MovementEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementContentEntityRepository

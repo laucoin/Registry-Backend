@@ -5,8 +5,8 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileRoleCountEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileRoleCountEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.EventProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.EventProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IEventProfileEntityRepository

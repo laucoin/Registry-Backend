@@ -5,7 +5,7 @@ import com.nimbusds.jose.shaded.gson.reflect.TypeToken
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
 import org.springframework.stereotype.Component

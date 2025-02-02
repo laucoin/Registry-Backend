@@ -5,10 +5,11 @@ import com.nimbusds.jose.shaded.gson.reflect.TypeToken
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.movement.MovementEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
 import java.time.ZonedDateTime
+import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
@@ -19,7 +20,8 @@ class MovementEntityMapper(private val gson: Gson): IEntityMapper<MovementModel,
         return MovementModel().apply {
             dateTime = entity.dateTime ?: ZonedDateTime.now()
             type = entity.type
-            content = gson.fromJson(entity.content, listType)
+            content = gson.fromJson<List<MovementContentModel>?>(entity.content, listType)
+                          ?.map { it.apply { vehicle = if (Objects.nonNull(vehicle?.id)) vehicle else null } } ?: emptyList()
         }.fillWithEventAndEntity(entity)
     }
 

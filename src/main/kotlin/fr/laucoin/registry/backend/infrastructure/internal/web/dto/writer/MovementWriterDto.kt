@@ -21,8 +21,9 @@ data class MovementWriterDto(
     var content: List<MovementContentWriterDto>?,
 ) {
     data class MovementContentWriterDto(
-        var poolName: String? = null,
         @field:NotNull(message = MOVEMENT_CONTENT_PARTICIPANT_ID_NULL)
         var participantId: UUID?,
+        var vehicleId: UUID? = null,
+        var poolName: String? = null,
     )
 }

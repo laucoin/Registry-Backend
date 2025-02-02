@@ -8,12 +8,14 @@ import org.springframework.stereotype.Component
 
 @Component
 class MovementContentReaderDtoMapper(
-    private val participantMapper: ParticipantReaderDtoMapper
+    private val participantMapper: ParticipantReaderDtoMapper,
+    private val vehicleMapper: VehicleReaderDtoMapper,
 ): IGenericReaderDtoMapper<MovementContentModel, MovementContentReaderDto> {
     override fun toDto(model: MovementContentModel, locale: Locale): MovementContentReaderDto {
         return MovementContentReaderDto(
             poolName = model.poolName,
             participant = if (Objects.nonNull(model.participant)) participantMapper.toDto(model.participant !!, locale) else null,
+            vehicle = if (Objects.nonNull(model.vehicle)) vehicleMapper.toDto(model.vehicle !!, locale) else null,
         )
     }
 }

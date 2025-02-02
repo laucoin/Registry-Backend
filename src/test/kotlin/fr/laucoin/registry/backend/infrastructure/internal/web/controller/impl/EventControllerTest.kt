@@ -132,6 +132,7 @@ class EventControllerTest(@Autowired private val webClient: WebTestClient): Test
             val event = EventWriterDto(name = "event", begin = now(), end = now().plusDays(1), options = listOf(ACTIVITY))
             return Stream.of(
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(uuid), null),
+                Arguments.of(GET, "$BASE_URL/options", emptyList<String>(), null),
                 Arguments.of(POST, BASE_URL, emptyList<String>(), event),
                 Arguments.of(PATCH, "$BASE_URL/{id}", listOf(uuid), event),
                 Arguments.of(PATCH, "$BASE_URL/{id}/disable", listOf(uuid), null),

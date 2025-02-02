@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileRoleCountModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileRoleCountEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileRoleCountEntity
 import java.util.Objects
 import org.springframework.stereotype.Component
 
