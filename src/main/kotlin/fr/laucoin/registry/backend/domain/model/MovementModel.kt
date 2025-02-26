@@ -8,6 +8,7 @@ import java.util.UUID
 data class MovementModel(
     var dateTime: ZonedDateTime = ZonedDateTime.now(),
     var type: MovementTypeEnum? = null,
+    var activity: ActivityModel? = null,
     var content: List<MovementContentModel> = emptyList(),
 ): GenericEventModel() {
     data class MovementContentModel(
@@ -15,15 +16,7 @@ data class MovementModel(
         var poolName: String? = null,
         var participant: ParticipantModel? = null,
         var vehicle: VehicleModel? = null,
-    ) {
-        fun getSearchableValues(): List<String> =
-            vehicle?.getSearchableValues().orEmpty() +
-            participant?.getSearchableValues().orEmpty() +
-            (if (Objects.nonNull(poolName)) listOf(poolName !!) else emptyList())
-    }
-
-    override fun getSearchableValues(): List<String> =
-        event?.getSearchableValues().orEmpty() + content.flatMap { it.getSearchableValues() }
+    )
 
     fun getNewContent(movement: MovementModel): List<MovementContentModel> {
         return movement.content
@@ -38,7 +31,7 @@ data class MovementModel(
         return getNewContent(movement).mapNotNull { it.vehicle?.id }
     }
 
-    fun getRemovedContentIds(movement: MovementModel): List<UUID> {
+    fun getOldContentIds(movement: MovementModel): List<UUID> {
         return content
             .filter { old -> Objects.isNull(movement.content.find { old.participant?.id == it.participant?.id && old.poolName == it.poolName && old.vehicle?.id == it.vehicle?.id }) }
             .mapNotNull(MovementContentModel::id)

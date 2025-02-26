@@ -9,16 +9,17 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Size
-import java.time.ZonedDateTime
 import java.util.UUID
 
-@StartBeforeEnd(startField = "begin", endField = "end", message = GROUP_START_LATER_THAN_END)
+@StartBeforeEnd(startField = "startAvailability", endField = "endAvailability", message = GROUP_START_LATER_THAN_END)
 data class GroupWriterDto(
     @field:NotBlank(message = GROUP_NAME_NULL_OR_BLANK)
     @field:Size(max = 150, message = GROUP_NAME_TOO_LONG)
     var name: String? = null,
-    var begin: ZonedDateTime? = null,
-    var end: ZonedDateTime? = null,
+    @field:Valid
+    var startAvailability: CustomDateTimeWriterDto? = null,
+    @field:Valid
+    var endAvailability: CustomDateTimeWriterDto? = null,
     @field:Valid
     @field:NotEmpty(message = GROUP_MEMBERS_EMPTY)
     var members: List<UUID>? = null,

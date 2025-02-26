@@ -14,21 +14,24 @@ import org.springframework.stereotype.Component
 class MovementReaderDtoMapper(
     @Qualifier("messagesSource") private val translateService: MessageSource,
     private val eventMapper: EventReaderDtoMapper,
+    private val activityMapper: ActivityReaderDtoMapper,
     private val movementContentMapper: MovementContentReaderDtoMapper,
 ): IGenericReaderDtoMapper<MovementModel, MovementReaderDto> {
     override fun toDto(model: MovementModel, locale: Locale): MovementReaderDto {
         return MovementReaderDto(
-            id = model.id,
-            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null,
             dateTime = model.dateTime,
             type = if (Objects.nonNull(model.type)) LabelDto(
                 model.type !!.name,
                 translateService.getMessage("$MOVEMENT_TYPE_PREFIX${model.type}", null, locale),
             ) else null,
+            activity = if (Objects.nonNull(model.activity)) activityMapper.toDto(model.activity !!, locale) else null,
             content = movementContentMapper.toDtoList(model.content, locale),
-            visible = model.visible,
-            creation = model.creation,
-            lastEdition = model.lastEdition,
-        )
+        ).apply {
+            id = model.id
+            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
+            visible = model.visible
+            creation = model.creation
+            lastEdition = model.lastEdition
+        }
     }
 }

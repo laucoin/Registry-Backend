@@ -2,11 +2,12 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.EventProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IEventProfileService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IEventProfileController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CreatedEventProfilesReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
@@ -15,15 +16,12 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventP
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.CreatedEventProfilesReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileRoleReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.EventProfilesWriterDtoMapper
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
@@ -37,57 +35,45 @@ class EventProfileController(
     private val readerMapper: EventProfileReaderDtoMapper,
     private val partialUserReaderMapper: PartialUserReaderDtoMapper,
     private val eventProfileRoleReaderMapper: EventProfileRoleReaderDtoMapper,
-    private val eventProfileStatusReaderMapper: EventProfileStatusReaderDtoMapper,
     private val createdEventProfilesReaderMapper: CreatedEventProfilesReaderDtoMapper,
     private val writerMapper: EventProfileWriterDtoMapper,
     private val profilesWriterMapper: EventProfilesWriterDtoMapper,
-    @Value("\${registry.feature.profile.searched.max-user-result}")
-    private val maxUserResult: Long,
 ): IEventProfileController {
     override fun findEventProfiles(
         locale: Locale,
         eventId: UUID,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        status: ProfileStatusEnum?,
-        searched: String?,
-        startAccess: ZonedDateTime?,
-        endAccess: ZonedDateTime?
-    ): Mono<PageDto<EventProfileReaderDto>> {
-        return service.findEventProfilesByEventId(
+        pageNumber: Int,
+        pageSize: Int,
+        textSearched: String?,
+        availabilitySearched: Boolean?,
+        statusSearched: ProfileStatusEnum?,
+        dateTimeSearched: ZonedDateTime?
+    ): Mono<PageModel<EventProfileReaderDto>> {
+        return service.findEventProfilesPage(
             eventId,
-            order,
-            onlyVisible,
-            status,
-            searched,
-            startAccess,
-            endAccess
-        )
-            .paginate(offset, limit)
-            .map { readerMapper.toDtoPage(it, locale) }
+            PageableModel(pageNumber * pageSize, pageSize),
+            EventProfileSearchParamModel(
+                textSearched,
+                availabilitySearched,
+                statusSearched,
+                dateTimeSearched
+            ),
+        ).map { readerMapper.toDtoPage(it, locale) }
     }
 
     override fun findEventProfileById(locale: Locale, eventId: UUID, id: UUID): Mono<EventProfileReaderDto> {
-        return service.findEventProfileByEventIdAndId(eventId, id, onlyVisible = false)
+        return service.findEventProfileById(eventId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun searchUsers(locale: Locale, eventId: UUID, searched: String?): Flux<PartialUserReaderDto> {
-        return service.searchUsers(searched)
-            .take(maxUserResult)
+    override fun searchUsers(locale: Locale, eventId: UUID, textSearched: String?): Flux<PartialUserReaderDto> {
+        return service.searchUsers(textSearched)
             .map { partialUserReaderMapper.toDto(it, locale) }
     }
 
     override fun getAssignableEventProfileRoles(currentUser: CurrentUserModel, locale: Locale, eventId: UUID): Flux<LabelDto> {
         return service.getAssignableEventRoles(currentUser, eventId)
             .map { eventProfileRoleReaderMapper.toDto(it, locale) }
-    }
-
-    override fun getAvailableEventProfileStatus(locale: Locale, eventId: UUID): Flux<LabelDto> {
-        return service.getAvailableEventStatus(eventId)
-            .map { eventProfileStatusReaderMapper.toDto(it, locale) }
     }
 
     override fun createEventProfiles(
@@ -99,11 +85,6 @@ class EventProfileController(
         return service.createEventProfiles(currentUser, eventId, profiles.userIds !!, profilesWriterMapper.toModels(profiles, eventId))
             .map { createdEventProfilesReaderMapper.toDto(it, locale) }
             .map { ResponseEntity.status(if (it.notCreatedUserIds.isEmpty()) OK else MULTI_STATUS).body(it) }
-    }
-
-    override fun createSupportEventProfile(currentUser: CurrentUserModel, locale: Locale, eventId: UUID): Mono<EventProfileReaderDto> {
-        return service.createSupportEventProfile(currentUser, eventId)
-            .map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateEventProfile(

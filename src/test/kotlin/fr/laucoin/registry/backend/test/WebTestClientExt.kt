@@ -34,7 +34,10 @@ object WebTestClientExt {
         firstName = FIRST_NAME,
         lastName = LAST_NAME,
         email = "$FIRST_NAME.$LAST_NAME@test.com"
-    ).apply { id = UUID.randomUUID() }
+    ).apply {
+        id = UUID.fromString("9cd10ea7-96c1-4f82-8366-d11d2e3ec300")
+        oidcId = UUID.fromString("07805018-b5db-435f-99db-ff8c3d79016e")
+    }
 
     fun buildAuthority(authority: String): String = "${eventId}_$authority"
 

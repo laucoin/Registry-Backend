@@ -3,30 +3,30 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum
+import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.EventProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
+import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
-import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
+import fr.laucoin.registry.backend.test.ModelExt.eventId
 import java.util.UUID
 import java.util.stream.Stream
-import org.junit.jupiter.api.Assertions.assertEquals
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.lenient
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.LOCKED
@@ -40,16 +40,9 @@ import reactor.core.publisher.Mono
 class TokenConverterServiceTest {
     private val roleService: IRoleService = mock()
     private val userService: IUserService = mock()
-    private val profileService: IUserEventProfileService = mock()
-
+    private val profileRepository: IEventProfileModelRepository = mock()
     private val service = TokenConverterService(
-        userService = userService,
-        profileService = profileService,
-        roleService = roleService,
-        userIdKey = USER_ID_KEY,
-        emailKey = EMAIL_KEY,
-        firstNameKey = FIRST_NAME_KEY,
-        lastNameKey = LAST_NAME_KEY,
+        userService, profileRepository, roleService, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY
     )
 
     companion object {
@@ -80,8 +73,9 @@ class TokenConverterServiceTest {
                 lastName = "DOE"
             }
             return Stream.of(
-                Arguments.of(null, currentUser, 1, 0),
-                Arguments.of(currentUser, currentUser, 0, 1),
+                Arguments.of(currentUser, currentUser, null, 0, 1),
+                Arguments.of(null, currentUser, emptyList<EventOptionEnum>(), 1, 0),
+                Arguments.of(currentUser, currentUser, listOf(VEHICLE), 0, 1),
             )
         }
     }
@@ -94,8 +88,8 @@ class TokenConverterServiceTest {
     ) {
         // Arrange
         val jwt = mock<Jwt>()
-        `when`(jwt.hasClaim(USER_ID_KEY)).thenReturn(hasUserId)
-        `when`(jwt.hasClaim(EMAIL_KEY)).thenReturn(hasEmail)
+        whenever(jwt.hasClaim(USER_ID_KEY)).thenReturn(hasUserId)
+        whenever(jwt.hasClaim(EMAIL_KEY)).thenReturn(hasEmail)
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -108,7 +102,7 @@ class TokenConverterServiceTest {
 
         verifyNoInteractions(roleService)
         verifyNoInteractions(userService)
-        verifyNoInteractions(profileService)
+        verifyNoInteractions(profileRepository)
     }
 
     @ParameterizedTest
@@ -122,7 +116,7 @@ class TokenConverterServiceTest {
         // Arrange
         val jwt = mock<Jwt>()
         val userId = UUID.randomUUID()
-        `when`(jwt.claims).thenReturn(
+        whenever(jwt.claims).thenReturn(
             mapOf(
                 USER_ID_KEY to userId.toString(),
                 EMAIL_KEY to "john.doe@test.com",
@@ -130,14 +124,14 @@ class TokenConverterServiceTest {
                 LAST_NAME_KEY to "DOE",
             )
         )
-        `when`(jwt.hasClaim(any())).thenCallRealMethod()
-        `when`(jwt.getClaimAsString(any())).thenCallRealMethod()
+        whenever(jwt.hasClaim(any())).thenCallRealMethod()
+        whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
 
         val currentUser = CurrentUserModel().apply {
             visible = userVisible
             purged = userPurged
         }
-        `when`(userService.findUserByOidcId(any(), any())).thenReturn(Mono.just(currentUser))
+        whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -149,8 +143,8 @@ class TokenConverterServiceTest {
         assertEquals(expectedMessage, result.message)
 
         verifyNoInteractions(roleService)
-        verify(userService, times(1)).findUserByOidcId(userId, onlyVisible = false)
-        verifyNoInteractions(profileService)
+        verify(userService).findUserByOidcId(userId, visibilitySearched = null)
+        verifyNoInteractions(profileRepository)
     }
 
     @ParameterizedTest
@@ -158,6 +152,7 @@ class TokenConverterServiceTest {
     fun `Should convert return Authentication`(
         databaseUser: CurrentUserModel?,
         currentUser: CurrentUserModel,
+        eventOptions: List<EventOptionEnum>?,
         expectedUserCreation: Int,
         expectedUserUpdate: Int,
     ) {
@@ -165,7 +160,7 @@ class TokenConverterServiceTest {
         val jwt = mock<Jwt>()
         val userId = UUID.randomUUID()
         val userOidcId = UUID.randomUUID()
-        `when`(jwt.claims).thenReturn(
+        whenever(jwt.claims).thenReturn(
             mapOf(
                 USER_ID_KEY to userOidcId.toString(),
                 EMAIL_KEY to currentUser.email,
@@ -173,38 +168,36 @@ class TokenConverterServiceTest {
                 LAST_NAME_KEY to currentUser.lastName,
             )
         )
-        `when`(jwt.hasClaim(any())).thenCallRealMethod()
-        `when`(jwt.getClaimAsString(any())).thenCallRealMethod()
+        whenever(jwt.hasClaim(any())).thenCallRealMethod()
+        whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
 
-        `when`(userService.findUserByOidcId(any(), any())).thenReturn(Mono.justOrEmpty(databaseUser?.apply {
+        whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.justOrEmpty(databaseUser?.apply {
             visible = true
             purged = false
         }))
 
         val userRole = "USER_ROLE"
-        lenient().`when`(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
+        whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
             .thenReturn(Mono.just(currentUser.apply { id = userId; oidcId = userOidcId; role = userRole }))
-        `when`(userService.updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull()))
+        whenever(userService.updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull()))
             .thenReturn(Mono.just(currentUser.apply { id = userId; oidcId = userOidcId; role = userRole }))
 
-        val profileId = UUID.randomUUID()
         val eventRole = "EVENT_ROLE"
-        val eventId = UUID.randomUUID()
-        val profile = EventProfileModel().apply {
-            id = profileId
+        val role = EventProfileRoleModel(
+            eventId,
+            eventOptions = eventOptions,
             role = eventRole
-            event = EventModel().apply { id = eventId }
-        }
+        )
 
-        `when`(profileService.findAllUserEventProfiles(any(), any(), anyOrNull())).thenReturn(Flux.just(profile))
-        `when`(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
-        `when`(roleService.getAuthoritiesByEventRole(any(), any())).thenReturn(emptyList())
+        whenever(profileRepository.findEventProfilesRolesByUserId(any())).thenReturn(Flux.just(role))
+        whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
+        whenever(roleService.getAuthoritiesByEventRole(any(), any(), anyOrNull())).thenReturn(emptyList())
 
         // Act
         service.convert(jwt).block()
 
         // Assert
-        verify(userService, times(1)).findUserByOidcId(userOidcId, onlyVisible = false)
+        verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
         verify(userService, times(expectedUserCreation)).createUser(
             userOidcId,
             currentUser.email !!,
@@ -217,12 +210,8 @@ class TokenConverterServiceTest {
             eq(currentUser.firstName),
             eq(currentUser.lastName),
         )
-        verify(profileService, times(1)).findAllUserEventProfiles(
-            userId,
-            onlyUsable = true,
-            status = ACCEPTED,
-        )
-        verify(roleService, times(1)).getAuthoritiesByUserRole(userRole)
-        verify(roleService, times(1)).getAuthoritiesByEventRole(eventRole, eventId)
+        verify(profileRepository).findEventProfilesRolesByUserId(userId)
+        verify(roleService).getAuthoritiesByUserRole(userRole)
+        verify(roleService).getAuthoritiesByEventRole(eq(eventRole), eq(eventId), anyOrNull())
     }
 }

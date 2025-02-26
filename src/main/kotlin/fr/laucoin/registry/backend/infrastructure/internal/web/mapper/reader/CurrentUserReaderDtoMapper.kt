@@ -17,7 +17,6 @@ class CurrentUserReaderDtoMapper(
 ): IGenericReaderDtoMapper<CurrentUserModel, CurrentUserReaderDto> {
     override fun toDto(model: CurrentUserModel, locale: Locale): CurrentUserReaderDto {
         return CurrentUserReaderDto(
-            id = model.id,
             authorities = model.authorities.map { it.authority },
             preferences = if (Objects.nonNull(model.preferences)) preferenceMapper.toDto(model.preferences !!, locale) else null,
             firstName = model.firstName,
@@ -30,9 +29,11 @@ class CurrentUserReaderDtoMapper(
             birthday = model.birthday,
             lastLogin = model.lastLogin,
             purged = model.purged,
-            visible = model.visible,
-            creation = model.creation,
-            lastEdition = model.lastEdition,
-        )
+        ).apply {
+            id = model.id
+            visible = model.visible
+            creation = model.creation
+            lastEdition = model.lastEdition
+        }
     }
 }

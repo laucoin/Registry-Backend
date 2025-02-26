@@ -7,7 +7,6 @@ WORKDIR $APP_HOME
 
 # Copy the Gradle build files to the container
 COPY build.gradle.kts $APP_HOME
-COPY settings.gradle.kts $APP_HOME
 COPY gradlew $APP_HOME
 COPY gradle $APP_HOME/gradle
 

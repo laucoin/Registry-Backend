@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.VISIBLE
 import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
 import java.util.UUID
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.ReadOnlyProperty
@@ -27,7 +26,7 @@ abstract class GenericEntity(
     var visible: Boolean? = null,
 
     @Column(CREATED_AT)
-    var createdAt: ZonedDateTime = now(),
+    var createdAt: ZonedDateTime? = null,
     @Column(CREATOR_ID)
     var creatorId: UUID? = null,
     @ReadOnlyProperty
@@ -41,7 +40,7 @@ abstract class GenericEntity(
     var creatorEmail: String? = null,
 
     @Column(LAST_MODIFIER_DATE)
-    var lastUpdateAt: ZonedDateTime = now(),
+    var lastUpdateAt: ZonedDateTime? = null,
     @Column(LAST_MODIFIER_ID)
     var lastEditorId: UUID? = null,
     @ReadOnlyProperty

@@ -12,14 +12,15 @@ class GroupWithoutMemberReaderDtoMapper(
 ): IGenericReaderDtoMapper<GroupModel, GroupWithoutMemberReaderDto> {
     override fun toDto(model: GroupModel, locale: Locale): GroupWithoutMemberReaderDto {
         return GroupWithoutMemberReaderDto(
-            id = model.id,
-            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null,
             name = model.name,
-            begin = model.begin,
-            end = model.end,
-            visible = model.visible,
-            creation = model.creation,
-            lastEdition = model.lastEdition,
-        )
+            startAvailability = model.startAvailability,
+            endAvailability = model.endAvailability,
+        ).apply {
+            id = model.id
+            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
+            visible = model.visible
+            creation = model.creation
+            lastEdition = model.lastEdition
+        }
     }
 }

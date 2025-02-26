@@ -27,7 +27,6 @@ class ReactiveExtTest {
     @ParameterizedTest
     @MethodSource
     fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>, id: UUID) {
-        // Arrange
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
             value.notFoundIfEmpty(id).block()

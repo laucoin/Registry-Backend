@@ -10,14 +10,17 @@ import java.util.UUID
 import org.springframework.stereotype.Component
 
 @Component
-class ParticipantWriterDtoMapper: IGenericEventWriterDtoMapper<ParticipantModel, ParticipantWriterDto> {
+class ParticipantWriterDtoMapper(
+    private val customDateTimeMapper: CustomDateTimeWriterDtoMapper,
+): IGenericEventWriterDtoMapper<ParticipantModel, ParticipantWriterDto> {
     override fun toModel(dto: ParticipantWriterDto, eventId: UUID): ParticipantModel {
         return ParticipantModel().apply {
             firstName = dto.firstName
             lastName = dto.lastName
             birthday = dto.birthday
-            begin = dto.begin
-            end = dto.end
+            startAvailability =
+                if (Objects.nonNull(dto.startAvailability)) customDateTimeMapper.toModel(dto.startAvailability !!) else null
+            endAvailability = if (Objects.nonNull(dto.endAvailability)) customDateTimeMapper.toModel(dto.endAvailability !!) else null
             user = if (Objects.nonNull(dto.userId)) UserModel().apply { id = dto.userId } else null
             groups = if (Objects.nonNull(dto.groupIds)) dto.groupIds !!.map { GroupModel().apply { id = it } } else emptyList()
             event = EventModel().apply { id = eventId }

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension
 
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GenericEventModel
 import fr.laucoin.registry.backend.domain.model.GenericModel
@@ -10,13 +11,16 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import java.util.Objects
 
 fun <M: GenericEventModel, E: GenericEventEntity> M.fillWithEventAndEntity(entity: E): M {
-    event = if (Objects.nonNull(entity.eventId)) EventModel().apply {
+    event = if (Objects.isNull(entity.eventName)) null
+    else EventModel().apply {
         id = entity.eventId
         name = entity.eventName
-        begin = entity.eventStartTime
-        end = entity.eventEndTime
+        begin = if (Objects.isNull(entity.eventStartDate)) null
+        else CustomDateTimeModel(entity.eventStartDate !!, entity.eventStartTime)
+        end = if (Objects.isNull(entity.eventEndDate) && Objects.isNull(entity.eventEndTime)) null
+        else CustomDateTimeModel(entity.eventEndDate !!, entity.eventEndTime)
         options = entity.eventOptions
-    } else null
+    }
 
     fillWithEntity(entity)
 
@@ -27,24 +31,26 @@ fun <M: GenericModel, E: GenericEntity> M.fillWithEntity(entity: E): M {
     id = entity.id
     visible = entity.visible ?: visible
 
-    creation = HistoryModel(
-        dateTime = entity.createdAt,
-        user = HistoryUserModel(
+    creation = if (Objects.isNull(entity.createdAt)) null
+    else HistoryModel(
+        dateTime = entity.createdAt !!,
+        user = if (Objects.nonNull(entity.creatorId)) HistoryUserModel(
             id = entity.creatorId,
             firstName = entity.creatorFirstName,
             lastName = entity.creatorLastName,
             email = entity.creatorEmail
-        )
+        ) else null
     )
 
-    lastEdition = HistoryModel(
-        dateTime = entity.lastUpdateAt,
-        user = HistoryUserModel(
+    lastEdition = if (Objects.isNull(entity.lastUpdateAt)) null
+    else HistoryModel(
+        dateTime = entity.lastUpdateAt !!,
+        user = if (Objects.nonNull(entity.lastEditorId)) HistoryUserModel(
             id = entity.lastEditorId,
             firstName = entity.lastEditorFirstName,
             lastName = entity.lastEditorLastName,
             email = entity.lastEditorEmail
-        )
+        ) else null
     )
 
     return this
@@ -62,11 +68,11 @@ fun <M: GenericModel, E: GenericEntity> E.fillWithModel(model: M): E {
     id = model.id
     visible = model.visible
 
-    createdAt = model.creation.dateTime
-    creatorId = model.creation.user?.id
+    createdAt = model.creation?.dateTime
+    creatorId = model.creation?.user?.id
 
-    lastUpdateAt = model.lastEdition.dateTime
-    lastEditorId = model.lastEdition.user?.id
+    lastUpdateAt = model.lastEdition?.dateTime
+    lastEditorId = model.lastEdition?.user?.id
 
     return this
 }

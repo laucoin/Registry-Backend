@@ -34,8 +34,9 @@ registry:
     movement:
       searched:
         max-participant-result: 10
-        max-group-result: 10
+        max-group-result: 5
         max-vehicle-result: 10
+        max-activity-result: 10
   security:
     default-role: USER
     oauth2:

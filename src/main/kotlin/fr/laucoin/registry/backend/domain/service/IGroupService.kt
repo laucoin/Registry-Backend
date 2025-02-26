@@ -1,49 +1,48 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.UserModel
-import java.time.ZonedDateTime
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IGroupService {
-    fun findGroups(
+    fun findGroupsPage(
         eventId: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?,
-    ): Flux<GroupModel>
+        pageable: PageableModel,
+        searchParams: GroupSearchParamModel,
+    ): Mono<PageModel<GroupModel>>
 
-    fun findGroupMembersByGroupId(
+    fun findGroupsMembers(
+        eventId: UUID,
+        groupIds: List<UUID>,
+    ): Flux<Pair<UUID, List<ParticipantModel>>>
+
+    fun findGroupMembersPageByGroupId(
         eventId: UUID,
         id: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?,
-    ): Flux<ParticipantModel>
+        pageable: PageableModel,
+        searchParams: ParticipantSearchParamModel,
+    ): Mono<PageModel<ParticipantModel>>
 
-    fun findGroupById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<GroupModel>
-    fun searchParticipants(eventId: UUID, searched: String?): Flux<ParticipantModel>
-    fun createGroup(currentUser: UserModel, group: GroupModel): Mono<GroupModel>
-    fun updateGroupById(currentUser: UserModel, eventId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
+    fun findGroupById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel>
+    fun searchParticipants(eventId: UUID, textSearched: String?): Flux<ParticipantModel>
+    fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel>
+    fun updateGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
     fun addMembersToGroupById(
-        currentUser: UserModel,
+        currentUser: CurrentUserModel,
         eventId: UUID,
         id: UUID,
         memberIds: List<UUID>
     ): Mono<Pair<List<UUID>, List<UUID>>>
 
-    fun removeMemberFromGroupById(currentUser: UserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel>
-    fun disableGroupById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<GroupModel>
-    fun enableGroupById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<GroupModel>
+    fun removeMemberFromGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel>
+    fun disableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel>
+    fun enableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel>
     fun deleteGroupById(eventId: UUID, id: UUID): Mono<Void>
 }

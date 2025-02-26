@@ -3,7 +3,10 @@ package fr.laucoin.registry.backend.domain.validator
 import fr.laucoin.registry.backend.domain.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME
+import fr.laucoin.registry.backend.domain.extension.DateExt.isBeforeOrEqual
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 import java.time.LocalDate
@@ -47,6 +50,12 @@ class StartBeforeEndValidator: ConstraintValidator<StartBeforeEnd, Any> {
         return when {
             startValue is ZonedDateTime && endValue is ZonedDateTime -> startValue.isBefore(endValue)
             startValue is LocalDate && endValue is LocalDate -> startValue.isBefore(endValue)
+            startValue is CustomDateTimeWriterDto && endValue is CustomDateTimeWriterDto -> {
+                val startDateTime = CustomDateTimeModel(startValue.date !!, startValue.time)
+                val endDateTime = CustomDateTimeModel(endValue.date !!, endValue.time)
+                startDateTime.isBeforeOrEqual(endDateTime)
+            }
+
             Objects.isNull(startValue) || Objects.isNull(endValue) -> true
             else -> {
                 val exception = RegistryException(INTERNAL_SERVER_ERROR, COMPARING_WRONG_PARAMETER_TYPE)

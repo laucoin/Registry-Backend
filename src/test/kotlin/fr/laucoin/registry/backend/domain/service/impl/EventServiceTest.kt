@@ -1,7 +1,14 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_DATE_CONFLICT_WITH_ELEMENTS
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_R
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.EventSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IEventModelRepository
 import fr.laucoin.registry.backend.domain.service.IEventService
@@ -9,31 +16,29 @@ import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.util.UUID
+import java.time.LocalDate
+import java.time.LocalTime
 import java.util.stream.Stream
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.lenient
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
-import org.springframework.data.domain.Sort.Direction.DESC
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class EventServiceTest {
@@ -49,405 +54,485 @@ class EventServiceTest {
     )
 
     companion object {
-        private val event0 = EventModel().apply { name = "0" }
-        private val event1 = EventModel().apply { name = "1" }
-        private val event2 = EventModel().apply { name = "2" }
-        private val event3 = EventModel().apply { name = "3" }
-
-        private val events = arrayOf(event0, event1, event2, event3)
+        @JvmStatic
+        fun `Should validateDateTime call repository findById and validate the request date is in event range`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(null, null, null),
+                Arguments.of(
+                    null, null,
+                    CustomDateTimeModel(LocalDate.MIN),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                ),
+            )
+        }
 
         @JvmStatic
-        fun `Should findEvents return Events`(): Stream<Arguments> = Stream.of(
-            Arguments.of(ASC, null, events.toList()),
-            Arguments.of(DESC, null, events.toList().reversed()),
-            Arguments.of(ASC, "0", listOf(event0)),
-            Arguments.of(ASC, "1", listOf(event1)),
-            Arguments.of(ASC, "2", listOf(event2)),
-            Arguments.of(ASC, "3", listOf(event3)),
-            Arguments.of(DESC, "0", listOf(event0)),
-            Arguments.of(DESC, "1", listOf(event1)),
-            Arguments.of(DESC, "2", listOf(event2)),
-            Arguments.of(DESC, "3", listOf(event3)),
-            Arguments.of(ASC, "QWERTY", emptyList<EventModel>()),
-            Arguments.of(DESC, "QWERTY", emptyList<EventModel>()),
-        )
+        fun `Should validateDateTime call repository findById and throw on invalid date`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.of(0, 0, 1)),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.of(23, 59, 59)),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+            )
+        }
 
         @JvmStatic
-        fun `Should validateDateTimes throw RegistryException for datetime out of range`(): Stream<Arguments> = Stream.of(
-            Arguments.of(
-                ZonedDateTime.of(1999, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2011, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
-            ),
-            Arguments.of(
-                ZonedDateTime.of(1999, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2011, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")),
-            ),
-        )
+        fun `Should validateDateTimes call repository findById and validate the request dates are in event range`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(null, null, null, null),
+                Arguments.of(
+                    null, null,
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                ),
+            )
+        }
 
         @JvmStatic
-        fun `Should updateEventById update and return an Event`(): Stream<Arguments> = Stream.of(
-            Arguments.of(null, null, null, null, 0),
-            Arguments.of(
-                null, null,
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-                1,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-                null, null, 0,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-                null,
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-                1,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-                null, null, 0,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                null, 0,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 26, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 27, 0, 0, 0, 0, ZoneId.of("UTC")),
-                0,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 26, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-                1,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 26, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 23, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 27, 0, 0, 0, 0, ZoneId.of("UTC")),
-                1,
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 26, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 23, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-                1,
-            ),
-        )
+        fun `Should validateDateTimes call repository findById and throw on invalid dates`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MIN),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.of(0, 0, 1)),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.of(23, 59, 59)),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                ),
+            )
+        }
 
         @JvmStatic
-        fun `Should updateEventById throw RegistryException`(): Stream<Arguments> = Stream.of(
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 24, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 25, 0, 0, 0, 0, ZoneId.of("UTC")),
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 21, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-            ),
-            Arguments.of(
-                ZonedDateTime.of(2024, 9, 24, 0, 0, 0, 0, ZoneId.of("UTC")),
-                ZonedDateTime.of(2024, 9, 22, 0, 0, 0, 0, ZoneId.of("UTC")),
-            ),
+        fun `Should updateEventById call repository findById, validDateTime and update`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(null, null, null, null, 0),
+                Arguments.of(
+                    null, null,
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    1,
+                ),
+                Arguments.of(
+                    null,
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    null,
+                    1,
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    null,
+                    null,
+                    CustomDateTimeModel(LocalDate.MAX),
+                    1,
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    0,
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MAX),
+                    1,
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    0,
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.EPOCH),
+                    CustomDateTimeModel(LocalDate.EPOCH),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    0,
+                ),
+                Arguments.of(
+                    CustomDateTimeModel(LocalDate.MIN, LocalTime.of(0, 0, 1)),
+                    CustomDateTimeModel(LocalDate.MAX, LocalTime.of(23, 59, 59)),
+                    CustomDateTimeModel(LocalDate.MIN),
+                    CustomDateTimeModel(LocalDate.MAX),
+                    0,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `Should findEventsPage call repository findPage`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = EventSearchParamModel()
+        whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(listOf(REGISTRY_EVENT_R))
+        whenever(repository.findPage(any(), any())).thenReturn(
+            Mono.just(PageModel(1, 2, 3, 4, emptyList()))
         )
+
+        // Act
+        service.findEventsPage(currentUser(REGISTRY_EVENT_R), pageable, params).block()
+
+        // Assert
+        verify(repository).findPage(pageable, params)
+        verify(repository, never()).findPage(any(), any(), any())
+    }
+
+    @Test
+    fun `Should findEventsPage call repository findPage for currentUserEvent`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = EventSearchParamModel()
+        whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
+        whenever(roleService.getEventIdsFromCurrentUserProfiles(any())).thenReturn(emptyList())
+        whenever(repository.findPage(any(), any(), any())).thenReturn(
+            Mono.just(PageModel(1, 2, 3, 4, emptyList()))
+        )
+
+        // Act
+        service.findEventsPage(currentUser(), pageable, params).block()
+
+        // Assert
+        verify(repository).findPage(emptyList(), pageable, params)
+        verify(repository, never()).findPage(any(), any())
+    }
+
+    @Test
+    fun `Should findEventById call repository findById`() {
+        // Arrange
+        val event = EventModel()
+        val onlyVisible = true
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
+
+        // Act
+        service.findEventById(eventId, onlyVisible).block()
+
+        // Assert
+        verify(repository).findById(eventId, onlyVisible)
+    }
+
+    @Test
+    fun `Should findActivityById call repository findById throw on empty result`() {
+        // Arrange
+        val onlyVisible = true
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.empty())
+
+        // Act
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+            service.findEventById(eventId, onlyVisible).block()
+        }) as RegistryException
+
+        // Assert
+        assertEquals(NOT_FOUND, result.status)
+        assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
+        assertEquals(1, result.args?.size)
+        verify(repository).findById(eventId, onlyVisible)
+    }
+
+    @Test
+    fun `Should availableEventOptions not throw`() {
+        // Act
+        assertDoesNotThrow {
+            service.availableEventOptions().blockFirst()
+        }
+
+        // Assert
+        verifyNoInteractions(repository)
+        verifyNoInteractions(eventProfileService)
+        verifyNoInteractions(transactionalOperator)
+        verifyNoInteractions(roleService)
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should findEvents return Events`(
-        order: Direction,
-        searched: String?,
-        expectedList: List<EventModel>,
+    fun `Should validateDateTime call repository findById and validate the request date is in event range`(
+        eventBeginDateTime: CustomDateTimeModel?,
+        eventEndDateTime: CustomDateTimeModel?,
+        dateTime: CustomDateTimeModel?,
     ) {
         // Arrange
-        `when`(repository.findAll(any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(*events))
-        `when`(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(listOf("REGISTRY_EVENT_R"))
+        val event = EventModel().apply { begin = eventBeginDateTime; end = eventEndDateTime }
+        val errorMessage = "ERROR_MESSAGE"
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
 
         // Act
-        val result = service.findEvents(
-            currentUser(),
-            order,
-            onlyVisible = true,
-            searched,
-            startDateTime = null,
-            endDateTime = null
-        ).collectList().block()
+        val result = service.validateDateTime(eventId, dateTime, errorMessage).block()
 
         // Assert
-        assertEquals(expectedList.size, result?.size)
-        expectedList.forEachIndexed { index, it ->
-            assertEquals(it, result?.get(index))
-        }
+        assertEquals(eventId, result)
+        verify(repository).findById(eventId, visibilitySearched = null)
     }
 
-    @Test
-    fun `Should findEventById return the Event`() {
+    @ParameterizedTest
+    @MethodSource
+    fun `Should validateDateTime call repository findById and throw on invalid date`(
+        eventBeginDateTime: CustomDateTimeModel?,
+        eventEndDateTime: CustomDateTimeModel?,
+        dateTime: CustomDateTimeModel?,
+    ) {
         // Arrange
-        val uuid = UUID.randomUUID()
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event0))
-
-        // Act
-        service.findEventById(uuid, onlyVisible = true).block()
-
-        // Assert
-        verify(repository, times(1)).findById(uuid, onlyVisible = true)
-    }
-
-    @Test
-    fun `Should validateDateTime throw RegistryException for datetime out of range`() {
-        // Arrange
-        val message = "MESSAGE"
-        val now = ZonedDateTime.now()
-        val event = EventModel().apply {
-            id = eventId
-            begin = ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-            end = ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-        }
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
+        val event = EventModel().apply { begin = eventBeginDateTime; end = eventEndDateTime }
+        val errorMessage = "ERROR_MESSAGE"
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.validateDateTime(eventId, now, message).block()
+            service.validateDateTime(eventId, dateTime, errorMessage).block()
         }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
-        assertEquals(message, result.message)
+        assertEquals(errorMessage, result.message)
         assertEquals(3, result.args?.size)
-        assertEquals(now.toString(), result.args?.first())
-        assertEquals(event.begin.toString(), result.args?.get(1))
-        assertEquals(event.end.toString(), result.args?.get(2))
-
-        verify(repository, times(1)).findById(eventId, onlyVisible = false)
-    }
-
-    @Test
-    fun `Should validateDateTime not throw`() {
-        // Arrange
-        val message = "MESSAGE"
-        val now = ZonedDateTime.now()
-        val event = EventModel().apply {
-            id = eventId
-            begin = ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-            end = ZonedDateTime.of(3000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-        }
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
-
-        // Act
-        val result = service.validateDateTime(eventId, now, message).block()
-
-        // Assert
-        assertEquals(eventId, result)
-
-        verify(repository, times(1)).findById(eventId, onlyVisible = false)
+        verify(repository).findById(eventId, visibilitySearched = null)
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should validateDateTimes throw RegistryException for datetime out of range`(
-        newStart: ZonedDateTime,
-        newEnd: ZonedDateTime,
+    fun `Should validateDateTimes call repository findById and validate the request dates are in event range`(
+        eventBeginDateTime: CustomDateTimeModel?,
+        eventEndDateTime: CustomDateTimeModel?,
+        startDateTime: CustomDateTimeModel?,
+        endDateTime: CustomDateTimeModel?,
     ) {
         // Arrange
-        val message = "MESSAGE"
-        val event = EventModel().apply {
-            id = eventId
-            begin = ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-            end = ZonedDateTime.of(2010, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-        }
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
+        val event = EventModel().apply { begin = eventBeginDateTime; end = eventEndDateTime }
+        val errorMessage = "ERROR_MESSAGE"
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
+
+        // Act
+        val result = service.validateDateTimes(eventId, startDateTime, endDateTime, errorMessage).block()
+
+        // Assert
+        assertEquals(eventId, result)
+        verify(repository).findById(eventId, visibilitySearched = null)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should validateDateTimes call repository findById and throw on invalid dates`(
+        eventBeginDateTime: CustomDateTimeModel?,
+        eventEndDateTime: CustomDateTimeModel?,
+        startDateTime: CustomDateTimeModel?,
+        endDateTime: CustomDateTimeModel?,
+    ) {
+        // Arrange
+        val event = EventModel().apply { begin = eventBeginDateTime; end = eventEndDateTime }
+        val errorMessage = "ERROR_MESSAGE"
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.validateDateTimes(eventId, newStart, newEnd, message).block()
+            service.validateDateTimes(eventId, startDateTime, endDateTime, errorMessage).block()
         }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
-        assertEquals(message, result.message)
+        assertEquals(errorMessage, result.message)
         assertEquals(4, result.args?.size)
-        assertEquals(newStart.toString(), result.args?.first())
-        assertEquals(newEnd.toString(), result.args?.get(1))
-        assertEquals(event.begin.toString(), result.args?.get(2))
-        assertEquals(event.end.toString(), result.args?.get(3))
-
-        verify(repository, times(1)).findById(eventId, onlyVisible = false)
+        verify(repository).findById(eventId, visibilitySearched = null)
     }
 
     @Test
-    fun `Should validateDateTimes not throw`() {
+    fun `Should createEvent call profile service createUserEventProfileFromEvent and repository create`() {
         // Arrange
-        val message = "MESSAGE"
-        val newStart: ZonedDateTime = ZonedDateTime.now()
-        val newEnd: ZonedDateTime = ZonedDateTime.now()
-        val event = EventModel().apply {
-            id = eventId
-            begin = ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-            end = ZonedDateTime.of(3000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-        }
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event))
+        val event = EventModel()
+        whenever(eventProfileService.createUserEventProfileFromEvent(any(), any())).thenReturn(Mono.just(EventProfileModel()))
+        whenever(repository.create(any())).thenReturn(Mono.just(event))
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
-        val result = service.validateDateTimes(eventId, newStart, newEnd, message).block()
+        service.createEvent(currentUser(), event).block()
 
         // Assert
-        assertEquals(eventId, result)
-
-        verify(repository, times(1)).findById(eventId, onlyVisible = false)
-    }
-
-    @Test
-    fun `Should createEvent create and return a Event`() {
-        // Arrange
-        val currentUser = currentUser()
-        `when`(repository.create(any())).thenReturn(Mono.just(event0))
-        `when`(transactionalOperator.transactional(any<Mono<*>>())).thenReturn(Mono.just(event0))
-
-        // Act
-        service.createEvent(currentUser, event0).block()
-
-        // Assert
-        verify(repository, times(1)).create(event0)
-        verify(transactionalOperator, times(1)).transactional(any<Mono<*>>())
+        verify(eventProfileService).createUserEventProfileFromEvent(currentUser(), event)
+        verify(repository).create(event)
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should updateEventById update and return an Event`(
-        oldBegin: ZonedDateTime?,
-        oldFinish: ZonedDateTime?,
-        newBegin: ZonedDateTime?,
-        newFinish: ZonedDateTime?,
-        expectedFindMovementsCall: Int,
+    fun `Should updateEventById call repository findById, validDateTime and update`(
+        eventBeginDateTime: CustomDateTimeModel?,
+        eventEndDateTime: CustomDateTimeModel?,
+        newEventBeginDateTime: CustomDateTimeModel?,
+        newEventEndDateTime: CustomDateTimeModel?,
+        expectedVerificationCall: Int,
     ) {
-        val uuid = UUID.randomUUID()
-        val currentUser = currentUser()
-        val oldEvent = EventModel().apply {
-            id = eventId
-            begin = oldBegin
-            end = oldFinish
-        }
-        val newEvent = EventModel().apply {
-            id = eventId
-            begin = newBegin
-            end = newFinish
-        }
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(oldEvent))
-        lenient().`when`(repository.validDateTime(any(), anyOrNull(), anyOrNull()))
-            .thenReturn(Mono.just(true))
-        `when`(repository.update(any())).thenReturn(Mono.just(newEvent))
+        // Arrange
+        val eventToUpdate = EventModel().apply { id = eventId; begin = eventBeginDateTime; end = eventEndDateTime }
+        val eventUpdated = EventModel().apply { id = eventId; begin = newEventBeginDateTime; end = newEventEndDateTime }
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(eventToUpdate))
+        whenever(repository.validDateTime(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(true))
+        whenever(repository.update(any())).thenReturn(Mono.just(eventUpdated))
 
         // Act
-        service.updateEventById(currentUser, uuid, newEvent).block()
+        service.updateEventById(currentUser(), eventId, eventUpdated).block()
 
         // Assert
-        verify(repository, times(1)).findById(uuid, onlyVisible = false)
-        verify(repository, times(expectedFindMovementsCall)).validDateTime(
-            id = eventId,
-            begin = newBegin,
-            end = newFinish,
+        verify(repository).findById(eventId, visibilitySearched = null)
+        verify(repository, times(expectedVerificationCall)).validDateTime(
+            eventId,
+            newEventBeginDateTime?.toLocalDateTime(LocalTime.MIN),
+            newEventEndDateTime?.toLocalDateTime(LocalTime.MAX),
         )
-        verify(repository, times(1)).update(newEvent)
+        verify(repository).update(any())
     }
 
-    @ParameterizedTest
-    @MethodSource
-    fun `Should updateEventById throw RegistryException`(
-        newBegin: ZonedDateTime?,
-        newFinish: ZonedDateTime?,
-    ) {
-        val uuid = UUID.randomUUID()
-        val currentUser = currentUser()
-        val oldEvent = EventModel().apply {
-            id = eventId
-            begin = ZonedDateTime.of(2000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-            end = ZonedDateTime.of(3000, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
-        }
-        val newEvent = EventModel().apply {
-            id = eventId
-            begin = newBegin
-            end = newFinish
-        }
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(oldEvent))
-        lenient().`when`(repository.validDateTime(any(), anyOrNull(), anyOrNull()))
-            .thenReturn(Mono.just(false))
-        `when`(repository.update(any())).thenReturn(Mono.just(newEvent))
+    @Test
+    fun `Should updateEventById call repository findById, validDateTime and throw due to date conflict`() {
+        // Arrange
+        val eventToUpdate = EventModel().apply { id = eventId }
+        val dateTime = CustomDateTimeModel(LocalDate.EPOCH)
+        val eventUpdated = EventModel().apply { id = eventId; begin = dateTime; end = dateTime }
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(eventToUpdate))
+        whenever(repository.validDateTime(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(false))
+        whenever(repository.update(any())).thenReturn(Mono.just(eventUpdated))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.updateEventById(currentUser, uuid, newEvent).block()
+            service.updateEventById(currentUser(), eventId, eventUpdated).block()
         }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(EVENT_DATE_CONFLICT_WITH_ELEMENTS, result.message)
-
-        verify(repository, times(1)).findById(uuid, onlyVisible = false)
-        verify(repository, times(1)).validDateTime(
-            id = eventId,
-            begin = newBegin,
-            end = newFinish,
+        assertNull(result.args)
+        verify(repository).findById(eventId, visibilitySearched = null)
+        verify(repository).validDateTime(
+            eventId,
+            dateTime.toLocalDateTime(LocalTime.MIN),
+            dateTime.toLocalDateTime(LocalTime.MAX),
         )
         verify(repository, never()).update(any())
     }
 
     @Test
-    fun `Should disableEventById hide and return an Event`() {
+    fun `Should disableEventById call existing event and call repository update`() {
         // Arrange
-        val uuid = UUID.randomUUID()
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event0))
-        `when`(repository.update(any())).thenReturn(Mono.just(event0))
+        val event = EventModel().apply { visible = true }
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
+        whenever(repository.update(any())).thenReturn(Mono.just(event))
 
         // Act
-        service.disableEventById(currentUser(), uuid).block()
+        service.disableEventById(currentUser(), eventId).block()
 
         // Assert
-        verify(repository, times(1)).findById(uuid, onlyVisible = true)
-        verify(repository, times(1)).update(any())
+        verify(repository).findById(eventId, visibilitySearched = true)
+        verify(repository).update(event.apply { visible = false })
     }
 
     @Test
-    fun `Should enableEventById restore and return an Event`() {
+    fun `Should enableEventById call existing event and call repository update`() {
         // Arrange
-        val uuid = UUID.randomUUID()
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event0))
-        `when`(repository.update(any())).thenReturn(Mono.just(event0))
+        val event = EventModel().apply { visible = false }
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
+        whenever(repository.update(any())).thenReturn(Mono.just(event))
 
         // Act
-        service.enableEventById(currentUser(), uuid).block()
+        service.enableEventById(currentUser(), eventId).block()
 
         // Assert
-        verify(repository, times(1)).findById(uuid, onlyVisible = false)
-        verify(repository, times(1)).update(any())
+        verify(repository).findById(eventId, visibilitySearched = false)
+        verify(repository).update(event.apply { visible = true })
     }
 
     @Test
-    fun `Should deleteEventById delete a Participant`() {
+    fun `Should deleteEventById call existing event and call repository deleteById`() {
         // Arrange
-        val uuid = UUID.randomUUID()
-        `when`(repository.findById(any(), any())).thenReturn(Mono.just(event0))
-        `when`(repository.deleteById(any())).thenReturn(Mono.empty())
+        val event = EventModel()
+        whenever(repository.findById(any(), anyOrNull())).thenReturn(Mono.just(event))
+        whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
-        service.deleteEventById(uuid).block()
+        service.deleteEventById(eventId).block()
 
         // Assert
-        verify(repository, times(1)).findById(uuid, onlyVisible = false)
-        verify(repository, times(1)).deleteById(uuid)
+        verify(repository).findById(eventId, visibilitySearched = null)
+        verify(repository).deleteById(eventId)
     }
 }

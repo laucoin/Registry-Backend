@@ -3,55 +3,51 @@ package fr.laucoin.registry.backend.domain.repository
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.EventProfileRoleCountModel
-import java.time.ZonedDateTime
+import fr.laucoin.registry.backend.domain.model.EventProfileRoleModel
+import fr.laucoin.registry.backend.domain.model.EventProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import java.time.LocalDateTime
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IEventProfileModelRepository: IGenericReadEventModelRepository<EventProfileModel>,
                                         IGenericWriteModelRepository<EventProfileModel> {
-    fun findEventProfilesByEventId(
+    fun findEventProfilesPageByUserId(
+        userId: UUID,
+        pageable: PageableModel,
+        searchParams: EventProfileSearchParamModel,
+    ): Mono<PageModel<EventProfileModel>>
+
+    fun findEventProfilesPageByEventId(
         eventId: UUID,
-        onlyVisible: Boolean,
-        onlyUsable: Boolean,
-        status: ProfileStatusEnum?,
-        startAccess: ZonedDateTime?,
-        endAccess: ZonedDateTime?,
-    ): Flux<EventProfileModel>
+        pageable: PageableModel,
+        searchParams: EventProfileSearchParamModel,
+    ): Mono<PageModel<EventProfileModel>>
 
-    fun findEventProfilesByUserId(
-        userId: UUID,
-        onlyVisible: Boolean,
-        onlyUsable: Boolean,
-        status: ProfileStatusEnum?,
-        startAccess: ZonedDateTime?,
-        endAccess: ZonedDateTime?,
-    ): Flux<EventProfileModel>
-
-    fun findAllEventProfilesByUserId(
-        userId: UUID,
-        onlyUsable: Boolean,
-        status: ProfileStatusEnum?,
-    ): Flux<EventProfileModel>
-
-    fun findUsableProfileByEventAndUserId(
-        userId: UUID,
+    fun findUserIdsWithEventProfileForEventWithProfileExclusion(
         eventId: UUID,
-    ): Mono<EventProfileModel>
+        userIds: List<UUID>,
+        profileIdToExclude: UUID?,
+        statusSearched: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
+        startDateTimeSearched: LocalDateTime? = null,
+        endDateTimeSearched: LocalDateTime? = null,
+    ): Flux<UUID>
 
-    fun findEventProfilesByIdAndUserId(userId: UUID, id: UUID, onlyVisible: Boolean): Mono<EventProfileModel>
+    fun findEventProfilesRolesByUserId(userId: UUID): Flux<EventProfileRoleModel>
+
+    fun findEventProfileByUserIdAndId(userId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<EventProfileModel>
 
     fun findEventProfileByEventAndUserId(
         eventId: UUID,
         userId: UUID,
-        onlyVisible: Boolean,
-        onlyUsable: Boolean,
-        status: ProfileStatusEnum?,
+        searchParams: EventProfileSearchParamModel,
     ): Mono<EventProfileModel>
 
-    fun findLevel0EventProfileRoleByUserId(userId: UUID, onlyVisible: Boolean): Flux<EventProfileRoleCountModel>
+    fun findLevel0EventProfileRoleByUserId(userId: UUID, visibilitySearched: Boolean?): Flux<EventProfileRoleCountModel>
 
-    fun findLevel0EventProfileRoleByEventId(eventId: UUID, onlyVisible: Boolean): Flux<EventProfileModel>
+    fun findLevel0EventProfileRoleByEventId(eventId: UUID, visibilitySearched: Boolean?): Flux<EventProfileModel>
 
     fun saveAll(profiles: List<EventProfileModel>): Flux<EventProfileModel>
 }

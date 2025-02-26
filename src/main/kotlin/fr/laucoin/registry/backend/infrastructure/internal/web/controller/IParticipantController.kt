@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_D
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_HISTORY_R
@@ -7,8 +10,9 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
@@ -19,10 +23,11 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
@@ -59,17 +64,17 @@ interface IParticipantController {
     fun findParticipants(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestParam(defaultValue = "0") offset: Int,
-        @RequestParam(defaultValue = "20") limit: Int,
-        @RequestParam(defaultValue = "ASC") order: Direction,
-        @RequestParam(defaultValue = "true") onlyVisible: Boolean,
-        @RequestParam(defaultValue = "false") onlyPresent: Boolean,
-        @RequestParam(required = false) searched: String?,
+        @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
+        @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+            200,
+            message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+        ) pageSize: Int,
+        @RequestParam(required = false) textSearched: String?,
+        @RequestParam(required = false) visibilitySearched: Boolean?,
+        @RequestParam(required = false) statusSearched: UsableElementStatusEnum?,
         @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
-    ): Mono<PageDto<ParticipantReaderDto>>
+        @DateTimeFormat(iso = DATE_TIME) dateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<ParticipantReaderDto>>
 
     @Operation(
         summary = "Find Participant",
@@ -106,7 +111,7 @@ interface IParticipantController {
     fun searchUsers(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestParam searched: String?,
+        @RequestParam textSearched: String?,
     ): Flux<PartialUserReaderDto>
 
     @Operation(
@@ -125,7 +130,7 @@ interface IParticipantController {
     fun searchGroups(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestParam searched: String?
+        @RequestParam textSearched: String?
     ): Flux<GroupWithoutMemberReaderDto>
 
     @Operation(
@@ -145,17 +150,18 @@ interface IParticipantController {
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
-        @RequestParam(defaultValue = "0") offset: Int,
-        @RequestParam(defaultValue = "20") limit: Int,
-        @RequestParam(defaultValue = "DESC") order: Direction,
-        @RequestParam(defaultValue = "true") onlyVisible: Boolean,
-        @RequestParam(required = false) searched: String?,
-        @RequestParam(required = false) type: MovementTypeEnum?,
+        @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
+        @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+            200,
+            message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+        ) pageSize: Int,
+        @RequestParam(required = false) visibilitySearched: Boolean?,
+        @RequestParam(required = false) typeSearched: MovementTypeEnum?,
         @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
+        @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,
         @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
-    ): Mono<PageDto<MovementReaderDto>>
+        @DateTimeFormat(iso = DATE_TIME) endDateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<MovementReaderDto>>
 
     @Operation(
         summary = "Create Participant",

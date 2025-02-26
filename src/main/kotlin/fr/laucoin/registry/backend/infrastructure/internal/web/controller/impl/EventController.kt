@@ -1,10 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.EventSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IEventController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.EventWriterDto
@@ -14,7 +15,6 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.Eve
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -29,21 +29,21 @@ class EventController(
     override fun findEvents(
         currentUser: CurrentUserModel,
         locale: Locale,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Mono<PageDto<EventReaderDto>> {
-        return service.findEvents(currentUser, order, onlyVisible, searched, startDateTime, endDateTime)
-            .paginate(offset, limit)
-            .map { readerMapper.toDtoPage(it, locale) }
+        pageNumber: Int,
+        pageSize: Int,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        dateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<EventReaderDto>> {
+        return service.findEventsPage(
+            currentUser,
+            PageableModel(pageNumber * pageSize, pageSize),
+            EventSearchParamModel(textSearched, visibilitySearched, dateTimeSearched),
+        ).map { readerMapper.toDtoPage(it, locale) }
     }
 
     override fun findEventById(locale: Locale, id: UUID): Mono<EventReaderDto> {
-        return service.findEventById(id, onlyVisible = false)
+        return service.findEventById(id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 

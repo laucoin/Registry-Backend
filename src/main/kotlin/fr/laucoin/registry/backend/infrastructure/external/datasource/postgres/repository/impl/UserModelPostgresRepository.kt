@@ -1,7 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.UserEntityMapper
@@ -14,23 +17,54 @@ import reactor.core.publisher.Mono
 @Service
 class UserModelPostgresRepository(
     private val repository: IUserEntityRepository,
-    private val userMapper: UserEntityMapper,
+    private val mapper: UserEntityMapper,
     private val currentUserMapper: CurrentUserEntityMapper,
 ): IUserModelRepository {
-    override fun findAll(onlyVisible: Boolean): Flux<UserModel> = repository.findAll(onlyVisible).map(userMapper::toModel)
-    override fun findById(id: UUID, onlyVisible: Boolean): Mono<UserModel> =
-        repository.findById(id, onlyVisible).map(userMapper::toModel)
+    override fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>> {
+        return Mono.zip(
+            repository.countAll(
+                searchParams.textSearched,
+                searchParams.visibilitySearched,
+            ),
+            repository.findAll(
+                searchParams.textSearched,
+                searchParams.visibilitySearched,
+                pageable.limit,
+                pageable.offset,
+            ).map(mapper::toModel).collectList()
+        ).map {
+            PageModel(pageable, it.t1, it.t2)
+        }
+    }
 
-    override fun findByOidcId(oidcId: UUID, onlyVisible: Boolean): Mono<CurrentUserModel> =
-        repository.findByOidcId(oidcId, onlyVisible).map(currentUserMapper::toModel)
+    override fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel> {
+        return repository.findWithLimit(
+            searchParams.textSearched,
+            searchParams.visibilitySearched,
+            limit,
+        ).map(mapper::toModel)
+    }
 
-    override fun findServiceAccount(): Mono<UserModel> = repository.findServiceAccount().map(userMapper::toModel)
+    override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {
+        return repository.findById(id, visibilitySearched)
+            .map(mapper::toModel)
+            .switchIfEmpty(Mono.empty())
+    }
 
-    override fun findByRoleLevel(roleLevel: Int, onlyVisible: Boolean): Flux<UserModel> =
-        repository.findByRoleLevel(roleLevel, onlyVisible).map(userMapper::toModel)
+    override fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel> {
+        return repository.findByOidcId(oidcId, visibilitySearched)
+            .map(currentUserMapper::toModel)
+            .switchIfEmpty(Mono.empty())
+    }
+
+    override fun findServiceAccount(): Mono<CurrentUserModel> = repository.findServiceAccount().map(currentUserMapper::toModel)
+
+    override fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel> {
+        return repository.findByRoleLevel(roleLevel, visibilitySearched).map(mapper::toModel)
+    }
 
     override fun create(element: UserModel): Mono<UserModel> = save(element)
     override fun update(element: UserModel): Mono<UserModel> = save(element)
-    private fun save(element: UserModel): Mono<UserModel> = repository.save(userMapper.toEntity(element)).map(userMapper::toModel)
+    private fun save(element: UserModel): Mono<UserModel> = repository.save(mapper.toEntity(element)).map(mapper::toModel)
     override fun deleteById(id: UUID): Mono<Void> = repository.deleteById(id)
 }

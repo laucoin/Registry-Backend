@@ -1,11 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IVehicleController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.VehicleWriterDto
@@ -15,7 +18,6 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.Veh
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
@@ -29,30 +31,22 @@ class VehicleController(
     override fun findVehicles(
         locale: Locale,
         eventId: UUID,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Mono<PageDto<VehicleReaderDto>> {
-        return service.findVehiclesByEventId(
+        pageNumber: Int,
+        pageSize: Int,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        statusSearched: UsableElementStatusEnum?,
+        dateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<VehicleReaderDto>> {
+        return service.findVehiclesPage(
             eventId,
-            order,
-            onlyVisible,
-            onlyPresent,
-            searched,
-            startDateTime,
-            endDateTime
-        )
-            .paginate(offset, limit)
-            .map { readerMapper.toDtoPage(it, locale) }
+            PageableModel(pageNumber * pageSize, pageSize),
+            VehicleSearchParamModel(textSearched, visibilitySearched, statusSearched, dateTimeSearched),
+        ).map { readerMapper.toDtoPage(it, locale) }
     }
 
     override fun findVehicleById(locale: Locale, eventId: UUID, id: UUID): Mono<VehicleReaderDto> {
-        return service.findVehicleById(eventId, id, onlyVisible = false)
+        return service.findVehicleById(eventId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
@@ -60,18 +54,19 @@ class VehicleController(
         locale: Locale,
         eventId: UUID,
         id: UUID,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        searched: String?,
-        type: MovementTypeEnum?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Mono<PageDto<MovementReaderDto>> {
-        return service.findVehicleMovements(eventId, id, order, onlyVisible, searched, type, startDateTime, endDateTime)
-            .paginate(offset, limit)
-            .map { movementReaderMapper.toDtoPage(it, locale) }
+        pageNumber: Int,
+        pageSize: Int,
+        visibilitySearched: Boolean?,
+        typeSearched: MovementTypeEnum?,
+        startDateTimeSearched: ZonedDateTime?,
+        endDateTimeSearched: ZonedDateTime?
+    ): Mono<PageModel<MovementReaderDto>> {
+        return service.findVehicleMovementsPage(
+            eventId,
+            id,
+            PageableModel(pageNumber * pageSize, pageSize),
+            MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
+        ).map { movementReaderMapper.toDtoPage(it, locale) }
     }
 
     override fun createVehicle(

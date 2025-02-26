@@ -6,19 +6,21 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IGroupService
-import java.time.ZonedDateTime
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -28,102 +30,93 @@ import reactor.core.publisher.Mono
 
 @Service
 class GroupService(
+    private val eventService: IEventService,
     private val repository: IGroupModelRepository,
     private val participantRepository: IParticipantModelRepository,
-    private val eventService: IEventService,
+    @Value("\${registry.feature.group.searched.max-participant-result}")
+    private val maxParticipantResult: Int,
 ): IGroupService, GenericService() {
-    override fun findGroups(
+    override fun findGroupsPage(
         eventId: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<GroupModel> {
-        return repository.findAll(eventId, onlyVisible, onlyPresent, startDateTime, endDateTime)
-            .searchAndSort(order, searched, compareBy { it.name })
+        pageable: PageableModel,
+        searchParams: GroupSearchParamModel,
+    ): Mono<PageModel<GroupModel>> {
+        return repository.findPage(eventId, pageable, searchParams)
     }
 
-    override fun findGroupMembersByGroupId(
+    override fun findGroupsMembers(eventId: UUID, groupIds: List<UUID>): Flux<Pair<UUID, List<ParticipantModel>>> {
+        return repository.findContent(eventId, groupIds)
+    }
+
+    override fun findGroupMembersPageByGroupId(
         eventId: UUID,
         id: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<ParticipantModel> {
-        return participantRepository.findAll(
+        pageable: PageableModel,
+        searchParams: ParticipantSearchParamModel,
+    ): Mono<PageModel<ParticipantModel>> {
+        return participantRepository.findPageByGroupId(
             eventId,
-            onlyVisible,
-            onlyPresent,
-            startDateTime,
-            endDateTime
+            id,
+            pageable,
+            searchParams,
         )
-            .filter { it.groups.any { group -> group.id == id } }
-            .searchAndSort(order, searched, compareBy { it.lastName })
     }
 
-    override fun findGroupById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<GroupModel> {
-        return repository.findById(eventId, id, onlyVisible)
+    override fun findGroupById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel> {
+        return repository.findById(eventId, id, visibilitySearched)
             .notFoundIfEmpty(id)
     }
 
-    override fun searchParticipants(eventId: UUID, searched: String?): Flux<ParticipantModel> {
-        return participantRepository.findAll(
+    override fun searchParticipants(eventId: UUID, textSearched: String?): Flux<ParticipantModel> {
+        return participantRepository.findWithLimit(
+            maxParticipantResult,
             eventId,
-            onlyVisible = true,
-            onlyPresent = false,
-            startDateTime = null,
-            endDateTime = null
-        ).searchAndSort(order = ASC, searched, compareBy { it.lastName })
+            ParticipantSearchParamModel(textSearched, visibilitySearched = true)
+        )
     }
 
-    override fun createGroup(currentUser: UserModel, group: GroupModel): Mono<GroupModel> {
+    override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
         return eventService.validateDateTimes(
             group.event !!.id !!,
-            group.begin,
-            group.end,
+            group.startAvailability,
+            group.endAvailability,
             GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE,
         )
             .flatMap { validateMembers(group.event !!.id !!, group, group.members.mapNotNull { p -> p.id }) }
             .flatMap { repository.create(group.apply { create(currentUser) }) }
     }
 
-    override fun updateGroupById(currentUser: UserModel, eventId: UUID, id: UUID, group: GroupModel): Mono<GroupModel> {
+    override fun updateGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, group: GroupModel): Mono<GroupModel> {
         return eventService.validateDateTimes(
             group.event !!.id !!,
-            group.begin,
-            group.end,
+            group.startAvailability,
+            group.endAvailability,
             GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE,
         )
-            .flatMap { findGroupById(eventId, id, onlyVisible = false) }
+            .flatMap { findGroupById(eventId, id, visibilitySearched = null) }
             .flatMap {
                 val newMemberIds: List<UUID> = it.getNewMemberIds(group)
                 if (newMemberIds.isEmpty()) Mono.just(it)
                 else validateMembers(eventId, it, newMemberIds)
             }
-            .flatMap {
-                it.let {
+            .map {
+                it.apply {
                     it.name = group.name
-                    it.begin = group.begin
-                    it.end = group.end
+                    it.startAvailability = group.startAvailability
+                    it.endAvailability = group.endAvailability
                     it.members = group.members
-                    it.update(currentUser)
                 }
-                repository.update(it)
             }
+            .updateGroup(currentUser)
     }
 
     override fun addMembersToGroupById(
-        currentUser: UserModel,
+        currentUser: CurrentUserModel,
         eventId: UUID,
         id: UUID,
         memberIds: List<UUID>
     ): Mono<Pair<List<UUID>, List<UUID>>> {
-        return findGroupById(eventId, id, onlyVisible = false)
+        return findGroupById(eventId, id, visibilitySearched = null)
             .map { Pair(it, it.getNewMemberIds(memberIds)) }
             .handle { it, handle ->
                 if (it.second.isEmpty()) {
@@ -146,8 +139,8 @@ class GroupService(
             }
     }
 
-    override fun removeMemberFromGroupById(currentUser: UserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel> {
-        return findGroupById(eventId, id, onlyVisible = false)
+    override fun removeMemberFromGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel> {
+        return findGroupById(eventId, id, visibilitySearched = null)
             .map { it.apply { members = members.filter { m -> m.id != memberId } } }
             .handle { it, handle ->
                 if (it.members.isEmpty()) {
@@ -164,12 +157,12 @@ class GroupService(
             .updateGroup(currentUser)
     }
 
-    private fun Mono<GroupModel>.updateGroup(currentUser: UserModel) = flatMap {
+    private fun Mono<GroupModel>.updateGroup(currentUser: CurrentUserModel) = flatMap {
         repository.update(it.apply { update(currentUser) })
     }
 
     private fun validateMembers(eventId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
-        return participantRepository.findAllByIds(eventId, newMemberIds, onlyVisible = false)
+        return participantRepository.findAllByIds(eventId, newMemberIds, visibilitySearched = null)
             .collectList()
             .handle { it, handle ->
                 when {
@@ -180,7 +173,7 @@ class GroupService(
                         )
                     )
 
-                    it.any { m -> m.isNotVisible() || m.purged == true } -> handle.error(
+                    it.any(ParticipantModel::isNotUsable) -> handle.error(
                         RegistryException(
                             CONFLICT,
                             GROUP_MEMBERS_NOT_VISIBLE,
@@ -192,20 +185,20 @@ class GroupService(
             }
     }
 
-    override fun disableGroupById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(eventId, id, onlyVisible = true)
+    override fun disableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
+        return findGroupById(eventId, id, visibilitySearched = true)
             .updateVisibility(visibility = false)
             .updateGroup(currentUser)
     }
 
-    override fun enableGroupById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(eventId, id, onlyVisible = false)
+    override fun enableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
+        return findGroupById(eventId, id, visibilitySearched = false)
             .updateVisibility(visibility = true)
             .updateGroup(currentUser)
     }
 
     override fun deleteGroupById(eventId: UUID, id: UUID): Mono<Void> {
-        return findGroupById(eventId, id, onlyVisible = false)
+        return findGroupById(eventId, id, visibilitySearched = null)
             .flatMap { repository.deleteById(id) }
     }
 }

@@ -53,7 +53,6 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:$mockWebServer")
     testImplementation("com.tngtech.archunit:archunit-junit5:$testArch")
     testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

@@ -1,3 +1,11 @@
+logging:
+  level:
+    fr.laucoin.registry.backend: ${registry.server.logging-level}
+    org.springframework.r2dbc: ${registry.server.logging-level}
+    org.springframework.web: ${registry.server.logging-level}
+    org.springframework.security.oauth2: ${registry.server.logging-level}
+    org.springframework.security.oauth2.client: ${registry.server.logging-level}
+
 external:
   frontend:
     base-url: https://test.frontend.com
@@ -39,6 +47,7 @@ registry:
         max-participant-result: 1
         max-group-result: 1
         max-vehicle-result: 1
+        max-activity-result: 1
   security:
     default-role: "USER"
     oauth2:
@@ -53,7 +62,7 @@ registry:
         first-name: "given_name"
         last-name: "family_name"
   server:
-    logging-level: INFO
+    logging-level: DEBUG
     prefix: /api
 
 spring:

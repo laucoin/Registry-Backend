@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.domain.model.PageModel
 import java.util.Locale
 
 interface IGenericReaderDtoMapper<M, D> {
@@ -10,10 +10,11 @@ interface IGenericReaderDtoMapper<M, D> {
         return modelList.map { toDto(it, locale) }
     }
 
-    fun toDtoPage(page: PageDto<M>, locale: Locale): PageDto<D> {
-        return PageDto(
-            page.offset,
-            page.limit,
+    fun toDtoPage(page: PageModel<M>, locale: Locale): PageModel<D> {
+        return PageModel(
+            page.pageNumber,
+            page.pageSize,
+            page.totalPages,
             page.totalElements,
             toDtoList(page.content, locale),
             page.lastRefresh,

@@ -1,18 +1,27 @@
 package fr.laucoin.registry.backend.domain.repository
 
 import fr.laucoin.registry.backend.domain.model.GroupModel
-import java.time.ZonedDateTime
+import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import java.util.UUID
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 interface IGroupModelRepository: IGenericReadEventModelRepository<GroupModel>, IGenericWriteModelRepository<GroupModel> {
-    fun findAll(
+    fun findPage(
         eventId: UUID,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<GroupModel>
+        pageable: PageableModel,
+        searchParams: GroupSearchParamModel,
+    ): Mono<PageModel<GroupModel>>
 
-    fun findAllByIds(eventId: UUID, ids: List<UUID>, onlyVisible: Boolean): Flux<GroupModel>
+    fun findContent(
+        eventId: UUID,
+        groupIds: List<UUID>,
+    ): Flux<Pair<UUID, List<ParticipantModel>>>
+
+    fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>
+
+    fun findWithLimit(limit: Int, eventId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
 }

@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.springframework.security.oauth2.jwt.Jwt
 
 class UserExtTest {
@@ -31,8 +31,8 @@ class UserExtTest {
         // Arrange
         val key = "uuid"
         val jwt: Jwt = mock()
-        `when`(jwt.hasClaim(key)).thenReturn(asKey)
-        `when`(jwt.getClaimAsString(key)).thenReturn(uuid)
+        whenever(jwt.hasClaim(key)).thenReturn(asKey)
+        whenever(jwt.getClaimAsString(key)).thenReturn(uuid)
 
         // Act
         val result = jwt.getClaimAsUUID(key)

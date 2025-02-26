@@ -4,5 +4,5 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 interface IGenericReadEventModelRepository<T> {
-    fun findById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<T>
+    fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<T>
 }

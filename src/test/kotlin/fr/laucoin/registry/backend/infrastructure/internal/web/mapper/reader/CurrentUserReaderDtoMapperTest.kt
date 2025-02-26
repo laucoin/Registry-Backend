@@ -5,16 +5,22 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PreferenceReaderDto
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
+import java.util.stream.Stream
 import kotlin.test.assertEquals
-import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.context.MessageSource
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 
@@ -23,35 +29,79 @@ class CurrentUserReaderDtoMapperTest {
     private val preferenceMapper: PreferenceReaderDtoMapper = mock()
     private val mapper: CurrentUserReaderDtoMapper = CurrentUserReaderDtoMapper(translateService, preferenceMapper)
 
-    @Test
-    fun `Should toDto convert CurrentUserModel to CurrentUserReaderDto`() {
+    companion object {
+        @JvmStatic
+        fun `Should toDto convert CurrentUserModel to CurrentUserReaderDto`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    CurrentUserModel(
+                        authorities = mutableListOf(SimpleGrantedAuthority(REGISTRY_EVENT_R)),
+                        preferences = PreferencesModel(),
+                    ).apply {
+                        id = UUID.randomUUID()
+                        oidcId = UUID.randomUUID()
+                        firstName = "John"
+                        lastName = "DOE"
+                        email = "john.doe@test.com"
+                        role = "ROLE"
+                        birthday = LocalDate.now()
+                        lastLogin = ZonedDateTime.now()
+                        purged = false
+                        visible = true
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    1,
+                    1,
+                ),
+                Arguments.of(
+                    CurrentUserModel(
+                        authorities = mutableListOf(SimpleGrantedAuthority(REGISTRY_EVENT_R)),
+                    ).apply {
+                        id = UUID.randomUUID()
+                        oidcId = UUID.randomUUID()
+                        firstName = "John"
+                        lastName = "DOE"
+                        email = "john.doe@test.com"
+                        birthday = LocalDate.now()
+                        lastLogin = ZonedDateTime.now()
+                        purged = false
+                        visible = true
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    0,
+                    0,
+                ),
+            )
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should toDto convert CurrentUserModel to CurrentUserReaderDto`(
+        currentUser: CurrentUserModel,
+        expectedRoleTranslation: Int,
+        expectedPreferencesCast: Int,
+    ) {
         // Arrange
         val authority = REGISTRY_EVENT_R
-        val currentUser = CurrentUserModel(
-            authorities = mutableListOf(SimpleGrantedAuthority(authority)),
-            preferences = PreferencesModel(),
-        ).apply {
-            id = UUID.randomUUID()
-            oidcId = UUID.randomUUID()
-            firstName = "John"
-            lastName = "DOE"
-            email = "john.doe@test.com"
-            role = "ROLE"
-            birthday = LocalDate.now()
-            lastLogin = ZonedDateTime.now()
-            purged = false
-            visible = true
-            creation = HistoryModel()
-            lastEdition = HistoryModel()
-        }
-        val label = "Role translated"
-        `when`(translateService.getMessage("${USER_ROLE_PREFIX}ROLE", null, Locale.getDefault())).thenReturn(label)
+        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("Role translated")
+        whenever(preferenceMapper.toDto(any(), any())).thenReturn(PreferenceReaderDto())
 
         // Act
         val result = mapper.toDto(currentUser, Locale.getDefault())
 
         // Assert
-        verify(preferenceMapper, times(1)).toDto(currentUser.preferences !!, Locale.getDefault())
+        verify(translateService, times(expectedRoleTranslation)).getMessage(
+            "${USER_ROLE_PREFIX}ROLE",
+            null,
+            Locale.getDefault()
+        )
+        verify(preferenceMapper, times(expectedPreferencesCast)).toDto(
+            currentUser.preferences ?: PreferencesModel(),
+            Locale.getDefault()
+        )
 
         assertEquals(currentUser.id, result.id)
         assertEquals(1, result.authorities.size)
@@ -59,7 +109,6 @@ class CurrentUserReaderDtoMapperTest {
         assertEquals(currentUser.firstName, result.firstName)
         assertEquals(currentUser.lastName, result.lastName)
         assertEquals(currentUser.email, result.email)
-        assertEquals(label, result.role?.label)
         assertEquals(currentUser.role, result.role?.value)
         assertEquals(currentUser.birthday, result.birthday)
         assertEquals(currentUser.lastLogin, result.lastLogin)

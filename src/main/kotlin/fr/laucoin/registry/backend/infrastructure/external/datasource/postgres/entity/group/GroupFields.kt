@@ -10,8 +10,10 @@ object GroupFields {
     const val GROUP_CONTENT_TABLE = "tb_group_content"
 
     const val GROUP_NAME = "name"
-    const val GROUP_BEGIN = "begin"
-    const val GROUP_END = "finish"
+    const val GROUP_START_AVAILABILITY_DATE = "start_availability_date"
+    const val GROUP_START_AVAILABILITY_TIME = "start_availability_time"
+    const val GROUP_END_AVAILABILITY_DATE = "end_availability_date"
+    const val GROUP_END_AVAILABILITY_TIME = "end_availability_time"
     const val GROUP_MEMBERS = "members"
 
     private const val PARTICIPANT_PREFIX = "participant_"

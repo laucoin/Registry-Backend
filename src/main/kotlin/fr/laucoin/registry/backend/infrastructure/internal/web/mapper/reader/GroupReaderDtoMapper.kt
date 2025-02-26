@@ -18,8 +18,8 @@ class GroupReaderDtoMapper(
             id = model.id
             event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
             name = model.name
-            begin = model.begin
-            end = model.end
+            startAvailability = model.startAvailability
+            endAvailability = model.endAvailability
             visible = model.visible
             creation = model.creation
             lastEdition = model.lastEdition

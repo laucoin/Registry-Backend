@@ -21,8 +21,6 @@ open class UserModel(
     var lastLogin: ZonedDateTime? = now(),
     var purged: Boolean = false,
 ): GenericModel() {
-    override fun getSearchableValues(): List<String> = listOfNotNull(firstName, lastName, email)
-
     fun personalDataChanged(email: String, firstName: String?, lastName: String?): Boolean =
         this.email != email || this.firstName != firstName || this.lastName != lastName || this.birthday != birthday
 

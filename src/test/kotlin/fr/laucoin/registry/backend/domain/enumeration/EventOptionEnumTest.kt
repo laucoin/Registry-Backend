@@ -39,7 +39,6 @@ class EventOptionEnumTest {
         eventOptions: List<EventOptionEnum>,
         expected: Pair<EventOptionEnum, List<EventOptionEnum>>?,
     ) {
-        // Arrange
         // Act
         val result = eventOptions.missingOptions()
 

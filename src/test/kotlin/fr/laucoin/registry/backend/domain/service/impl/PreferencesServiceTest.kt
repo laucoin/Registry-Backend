@@ -5,31 +5,32 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
-import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import java.util.UUID
 import java.util.stream.Stream
-import org.junit.jupiter.api.Assertions.assertEquals
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.lenient
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
 
 class PreferencesServiceTest {
     private val repository: IPreferencesModelRepository = mock()
-    private val eventProfileService: IUserEventProfileService = mock()
-    private val service: IPreferencesService = PreferencesService(repository, eventProfileService)
+    private val eventProfileRepository: IEventProfileModelRepository = mock()
+    private val service: IPreferencesService = PreferencesService(repository, eventProfileRepository)
 
     companion object {
         @JvmStatic
@@ -59,17 +60,17 @@ class PreferencesServiceTest {
         val uuid = UUID.randomUUID()
         val currentUser = CurrentUserModel().apply { id = uuid }
         val preferences = Mono.just(PreferencesModel())
-        `when`(repository.findByUserId(any(), any())).thenReturn(
+        whenever(repository.findByUserId(any(), anyOrNull())).thenReturn(
             if (isFirstEmpty) Mono.empty() else preferences,
             preferences
         )
-        lenient().`when`(repository.save(any())).thenReturn(preferences)
+        whenever(repository.save(any())).thenReturn(preferences)
 
         // Act
         service.findByUser(currentUser).block()
 
         // Assert
-        verify(repository, times(expectedCallOnFindByUserId)).findByUserId(uuid, onlyVisible = true)
+        verify(repository, times(expectedCallOnFindByUserId)).findByUserId(uuid, visibilitySearched = null)
         verify(repository, times(expectedCallOnSave)).save(any())
     }
 
@@ -86,16 +87,16 @@ class PreferencesServiceTest {
         val currentUser = CurrentUserModel().apply { id = uuid }
         val profile = EventProfileModel().apply { id = profileId }
 
-        `when`(eventProfileService.findUserEventProfileById(any(), any(), any())).thenReturn(Mono.just(profile))
-        `when`(repository.findByUserId(any(), any())).thenReturn(Mono.just(currentPreferences))
-        lenient().`when`(repository.save(any())).thenReturn(Mono.just(currentPreferences))
+        whenever(eventProfileRepository.findEventProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(repository.findByUserId(any(), anyOrNull())).thenReturn(Mono.just(currentPreferences))
+        whenever(repository.save(any())).thenReturn(Mono.just(currentPreferences))
 
         // Act
         service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId).block()
 
         // Assert
-        verify(eventProfileService, times(1)).findUserEventProfileById(currentUser, profileId, onlyVisible = true)
-        verify(repository, times(expectedCallOnFindByUserId)).findByUserId(uuid, onlyVisible = true)
+        verify(eventProfileRepository).findEventProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
+        verify(repository, times(expectedCallOnFindByUserId)).findByUserId(uuid, visibilitySearched = null)
         verify(repository, times(expectedCallOnSave)).save(any())
     }
 
@@ -105,7 +106,7 @@ class PreferencesServiceTest {
         val uuid = UUID.randomUUID()
         val profileId = UUID.randomUUID()
         val currentUser = CurrentUserModel().apply { id = uuid }
-        `when`(eventProfileService.findUserEventProfileById(any(), any(), any())).thenReturn(Mono.empty())
+        whenever(eventProfileRepository.findEventProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -113,6 +114,9 @@ class PreferencesServiceTest {
         }) as RegistryException
 
         // Assert
+        verify(eventProfileRepository).findEventProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
+        verify(repository, never()).findByUserId(any(), anyOrNull())
+        verify(repository, never()).save(any())
         assertEquals(NOT_FOUND, result.status)
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
         assertEquals(profileId.toString(), result.args?.first())

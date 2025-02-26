@@ -13,8 +13,8 @@ class PreferenceModelPostgresRepository(
     private val repository: IPreferencesEntityRepository,
     private val mapper: PreferencesEntityMapper,
 ): IPreferencesModelRepository {
-    override fun findByUserId(userId: UUID, onlyVisible: Boolean): Mono<PreferencesModel> {
-        return repository.findByUserId(userId, onlyVisible).map(mapper::toModel)
+    override fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesModel> {
+        return repository.findByUserId(userId, visibilitySearched).map(mapper::toModel)
     }
 
     override fun save(preference: PreferencesModel): Mono<PreferencesModel> {

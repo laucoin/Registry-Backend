@@ -19,21 +19,9 @@ include:
   - project: "laucoin/gitlab-ci--commons"
     file: delivery.gitlab-ci.yml
 
-"👨‍💻 Execute `gradle test` 👩‍💻":
-  stage: "🧪 Test code 🧪"
-  image: gradle:8.4-jdk21-alpine
-  services:
-    - docker:dind
-  rules:
-    - if: '$CI_COMMIT_MESSAGE =~ /^\[Gradle Release Plugin\]/ || $CI_COMMIT_REF_SLUG == "main"'
-      when: never
-    - if: '$RELEASE == null && $CI_PIPELINE_SOURCE == "merge_request_event"'
-  script:
-    - gradle test
-
 "👨‍💻 Execute `gradle build -x test` 👩‍💻":
   stage: "🧪 Test code 🧪"
-  image: gradle:8.4-jdk21-alpine
+  image: gradle:8.11-jdk21-alpine
   rules:
     - if: '$CI_COMMIT_MESSAGE =~ /^\[Gradle Release Plugin\]/ || $CI_COMMIT_REF_SLUG == "main"'
       when: never
@@ -70,7 +58,7 @@ include:
   stage: "🆕 Release 🆕"
   needs:
     - job: "📝 Generate changelog 📝"
-  image: gradle:8.4-jdk21-alpine
+  image: gradle:8.11-jdk21-alpine
   rules:
     - if: '$RELEASE =~ /^\d+\.\d+\.\d+$/'
   before_script:

@@ -4,9 +4,9 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import java.util.Locale
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 
 class MovementParticipantsAndGroupsReaderDtoMapperTest {
     private val participantMapper: ParticipantReaderDtoMapper = mock()
@@ -26,7 +26,7 @@ class MovementParticipantsAndGroupsReaderDtoMapperTest {
         mapper.toDto(content, Locale.getDefault())
 
         // Assert
-        verify(participantMapper, times(1)).toDtoList(content.first, Locale.getDefault())
-        verify(groupsMapper, times(1)).toDtoList(content.second, Locale.getDefault())
+        verify(participantMapper).toDtoList(content.first, Locale.getDefault())
+        verify(groupsMapper).toDtoList(content.second, Locale.getDefault())
     }
 }

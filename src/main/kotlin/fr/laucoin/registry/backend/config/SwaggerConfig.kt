@@ -80,19 +80,25 @@ class SwaggerConfig(
 
     @Bean
     fun securitiesApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("Security Management")
+        return GroupedOpenApi.builder().group("security")
             .pathsToMatch("/api/authentication/**").build()
     }
 
     @Bean
+    fun metadataApis(): GroupedOpenApi {
+        return GroupedOpenApi.builder().group("metadata")
+            .pathsToMatch("/api/metadata/**").build()
+    }
+
+    @Bean
     fun usersApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("Users Management")
+        return GroupedOpenApi.builder().group("users")
             .pathsToMatch("/api/users/**").build()
     }
 
     @Bean
     fun eventsApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("Events Management")
+        return GroupedOpenApi.builder().group("events")
             .pathsToMatch(
                 "/api/events",
                 "/api/events/{id}",
@@ -103,13 +109,13 @@ class SwaggerConfig(
 
     @Bean
     fun eventProfilesApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("Event's Profiles Management")
+        return GroupedOpenApi.builder().group("event-profiles")
             .pathsToMatch("/api/events/{eventId}/profiles/**").build()
     }
 
     @Bean
     fun eventParticipantsApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("Event's Participants Management")
+        return GroupedOpenApi.builder().group("event-participant")
             .pathsToMatch(
                 "/api/events/{eventId}/participants/**",
                 "/api/events/{eventId}/groups/**",
@@ -117,14 +123,20 @@ class SwaggerConfig(
     }
 
     @Bean
+    fun eventMovementsApis(): GroupedOpenApi {
+        return GroupedOpenApi.builder().group("event-movements")
+            .pathsToMatch("/api/events/{eventId}/movements/**").build()
+    }
+
+    @Bean
     fun eventVehiclesApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("Event's Vehicles Management")
+        return GroupedOpenApi.builder().group("event-vehicles")
             .pathsToMatch("/api/events/{eventId}/vehicles/**").build()
     }
 
     @Bean
-    fun eventMovementsApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("Event's Movements Management")
-            .pathsToMatch("/api/events/{eventId}/movements/**").build()
+    fun eventActivitiesApis(): GroupedOpenApi {
+        return GroupedOpenApi.builder().group("event-activities")
+            .pathsToMatch("/api/events/{eventId}/activities/**").build()
     }
 }

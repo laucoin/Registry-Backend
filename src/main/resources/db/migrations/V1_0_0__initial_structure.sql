@@ -1,19 +1,6 @@
--- drop existing extensions
-DROP EXTENSION IF EXISTS "uuid-ossp" CASCADE;
-
--- drop existing tables
-DROP TABLE IF EXISTS tb_user CASCADE;
-DROP TABLE IF EXISTS tb_preferences CASCADE;
-DROP TABLE IF EXISTS tb_event CASCADE;
-DROP TABLE IF EXISTS tb_event_profile CASCADE;
-DROP TABLE IF EXISTS tb_participant CASCADE;
-DROP TABLE IF EXISTS tb_group CASCADE;
-DROP TABLE IF EXISTS tb_group_content CASCADE;
-DROP TABLE IF EXISTS tb_movement CASCADE;
-DROP TABLE IF EXISTS tb_movement_content CASCADE;
-
--- uuid-ossp definition
-CREATE EXTENSION "uuid-ossp";
+-- extension definition
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- tb_user_permission definition
 CREATE TABLE tb_user_permission
@@ -103,8 +90,10 @@ CREATE TABLE tb_event
 (
     id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
     name               VARCHAR(150)             NOT NULL,
-    begin              TIMESTAMP WITH TIME ZONE,
-    finish             TIMESTAMP WITH TIME ZONE,
+    begin_date         DATE,
+    begin_time         TIME WITH TIME ZONE,
+    end_date           DATE,
+    end_time           TIME WITH TIME ZONE,
     options            TEXT[]                   NOT NULL DEFAULT '{}',
     created_date       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by         uuid,
@@ -122,8 +111,10 @@ CREATE TABLE tb_event_profile
     event_id           uuid                     NOT NULL,
     role               VARCHAR                  NOT NULL,
     status             VARCHAR                  NOT NULL,
-    start_access       TIMESTAMP WITH TIME ZONE,
-    end_access         TIMESTAMP WITH TIME ZONE,
+    start_access_date  DATE,
+    start_access_time  TIME WITH TIME ZONE,
+    end_access_date    DATE,
+    end_access_time    TIME WITH TIME ZONE,
     created_date       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by         uuid,
     last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -135,64 +126,23 @@ CREATE TABLE tb_event_profile
 -- tb_participant definition
 CREATE TABLE tb_participant
 (
-    id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
-    first_name         VARCHAR(150)             NOT NULL,
-    last_name          VARCHAR(150)             NOT NULL,
-    birthday           DATE                     NOT NULL,
-    begin              TIMESTAMP WITH TIME ZONE,
-    finish             TIMESTAMP WITH TIME ZONE,
-    user_id            uuid,
-    event_id           uuid                     NOT NULL,
-    created_date       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by         uuid,
-    last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_modified_by   uuid,
-    purged             BOOLEAN                  NOT NULL DEFAULT FALSE,
-    visible            BOOLEAN                  NOT NULL DEFAULT TRUE,
+    id                      uuid                     NOT NULL DEFAULT uuid_generate_v4(),
+    first_name              VARCHAR(150)             NOT NULL,
+    last_name               VARCHAR(150)             NOT NULL,
+    birthday                DATE                     NOT NULL,
+    start_availability_date DATE,
+    start_availability_time TIME WITH TIME ZONE,
+    end_availability_date   DATE,
+    end_availability_time   TIME WITH TIME ZONE,
+    user_id                 uuid,
+    event_id                uuid                     NOT NULL,
+    created_date            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by              uuid,
+    last_modified_date      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_modified_by        uuid,
+    purged                  BOOLEAN                  NOT NULL DEFAULT FALSE,
+    visible                 BOOLEAN                  NOT NULL DEFAULT TRUE,
     CONSTRAINT tb_participant_pkey PRIMARY KEY (id)
-);
-
--- tb_group definition
-CREATE TABLE tb_group
-(
-    id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
-    name               VARCHAR(150)             NOT NULL,
-    begin              TIMESTAMP WITH TIME ZONE,
-    finish             TIMESTAMP WITH TIME ZONE,
-    event_id           uuid                     NOT NULL,
-    created_date       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by         uuid,
-    last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_modified_by   uuid,
-    visible            BOOLEAN                  NOT NULL DEFAULT TRUE,
-    CONSTRAINT tb_group_pkey PRIMARY KEY (id)
-);
-
--- tb_group_content definition
-CREATE TABLE tb_group_content
-(
-    id             uuid NOT NULL DEFAULT uuid_generate_v4(),
-    group_id       uuid NOT NULL,
-    participant_id uuid NOT NULL,
-    CONSTRAINT tb_group_content_pkey PRIMARY KEY (group_id, participant_id)
-);
-
--- tb_vehicle definition
-CREATE TABLE tb_vehicle
-(
-    id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
-    registration       VARCHAR(20)              NOT NULL,
-    brand              VARCHAR(150)             NOT NULL,
-    model              VARCHAR(150)             NOT NULL,
-    begin              TIMESTAMP WITH TIME ZONE,
-    finish             TIMESTAMP WITH TIME ZONE,
-    event_id           uuid                     NOT NULL,
-    created_date       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by         uuid,
-    last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_modified_by   uuid,
-    visible            BOOLEAN                  NOT NULL DEFAULT TRUE,
-    CONSTRAINT tb_vehicle_pkey PRIMARY KEY (id)
 );
 
 -- tb_movement definition
@@ -216,8 +166,6 @@ CREATE TABLE tb_movement_content
     id             uuid NOT NULL DEFAULT uuid_generate_v4(),
     movement_id    uuid NOT NULL,
     participant_id uuid NOT NULL,
-    pool_name      VARCHAR,
-    vehicle_id     uuid,
     CONSTRAINT tb_movement_content_pkey PRIMARY KEY (movement_id, participant_id)
 );
 
@@ -315,38 +263,6 @@ ALTER TABLE tb_participant
 ALTER TABLE tb_participant
     ADD CONSTRAINT tb_participant_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 
--- tb_group foreign keys and indexes
-CREATE INDEX tb_group_index_event_id ON tb_group (event_id);
-CREATE INDEX tb_group_index_created_by ON tb_group (created_by);
-CREATE INDEX tb_group_index_last_modified_by ON tb_group (last_modified_by);
-
-ALTER TABLE tb_group
-    ADD CONSTRAINT tb_group_event_fkey FOREIGN KEY (event_id) REFERENCES tb_event (id) ON DELETE CASCADE;
-ALTER TABLE tb_group
-    ADD CONSTRAINT tb_group_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
-ALTER TABLE tb_group
-    ADD CONSTRAINT tb_group_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
-
--- tb_group_content foreign keys and indexes
-CREATE UNIQUE INDEX tb_group_content_index_group_and_participant_id ON tb_group_content (group_id, participant_id);
-
-ALTER TABLE tb_group_content
-    ADD CONSTRAINT tb_group_content_group_fkey FOREIGN KEY (group_id) REFERENCES tb_group (id) ON DELETE CASCADE;
-ALTER TABLE tb_group_content
-    ADD CONSTRAINT tb_group_content_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_participant (id) ON DELETE CASCADE;
-
--- tb_vehicle foreign keys and indexes
-CREATE INDEX tb_vehicle_index_event_id ON tb_vehicle (event_id);
-CREATE INDEX tb_vehicle_index_created_by ON tb_vehicle (created_by);
-CREATE INDEX tb_vehicle_index_last_modified_by ON tb_vehicle (last_modified_by);
-
-ALTER TABLE tb_vehicle
-    ADD CONSTRAINT tb_vehicle_event_fkey FOREIGN KEY (event_id) REFERENCES tb_event (id) ON DELETE CASCADE;
-ALTER TABLE tb_vehicle
-    ADD CONSTRAINT tb_vehicle_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
-ALTER TABLE tb_vehicle
-    ADD CONSTRAINT tb_vehicle_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
-
 -- tb_movement foreign keys and indexes
 CREATE INDEX tb_movement_index_event_id ON tb_movement (event_id);
 CREATE INDEX tb_movement_index_created_by ON tb_movement (created_by);
@@ -361,60 +277,8 @@ ALTER TABLE tb_movement
 
 -- tb_movement_content foreign keys and indexes
 CREATE UNIQUE INDEX tb_movement_content_index_movement_and_participant_id ON tb_movement_content (movement_id, participant_id);
-CREATE UNIQUE INDEX tb_movement_content_index_movement_and_vehicle_id ON tb_movement_content (movement_id, vehicle_id);
 
 ALTER TABLE tb_movement_content
     ADD CONSTRAINT tb_movement_content_movement_fkey FOREIGN KEY (movement_id) REFERENCES tb_movement (id) ON DELETE CASCADE;
 ALTER TABLE tb_movement_content
-    ADD CONSTRAINT tb_movement_content_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_participant (id);
-ALTER TABLE tb_movement_content
-    ADD CONSTRAINT tb_movement_content_vehicle_fkey FOREIGN KEY (vehicle_id) REFERENCES tb_vehicle (id);
-
--- tb_user insert service user
-INSERT INTO tb_user(type)
-VALUES ('SERVICE_ACCOUNT');
-
--- tb_user_permission insert service user
-INSERT INTO tb_user_permission(name)
-VALUES ('REGISTRY_USER_R'),
-       ('REGISTRY_USER_U'),
-       ('REGISTRY_USER_D'),
-       ('REGISTRY_USER_METADATA_R'),
-       ('REGISTRY_EVENT_C'),
-       ('REGISTRY_EVENT_R'),
-       ('REGISTRY_EVENT_METADATA_R'),
-       ('REGISTRY_PROFILE_C')
-;
-
--- tb_event_permission insert service user
-INSERT INTO tb_event_permission(name)
-VALUES ('REGISTRY_EVENT_R'),
-       ('REGISTRY_EVENT_U'),
-       ('REGISTRY_EVENT_D'),
-       ('REGISTRY_EVENT_PROFILE_C'),
-       ('REGISTRY_EVENT_PROFILE_R'),
-       ('REGISTRY_EVENT_PROFILE_U'),
-       ('REGISTRY_EVENT_PROFILE_D'),
-       ('REGISTRY_EVENT_PROFILE_METADATA_R'),
-       ('REGISTRY_EVENT_PARTICIPANT_C'),
-       ('REGISTRY_EVENT_PARTICIPANT_R'),
-       ('REGISTRY_EVENT_PARTICIPANT_HISTORY_R'),
-       ('REGISTRY_EVENT_PARTICIPANT_U'),
-       ('REGISTRY_EVENT_PARTICIPANT_D'),
-       ('REGISTRY_EVENT_PARTICIPANT_METADATA_R'),
-       ('REGISTRY_EVENT_GROUP_C'),
-       ('REGISTRY_EVENT_GROUP_R'),
-       ('REGISTRY_EVENT_GROUP_U'),
-       ('REGISTRY_EVENT_GROUP_D'),
-       ('REGISTRY_EVENT_GROUP_METADATA_R'),
-       ('REGISTRY_EVENT_VEHICLE_C'),
-       ('REGISTRY_EVENT_VEHICLE_R'),
-       ('REGISTRY_EVENT_VEHICLE_HISTORY_R'),
-       ('REGISTRY_EVENT_VEHICLE_U'),
-       ('REGISTRY_EVENT_VEHICLE_D'),
-       ('REGISTRY_EVENT_MOVEMENT_C'),
-       ('REGISTRY_EVENT_MOVEMENT_R'),
-       ('REGISTRY_EVENT_MOVEMENT_U'),
-       ('REGISTRY_EVENT_MOVEMENT_D'),
-       ('REGISTRY_EVENT_MOVEMENT_METADATA_R')
-;
+    ADD CONSTRAINT tb_movement_content_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_participant (id) ON DELETE CASCADE;

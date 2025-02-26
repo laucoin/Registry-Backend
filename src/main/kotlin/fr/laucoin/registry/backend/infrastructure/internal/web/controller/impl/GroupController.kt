@@ -1,10 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IGroupController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.AddedGroupMembersReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
@@ -16,8 +19,6 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.Gro
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
@@ -32,52 +33,59 @@ class GroupController(
     private val participantReaderMapper: ParticipantReaderDtoMapper,
     private val addedGroupMembersReaderMapper: AddedGroupMembersReaderDtoMapper,
     private val writerMapper: GroupWriterDtoMapper,
-    @Value("\${registry.feature.group.searched.max-participant-result}")
-    private val maxParticipantResult: Long,
 ): IGroupController {
     override fun findGroups(
         locale: Locale,
         eventId: UUID,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Mono<PageDto<GroupReaderDto>> {
-        return service.findGroups(eventId, order, onlyVisible, onlyPresent, searched, startDateTime, endDateTime)
-            .paginate(offset, limit)
-            .map { readerMapper.toDtoPage(it, locale) }
+        pageNumber: Int,
+        pageSize: Int,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        presenceSearched: Boolean?,
+        dateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<GroupReaderDto>> {
+        return service.findGroupsPage(
+            eventId,
+            PageableModel(pageNumber * pageSize, pageSize),
+            GroupSearchParamModel(textSearched, visibilitySearched, presenceSearched, dateTimeSearched),
+        ).map { readerMapper.toDtoPage(it, locale) }
+    }
+
+    override fun findGroupMembers(
+        locale: Locale,
+        eventId: UUID,
+        groupIds: List<UUID>
+    ): Flux<Pair<UUID, List<ParticipantReaderDto>>> {
+        return service.findGroupsMembers(eventId, groupIds)
+            .map { Pair(it.first, it.second.map { members -> participantReaderMapper.toDto(members, locale) }) }
     }
 
     override fun findGroupMembersByGroupId(
         locale: Locale,
         eventId: UUID,
         id: UUID,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Mono<PageDto<ParticipantReaderDto>> {
-        return service.findGroupMembersByGroupId(eventId, id, order, onlyVisible, onlyPresent, searched, startDateTime, endDateTime)
-            .paginate(offset, limit)
-            .map { participantReaderMapper.toDtoPage(it, locale) }
+        pageNumber: Int,
+        pageSize: Int,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        statusSearched: UsableElementStatusEnum?,
+        dateTimeSearched: ZonedDateTime?
+    ): Mono<PageModel<ParticipantReaderDto>> {
+        return service.findGroupMembersPageByGroupId(
+            eventId,
+            id,
+            PageableModel(pageNumber * pageSize, pageSize),
+            ParticipantSearchParamModel(textSearched, visibilitySearched, statusSearched, dateTimeSearched),
+        ).map { participantReaderMapper.toDtoPage(it, locale) }
     }
 
     override fun findGroupById(locale: Locale, eventId: UUID, id: UUID): Mono<GroupReaderDto> {
-        return service.findGroupById(eventId, id, onlyVisible = false)
+        return service.findGroupById(eventId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun searchParticipants(locale: Locale, eventId: UUID, searched: String?): Flux<ParticipantReaderDto> {
-        return service.searchParticipants(eventId, searched)
-            .take(maxParticipantResult)
+    override fun searchParticipants(locale: Locale, eventId: UUID, textSearched: String?): Flux<ParticipantReaderDto> {
+        return service.searchParticipants(eventId, textSearched)
             .map { participantReaderMapper.toDto(it, locale) }
     }
 

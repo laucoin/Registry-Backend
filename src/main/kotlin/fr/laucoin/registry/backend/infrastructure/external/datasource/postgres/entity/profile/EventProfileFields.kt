@@ -20,8 +20,10 @@ object EventProfileFields {
 
     const val EVENT_PROFILE_ROLE = "role"
     const val EVENT_PROFILE_STATUS = "status"
-    const val EVENT_PROFILE_START_ACCESS = "start_access"
-    const val EVENT_PROFILE_END_ACCESS = "end_access"
+    const val EVENT_PROFILE_START_ACCESS_DATE = "start_access_date"
+    const val EVENT_PROFILE_START_ACCESS_TIME = "start_access_time"
+    const val EVENT_PROFILE_END_ACCESS_DATE = "end_access_date"
+    const val EVENT_PROFILE_END_ACCESS_TIME = "end_access_time"
 
     const val ROLE_COUNT = "role_count"
 }

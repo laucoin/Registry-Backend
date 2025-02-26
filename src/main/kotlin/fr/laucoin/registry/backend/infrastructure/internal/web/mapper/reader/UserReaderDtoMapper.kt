@@ -16,7 +16,6 @@ class UserReaderDtoMapper(
 ): IGenericReaderDtoMapper<UserModel, UserReaderDto> {
     override fun toDto(model: UserModel, locale: Locale): UserReaderDto {
         return UserReaderDto(
-            id = model.id,
             firstName = model.firstName,
             lastName = model.lastName,
             email = model.email,
@@ -27,9 +26,11 @@ class UserReaderDtoMapper(
             birthday = model.birthday,
             lastLogin = model.lastLogin,
             purged = model.purged,
-            visible = model.visible,
-            creation = model.creation,
-            lastEdition = model.lastEdition,
-        )
+        ).apply {
+            id = model.id
+            visible = model.visible
+            creation = model.creation
+            lastEdition = model.lastEdition
+        }
     }
 }

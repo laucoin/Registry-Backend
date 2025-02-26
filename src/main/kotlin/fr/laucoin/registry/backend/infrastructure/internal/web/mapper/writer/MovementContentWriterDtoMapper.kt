@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentMod
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto.MovementContentWriterDto
+import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
@@ -12,7 +13,7 @@ class MovementContentWriterDtoMapper: IGenericWriterDtoMapper<MovementContentMod
         return MovementContentModel().apply {
             poolName = dto.poolName
             participant = ParticipantModel().apply { id = dto.participantId }
-            vehicle = VehicleModel().apply { id = dto.vehicleId }
+            vehicle = if (Objects.nonNull(dto.vehicleId)) VehicleModel().apply { id = dto.vehicleId } else null
         }
     }
 }

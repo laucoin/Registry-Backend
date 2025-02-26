@@ -34,7 +34,7 @@ class MovementContentEntityMapper: IEntityReaderMapper<MovementContentModel, Mov
         return if (Objects.isNull(entity.vehicleId)) null
         else VehicleModel().apply {
             id = entity.vehicleId
-            registration = entity.vehicleRegistration
+            licensePlate = entity.vehicleLicensePlate
             brand = entity.vehicleBrand
             model = entity.vehicleModel
         }

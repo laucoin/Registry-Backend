@@ -7,25 +7,29 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_EVENT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
+import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
-import fr.laucoin.registry.backend.domain.service.IUserService
-import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -35,106 +39,84 @@ import reactor.core.publisher.Mono
 
 @Service
 class ParticipantService(
-    private val repository: IParticipantModelRepository,
     private val eventService: IEventService,
-    private val userService: IUserService,
+    private val repository: IParticipantModelRepository,
+    private val userRepository: IUserModelRepository,
     private val movementRepository: IMovementModelRepository,
     private val groupRepository: IGroupModelRepository,
+    @Value("\${registry.feature.participant.searched.max-user-result}")
+    private val maxUserResult: Int,
+    @Value("\${registry.feature.participant.searched.max-group-result}")
+    private val maxGroupResult: Int,
 ): IParticipantService, GenericService() {
-    override fun findParticipantsByEventId(
+    override fun findParticipantsPage(
         eventId: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<ParticipantModel> {
-        return repository.findAll(eventId, onlyVisible, onlyPresent, startDateTime, endDateTime)
-            .searchAndSort(order, searched, compareBy { it.lastName })
+        pageable: PageableModel,
+        searchParams: ParticipantSearchParamModel,
+    ): Mono<PageModel<ParticipantModel>> {
+        return repository.findPage(eventId, pageable, searchParams)
     }
 
-    override fun findParticipantsByIds(eventId: UUID, ids: List<UUID>, onlyVisible: Boolean): Flux<ParticipantModel> {
-        return repository.findAllByIds(eventId, ids, onlyVisible)
+    override fun findParticipantsByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel> {
+        return repository.findAllByIds(eventId, ids, visibilitySearched)
     }
 
-    override fun findParticipantById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<ParticipantModel> {
-        return repository.findById(eventId, id, onlyVisible)
+    override fun findParticipantById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
+        return repository.findById(eventId, id, visibilitySearched)
             .notFoundIfEmpty(id)
     }
 
-    override fun searchUsers(eventId: UUID, searched: String?): Flux<UserModel> {
-        return userService.findUsers(
-            order = ASC,
-            onlyVisible = true,
-            searched
+    override fun searchUsers(eventId: UUID, textSearched: String?): Flux<UserModel> {
+        return userRepository.findWithLimit(
+            maxUserResult,
+            UserSearchParamModel(textSearched, visibilitySearched = true),
         )
     }
 
-    override fun searchGroups(eventId: UUID, searched: String?): Flux<GroupModel> {
-        return groupRepository.findAll(
+    override fun searchGroups(eventId: UUID, textSearched: String?): Flux<GroupModel> {
+        return groupRepository.findWithLimit(
+            maxGroupResult,
             eventId,
-            onlyVisible = true,
-            onlyPresent = false,
-            startDateTime = null,
-            endDateTime = null
-        ).searchAndSort(order = ASC, searched, compareBy { it.name })
+            GroupSearchParamModel(textSearched, visibilitySearched = true),
+        )
     }
 
-    override fun findParticipantMovements(
+    override fun findParticipantMovementsPage(
         eventId: UUID,
         id: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        searched: String?,
-        type: MovementTypeEnum?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<MovementModel> {
-        return movementRepository.findAll(
+        pageable: PageableModel,
+        searchParams: MovementSearchParamModel
+    ): Mono<PageModel<MovementModel>> {
+        return movementRepository.findPageByParticipantId(
             eventId,
-            onlyVisible,
-            type,
-            startDateTime,
-            endDateTime
+            id,
+            pageable,
+            searchParams
         )
-            .filter { it.content.any { c -> c.participant?.id == id } }
-            .searchAndSort(order, searched, compareBy { it.dateTime })
     }
 
-    override fun createParticipant(currentUser: UserModel, participant: ParticipantModel): Mono<ParticipantModel> {
+    override fun createParticipant(currentUser: CurrentUserModel, participant: ParticipantModel): Mono<ParticipantModel> {
         return eventService.validateDateTimes(
             participant.event !!.id !!,
-            participant.begin,
-            participant.end,
+            participant.startAvailability,
+            participant.endAvailability,
             PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE,
         )
             .flatMap {
-                if (Objects.nonNull(participant.user?.id)) {
+                if (Objects.nonNull(participant.user)) {
                     validateNoParticipantForUser(participant.event !!.id !!, participant.user !!.id !!)
-                } else {
-                    Mono.just(emptyList())
-                }
+                } else Mono.just(emptyList())
             }
             .flatMap {
-                if (participant.groups.isEmpty()) {
-                    Mono.just(participant)
-                } else {
+                if (participant.groups.isNotEmpty()) {
                     validateGroups(participant.event !!.id !!, participant, participant.groups.mapNotNull { g -> g.id })
-                }
+                } else Mono.just(participant)
             }
             .flatMap { repository.create(participant.apply { create(currentUser) }) }
     }
 
     private fun validateNoParticipantForUser(eventId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
-        return repository.findAll(
-            eventId,
-            onlyVisible = false,
-            onlyPresent = false,
-            startDateTime = null,
-            endDateTime = null
-        )
-            .filter { it.user?.id == userId }
+        return repository.findByUserId(eventId, userId)
             .collectList()
             .handle { it, handle ->
                 if (it.isNotEmpty()) {
@@ -149,19 +131,43 @@ class ParticipantService(
             }
     }
 
+    private fun validateGroups(eventId: UUID, participant: ParticipantModel, newGroupIds: List<UUID>): Mono<ParticipantModel> {
+        return groupRepository.findAllByIds(eventId, newGroupIds, visibilitySearched = null)
+            .collectList()
+            .handle { it, handle ->
+                when {
+                    it.size != newGroupIds.size -> handle.error(
+                        RegistryException(
+                            NOT_FOUND,
+                            PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT,
+                        )
+                    )
+
+                    it.any { m -> m.isNotVisible() } -> handle.error(
+                        RegistryException(
+                            CONFLICT,
+                            PARTICIPANT_GROUPS_NOT_VISIBLE,
+                        )
+                    )
+
+                    else -> handle.next(participant)
+                }
+            }
+    }
+
     override fun updateParticipantById(
-        currentUser: UserModel,
+        currentUser: CurrentUserModel,
         eventId: UUID,
         id: UUID,
         participant: ParticipantModel
     ): Mono<ParticipantModel> {
         return eventService.validateDateTimes(
             participant.event !!.id !!,
-            participant.begin,
-            participant.end,
+            participant.startAvailability,
+            participant.endAvailability,
             PARTICIPANT_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE,
         )
-            .flatMap { findParticipantById(eventId, id, onlyVisible = false) }
+            .flatMap { findParticipantById(eventId, id, visibilitySearched = null) }
             .flatMap { toUpdate ->
                 if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
                     validateNoParticipantForUser(participant.event !!.id !!, participant.user !!.id !!)
@@ -185,79 +191,47 @@ class ParticipantService(
                     birthday = participant.birthday
                     groups = participant.groups
                     user = participant.user
-                    begin = participant.begin
-                    end = participant.end
+                    startAvailability = participant.startAvailability
+                    endAvailability = participant.endAvailability
                 }
             }
             .updateParticipant(currentUser)
     }
 
-    private fun validateGroups(eventId: UUID, participant: ParticipantModel, newGroupIds: List<UUID>): Mono<ParticipantModel> {
-        return groupRepository.findAllByIds(eventId, newGroupIds, onlyVisible = false)
-            .collectList()
-            .handle { it, handle ->
-                when {
-                    it.size != newGroupIds.size -> handle.error(
-                        RegistryException(
-                            NOT_FOUND,
-                            PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_EVENT,
-                        )
-                    )
-
-                    it.any { m -> m.isNotVisible() } -> handle.error(
-                        RegistryException(
-                            CONFLICT,
-                            PARTICIPANT_GROUPS_NOT_VISIBLE,
-                        )
-                    )
-
-                    else -> handle.next(participant)
-                }
-            }
+    private fun Mono<ParticipantModel>.updateParticipant(currentUser: CurrentUserModel) = flatMap {
+        repository.update(it.apply { update(currentUser) })
     }
 
-    override fun disableParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<ParticipantModel> {
-        return findParticipantById(eventId, id, onlyVisible = true)
+    override fun disableParticipantById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<ParticipantModel> {
+        return findParticipantById(eventId, id, visibilitySearched = true)
             .validateNotLastGroupMember(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER)
             .updateVisibility(visibility = false)
             .updateParticipant(currentUser)
     }
 
-    override fun enableParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<ParticipantModel> {
-        return findParticipantById(eventId, id, onlyVisible = false)
+    override fun enableParticipantById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<ParticipantModel> {
+        return findParticipantById(eventId, id, visibilitySearched = false)
             .updateVisibility(visibility = true)
             .updateParticipant(currentUser)
     }
 
-    override fun deleteParticipantById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<Void> {
-        return findParticipantById(eventId, id, onlyVisible = false)
+    override fun deleteParticipantById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void> {
+        return findParticipantById(eventId, id, visibilitySearched = null)
             .validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
             .validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
             .flatMap { repository.deleteById(it.id !!) }
     }
 
-    private fun Mono<ParticipantModel>.updateParticipant(currentUser: UserModel) = flatMap {
-        repository.update(it.apply { update(currentUser) })
-    }
-
     private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String) = flatMap { participantToUpdate ->
-        findParticipantMovements(
+        movementRepository.countAllByParticipantId(
             participantToUpdate.event !!.id !!,
             participantToUpdate.id !!,
-            order = ASC,
-            onlyVisible = false,
-            searched = null,
-            type = null,
-            startDateTime = null,
-            endDateTime = null
-        )
-            .collectList()
-            .handle { it, handle ->
-                if (it.isNotEmpty()) {
-                    log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)
-                    handle.error(RegistryException(FORBIDDEN, error))
-                } else handle.next(participantToUpdate)
-            }
+        ).handle { it, handle ->
+            if (it > 0) {
+                log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)
+                handle.error(RegistryException(FORBIDDEN, error))
+            } else handle.next(participantToUpdate)
+        }
     }
 
     private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String) = flatMap { participantToUpdate ->
@@ -268,7 +242,7 @@ class ParticipantService(
         groupRepository.findAllByIds(
             participantToUpdate.event !!.id !!,
             participantToUpdate.groups.mapNotNull { it.id },
-            onlyVisible = false
+            visibilitySearched = null
         )
             .filter { it.members.size == 1 }
             .collectList()
