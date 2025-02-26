@@ -8,9 +8,13 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_START_LATER_THAN_END
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_HISTORY_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
@@ -19,6 +23,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupWithoutMemberReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantWriterDtoMapper
@@ -74,6 +79,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
     @MockitoSpyBean
     private lateinit var groupReaderMapper: GroupWithoutMemberReaderDtoMapper
+
+    @MockitoSpyBean
+    private lateinit var movementReaderMapper: MovementReaderDtoMapper
 
     @MockitoSpyBean
     private lateinit var partialUserReaderMapper: PartialUserReaderDtoMapper
@@ -151,12 +159,31 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         )
 
         @JvmStatic
+        fun `Should findParticipantMovements return 200`(): Stream<Arguments> = Stream.of(
+            Arguments.of(null, null, null, null, null, null, null, null),
+            Arguments.of(50, null, null, null, null, null, null, null),
+            Arguments.of(null, 25, null, null, null, null, null, null),
+            Arguments.of(null, null, ASC, null, null, null, null, null),
+            Arguments.of(null, null, DESC, null, null, null, null, null),
+            Arguments.of(null, null, null, true, null, null, null, null),
+            Arguments.of(null, null, null, false, null, null, null, null),
+            Arguments.of(null, null, null, null, "searched", null, null, null),
+            Arguments.of(null, null, null, null, null, IN, null, null),
+            Arguments.of(null, null, null, null, null, OUT, null, null),
+            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
+            Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+        )
+
+        @JvmStatic
         fun `Participant management routes`(): Stream<Arguments> {
             val uuid = UUID.randomUUID()
             val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now())
             return Stream.of(
                 Arguments.of(GET, BASE_URL, listOf(eventId), null),
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
+                Arguments.of(GET, "$BASE_URL/{id}/movements", listOf(eventId, uuid), null),
+                Arguments.of(GET, "$BASE_URL/search/users", listOf(eventId), null),
+                Arguments.of(GET, "$BASE_URL/search/groups", listOf(eventId), null),
                 Arguments.of(POST, BASE_URL, listOf(eventId), participant),
                 Arguments.of(PATCH, "$BASE_URL/{id}", listOf(eventId, uuid), participant),
                 Arguments.of(PATCH, "$BASE_URL/{id}/disable", listOf(eventId, uuid), null),
@@ -318,6 +345,89 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
         verify(service, times(1)).findParticipantById(eventId, uuid, onlyVisible = false)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findParticipantMovements return 200`(
+        offset: Int?,
+        limit: Int?,
+        order: Direction?,
+        onlyVisible: Boolean?,
+        searched: String?,
+        type: MovementTypeEnum?,
+        startDateTime: String?,
+        endDateTime: String?,
+    ) {
+        // Arrange
+        val uuid = UUID.randomUUID()
+
+        val expectedOrder = order ?: DESC
+        val expectedOnlyVisible = onlyVisible ?: true
+        val expectedOffset = offset ?: 0
+        val expectedLimit = limit ?: 20
+        val expectedSize = 0
+
+        `when`(
+            service.findParticipantMovements(
+                any(),
+                any(),
+                any(),
+                any(),
+                anyOrNull(),
+                anyOrNull(),
+                anyOrNull(),
+                anyOrNull()
+            )
+        ).thenReturn(Flux.empty())
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_HISTORY_R))
+            .get()
+            .uri(
+                uriBuilder(
+                    "$BASE_URL/{id}/movements",
+                    listOf(eventId, uuid),
+                    listOf(
+                        Pair("offset", offset),
+                        Pair("limit", limit),
+                        Pair("order", order),
+                        Pair("onlyVisible", onlyVisible),
+                        Pair("searched", searched),
+                        Pair("type", type),
+                        Pair("startDateTime", startDateTime),
+                        Pair("endDateTime", endDateTime),
+                    ),
+                )
+            )
+            .exchange()
+
+        // Assert
+        val body = result.body<PageDto<*>>(OK)
+
+        assertNotNull(body)
+        body !!.assertPage(
+            expectedTotalElements = expectedSize,
+            expectedOffset = expectedOffset,
+            expectedLimit = expectedLimit,
+        )
+
+        verify(movementReaderMapper, times(1)).toDtoPage(any(), any())
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verify(service, times(1)).findParticipantMovements(
+            eventId = eq(eventId),
+            id = eq(uuid),
+            order = eq(expectedOrder),
+            onlyVisible = eq(expectedOnlyVisible),
+            searched = eq(searched),
+            type = eq(type),
+            startDateTime = anyOrNull(),
+            endDateTime = anyOrNull(),
+        )
     }
 
     @Test

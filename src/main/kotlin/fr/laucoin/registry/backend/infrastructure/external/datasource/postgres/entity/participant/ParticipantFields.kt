@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.participant
+package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant
 
 object ParticipantFields {
     const val PARTICIPANT_TABLE = "tb_participant"

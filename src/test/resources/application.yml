@@ -38,6 +38,7 @@ registry:
       searched:
         max-participant-result: 1
         max-group-result: 1
+        max-vehicle-result: 1
     search:
       threshold: 0.5
   security:

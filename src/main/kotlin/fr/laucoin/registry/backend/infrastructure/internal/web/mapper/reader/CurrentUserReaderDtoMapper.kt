@@ -13,12 +13,13 @@ import org.springframework.stereotype.Component
 @Component
 class CurrentUserReaderDtoMapper(
     @Qualifier("messagesSource") private val translateService: MessageSource,
+    private val preferenceMapper: PreferenceReaderDtoMapper,
 ): IGenericReaderDtoMapper<CurrentUserModel, CurrentUserReaderDto> {
     override fun toDto(model: CurrentUserModel, locale: Locale): CurrentUserReaderDto {
         return CurrentUserReaderDto(
             id = model.id,
             authorities = model.authorities.map { it.authority },
-            preferences = model.preferences,
+            preferences = if (Objects.nonNull(model.preferences)) preferenceMapper.toDto(model.preferences !!, locale) else null,
             firstName = model.firstName,
             lastName = model.lastName,
             email = model.email,

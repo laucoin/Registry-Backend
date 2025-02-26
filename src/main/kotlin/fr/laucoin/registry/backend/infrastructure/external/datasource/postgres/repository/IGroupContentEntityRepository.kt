@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository
 
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupContentEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupFields.GROUP_CONTENT_GROUP_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupFields.GROUP_CONTENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupContentEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository

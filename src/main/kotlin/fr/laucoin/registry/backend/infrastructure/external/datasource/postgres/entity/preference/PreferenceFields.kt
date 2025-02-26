@@ -4,11 +4,11 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_END
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_OPTIONS
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileFields.EVENT_PROFILE_END_ACCESS
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileFields.EVENT_PROFILE_ROLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileFields.EVENT_PROFILE_START_ACCESS
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile.EventProfileFields.EVENT_PROFILE_STATUS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileFields.EVENT_PROFILE_END_ACCESS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileFields.EVENT_PROFILE_ROLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileFields.EVENT_PROFILE_START_ACCESS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileFields.EVENT_PROFILE_STATUS
 
 object PreferenceFields {
     const val PREFERENCE_TABLE = "tb_preferences"

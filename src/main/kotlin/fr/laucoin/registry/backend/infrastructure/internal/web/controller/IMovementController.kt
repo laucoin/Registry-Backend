@@ -11,6 +11,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -106,6 +107,25 @@ interface IMovementController {
         @PathVariable eventId: UUID,
         @RequestParam searched: String?
     ): Mono<MovementParticipantsAndGroupsReaderDto>
+
+    @Operation(
+        summary = "Search Vehicles",
+        description = "Search Vehicles to add in a Movement",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @GetMapping("/search/vehicles")
+    fun searchVehicles(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @RequestParam searched: String?
+    ): Flux<VehicleReaderDto>
 
     @Operation(
         summary = "Get available Movement Type",

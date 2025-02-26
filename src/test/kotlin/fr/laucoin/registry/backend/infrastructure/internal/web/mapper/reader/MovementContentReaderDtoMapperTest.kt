@@ -12,7 +12,8 @@ import org.mockito.kotlin.any
 
 class MovementContentReaderDtoMapperTest {
     private val participantMapper: ParticipantReaderDtoMapper = mock()
-    private val mapper: MovementContentReaderDtoMapper = MovementContentReaderDtoMapper(participantMapper)
+    private val vehicleMapper: VehicleReaderDtoMapper = mock()
+    private val mapper: MovementContentReaderDtoMapper = MovementContentReaderDtoMapper(participantMapper, vehicleMapper)
 
     @Test
     fun `Should toDto convert MovementModel to MovementReaderDto`() {

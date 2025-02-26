@@ -1,13 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository
 
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupFields.GROUP_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupQueries.CONTENT_JOIN
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupQueries.GROUP_BY_GROUP
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupQueries.IN_DATE_RANGE_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupQueries.PRESENT_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.group.GroupQueries.SELECT_CONTENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.CONTENT_JOIN
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.GROUP_BY_GROUP
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.IN_DATE_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.PRESENT_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.SELECT_CONTENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_JOIN

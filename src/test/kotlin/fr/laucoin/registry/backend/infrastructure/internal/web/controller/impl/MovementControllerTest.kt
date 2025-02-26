@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_PARTICIPANT_ID_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_D
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_METADATA_R
@@ -130,6 +130,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
             return Stream.of(
                 Arguments.of(GET, BASE_URL, listOf(eventId), null),
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
+                Arguments.of(GET, "$BASE_URL/types", listOf(eventId), null),
+                Arguments.of(GET, "$BASE_URL/search/participants-and-groups", listOf(eventId), null),
                 Arguments.of(POST, BASE_URL, listOf(eventId), movement),
                 Arguments.of(PATCH, "$BASE_URL/{id}", listOf(eventId, uuid), movement),
                 Arguments.of(PATCH, "$BASE_URL/{id}/disable", listOf(eventId, uuid), null),

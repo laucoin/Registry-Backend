@@ -117,6 +117,12 @@ class SwaggerConfig(
     }
 
     @Bean
+    fun eventVehiclesApis(): GroupedOpenApi {
+        return GroupedOpenApi.builder().group("Event's Vehicles Management")
+            .pathsToMatch("/api/events/{eventId}/vehicles/**").build()
+    }
+
+    @Bean
     fun eventMovementsApis(): GroupedOpenApi {
         return GroupedOpenApi.builder().group("Event's Movements Management")
             .pathsToMatch("/api/events/{eventId}/movements/**").build()

@@ -21,5 +21,6 @@ data class MovementReaderDto(
     data class MovementContentReaderDto(
         var poolName: String? = null,
         var participant: ParticipantReaderDto? = null,
+        var vehicle: VehicleReaderDto? = null,
     )
 }

@@ -14,9 +14,12 @@ data class MovementModel(
         var id: UUID? = null,
         var poolName: String? = null,
         var participant: ParticipantModel? = null,
+        var vehicle: VehicleModel? = null,
     ) {
         fun getSearchableValues(): List<String> =
-            participant?.getSearchableValues().orEmpty() + (if (Objects.nonNull(poolName)) listOf(poolName !!) else emptyList())
+            vehicle?.getSearchableValues().orEmpty() +
+            participant?.getSearchableValues().orEmpty() +
+            (if (Objects.nonNull(poolName)) listOf(poolName !!) else emptyList())
     }
 
     override fun getSearchableValues(): List<String> =
@@ -24,16 +27,20 @@ data class MovementModel(
 
     fun getNewContent(movement: MovementModel): List<MovementContentModel> {
         return movement.content
-            .filter { new -> Objects.isNull(content.find { new.participant?.id == it.participant?.id && new.poolName == it.poolName }) }
+            .filter { new -> Objects.isNull(content.find { new.participant?.id == it.participant?.id && new.poolName == it.poolName && new.vehicle?.id == it.vehicle?.id }) }
     }
 
     fun getNewContentParticipantIds(movement: MovementModel): List<UUID> {
         return getNewContent(movement).mapNotNull { it.participant?.id }
     }
 
+    fun getNewContentVehicleIds(movement: MovementModel): List<UUID> {
+        return getNewContent(movement).mapNotNull { it.vehicle?.id }
+    }
+
     fun getRemovedContentIds(movement: MovementModel): List<UUID> {
         return content
-            .filter { old -> Objects.isNull(movement.content.find { old.participant?.id == it.participant?.id && old.poolName == it.poolName }) }
+            .filter { old -> Objects.isNull(movement.content.find { old.participant?.id == it.participant?.id && old.poolName == it.poolName && old.vehicle?.id == it.vehicle?.id }) }
             .mapNotNull(MovementContentModel::id)
     }
 }

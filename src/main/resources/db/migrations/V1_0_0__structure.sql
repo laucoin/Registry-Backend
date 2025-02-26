@@ -177,6 +177,24 @@ CREATE TABLE tb_group_content
     CONSTRAINT tb_group_content_pkey PRIMARY KEY (group_id, participant_id)
 );
 
+-- tb_vehicle definition
+CREATE TABLE tb_vehicle
+(
+    id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
+    registration       VARCHAR(20)              NOT NULL,
+    brand              VARCHAR(150)             NOT NULL,
+    model              VARCHAR(150)             NOT NULL,
+    begin              TIMESTAMP WITH TIME ZONE,
+    finish             TIMESTAMP WITH TIME ZONE,
+    event_id           uuid                     NOT NULL,
+    created_date       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by         uuid,
+    last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_modified_by   uuid,
+    visible            BOOLEAN                  NOT NULL DEFAULT TRUE,
+    CONSTRAINT tb_vehicle_pkey PRIMARY KEY (id)
+);
+
 -- tb_movement definition
 CREATE TABLE tb_movement
 (
@@ -197,8 +215,9 @@ CREATE TABLE tb_movement_content
 (
     id             uuid NOT NULL DEFAULT uuid_generate_v4(),
     movement_id    uuid NOT NULL,
-    pool_name      VARCHAR,
     participant_id uuid NOT NULL,
+    pool_name      VARCHAR,
+    vehicle_id     uuid,
     CONSTRAINT tb_movement_content_pkey PRIMARY KEY (movement_id, participant_id)
 );
 
@@ -316,6 +335,18 @@ ALTER TABLE tb_group_content
 ALTER TABLE tb_group_content
     ADD CONSTRAINT tb_group_content_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_participant (id) ON DELETE CASCADE;
 
+-- tb_vehicle foreign keys and indexes
+CREATE INDEX tb_vehicle_index_event_id ON tb_vehicle (event_id);
+CREATE INDEX tb_vehicle_index_created_by ON tb_vehicle (created_by);
+CREATE INDEX tb_vehicle_index_last_modified_by ON tb_vehicle (last_modified_by);
+
+ALTER TABLE tb_vehicle
+    ADD CONSTRAINT tb_vehicle_event_fkey FOREIGN KEY (event_id) REFERENCES tb_event (id) ON DELETE CASCADE;
+ALTER TABLE tb_vehicle
+    ADD CONSTRAINT tb_vehicle_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
+ALTER TABLE tb_vehicle
+    ADD CONSTRAINT tb_vehicle_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
+
 -- tb_movement foreign keys and indexes
 CREATE INDEX tb_movement_index_event_id ON tb_movement (event_id);
 CREATE INDEX tb_movement_index_created_by ON tb_movement (created_by);
@@ -330,11 +361,14 @@ ALTER TABLE tb_movement
 
 -- tb_movement_content foreign keys and indexes
 CREATE UNIQUE INDEX tb_movement_content_index_movement_and_participant_id ON tb_movement_content (movement_id, participant_id);
+CREATE UNIQUE INDEX tb_movement_content_index_movement_and_vehicle_id ON tb_movement_content (movement_id, vehicle_id);
 
 ALTER TABLE tb_movement_content
     ADD CONSTRAINT tb_movement_content_movement_fkey FOREIGN KEY (movement_id) REFERENCES tb_movement (id) ON DELETE CASCADE;
 ALTER TABLE tb_movement_content
     ADD CONSTRAINT tb_movement_content_participant_fkey FOREIGN KEY (participant_id) REFERENCES tb_participant (id);
+ALTER TABLE tb_movement_content
+    ADD CONSTRAINT tb_movement_content_vehicle_fkey FOREIGN KEY (vehicle_id) REFERENCES tb_vehicle (id);
 
 -- tb_user insert service user
 INSERT INTO tb_user(type)
@@ -373,6 +407,11 @@ VALUES ('REGISTRY_EVENT_R'),
        ('REGISTRY_EVENT_GROUP_U'),
        ('REGISTRY_EVENT_GROUP_D'),
        ('REGISTRY_EVENT_GROUP_METADATA_R'),
+       ('REGISTRY_EVENT_VEHICLE_C'),
+       ('REGISTRY_EVENT_VEHICLE_R'),
+       ('REGISTRY_EVENT_VEHICLE_HISTORY_R'),
+       ('REGISTRY_EVENT_VEHICLE_U'),
+       ('REGISTRY_EVENT_VEHICLE_D'),
        ('REGISTRY_EVENT_MOVEMENT_C'),
        ('REGISTRY_EVENT_MOVEMENT_R'),
        ('REGISTRY_EVENT_MOVEMENT_U'),

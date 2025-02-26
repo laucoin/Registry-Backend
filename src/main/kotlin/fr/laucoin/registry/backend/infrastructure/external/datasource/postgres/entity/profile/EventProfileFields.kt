@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.profile
+package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile
 
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_EMAIL

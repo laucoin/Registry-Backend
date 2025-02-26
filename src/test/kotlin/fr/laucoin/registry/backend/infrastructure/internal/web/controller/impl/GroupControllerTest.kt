@@ -134,11 +134,15 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
             return Stream.of(
                 Arguments.of(GET, BASE_URL, listOf(eventId), null),
                 Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
+                Arguments.of(GET, "$BASE_URL/{id}/members", listOf(eventId, uuid), null),
+                Arguments.of(GET, "$BASE_URL/search/participants", listOf(eventId), null),
                 Arguments.of(POST, BASE_URL, listOf(eventId), group),
                 Arguments.of(PATCH, "$BASE_URL/{id}", listOf(eventId, uuid), group),
+                Arguments.of(PATCH, "$BASE_URL/{id}/members", listOf(eventId, uuid), listOf(uuid)),
                 Arguments.of(PATCH, "$BASE_URL/{id}/disable", listOf(eventId, uuid), null),
                 Arguments.of(PATCH, "$BASE_URL/{id}/enable", listOf(eventId, uuid), null),
                 Arguments.of(DELETE, "$BASE_URL/{id}", listOf(eventId, uuid), null),
+                Arguments.of(DELETE, "$BASE_URL/{id}/members/{memberId}", listOf(eventId, uuid, uuid), null),
             )
         }
     }

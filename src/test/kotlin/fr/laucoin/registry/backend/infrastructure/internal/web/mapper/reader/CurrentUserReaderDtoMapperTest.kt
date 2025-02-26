@@ -13,12 +13,15 @@ import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.springframework.context.MessageSource
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 
 class CurrentUserReaderDtoMapperTest {
     private val translateService: MessageSource = mock()
-    private val mapper: CurrentUserReaderDtoMapper = CurrentUserReaderDtoMapper(translateService)
+    private val preferenceMapper: PreferenceReaderDtoMapper = mock()
+    private val mapper: CurrentUserReaderDtoMapper = CurrentUserReaderDtoMapper(translateService, preferenceMapper)
 
     @Test
     fun `Should toDto convert CurrentUserModel to CurrentUserReaderDto`() {
@@ -48,10 +51,11 @@ class CurrentUserReaderDtoMapperTest {
         val result = mapper.toDto(currentUser, Locale.getDefault())
 
         // Assert
+        verify(preferenceMapper, times(1)).toDto(currentUser.preferences !!, Locale.getDefault())
+
         assertEquals(currentUser.id, result.id)
         assertEquals(1, result.authorities.size)
         assertEquals(authority, result.authorities.first())
-        assertEquals(currentUser.preferences, result.preferences)
         assertEquals(currentUser.firstName, result.firstName)
         assertEquals(currentUser.lastName, result.lastName)
         assertEquals(currentUser.email, result.email)

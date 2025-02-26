@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
+import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.test.ModelExt.eventId
@@ -48,8 +49,10 @@ class MovementServiceTest {
     private val repository: IMovementModelRepository = mock()
     private val eventService: IEventService = mock()
     private val participantRepository: IParticipantModelRepository = mock()
+    private val vehicleRepository: IVehicleModelRepository = mock()
     private val groupRepository: IGroupModelRepository = mock()
-    private val service: IMovementService = MovementService(repository, eventService, participantRepository, groupRepository)
+    private val service: IMovementService =
+        MovementService(repository, eventService, participantRepository, vehicleRepository, groupRepository)
 
     companion object {
         private val event0 = EventModel().apply {

@@ -3,6 +3,8 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -10,9 +12,11 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
+import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IMovementService
@@ -33,6 +37,7 @@ class MovementService(
     private val repository: IMovementModelRepository,
     private val eventService: IEventService,
     private val participantRepository: IParticipantModelRepository,
+    private val vehicleRepository: IVehicleModelRepository,
     private val groupRepository: IGroupModelRepository,
 ): IMovementService, GenericService() {
     override fun findMovements(
@@ -77,6 +82,11 @@ class MovementService(
         )
     }
 
+    override fun searchVehicles(eventId: UUID, searched: String?): Flux<VehicleModel> {
+        return vehicleRepository.findAll(eventId, onlyVisible = true, onlyPresent = true, startDateTime = null, endDateTime = null)
+            .searchAndSort(ASC, searched, compareBy { it.registration })
+    }
+
     override fun availableMovementTypes(): Flux<MovementTypeEnum> {
         return Flux.just(*MovementTypeEnum.entries.toTypedArray())
     }
@@ -88,6 +98,15 @@ class MovementService(
                     movement.event !!.id !!,
                     movement,
                     movement.content.mapNotNull { c -> c.participant?.id })
+            }
+            .flatMap {
+                val newVehicleIds: List<UUID> = movement.content.mapNotNull { c -> c.vehicle?.id }
+                if (newVehicleIds.isEmpty()) Mono.just(it)
+                else validateVehicles(
+                    movement.event !!.id !!,
+                    movement,
+                    newVehicleIds
+                )
             }
             .flatMap { repository.create(movement.apply { create(currentUser) }) }
     }
@@ -101,6 +120,11 @@ class MovementService(
                 else validateParticipants(eventId, it, newParticipantIds)
             }
             .flatMap {
+                val newVehicleIds: List<UUID> = it.getNewContentVehicleIds(movement)
+                if (newVehicleIds.isEmpty()) Mono.just(it)
+                else validateVehicles(eventId, it, newVehicleIds)
+            }
+            .flatMap {
                 it.let {
                     it.dateTime = movement.dateTime
                     it.content = movement.content
@@ -112,6 +136,30 @@ class MovementService(
 
     private fun Mono<MovementModel>.updateMovement(currentUser: UserModel) = flatMap {
         repository.update(it.apply { update(currentUser) })
+    }
+
+    private fun validateVehicles(eventId: UUID, movement: MovementModel, newVehicleIds: List<UUID>): Mono<MovementModel> {
+        return vehicleRepository.findAllByIds(eventId, newVehicleIds, onlyVisible = false)
+            .collectList()
+            .handle { it, handle ->
+                when {
+                    it.size != newVehicleIds.size -> handle.error(
+                        RegistryException(
+                            NOT_FOUND,
+                            MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_EVENT,
+                        )
+                    )
+
+                    it.any { m -> m.isNotVisible() } -> handle.error(
+                        RegistryException(
+                            CONFLICT,
+                            MOVEMENT_VEHICLES_NOT_VISIBLE,
+                        )
+                    )
+
+                    else -> handle.next(movement)
+                }
+            }
     }
 
     private fun validateParticipants(eventId: UUID, movement: MovementModel, newParticipantIds: List<UUID>): Mono<MovementModel> {
