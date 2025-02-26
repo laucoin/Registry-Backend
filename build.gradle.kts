@@ -10,7 +10,6 @@ plugins {
 group = "fr.laucoin.registry"
 
 val swaggerVersion = "2.7.0"
-val apacheCommonVersion = "1.13.0"
 val jacocoVersion = "0.8.12"
 val mockitoVersion = "5.14.2"
 val testArch = "1.3.0"
@@ -43,7 +42,6 @@ dependencies {
 
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
-    implementation("org.apache.commons:commons-text:$apacheCommonVersion")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")

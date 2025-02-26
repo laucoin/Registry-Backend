@@ -135,7 +135,6 @@ class UserServiceTest {
         expectedList: List<UserModel>,
     ) {
         // Arrange
-        setField(service, "searchThreshold", 0.5)
         `when`(repository.findAll(any())).thenReturn(Flux.just(*users, serviceAccount))
 
         // Act

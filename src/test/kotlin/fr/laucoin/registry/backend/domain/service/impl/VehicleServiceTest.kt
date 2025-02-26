@@ -31,7 +31,6 @@ import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.FORBIDDEN
-import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -83,7 +82,6 @@ class VehicleServiceTest {
         expectedList: List<VehicleModel>,
     ) {
         // Arrange
-        setField(service, "searchThreshold", 0.5)
         `when`(repository.findAll(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(*vehicles))
 
         // Act

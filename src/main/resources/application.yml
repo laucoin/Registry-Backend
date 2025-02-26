@@ -36,8 +36,6 @@ registry:
         max-participant-result: 10
         max-group-result: 10
         max-vehicle-result: 10
-    search:
-      threshold: 0.5
   security:
     default-role: USER
     oauth2:

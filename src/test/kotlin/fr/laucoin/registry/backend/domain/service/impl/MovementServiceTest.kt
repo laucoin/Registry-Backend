@@ -40,7 +40,6 @@ import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -144,7 +143,6 @@ class MovementServiceTest {
         expectedList: List<MovementModel>,
     ) {
         // Arrange
-        setField(service, "searchThreshold", 0.5)
         `when`(repository.findAll(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(*movements))
 
         // Act

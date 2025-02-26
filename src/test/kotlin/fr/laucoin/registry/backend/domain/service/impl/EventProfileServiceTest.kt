@@ -37,7 +37,6 @@ import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
-import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -91,7 +90,6 @@ class EventProfileServiceTest {
         expectedList: List<EventProfileModel>,
     ) {
         // Arrange
-        setField(service, "searchThreshold", 0.5)
         `when`(
             repository.findEventProfilesByEventId(
                 any(),
