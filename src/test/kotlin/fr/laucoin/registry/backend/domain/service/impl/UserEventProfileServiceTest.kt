@@ -34,7 +34,6 @@ import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -77,7 +76,6 @@ class UserEventProfileServiceTest {
         expectedList: List<EventProfileModel>,
     ) {
         // Arrange
-        setField(service, "searchThreshold", 0.5)
         val uuid = UUID.randomUUID()
         `when`(
             repository.findEventProfilesByUserId(

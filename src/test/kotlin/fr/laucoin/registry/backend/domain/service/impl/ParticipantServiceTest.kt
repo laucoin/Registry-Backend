@@ -41,7 +41,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -132,7 +131,6 @@ class ParticipantServiceTest {
         expectedList: List<ParticipantModel>,
     ) {
         // Arrange
-        setField(service, "searchThreshold", 0.5)
         `when`(repository.findAll(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(*participants))
 
         // Act

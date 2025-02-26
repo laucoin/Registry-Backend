@@ -31,7 +31,6 @@ import org.springframework.data.domain.Sort.Direction
 import org.springframework.data.domain.Sort.Direction.ASC
 import org.springframework.data.domain.Sort.Direction.DESC
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
@@ -176,7 +175,6 @@ class EventServiceTest {
         expectedList: List<EventModel>,
     ) {
         // Arrange
-        setField(service, "searchThreshold", 0.5)
         `when`(repository.findAll(any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(*events))
         `when`(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(listOf("REGISTRY_EVENT_R"))
 
