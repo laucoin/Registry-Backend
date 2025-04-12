@@ -33,4 +33,21 @@ interface IPreferencesController {
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @PathVariable profileId: UUID,
     ): Mono<PreferencesModel>
+
+    @Operation(
+        summary = "Change Default Profile by Event id",
+        description = "Changes the Event on which default operations are performed by changing Profile.",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PatchMapping("/events/{eventId}/profile/select")
+    fun updateSelectedEventProfileWithEventId(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @PathVariable eventId: UUID,
+    ): Mono<PreferencesModel>
 }

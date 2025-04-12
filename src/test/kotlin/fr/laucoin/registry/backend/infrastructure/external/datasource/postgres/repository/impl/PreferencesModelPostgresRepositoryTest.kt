@@ -1,54 +1,56 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferencesEntity
+import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.PreferencesEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IPreferencesEntityRepository
-import java.util.UUID
+import fr.laucoin.registry.backend.test.TestContext
+import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
-import reactor.core.publisher.Mono
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
-class PreferencesModelPostgresRepositoryTest {
-    private val repository: IPreferencesEntityRepository = mock()
-    private val mapper: PreferencesEntityMapper = spy()
-    private val modelRepository: PreferenceModelPostgresRepository =
-        PreferenceModelPostgresRepository(repository, mapper)
+class PreferencesModelPostgresRepositoryTest(
+    @Autowired private val repository: IPreferencesModelRepository
+): TestContext() {
+    @MockitoSpyBean
+    private lateinit var postgresRepository: IPreferencesEntityRepository
+
+    @MockitoSpyBean
+    private lateinit var mapper: PreferencesEntityMapper
 
     @Test
     fun `Should findByUserId call repository findByUserId`() {
-        // Arrange
-        val preferences = PreferencesEntity()
-        val userId = UUID.randomUUID()
-        val onlyVisible = true
-        `when`(repository.findByUserId(any(), any())).thenReturn(Mono.just(preferences))
-
         // Act
-        modelRepository.findByUserId(userId, onlyVisible).block()
+        val result = repository.findByUserId(currentUser().id !!, visibilitySearched = null).block()
 
         // Assert
-        verify(repository, times(1)).findByUserId(userId, onlyVisible)
-        verify(mapper, times(1)).toModel(preferences)
+        assertNotNull(result)
+        verify(postgresRepository).findByUserId(
+            currentUser().id !!,
+            visibilitySearched = null,
+        )
+        verify(mapper).toModel(any())
     }
 
     @Test
-    fun `Should create call repository save`() {
+    fun `Should save call repository save`() {
         // Arrange
-        val preferences = PreferencesModel()
-        val preferencesEntity = PreferencesEntity()
-        `when`(repository.save(any())).thenReturn(Mono.just(preferencesEntity))
+        val preferences = PreferencesModel().apply {
+            userId = currentUser().id
+        }
 
         // Act
-        modelRepository.save(preferences).block()
+        val result = repository.save(preferences).block()
 
         // Assert
-        verify(repository, times(1)).save(any())
-        verify(mapper, times(1)).toEntity(preferences)
-        verify(mapper, times(1)).toModel(preferencesEntity)
+        assertNotNull(result?.id)
+        verify(postgresRepository).save(any())
+        verify(mapper).toEntity(any())
+        verify(mapper).toModel(any())
     }
 }

@@ -1,12 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ParticipantEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IParticipantEntityRepository
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,23 +24,90 @@ class ParticipantModelPostgresRepository(
     private val mapper: ParticipantEntityMapper,
     private val groupContentMapper: GroupContentEntityMapper,
 ): IParticipantModelRepository {
-    override fun findAll(
+    override fun findPage(
         eventId: UUID,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<ParticipantModel> {
-        return repository.findAll(eventId, onlyVisible, onlyPresent, startDateTime, endDateTime).map(mapper::toModel)
+        pageable: PageableModel,
+        searchParams: ParticipantSearchParamModel,
+    ): Mono<PageModel<ParticipantModel>> {
+        return Mono.zip(
+            repository.countAll(
+                eventId,
+                searchParams.textSearched,
+                searchParams.visibilitySearched,
+                searchParams.availabilitySearched,
+                searchParams.presenceSearched,
+                searchParams.dateTimeSearched,
+            ),
+            repository.findAll(
+                eventId,
+                searchParams.textSearched,
+                searchParams.visibilitySearched,
+                searchParams.availabilitySearched,
+                searchParams.presenceSearched,
+                searchParams.dateTimeSearched,
+                pageable.limit,
+                pageable.offset,
+            ).map(mapper::toModel).collectList()
+        ).map {
+            PageModel(pageable, it.t1, it.t2)
+        }
     }
 
-    override fun findAllByIds(eventId: UUID, ids: List<UUID>, onlyVisible: Boolean): Flux<ParticipantModel> {
+    override fun findPageByGroupId(
+        eventId: UUID,
+        groupId: UUID,
+        pageable: PageableModel,
+        searchParams: ParticipantSearchParamModel
+    ): Mono<PageModel<ParticipantModel>> {
+        return Mono.zip(
+            repository.countAllByGroupId(
+                eventId,
+                groupId,
+                searchParams.textSearched,
+                searchParams.visibilitySearched,
+                searchParams.availabilitySearched,
+                searchParams.presenceSearched,
+                searchParams.dateTimeSearched,
+            ),
+            repository.findAllByGroupId(
+                eventId,
+                groupId,
+                searchParams.textSearched,
+                searchParams.visibilitySearched,
+                searchParams.availabilitySearched,
+                searchParams.presenceSearched,
+                searchParams.dateTimeSearched,
+                pageable.limit,
+                pageable.offset,
+            ).map(mapper::toModel).collectList()
+        ).map {
+            PageModel(pageable, it.t1, it.t2)
+        }
+    }
+
+    override fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel> {
         return if (ids.isEmpty()) Flux.empty()
-        else repository.findAllByIds(eventId, ids, onlyVisible).map(mapper::toModel)
+        else repository.findAllByIds(eventId, ids, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
     }
 
-    override fun findById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<ParticipantModel> {
-        return repository.findById(eventId, id, onlyVisible).map(mapper::toModel)
+    override fun findByUserId(eventId: UUID, userId: UUID): Flux<ParticipantModel> {
+        return repository.findByUserId(eventId, userId, null).map(mapper::toModel)
+    }
+
+    override fun findWithLimit(limit: Int, eventId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel> {
+        return repository.findWithLimit(
+            eventId,
+            searchParams.textSearched,
+            searchParams.visibilitySearched,
+            searchParams.availabilitySearched,
+            searchParams.presenceSearched,
+            searchParams.dateTimeSearched,
+            limit,
+        ).map(mapper::toModel)
+    }
+
+    override fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
+        return repository.findById(eventId, id, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
     }
 
     override fun create(element: ParticipantModel): Mono<ParticipantModel> {
@@ -49,7 +118,7 @@ class ParticipantModelPostgresRepository(
 
     override fun update(element: ParticipantModel): Mono<ParticipantModel> {
         return save(element)
-            .flatMap { findById(element.event !!.id !!, element.id !!, onlyVisible = false) }
+            .flatMap { findById(element.event !!.id !!, element.id !!, visibilitySearched = null) }
             .saveNewGroups(element)
             .removeDeletedGroups(element)
             .`as`(transactionalOperator::transactional)
@@ -70,7 +139,7 @@ class ParticipantModelPostgresRepository(
     @Transactional
     fun Mono<ParticipantModel>.removeDeletedGroups(element: ParticipantModel): Mono<ParticipantModel> {
         return flatMap { participant ->
-            val removedGroups = participant.getRemovedGroupIds(element)
+            val removedGroups = participant.getOldGroupIds(element)
             if (removedGroups.isEmpty()) return@flatMap Mono.just(participant)
             groupContentRepository.deleteAllByParticipantIdAndGroupIds(participant.id !!, removedGroups)
                 .then(Mono.fromCallable { participant.apply { groups = groups.filter { removedGroups.contains(it.id) } } })

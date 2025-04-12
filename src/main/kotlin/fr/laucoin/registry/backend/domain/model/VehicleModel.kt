@@ -1,13 +1,12 @@
 package fr.laucoin.registry.backend.domain.model
 
-import java.time.ZonedDateTime
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 
 data class VehicleModel(
-    var registration: String? = null,
+    var licensePlate: String? = null,
     var brand: String? = null,
     var model: String? = null,
-    var begin: ZonedDateTime? = null,
-    var end: ZonedDateTime? = null,
-): GenericEventModel() {
-    override fun getSearchableValues(): List<String> = listOfNotNull(registration, brand, model)
-}
+    var status: UsableElementStatusEnum? = null,
+    var startAvailability: CustomDateTimeModel? = null,
+    var endAvailability: CustomDateTimeModel? = null,
+): GenericEventModel()

@@ -1,40 +1,40 @@
 package fr.laucoin.registry.backend.domain.service
 
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.EventProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import java.time.ZonedDateTime
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IEventProfileService {
-    fun findEventProfilesByEventId(
+    fun findEventProfilesPage(
         eventId: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        status: ProfileStatusEnum?,
-        searched: String?,
-        startAccess: ZonedDateTime?,
-        endAccess: ZonedDateTime?,
-    ): Flux<EventProfileModel>
+        pageable: PageableModel,
+        searchParams: EventProfileSearchParamModel,
+    ): Mono<PageModel<EventProfileModel>>
 
-    fun findEventProfileByEventIdAndId(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<EventProfileModel>
-    fun searchUsers(searched: String?): Flux<UserModel>
-    fun getAssignableEventRoles(currentUser: UserModel, eventId: UUID): Flux<String>
-    fun getAvailableEventStatus(eventId: UUID): Flux<ProfileStatusEnum>
+    fun findEventProfileById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<EventProfileModel>
+    fun searchUsers(textSearched: String?): Flux<UserModel>
+    fun getAssignableEventRoles(currentUser: CurrentUserModel, eventId: UUID): Flux<String>
     fun createEventProfiles(
-        currentUser: UserModel,
+        currentUser: CurrentUserModel,
         eventId: UUID,
         userIds: List<UUID>,
         profiles: List<EventProfileModel>
     ): Mono<Pair<List<UUID>, List<UUID>>>
 
-    fun createSupportEventProfile(currentUser: UserModel, eventId: UUID): Mono<EventProfileModel>
+    fun updateEventProfileById(
+        currentUser: CurrentUserModel,
+        eventId: UUID,
+        id: UUID,
+        profile: EventProfileModel
+    ): Mono<EventProfileModel>
 
-    fun updateEventProfileById(currentUser: UserModel, eventId: UUID, id: UUID, profile: EventProfileModel): Mono<EventProfileModel>
-    fun blockEventProfileById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<EventProfileModel>
-    fun unblockEventProfileById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<EventProfileModel>
-    fun deleteEventProfileById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<Void>
+    fun blockEventProfileById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<EventProfileModel>
+    fun unblockEventProfileById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<EventProfileModel>
+    fun deleteEventProfileById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void>
 }

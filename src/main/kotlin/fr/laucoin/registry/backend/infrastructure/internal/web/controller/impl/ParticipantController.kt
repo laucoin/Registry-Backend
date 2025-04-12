@@ -1,11 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IParticipantController
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
@@ -19,8 +22,6 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.Par
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -33,50 +34,36 @@ class ParticipantController(
     private val movementReaderMapper: MovementReaderDtoMapper,
     private val partialUserReaderMapper: PartialUserReaderDtoMapper,
     private val writerMapper: ParticipantWriterDtoMapper,
-    @Value("\${registry.feature.participant.searched.max-user-result}")
-    private val maxUserResult: Long,
-    @Value("\${registry.feature.participant.searched.max-group-result}")
-    private val maxGroupResult: Long,
 ): IParticipantController {
     override fun findParticipants(
         locale: Locale,
         eventId: UUID,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Mono<PageDto<ParticipantReaderDto>> {
-        return service.findParticipantsByEventId(
+        pageNumber: Int,
+        pageSize: Int,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        statusSearched: UsableElementStatusEnum?,
+        dateTimeSearched: ZonedDateTime?
+    ): Mono<PageModel<ParticipantReaderDto>> {
+        return service.findParticipantsPage(
             eventId,
-            order,
-            onlyVisible,
-            onlyPresent,
-            searched,
-            startDateTime,
-            endDateTime
-        )
-            .paginate(offset, limit)
-            .map { readerMapper.toDtoPage(it, locale) }
+            PageableModel(pageNumber * pageSize, pageSize),
+            ParticipantSearchParamModel(textSearched, visibilitySearched, statusSearched, dateTimeSearched),
+        ).map { readerMapper.toDtoPage(it, locale) }
     }
 
     override fun findParticipantById(locale: Locale, eventId: UUID, id: UUID): Mono<ParticipantReaderDto> {
-        return service.findParticipantById(eventId, id, onlyVisible = false)
+        return service.findParticipantById(eventId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun searchUsers(locale: Locale, eventId: UUID, searched: String?): Flux<PartialUserReaderDto> {
-        return service.searchUsers(eventId, searched)
-            .take(maxUserResult)
+    override fun searchUsers(locale: Locale, eventId: UUID, textSearched: String?): Flux<PartialUserReaderDto> {
+        return service.searchUsers(eventId, textSearched)
             .map { partialUserReaderMapper.toDto(it, locale) }
     }
 
-    override fun searchGroups(locale: Locale, eventId: UUID, searched: String?): Flux<GroupWithoutMemberReaderDto> {
-        return service.searchGroups(eventId, searched)
-            .take(maxGroupResult)
+    override fun searchGroups(locale: Locale, eventId: UUID, textSearched: String?): Flux<GroupWithoutMemberReaderDto> {
+        return service.searchGroups(eventId, textSearched)
             .map { groupReaderMapper.toDto(it, locale) }
     }
 
@@ -84,18 +71,19 @@ class ParticipantController(
         locale: Locale,
         eventId: UUID,
         id: UUID,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        searched: String?,
-        type: MovementTypeEnum?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Mono<PageDto<MovementReaderDto>> {
-        return service.findParticipantMovements(eventId, id, order, onlyVisible, searched, type, startDateTime, endDateTime)
-            .paginate(offset, limit)
-            .map { movementReaderMapper.toDtoPage(it, locale) }
+        pageNumber: Int,
+        pageSize: Int,
+        visibilitySearched: Boolean?,
+        typeSearched: MovementTypeEnum?,
+        startDateTimeSearched: ZonedDateTime?,
+        endDateTimeSearched: ZonedDateTime?
+    ): Mono<PageModel<MovementReaderDto>> {
+        return service.findParticipantMovementsPage(
+            eventId,
+            id,
+            PageableModel(pageNumber * pageSize, pageSize),
+            MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
+        ).map { movementReaderMapper.toDtoPage(it, locale) }
     }
 
     override fun createParticipant(

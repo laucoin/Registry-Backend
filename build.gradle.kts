@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
 plugins {
     kotlin("jvm") version "2.1.0"
     kotlin("plugin.spring") version "2.1.0"
@@ -53,7 +55,6 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:$mockWebServer")
     testImplementation("com.tngtech.archunit:archunit-junit5:$testArch")
     testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -83,6 +84,12 @@ tasks.withType<Test> {
     useJUnitPlatform()
     maxParallelForks = Runtime.getRuntime().availableProcessors()
     finalizedBy(tasks.jacocoTestCoverageVerification, tasks.jacocoTestReport)
+}
+
+val targetName: String by project
+
+tasks.withType<BootJar> {
+    archiveFileName.set(targetName)
 }
 
 release {

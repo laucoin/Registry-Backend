@@ -28,7 +28,7 @@ interface IRegistryControllerAdvice {
     fun handleHandlerAuthorizationDeniedException(exception: AuthorizationDeniedException): Mono<ResponseEntity<ErrorDto>>
 
     @ExceptionHandler(ResponseStatusException::class)
-    fun handleException(exception: ResponseStatusException): Mono<ResponseEntity<ErrorDto>>
+    fun handleResponseStatusException(exception: ResponseStatusException): Mono<ResponseEntity<ErrorDto>>
 
     @ExceptionHandler(Exception::class)
     fun handleException(exception: Exception): Mono<ResponseEntity<ErrorDto>>

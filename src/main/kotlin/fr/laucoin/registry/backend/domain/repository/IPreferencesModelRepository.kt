@@ -5,6 +5,6 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 interface IPreferencesModelRepository {
-    fun findByUserId(userId: UUID, onlyVisible: Boolean): Mono<PreferencesModel>
+    fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesModel>
     fun save(preference: PreferencesModel): Mono<PreferencesModel>
 }

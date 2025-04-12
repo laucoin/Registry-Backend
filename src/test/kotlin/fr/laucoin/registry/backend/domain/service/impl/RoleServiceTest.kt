@@ -1,23 +1,34 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_PREFIX
+import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.ACTIVITY
+import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.RoleModel
 import fr.laucoin.registry.backend.domain.repository.IRoleModelRepository
-import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.mock
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.test.util.ReflectionTestUtils.setField
+import reactor.core.publisher.Flux
 
 class RoleServiceTest {
     private val repository: IRoleModelRepository = mock()
-    private val service: IRoleService = RoleService(repository, "ROLE_2")
+    private val defaultRole: String = "ROLE_2"
+    private val service: RoleService = RoleService(repository, defaultRole)
 
     private val roles = hashMapOf(
         "ROLE_0" to Pair(0, listOf("PERMISSION_0")),
@@ -74,6 +85,31 @@ class RoleServiceTest {
         )
     }
 
+    @Test
+    fun `Should onApplicationEvent call user and event role`() {
+        // Arrange
+        val event: ContextRefreshedEvent = mock()
+        val userRole = RoleModel(
+            role = "USER_ROLE_0",
+            level = 0,
+            permissions = listOf("USER_PERMISSION_0"),
+        )
+        whenever(repository.findUserRoles()).thenReturn(Flux.just(userRole))
+        val eventRole = RoleModel(
+            role = "EVENT_ROLE_0",
+            level = 0,
+            permissions = listOf("EVENT_PERMISSION_0"),
+        )
+        whenever(repository.findEventRoles()).thenReturn(Flux.just(eventRole))
+
+        // Act
+        service.onApplicationEvent(event)
+
+        // Assert
+        verify(repository).findUserRoles()
+        verify(repository).findEventRoles()
+    }
+
     @ParameterizedTest
     @MethodSource
     fun `Should getLevelByUserRole return this right level`(
@@ -118,6 +154,27 @@ class RoleServiceTest {
         assertEquals("ROLE_0", result)
     }
 
+    @Test
+    fun `Should getDefaultUserRole filter user role on defaultRole value`() {
+        // Arrange
+        setField(service, "userRoles", roles)
+
+        // Act
+        val result = service.getDefaultUserRole()
+
+        // Assert
+        assertEquals(defaultRole, result)
+    }
+
+    @Test
+    fun `Should getDefaultUserRole return null on null role`() {
+        // Act
+        val result = service.getDefaultUserRole()
+
+        // Assert
+        assertNull(result)
+    }
+
     @ParameterizedTest
     @MethodSource
     fun `Should getAuthoritiesByUserRole return a list of associated authorities`(
@@ -144,10 +201,44 @@ class RoleServiceTest {
         setField(service, "eventRoles", roles)
 
         // Act
-        val result = service.getAuthoritiesByEventRole(role, eventId)
+        val result = service.getAuthoritiesByEventRole(role, eventId, visibility = true)
 
         // Assert
         assertEquals(expectedAuthorities, result)
+    }
+
+    @Test
+    fun `Should getOptionAuthoritiesByEvent return formatted authorities for event option`() {
+        // Arrange
+        val options = listOf(VEHICLE, ACTIVITY)
+
+        // Act
+        val result = service.getOptionAuthoritiesByEvent(eventId, options)
+
+        // Assert
+        assertEquals(2, result.size)
+        assertEquals("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${VEHICLE}", result.first())
+        assertEquals("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${ACTIVITY}", result.last())
+    }
+
+    @Test
+    fun `Should getEventIdsFromCurrentUserProfiles return formatted authorities for event option`() {
+        // Arrange
+        val authorities: MutableList<GrantedAuthority> = mutableListOf(
+            SimpleGrantedAuthority("ROLE_0"),
+            SimpleGrantedAuthority("ROLE_1"),
+            SimpleGrantedAuthority("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${VEHICLE}"),
+            SimpleGrantedAuthority("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${ACTIVITY}"),
+        )
+        val currentUser: CurrentUserModel = mock()
+        whenever(currentUser.authorities).thenReturn(authorities)
+
+        // Act
+        val result = service.getEventIdsFromCurrentUserProfiles(currentUser)
+
+        // Assert
+        assertEquals(1, result.size)
+        assertEquals(eventId, result.first())
     }
 
     @ParameterizedTest

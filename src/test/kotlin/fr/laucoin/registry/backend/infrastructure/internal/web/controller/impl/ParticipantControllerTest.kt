@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_BIRTHDAY_FUTURE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_FIRST_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_FIRST_NAME_TOO_LONG
@@ -14,20 +17,27 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
@@ -36,37 +46,28 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.LocalDate
-import java.time.ZonedDateTime.now
-import java.util.Objects
+import java.time.LocalTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
-import org.springframework.data.domain.Sort.Direction.DESC
-import org.springframework.http.HttpMethod
-import org.springframework.http.HttpMethod.DELETE
-import org.springframework.http.HttpMethod.GET
-import org.springframework.http.HttpMethod.PATCH
-import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -74,19 +75,19 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     @MockitoBean
     private lateinit var service: IParticipantService
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var readerMapper: ParticipantReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var groupReaderMapper: GroupWithoutMemberReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var movementReaderMapper: MovementReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var partialUserReaderMapper: PartialUserReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var writerMapper: ParticipantWriterDtoMapper
 
     companion object {
@@ -94,189 +95,125 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         @JvmStatic
         fun `Should findParticipants return 200`(): Stream<Arguments> = Stream.of(
-            Arguments.of(null, null, null, null, null, null, null, null),
-            Arguments.of(50, null, null, null, null, null, null, null),
-            Arguments.of(null, 25, null, null, null, null, null, null),
-            Arguments.of(null, null, ASC, null, null, null, null, null),
-            Arguments.of(null, null, DESC, null, null, null, null, null),
-            Arguments.of(null, null, null, true, null, null, null, null),
-            Arguments.of(null, null, null, false, null, null, null, null),
-            Arguments.of(null, null, null, null, true, null, null, null),
-            Arguments.of(null, null, null, null, false, null, null, null),
-            Arguments.of(null, null, null, null, null, "searched", null, null),
-            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
-            Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+            Arguments.of("not locale", null, null, null, null, null, null),
+            Arguments.of(null, 0, null, null, null, null, null),
+            Arguments.of(null, null, 200, null, null, null, null),
+            Arguments.of(null, null, null, null, null, null, null),
+            Arguments.of(null, null, null, "text", null, null, null),
+            Arguments.of(null, null, null, null, true, null, null),
+            Arguments.of(null, null, null, null, null, UsableElementStatusEnum.IN, null),
+            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
         )
+
+        @JvmStatic
+        fun `Should findParticipants throw due to wrong params`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(- 1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+                Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
+                Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+            )
+        }
+
+        @JvmStatic
+        fun `Should findParticipantMovements return 200`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(null, null, null, null, null, null),
+                Arguments.of(0, null, null, null, null, null),
+                Arguments.of(null, 200, null, null, null, null),
+                Arguments.of(null, null, null, null, null, null),
+                Arguments.of(null, null, true, null, null, null),
+                Arguments.of(null, null, null, IN, null, null),
+                Arguments.of(null, null, null, null, "2024-11-14T18:34:33.000Z", null),
+                Arguments.of(null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+            )
+        }
+
+        @JvmStatic
+        fun `Should findParticipantMovements throw due to wrong params`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(- 1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+                Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
+                Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+            )
+        }
 
         @JvmStatic
         fun `Wrong ParticipantDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                ParticipantWriterDto(lastName = "DOE", birthday = LocalDate.now()),
+                ParticipantWriterDto(lastName = "DOE", birthday = LocalDate.EPOCH),
                 PARTICIPANT_FIRST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
-                ParticipantWriterDto(firstName = "", lastName = "DOE", birthday = LocalDate.now()),
+                ParticipantWriterDto(firstName = "", lastName = "DOE", birthday = LocalDate.EPOCH),
                 PARTICIPANT_FIRST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(
                     firstName = "azertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiop",
                     lastName = "DOE",
-                    birthday = LocalDate.now()
+                    birthday = LocalDate.EPOCH
                 ),
                 PARTICIPANT_FIRST_NAME_TOO_LONG,
             ),
             Arguments.of(
-                ParticipantWriterDto(firstName = "John", birthday = LocalDate.now()),
+                ParticipantWriterDto(firstName = "John", birthday = LocalDate.EPOCH),
                 PARTICIPANT_LAST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
-                ParticipantWriterDto(firstName = "John", lastName = "", birthday = LocalDate.now()),
+                ParticipantWriterDto(firstName = "John", lastName = "", birthday = LocalDate.EPOCH),
                 PARTICIPANT_LAST_NAME_NULL_OR_BLANK,
             ),
             Arguments.of(
                 ParticipantWriterDto(
                     firstName = "John",
                     lastName = "azertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiop",
-                    birthday = LocalDate.now()
+                    birthday = LocalDate.EPOCH
                 ),
                 PARTICIPANT_LAST_NAME_TOO_LONG,
             ),
             Arguments.of(
-                ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now().plusDays(1)),
+                ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.MAX),
                 PARTICIPANT_BIRTHDAY_FUTURE,
             ),
             Arguments.of(
                 ParticipantWriterDto(
                     firstName = "John",
                     lastName = "DOE",
-                    birthday = LocalDate.now(),
-                    begin = now().plusDays(1),
-                    end = now()
+                    birthday = LocalDate.EPOCH,
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
                 ),
                 PARTICIPANT_START_LATER_THAN_END,
             ),
         )
-
-        @JvmStatic
-        fun `Should findParticipantMovements return 200`(): Stream<Arguments> = Stream.of(
-            Arguments.of(null, null, null, null, null, null, null, null),
-            Arguments.of(50, null, null, null, null, null, null, null),
-            Arguments.of(null, 25, null, null, null, null, null, null),
-            Arguments.of(null, null, ASC, null, null, null, null, null),
-            Arguments.of(null, null, DESC, null, null, null, null, null),
-            Arguments.of(null, null, null, true, null, null, null, null),
-            Arguments.of(null, null, null, false, null, null, null, null),
-            Arguments.of(null, null, null, null, "searched", null, null, null),
-            Arguments.of(null, null, null, null, null, IN, null, null),
-            Arguments.of(null, null, null, null, null, OUT, null, null),
-            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
-            Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
-        )
-
-        @JvmStatic
-        fun `Participant management routes`(): Stream<Arguments> {
-            val uuid = UUID.randomUUID()
-            val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now())
-            return Stream.of(
-                Arguments.of(GET, BASE_URL, listOf(eventId), null),
-                Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
-                Arguments.of(GET, "$BASE_URL/{id}/movements", listOf(eventId, uuid), null),
-                Arguments.of(GET, "$BASE_URL/search/users", listOf(eventId), null),
-                Arguments.of(GET, "$BASE_URL/search/groups", listOf(eventId), null),
-                Arguments.of(POST, BASE_URL, listOf(eventId), participant),
-                Arguments.of(PATCH, "$BASE_URL/{id}", listOf(eventId, uuid), participant),
-                Arguments.of(PATCH, "$BASE_URL/{id}/disable", listOf(eventId, uuid), null),
-                Arguments.of(PATCH, "$BASE_URL/{id}/enable", listOf(eventId, uuid), null),
-                Arguments.of(DELETE, "$BASE_URL/{id}", listOf(eventId, uuid), null),
-            )
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("Participant management routes")
-    fun `Should return 401`(
-        method: HttpMethod, uri: String, params: List<String>, body: Any?
-    ) {
-        // Arrange
-        val request = webClient
-            .method(method)
-            .uri(uriBuilder(uri, params, listOf()))
-
-        if (Objects.nonNull(body)) {
-            request.bodyValue(body !!)
-        }
-
-        // Act
-        val result = request.exchange()
-
-        // Assert
-        result.expectStatus().isUnauthorized
-        verifyNoInteractions(readerMapper)
-        verifyNoInteractions(groupReaderMapper)
-        verifyNoInteractions(partialUserReaderMapper)
-        verifyNoInteractions(writerMapper)
-        verifyNoInteractions(service)
-    }
-
-    @ParameterizedTest
-    @MethodSource("Participant management routes")
-    fun `Should return 403`(
-        method: HttpMethod, uri: String, params: List<String>, body: Any?
-    ) {
-        // Arrange
-        val request = webClient
-            .authenticate()
-            .method(method)
-            .uri(uriBuilder(uri, params, listOf()))
-
-        if (Objects.nonNull(body)) {
-            request.bodyValue(body !!)
-        }
-
-        // Act
-        val result = request.exchange()
-
-        // Assert
-        result.expectStatus().isForbidden
-        verifyNoInteractions(readerMapper)
-        verifyNoInteractions(groupReaderMapper)
-        verifyNoInteractions(partialUserReaderMapper)
-        verifyNoInteractions(writerMapper)
-        verifyNoInteractions(service)
     }
 
     @ParameterizedTest
     @MethodSource
     fun `Should findParticipants return 200`(
-        offset: Int?,
-        limit: Int?,
-        order: Direction?,
-        onlyVisible: Boolean?,
-        onlyPresent: Boolean?,
-        searched: String?,
-        startDateTime: String?,
-        endDateTime: String?,
+        requestedLocale: String?,
+        pageNumber: Int?,
+        pageSize: Int?,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        statusSearched: UsableElementStatusEnum?,
+        dateTimeSearched: String?,
     ) {
         // Arrange
-        val expectedOrder = order ?: ASC
-        val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOnlyPresent = onlyPresent ?: false
-        val expectedOffset = offset ?: 0
-        val expectedLimit = limit ?: 20
-        val expectedSize = 0
-
-        `when`(
-            service.findParticipantsByEventId(
-                any(),
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.empty())
+        val expectedPageNumber = pageNumber ?: 0
+        val expectedPageSize = pageSize ?: 20
+        val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+        val searchParams = ParticipantSearchParamModel(
+            textSearched = textSearched,
+            visibilitySearched = visibilitySearched,
+            statusSearched = statusSearched,
+            dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+        )
+        val page = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
+        whenever(service.findParticipantsPage(any(), any(), any())).thenReturn(Mono.just(page))
+        whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+            PageModel(pageable, totalElements = 1, listOf(ParticipantReaderDto())),
+        )
 
         // Act
         val result = webClient
@@ -287,49 +224,67 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
                     BASE_URL,
                     listOf(eventId),
                     listOf(
-                        Pair("offset", offset),
-                        Pair("limit", limit),
-                        Pair("order", order),
-                        Pair("onlyVisible", onlyVisible),
-                        Pair("onlyPresent", onlyPresent),
-                        Pair("searched", searched),
-                        Pair("startDateTime", startDateTime),
-                        Pair("endDateTime", endDateTime),
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                        Pair("textSearched", textSearched),
+                        Pair("visibilitySearched", visibilitySearched),
+                        Pair("statusSearched", statusSearched),
+                        Pair("dateTimeSearched", dateTimeSearched),
+                    ),
+                )
+            )
+            .header(ACCEPT_LANGUAGE, requestedLocale)
+            .exchange()
+
+        // Assert
+        result.body<PageModel<*>>(OK)
+
+        verify(service).findParticipantsPage(eventId, pageable, searchParams)
+        verify(readerMapper).toDtoPage(page, Locale.ENGLISH)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(movementReaderMapper)
+        verifyNoInteractions(writerMapper)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findParticipants throw due to wrong params`(
+        pageNumber: Int?,
+        pageSize: Int?,
+        expectedMessage: String,
+    ) {
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_R))
+            .get()
+            .uri(
+                uriBuilder(
+                    BASE_URL,
+                    listOf(eventId),
+                    listOf(
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
                     ),
                 )
             )
             .exchange()
 
         // Assert
-        val body = result.body<PageDto<*>>(OK)
+        result.assertError(BAD_REQUEST, expectedMessage)
 
-        assertNotNull(body)
-        body !!.assertPage(
-            expectedTotalElements = expectedSize,
-            expectedOffset = expectedOffset,
-            expectedLimit = expectedLimit,
-        )
-
-        verify(readerMapper, times(1)).toDtoPage(any(), any())
-        verifyNoInteractions(groupReaderMapper)
+        verifyNoInteractions(service)
+        verifyNoInteractions(readerMapper)
         verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).findParticipantsByEventId(
-            eventId = eq(eventId),
-            order = eq(expectedOrder),
-            onlyVisible = eq(expectedOnlyVisible),
-            onlyPresent = eq(expectedOnlyPresent),
-            searched = eq(searched),
-            startDateTime = anyOrNull(),
-            endDateTime = anyOrNull(),
-        )
     }
 
     @Test
     fun `Should findParticipantById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findParticipantById(any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.findParticipantById(any(), any(), anyOrNull())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
@@ -341,45 +296,39 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<ParticipantReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(readerMapper).toDto(any(), any())
+        verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).findParticipantById(eventId, uuid, onlyVisible = false)
+        verify(service).findParticipantById(eventId, uuid, visibilitySearched = null)
     }
 
     @ParameterizedTest
     @MethodSource
     fun `Should findParticipantMovements return 200`(
-        offset: Int?,
-        limit: Int?,
-        order: Direction?,
-        onlyVisible: Boolean?,
-        searched: String?,
-        type: MovementTypeEnum?,
-        startDateTime: String?,
-        endDateTime: String?,
+        pageNumber: Int?,
+        pageSize: Int?,
+        visibilitySearched: Boolean?,
+        typeSearched: MovementTypeEnum?,
+        startDateTimeSearched: String?,
+        endDateTimeSearched: String?,
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
-
-        val expectedOrder = order ?: DESC
-        val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOffset = offset ?: 0
-        val expectedLimit = limit ?: 20
-        val expectedSize = 0
-
-        `when`(
-            service.findParticipantMovements(
-                any(),
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.empty())
+        val expectedPageNumber = pageNumber ?: 0
+        val expectedPageSize = pageSize ?: 20
+        val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+        val searchParams = MovementSearchParamModel(
+            visibilitySearched = visibilitySearched,
+            typeSearched = typeSearched,
+            startDateTimeSearched = startDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+            endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+        )
+        val page = PageModel(pageable, totalElements = 1, listOf(MovementModel()))
+        whenever(service.findParticipantMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
+        whenever(movementReaderMapper.toDtoPage(any(), any())).thenReturn(
+            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto())),
+        )
 
         // Act
         val result = webClient
@@ -390,113 +339,126 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
                     "$BASE_URL/{id}/movements",
                     listOf(eventId, uuid),
                     listOf(
-                        Pair("offset", offset),
-                        Pair("limit", limit),
-                        Pair("order", order),
-                        Pair("onlyVisible", onlyVisible),
-                        Pair("searched", searched),
-                        Pair("type", type),
-                        Pair("startDateTime", startDateTime),
-                        Pair("endDateTime", endDateTime),
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                        Pair("visibilitySearched", visibilitySearched),
+                        Pair("typeSearched", typeSearched),
+                        Pair("startDateTimeSearched", startDateTimeSearched),
+                        Pair("endDateTimeSearched", endDateTimeSearched),
                     ),
                 )
             )
             .exchange()
 
         // Assert
-        val body = result.body<PageDto<*>>(OK)
+        result.body<PageModel<*>>(OK)
 
-        assertNotNull(body)
-        body !!.assertPage(
-            expectedTotalElements = expectedSize,
-            expectedOffset = expectedOffset,
-            expectedLimit = expectedLimit,
-        )
-
-        verify(movementReaderMapper, times(1)).toDtoPage(any(), any())
+        verify(service).findParticipantMovementsPage(eventId, uuid, pageable, searchParams)
+        verify(movementReaderMapper).toDtoPage(page, Locale.ENGLISH)
         verifyNoInteractions(readerMapper)
-        verifyNoInteractions(groupReaderMapper)
-        verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).findParticipantMovements(
-            eventId = eq(eventId),
-            id = eq(uuid),
-            order = eq(expectedOrder),
-            onlyVisible = eq(expectedOnlyVisible),
-            searched = eq(searched),
-            type = eq(type),
-            startDateTime = anyOrNull(),
-            endDateTime = anyOrNull(),
-        )
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(groupReaderMapper)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findParticipantMovements throw due to wrong params`(
+        pageNumber: Int?,
+        pageSize: Int?,
+        expectedMessage: String,
+    ) {
+        // Arrange
+        val uuid = UUID.randomUUID()
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_HISTORY_R))
+            .get()
+            .uri(
+                uriBuilder(
+                    "$BASE_URL/{id}/movements",
+                    listOf(eventId, uuid),
+                    listOf(
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                    ),
+                )
+            )
+            .exchange()
+
+        // Assert
+        result.assertError(BAD_REQUEST, expectedMessage)
+
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(movementReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(service)
+        verifyNoInteractions(partialUserReaderMapper)
+        verifyNoInteractions(groupReaderMapper)
     }
 
     @Test
     fun `Should searchUsers return 200`() {
         // Arrange
-        val testConfigMaxResult = 1
         val searched = "John"
         val user = UserModel()
-        `when`(service.searchUsers(any(), anyOrNull())).thenReturn(Flux.just(user, user))
+        whenever(service.searchUsers(any(), anyOrNull())).thenReturn(Flux.just(user))
+        whenever(partialUserReaderMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
 
         // Act
         val result = webClient
             .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_METADATA_R))
             .get()
             .uri(
-                uriBuilder("$BASE_URL/search/users", listOf(eventId), listOf(Pair("searched", searched)))
+                uriBuilder("$BASE_URL/search/users", listOf(eventId), listOf(Pair("textSearched", searched)))
             )
             .exchange()
 
         // Assert
-        val users = result.body<List<*>>(OK)
+        result.body<List<*>>(OK)
 
+        verify(service).searchUsers(eventId, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(groupReaderMapper)
-        verify(partialUserReaderMapper, times(1)).toDto(any(), any())
+        verify(partialUserReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        assertEquals(testConfigMaxResult, users?.size)
-        verify(service, times(1)).searchUsers(
-            eventId,
-            searched,
-        )
     }
 
     @Test
     fun `Should searchGroups return 200`() {
         // Arrange
-        val testConfigMaxResult = 1
         val searched = "Group"
         val group = GroupModel()
-        `when`(service.searchGroups(any(), anyOrNull())).thenReturn(Flux.just(group, group))
+        whenever(service.searchGroups(any(), anyOrNull())).thenReturn(Flux.just(group))
+        whenever(groupReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
             .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_METADATA_R))
             .get()
             .uri(
-                uriBuilder("$BASE_URL/search/groups", listOf(eventId), listOf(Pair("searched", searched)))
+                uriBuilder("$BASE_URL/search/groups", listOf(eventId), listOf(Pair("textSearched", searched)))
             )
             .exchange()
 
         // Assert
-        val groups = result.body<List<*>>(OK)
+        result.body<List<*>>(OK)
 
+        verify(service).searchGroups(eventId, searched)
         verifyNoInteractions(readerMapper)
-        verify(groupReaderMapper, times(1)).toDto(any(), any())
+        verify(groupReaderMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        assertEquals(testConfigMaxResult, groups?.size)
-        verify(service, times(1)).searchGroups(
-            eventId,
-            searched,
-        )
     }
 
     @Test
     fun `Should createParticipant return 200`() {
         // Arrange
-        val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now())
-        `when`(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
+        whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
+        whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
@@ -509,10 +471,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<ParticipantReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
-        verify(writerMapper, times(1)).toModel(participant, eventId)
-        verify(service, times(1)).createParticipant(any(), any())
+        verify(writerMapper).toModel(participant, eventId)
+        verify(service).createParticipant(any(), any())
     }
 
     @Test
@@ -521,11 +483,13 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         val participant = ParticipantWriterDto(
             firstName = "John",
             lastName = "DOE",
-            birthday = LocalDate.now(),
+            birthday = LocalDate.EPOCH,
             userId = UUID.randomUUID(),
             groupIds = listOf(UUID.randomUUID(), UUID.randomUUID())
         )
-        `when`(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
+        whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
@@ -538,10 +502,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<ParticipantReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
-        verify(writerMapper, times(1)).toModel(participant, eventId)
-        verify(service, times(1)).createParticipant(any(), any())
+        verify(writerMapper).toModel(participant, eventId)
+        verify(service).createParticipant(any(), any())
     }
 
     @ParameterizedTest
@@ -550,7 +514,6 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         participant: ParticipantWriterDto,
         expectedCode: String,
     ) {
-        // Arrange
         // Act
         val result = webClient
             .authenticate()
@@ -574,9 +537,11 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     fun `Should updateEventProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.now())
+        val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
 
-        `when`(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
+        whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
@@ -589,10 +554,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<ParticipantReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
-        verify(writerMapper, times(1)).toModel(participant, eventId)
-        verify(service, times(1)).updateParticipantById(any(), eq(eventId), eq(uuid), any())
+        verify(writerMapper).toModel(participant, eventId)
+        verify(service).updateParticipantById(any(), eq(eventId), eq(uuid), any())
     }
 
     @ParameterizedTest
@@ -627,7 +592,8 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.disableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.disableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
@@ -639,10 +605,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<ParticipantReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).disableParticipantById(any(), eq(eventId), eq(uuid))
+        verify(service).disableParticipantById(any(), eq(eventId), eq(uuid))
     }
 
     @Test
@@ -650,7 +616,8 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.enableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.enableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
@@ -662,10 +629,10 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<ParticipantReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).enableParticipantById(any(), eq(eventId), eq(uuid))
+        verify(service).enableParticipantById(any(), eq(eventId), eq(uuid))
     }
 
     @Test
@@ -673,7 +640,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.deleteParticipantById(any(), any(), any())).thenReturn(Mono.empty())
+        whenever(service.deleteParticipantById(any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
@@ -689,6 +656,6 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verifyNoInteractions(groupReaderMapper)
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).deleteParticipantById(any(), eq(eventId), eq(uuid))
+        verify(service).deleteParticipantById(any(), eq(eventId), eq(uuid))
     }
 }

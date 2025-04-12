@@ -1,0 +1,60 @@
+package fr.laucoin.registry.backend.infrastructure.internal.web.controller
+
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
+import io.swagger.v3.oas.annotations.tags.Tag
+import java.util.Locale
+import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
+import reactor.core.publisher.Flux
+
+@Tag(name = "Metadata", description = "API for global metadata")
+@RequestMapping("/api/metadata")
+interface IMetadataController {
+
+    @Operation(
+        summary = "Get usable element's status",
+        description = "Get all usable element's status",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @GetMapping("/presences/status")
+    fun getUsableElementStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+
+    @Operation(
+        summary = "Get profile's status",
+        description = "Get all profile's status",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @GetMapping("/profiles/status")
+    fun getEventProfileStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+
+    @Operation(
+        summary = "Get available Movement Type",
+        description = "Get all movement type you are allowed to assign",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @GetMapping("/movements/types")
+    fun getMovementTypes(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+}

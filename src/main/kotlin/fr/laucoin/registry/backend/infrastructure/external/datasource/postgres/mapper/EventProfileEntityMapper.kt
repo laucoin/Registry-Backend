@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
@@ -16,8 +17,10 @@ class EventProfileEntityMapper: IEntityMapper<EventProfileModel, EventProfileEnt
             user = mapUserEntity(entity)
             role = entity.role
             status = entity.status
-            startAccess = entity.startAccess
-            endAccess = entity.endAccess
+            startAccess = if (Objects.isNull(entity.startAccessDate)) null
+            else CustomDateTimeModel(entity.startAccessDate !!, entity.startAccessTime)
+            endAccess = if (Objects.isNull(entity.endAccessDate)) null
+            else CustomDateTimeModel(entity.endAccessDate !!, entity.endAccessTime)
         }.fillWithEventAndEntity(entity)
     }
 
@@ -38,8 +41,10 @@ class EventProfileEntityMapper: IEntityMapper<EventProfileModel, EventProfileEnt
             userId = model.user?.id
             role = model.role
             status = model.status
-            startAccess = model.startAccess
-            endAccess = model.endAccess
+            startAccessDate = model.startAccess?.date
+            startAccessTime = model.startAccess?.time
+            endAccessDate = model.endAccess?.date
+            endAccessTime = model.endAccess?.time
         }.fillWithEventAndModel(model)
     }
 }

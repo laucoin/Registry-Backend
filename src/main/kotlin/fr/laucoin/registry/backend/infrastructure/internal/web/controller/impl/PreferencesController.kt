@@ -15,4 +15,8 @@ class PreferencesController(
     override fun updateSelectedEventProfile(currentUser: CurrentUserModel, profileId: UUID): Mono<PreferencesModel> {
         return service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId)
     }
+
+    override fun updateSelectedEventProfileWithEventId(currentUser: CurrentUserModel, eventId: UUID): Mono<PreferencesModel> {
+        return service.updateUserPreferenceSelectedEventProfileByEventId(currentUser, eventId)
+    }
 }

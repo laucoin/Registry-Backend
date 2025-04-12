@@ -15,7 +15,6 @@ class EventReaderDtoMapper(
 ): IGenericReaderDtoMapper<EventModel, EventReaderDto> {
     override fun toDto(model: EventModel, locale: Locale): EventReaderDto {
         return EventReaderDto(
-            id = model.id,
             name = model.name,
             begin = model.begin,
             end = model.end,
@@ -25,9 +24,11 @@ class EventReaderDtoMapper(
                     translateService.getMessage("$EVENT_OPTION_NAME_PREFIX$it", null, locale)
                 )
             },
-            visible = model.visible,
-            creation = model.creation,
-            lastEdition = model.lastEdition,
-        )
+        ).apply {
+            id = model.id
+            visible = model.visible
+            creation = model.creation
+            lastEdition = model.lastEdition
+        }
     }
 }

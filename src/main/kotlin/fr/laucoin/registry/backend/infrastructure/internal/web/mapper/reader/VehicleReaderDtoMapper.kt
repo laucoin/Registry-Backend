@@ -1,26 +1,37 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
+import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USABLE_ELEMENT_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.model.VehicleModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import java.util.Locale
 import java.util.Objects
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
 
 @Component
-class VehicleReaderDtoMapper(private val eventMapper: EventReaderDtoMapper):
-    IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
+class VehicleReaderDtoMapper(
+    @Qualifier("messagesSource") private val translateService: MessageSource,
+    private val eventMapper: EventReaderDtoMapper,
+): IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
     override fun toDto(model: VehicleModel, locale: Locale): VehicleReaderDto {
         return VehicleReaderDto(
-            id = model.id,
-            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null,
-            registration = model.registration,
+            licensePlate = model.licensePlate,
             brand = model.brand,
             model = model.model,
-            begin = model.begin,
-            end = model.end,
-            visible = model.visible,
-            creation = model.creation,
-            lastEdition = model.lastEdition,
-        )
+            status = if (Objects.nonNull(model.status)) LabelDto(
+                model.status !!.name,
+                translateService.getMessage("$USABLE_ELEMENT_STATUS_PREFIX${model.status}", null, locale),
+            ) else null,
+            startAvailability = model.startAvailability,
+            endAvailability = model.endAvailability,
+        ).apply {
+            id = model.id
+            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
+            visible = model.visible
+            creation = model.creation
+            lastEdition = model.lastEdition
+        }
     }
 }

@@ -1,20 +1,25 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.UserReaderDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import java.util.Locale
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -46,12 +51,14 @@ interface IUserController {
     @GetMapping
     fun findUsers(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @RequestParam(defaultValue = "0") offset: Int,
-        @RequestParam(defaultValue = "20") limit: Int,
-        @RequestParam(defaultValue = "ASC") order: Direction,
-        @RequestParam(defaultValue = "true") onlyVisible: Boolean,
-        @RequestParam(required = false) searched: String?,
-    ): Mono<PageDto<UserReaderDto>>
+        @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
+        @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+            200,
+            message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+        ) pageSize: Int,
+        @RequestParam(required = false) textSearched: String?,
+        @RequestParam(required = false) visibilitySearched: Boolean?,
+    ): Mono<PageModel<UserReaderDto>>
 
     @Operation(
         summary = "Find User",

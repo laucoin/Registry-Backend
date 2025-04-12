@@ -1,139 +1,235 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleEntity
+import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
+import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.VehicleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IVehicleEntityRepository
 import fr.laucoin.registry.backend.test.ModelExt.eventId
-import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
+import fr.laucoin.registry.backend.test.ModelExt.vehicleId
+import fr.laucoin.registry.backend.test.TestContext
+import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
 import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.MethodOrderer
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
+import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
-class VehicleModelPostgresRepositoryTest {
-    private val repository: IVehicleEntityRepository = mock()
-    private val mapper: VehicleEntityMapper = spy(VehicleEntityMapper())
-    private val modelRepository: VehicleModelPostgresRepository = VehicleModelPostgresRepository(repository, mapper)
+class VehicleModelPostgresRepositoryTest(
+    @Autowired private val repository: IVehicleModelRepository
+): TestContext() {
+    @MockitoSpyBean
+    private lateinit var postgresRepository: IVehicleEntityRepository
+
+    @MockitoSpyBean
+    private lateinit var mapper: VehicleEntityMapper
 
     companion object {
         @JvmStatic
-        fun `Should findAll call repository findAll`(): Stream<Arguments> = Stream.of(
-            Arguments.of(true, true, null, null),
-            Arguments.of(true, true, now(), null),
-            Arguments.of(true, true, null, now()),
-            Arguments.of(true, true, now(), now()),
-        )
+        fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    listOf(UUID.randomUUID(), UUID.randomUUID()),
+                    1,
+                ),
+                Arguments.of(
+                    emptyList<UUID>(),
+                    0,
+                ),
+            )
+        }
+    }
 
-        @JvmStatic
-        fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> = Stream.of(
-            Arguments.of(emptyList<UUID>(), 0),
-            Arguments.of(listOf(UUID.randomUUID()), 1),
+    @Test
+    fun `Should findPage call repository count and findPage`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = VehicleSearchParamModel()
+
+        // Act
+        val result = repository.findPage(eventId, pageable, params).block()
+
+        // Assert
+        assertNotNull(result)
+        assertEquals(0, result.pageNumber)
+        assertEquals(10, result.pageSize)
+        assertEquals(5, result.totalElements)
+        assertEquals(1, result.totalPages)
+        verify(postgresRepository).findAll(
+            eventId,
+            textSearched = null,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            presenceSearched = null,
+            dateTimeSearched = null,
+            pageable.limit,
+            pageable.offset,
         )
+        verify(postgresRepository).countAll(
+            eventId,
+            textSearched = null,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            presenceSearched = null,
+            dateTimeSearched = null,
+        )
+        verify(mapper, times(5)).toModel(any())
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should findAll call repository findAll`(
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
+    fun `Should findAllByIds call repository findAllByIds`(
+        ids: List<UUID>,
+        expectedDatabaseCall: Int,
     ) {
-        // Arrange
-        val vehicle = VehicleEntity()
-        `when`(repository.findAll(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(vehicle))
-
         // Act
-        modelRepository.findAll(eventId, onlyVisible, onlyPresent, startDateTime, endDateTime).blockFirst()
+        val result = repository.findAllByIds(eventId, ids, visibilitySearched = null).collectList().block()
 
         // Assert
-        verify(repository, times(1)).findAll(eventId, onlyVisible, onlyPresent, startDateTime, endDateTime)
-        verify(mapper, times(1)).toModel(vehicle)
+        assertNotNull(result)
+        verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
+            eventId,
+            ids,
+            visibilitySearched = null,
+        )
+        verify(mapper, never()).toModel(any())
     }
 
-    @ParameterizedTest
-    @MethodSource
-    fun `Should findAllByIds call repository findAllByIds`(ids: List<UUID>, expectedCall: Int) {
+    @Test
+    fun `Should findWithLimit call repository findWithLimit`() {
         // Arrange
-        val onlyVisible = true
-        `when`(repository.findAllByIds(any(), any(), any())).thenReturn(Flux.empty())
+        val size = 10
+        val params = VehicleSearchParamModel()
 
         // Act
-        modelRepository.findAllByIds(eventId, ids, onlyVisible).blockFirst()
+        val result = repository.findWithLimit(size, eventId, params).collectList().block()
 
         // Assert
-        verify(repository, times(expectedCall)).findAllByIds(eventId, ids, onlyVisible)
+        assertNotNull(result)
+        assertEquals(5, result.size)
+        verify(postgresRepository).findWithLimit(
+            eventId,
+            textSearched = null,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            presenceSearched = null,
+            dateTimeSearched = null,
+            size,
+        )
+        verify(mapper, times(5)).toModel(any())
     }
 
     @Test
     fun `Should findById call repository findById`() {
-        // Arrange
-        val vehicle = VehicleEntity()
-        val uuid = UUID.randomUUID()
-        val onlyVisible = true
-        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(vehicle))
-
         // Act
-        modelRepository.findById(eventId, uuid, onlyVisible).block()
+        val result = repository.findById(eventId, vehicleId, visibilitySearched = null).block()
 
         // Assert
-        verify(repository, times(1)).findById(eventId, uuid, onlyVisible)
-        verify(mapper, times(1)).toModel(vehicle)
+        assertNotNull(result)
+        verify(postgresRepository).findById(
+            eventId,
+            vehicleId,
+            visibilitySearched = null,
+        )
+        verify(mapper).toModel(any())
     }
 
     @Test
-    fun `Should create call repository save`() {
-        // Arrange
-        val vehicle = VehicleModel()
-        val vehicleEntity = VehicleEntity()
-        `when`(repository.save(any())).thenReturn(Mono.just(vehicleEntity))
-
-        // Act
-        modelRepository.create(vehicle).block()
-
-        // Assert
-        verify(repository, times(1)).save(any())
-        verify(mapper, times(1)).toEntity(vehicle)
-    }
-
-    @Test
-    fun `Should update call repository save`() {
-        // Arrange
-        val vehicle = VehicleModel()
-        val vehicleEntity = VehicleEntity()
-        `when`(repository.save(any())).thenReturn(Mono.just(vehicleEntity))
-
-        // Act
-        modelRepository.update(vehicle).block()
-
-        // Assert
-        verify(repository, times(1)).save(any())
-        verify(mapper, times(1)).toEntity(vehicle)
-    }
-
-    @Test
-    fun `Should deleteById call repository deleteById`() {
+    fun `Should findById call repository findById and return null`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(repository.deleteById(any<UUID>())).thenReturn(Mono.empty())
 
         // Act
-        modelRepository.deleteById(uuid).block()
+        val result = repository.findById(eventId, uuid, visibilitySearched = null).block()
 
         // Assert
-        verify(repository, times(1)).deleteById(uuid)
+        assertNull(result)
+        verify(postgresRepository).findById(
+            eventId,
+            uuid,
+            visibilitySearched = null,
+        )
+        verify(mapper, never()).toModel(any())
+    }
+
+    @Nested
+    @TestInstance(PER_CLASS)
+    @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+    inner class WritingTests {
+        private lateinit var uuid: UUID
+
+        @Test
+        @Order(1)
+        fun `Should create call repository save`() {
+            // Arrange
+            val vehicle = VehicleModel().apply {
+                licensePlate = "AB-123-CD"
+                brand = "test"
+                model = "test"
+                event = EventModel().apply { id = eventId }
+                create(currentUser())
+            }
+
+            // Act
+            val result = repository.create(vehicle).block()
+            uuid = result !!.id !!
+
+            // Assert
+            assertNotNull(result)
+            verify(postgresRepository).save(any())
+            verify(mapper).toEntity(any())
+            verify(mapper).toModel(any())
+        }
+
+        @Test
+        @Order(2)
+        fun `Should update call repository save`() {
+            // Arrange
+            val vehicle = VehicleModel().apply {
+                id = uuid
+                licensePlate = "AB-123-CD"
+                brand = "test update"
+                model = "test update"
+                event = EventModel().apply { id = eventId }
+                create(currentUser())
+            }
+
+            // Act
+            val result = repository.update(vehicle).block()
+
+            // Assert
+            assertNotNull(result)
+            verify(postgresRepository).save(any())
+            verify(mapper).toEntity(any())
+            verify(mapper).toModel(any())
+        }
+
+        @Test
+        @Order(3)
+        fun `Should deleteById call repository deleteById`() {
+            // Act
+            repository.deleteById(uuid).block()
+
+            // Assert
+            verify(postgresRepository).deleteById(uuid)
+        }
     }
 }

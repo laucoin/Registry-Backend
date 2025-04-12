@@ -9,8 +9,8 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_BRAND
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_MODEL
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_REGISTRATION
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.data.annotation.Id
@@ -44,8 +44,8 @@ data class MovementContentEntity(
     @Column(MOVEMENT_CONTENT_VEHICLE_ID)
     var vehicleId: UUID? = null,
     @ReadOnlyProperty
-    @Column(MOVEMENT_CONTENT_VEHICLE_REGISTRATION)
-    var vehicleRegistration: String? = null,
+    @Column(MOVEMENT_CONTENT_VEHICLE_LICENSE_PLATE)
+    var vehicleLicensePlate: String? = null,
     @ReadOnlyProperty
     @Column(MOVEMENT_CONTENT_VEHICLE_BRAND)
     var vehicleBrand: String? = null,

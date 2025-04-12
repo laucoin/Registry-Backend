@@ -4,22 +4,32 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_START_LATER_THAN_END
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_D
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_U
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IGroupService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.AddedGroupMembersReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.GroupWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.AddedGroupMembersReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.GroupWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
@@ -27,38 +37,29 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime.now
-import java.util.Objects
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.stream.Stream
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
-import org.springframework.data.domain.Sort.Direction.DESC
-import org.springframework.http.HttpMethod
-import org.springframework.http.HttpMethod.DELETE
-import org.springframework.http.HttpMethod.GET
-import org.springframework.http.HttpMethod.PATCH
-import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -66,33 +67,62 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
     @MockitoBean
     private lateinit var service: IGroupService
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var readerMapper: GroupReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var participantReaderMapper: ParticipantReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
+    private lateinit var addedGroupMembersReaderMapper: AddedGroupMembersReaderDtoMapper
+
+    @MockitoBean
     private lateinit var writerMapper: GroupWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/groups"
 
         @JvmStatic
-        fun `Should findPage return 200`(): Stream<Arguments> = Stream.of(
-            Arguments.of(null, null, null, null, null, null, null, null),
-            Arguments.of(50, null, null, null, null, null, null, null),
-            Arguments.of(null, 25, null, null, null, null, null, null),
-            Arguments.of(null, null, ASC, null, null, null, null, null),
-            Arguments.of(null, null, DESC, null, null, null, null, null),
-            Arguments.of(null, null, null, true, null, null, null, null),
-            Arguments.of(null, null, null, false, null, null, null, null),
-            Arguments.of(null, null, null, null, true, null, null, null),
-            Arguments.of(null, null, null, null, false, null, null, null),
-            Arguments.of(null, null, null, null, null, "searched", null, null),
-            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
-            Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+        fun `Should findGroups return 200`(): Stream<Arguments> = Stream.of(
+            Arguments.of("not locale", null, null, null, null, null, null),
+            Arguments.of(null, 0, null, null, null, null, null),
+            Arguments.of(null, null, 200, null, null, null, null),
+            Arguments.of(null, null, null, null, null, null, null),
+            Arguments.of(null, null, null, "text", null, null, null),
+            Arguments.of(null, null, null, null, true, null, null),
+            Arguments.of(null, null, null, null, null, true, null),
+            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
         )
+
+        @JvmStatic
+        fun `Should findGroups throw due to wrong params`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(- 1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+                Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
+                Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+            )
+        }
+
+        @JvmStatic
+        fun `Should findGroupMembersByGroupId return 200`(): Stream<Arguments> = Stream.of(
+            Arguments.of("not locale", null, null, null, null, null, null),
+            Arguments.of(null, 0, null, null, null, null, null),
+            Arguments.of(null, null, 200, null, null, null, null),
+            Arguments.of(null, null, null, null, null, null, null),
+            Arguments.of(null, null, null, "text", null, null, null),
+            Arguments.of(null, null, null, null, true, null, null),
+            Arguments.of(null, null, null, null, null, IN, null),
+            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+        )
+
+        @JvmStatic
+        fun `Should findGroupMembersByGroupId throw due to wrong params`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(- 1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+                Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
+                Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+            )
+        }
 
         @JvmStatic
         fun `Wrong GroupDto`(): Stream<Arguments> = Stream.of(
@@ -111,8 +141,8 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
             Arguments.of(
                 GroupWriterDto(
                     name = "name",
-                    begin = now().plusDays(1),
-                    end = now(),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
                     members = listOf(UUID.randomUUID())
                 ),
                 GROUP_START_LATER_THAN_END,
@@ -126,109 +156,34 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
                 GROUP_MEMBERS_EMPTY,
             ),
         )
-
-        @JvmStatic
-        fun `Group management routes`(): Stream<Arguments> {
-            val uuid = UUID.randomUUID()
-            val group = GroupWriterDto(name = "name", members = listOf(UUID.randomUUID()))
-            return Stream.of(
-                Arguments.of(GET, BASE_URL, listOf(eventId), null),
-                Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
-                Arguments.of(GET, "$BASE_URL/{id}/members", listOf(eventId, uuid), null),
-                Arguments.of(GET, "$BASE_URL/search/participants", listOf(eventId), null),
-                Arguments.of(POST, BASE_URL, listOf(eventId), group),
-                Arguments.of(PATCH, "$BASE_URL/{id}", listOf(eventId, uuid), group),
-                Arguments.of(PATCH, "$BASE_URL/{id}/members", listOf(eventId, uuid), listOf(uuid)),
-                Arguments.of(PATCH, "$BASE_URL/{id}/disable", listOf(eventId, uuid), null),
-                Arguments.of(PATCH, "$BASE_URL/{id}/enable", listOf(eventId, uuid), null),
-                Arguments.of(DELETE, "$BASE_URL/{id}", listOf(eventId, uuid), null),
-                Arguments.of(DELETE, "$BASE_URL/{id}/members/{memberId}", listOf(eventId, uuid, uuid), null),
-            )
-        }
     }
 
     @ParameterizedTest
-    @MethodSource("Group management routes")
-    fun `Should return 401`(
-        method: HttpMethod, uri: String, params: List<String>, body: Any?
-    ) {
-        // Arrange
-        val request = webClient
-            .method(method)
-            .uri(uriBuilder(uri, params, listOf()))
-
-        if (Objects.nonNull(body)) {
-            request.bodyValue(body !!)
-        }
-
-        // Act
-        val result = request.exchange()
-
-        // Assert
-        result.expectStatus().isUnauthorized
-        verifyNoInteractions(readerMapper)
-        verifyNoInteractions(participantReaderMapper)
-        verifyNoInteractions(writerMapper)
-        verifyNoInteractions(service)
-    }
-
-    @ParameterizedTest
-    @MethodSource("Group management routes")
-    fun `Should return 403`(
-        method: HttpMethod, uri: String, params: List<String>, body: Any?
-    ) {
-        // Arrange
-        val request = webClient
-            .authenticate()
-            .method(method)
-            .uri(uriBuilder(uri, params, listOf()))
-
-        if (Objects.nonNull(body)) {
-            request.bodyValue(body !!)
-        }
-
-        // Act
-        val result = request.exchange()
-
-        // Assert
-        result.expectStatus().isForbidden
-        verifyNoInteractions(readerMapper)
-        verifyNoInteractions(participantReaderMapper)
-        verifyNoInteractions(writerMapper)
-        verifyNoInteractions(service)
-    }
-
-    @ParameterizedTest
-    @MethodSource("Should findPage return 200")
+    @MethodSource
     fun `Should findGroups return 200`(
-        offset: Int?,
-        limit: Int?,
-        order: Direction?,
-        onlyVisible: Boolean?,
-        onlyPresent: Boolean?,
-        searched: String?,
-        startDateTime: String?,
-        endDateTime: String?,
+        requestedLocale: String?,
+        pageNumber: Int?,
+        pageSize: Int?,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        presenceSearched: Boolean?,
+        dateTimeSearched: String?,
     ) {
         // Arrange
-        val expectedOrder = order ?: DESC
-        val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOnlyPresent = onlyPresent ?: false
-        val expectedOffset = offset ?: 0
-        val expectedLimit = limit ?: 20
-        val expectedSize = 1
-
-        `when`(
-            service.findGroups(
-                any(),
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.just(GroupModel()))
+        val expectedPageNumber = pageNumber ?: 0
+        val expectedPageSize = pageSize ?: 20
+        val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+        val searchParams = GroupSearchParamModel(
+            textSearched = textSearched,
+            visibilitySearched = visibilitySearched,
+            presenceSearched = presenceSearched,
+            dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+        )
+        val page = PageModel(pageable, totalElements = 1, listOf(GroupModel()))
+        whenever(service.findGroupsPage(any(), any(), any())).thenReturn(Mono.just(page))
+        whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+            PageModel(pageable, totalElements = 1, listOf(GroupReaderDto())),
+        )
 
         // Act
         val result = webClient
@@ -239,75 +194,109 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
                     BASE_URL,
                     listOf(eventId),
                     listOf(
-                        Pair("offset", offset),
-                        Pair("limit", limit),
-                        Pair("order", order),
-                        Pair("onlyVisible", onlyVisible),
-                        Pair("onlyPresent", onlyPresent),
-                        Pair("searched", searched),
-                        Pair("startDateTime", startDateTime),
-                        Pair("endDateTime", endDateTime),
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                        Pair("textSearched", textSearched),
+                        Pair("visibilitySearched", visibilitySearched),
+                        Pair("presenceSearched", presenceSearched),
+                        Pair("dateTimeSearched", dateTimeSearched),
+                    ),
+                )
+            )
+            .header(ACCEPT_LANGUAGE, requestedLocale)
+            .exchange()
+
+        // Assert
+        result.body<PageModel<*>>(OK)
+
+        verify(service).findGroupsPage(eventId, pageable, searchParams)
+        verify(readerMapper).toDtoPage(any(), any())
+        verifyNoInteractions(participantReaderMapper)
+        verifyNoInteractions(writerMapper)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findGroups throw due to wrong params`(
+        pageNumber: Int?,
+        pageSize: Int?,
+        expectedMessage: String,
+    ) {
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .get()
+            .uri(
+                uriBuilder(
+                    BASE_URL,
+                    listOf(eventId),
+                    listOf(
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
                     ),
                 )
             )
             .exchange()
 
         // Assert
-        val body = result.body<PageDto<*>>(OK)
+        result.assertError(BAD_REQUEST, expectedMessage)
 
-        assertNotNull(body)
-        body !!.assertPage(
-            expectedTotalElements = expectedSize,
-            expectedOffset = expectedOffset,
-            expectedLimit = expectedLimit,
-        )
-
-        verify(readerMapper, times(1)).toDtoPage(any(), any())
+        verifyNoInteractions(service)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(participantReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).findGroups(
-            eventId = eq(eventId),
-            order = eq(expectedOrder),
-            onlyVisible = eq(expectedOnlyVisible),
-            onlyPresent = eq(expectedOnlyPresent),
-            searched = eq(searched),
-            startDateTime = anyOrNull(),
-            endDateTime = anyOrNull(),
-        )
+    }
+
+    @Test
+    fun `Should findGroupMembers return 200`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        whenever(service.findGroupsMembers(any(), any())).thenReturn(Flux.just(Pair(uuid, listOf(ParticipantModel()))))
+        whenever(participantReaderMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .get()
+            .uri(uriBuilder("$BASE_URL/members", listOf(eventId), listOf(Pair("groupIds", uuid))))
+            .exchange()
+
+        // Assert
+        result.body<List<*>>(OK)
+
+        verify(service).findGroupsMembers(eventId, listOf(uuid))
+        verifyNoInteractions(readerMapper)
+        verify(participantReaderMapper).toDto(any(), any())
+        verifyNoInteractions(writerMapper)
     }
 
     @ParameterizedTest
-    @MethodSource("Should findPage return 200")
+    @MethodSource
     fun `Should findGroupMembersByGroupId return 200`(
-        offset: Int?,
-        limit: Int?,
-        order: Direction?,
-        onlyVisible: Boolean?,
-        onlyPresent: Boolean?,
-        searched: String?,
-        startDateTime: String?,
-        endDateTime: String?,
+        requestedLocale: String?,
+        pageNumber: Int?,
+        pageSize: Int?,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        statusSearched: UsableElementStatusEnum?,
+        dateTimeSearched: String?,
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
-        val expectedOrder = order ?: DESC
-        val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOnlyPresent = onlyPresent ?: false
-        val expectedOffset = offset ?: 0
-        val expectedLimit = limit ?: 20
-        val expectedSize = 1
-
-        `when`(
-            service.findGroupMembersByGroupId(
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.just(ParticipantModel()))
+        val expectedPageNumber = pageNumber ?: 0
+        val expectedPageSize = pageSize ?: 20
+        val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+        val searchParams = ParticipantSearchParamModel(
+            textSearched = textSearched,
+            visibilitySearched = visibilitySearched,
+            statusSearched = statusSearched,
+            dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+        )
+        val page = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
+        whenever(service.findGroupMembersPageByGroupId(any(), any(), any(), any())).thenReturn(Mono.just(page))
+        whenever(participantReaderMapper.toDtoPage(any(), any())).thenReturn(
+            PageModel(pageable, totalElements = 1, listOf(ParticipantReaderDto())),
+        )
 
         // Act
         val result = webClient
@@ -318,49 +307,68 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
                     "$BASE_URL/{id}/members",
                     listOf(eventId, uuid),
                     listOf(
-                        Pair("offset", offset),
-                        Pair("limit", limit),
-                        Pair("order", order),
-                        Pair("onlyVisible", onlyVisible),
-                        Pair("onlyPresent", onlyPresent),
-                        Pair("searched", searched),
-                        Pair("startDateTime", startDateTime),
-                        Pair("endDateTime", endDateTime),
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                        Pair("textSearched", textSearched),
+                        Pair("visibilitySearched", visibilitySearched),
+                        Pair("statusSearched", statusSearched),
+                        Pair("dateTimeSearched", dateTimeSearched),
+                    ),
+                )
+            )
+            .header(ACCEPT_LANGUAGE, requestedLocale)
+            .exchange()
+
+        // Assert
+        result.body<PageModel<*>>(OK)
+
+        verify(service).findGroupMembersPageByGroupId(eventId, uuid, pageable, searchParams)
+        verifyNoInteractions(readerMapper)
+        verify(participantReaderMapper).toDtoPage(any(), any())
+        verifyNoInteractions(writerMapper)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findGroupMembersByGroupId throw due to wrong params`(
+        pageNumber: Int?,
+        pageSize: Int?,
+        expectedMessage: String,
+    ) {
+        // Arrange
+        val uuid = UUID.randomUUID()
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .get()
+            .uri(
+                uriBuilder(
+                    "$BASE_URL/{id}/members",
+                    listOf(eventId, uuid),
+                    listOf(
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
                     ),
                 )
             )
             .exchange()
 
         // Assert
-        val body = result.body<PageDto<*>>(OK)
+        result.assertError(BAD_REQUEST, expectedMessage)
 
-        assertNotNull(body)
-        body !!.assertPage(
-            expectedTotalElements = expectedSize,
-            expectedOffset = expectedOffset,
-            expectedLimit = expectedLimit,
-        )
-
+        verifyNoInteractions(service)
         verifyNoInteractions(readerMapper)
-        verify(participantReaderMapper, times(1)).toDtoPage(any(), any())
+        verifyNoInteractions(participantReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).findGroupMembersByGroupId(
-            eventId = eq(eventId),
-            id = eq(uuid),
-            order = eq(expectedOrder),
-            onlyVisible = eq(expectedOnlyVisible),
-            onlyPresent = eq(expectedOnlyPresent),
-            searched = eq(searched),
-            startDateTime = anyOrNull(),
-            endDateTime = anyOrNull(),
-        )
     }
 
     @Test
     fun `Should findGroupById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findGroupById(any(), any(), any())).thenReturn(Mono.just(GroupModel()))
+        whenever(service.findGroupById(any(), any(), anyOrNull())).thenReturn(Mono.just(GroupModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -371,38 +379,36 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<GroupReaderDto>(OK)
-        verify(readerMapper, times(1)).toDto(any(), any())
+
+        verify(service).findGroupById(eventId, uuid, visibilitySearched = null)
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).findGroupById(eventId, uuid, onlyVisible = false)
     }
 
     @Test
     fun `Should searchParticipants return 200`() {
         // Arrange
-        val testConfigMaxResult = 1
         val searched = "John"
         val participant = ParticipantModel()
-        `when`(service.searchParticipants(any(), anyOrNull())).thenReturn(Flux.just(participant, participant))
+        whenever(service.searchParticipants(any(), anyOrNull())).thenReturn(Flux.just(participant))
+        whenever(participantReaderMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
             .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_METADATA_R))
             .get()
             .uri(
-                uriBuilder("${BASE_URL}/search/participants", listOf(eventId), listOf(Pair("searched", searched)))
+                uriBuilder("${BASE_URL}/search/participants", listOf(eventId), listOf(Pair("textSearched", searched)))
             )
             .exchange()
 
         // Assert
-        val participants = result.body<List<*>>(OK)
-        assertEquals(testConfigMaxResult, participants?.size)
+        result.body<List<*>>(OK)
+
+        verify(service).searchParticipants(eventId, searched)
         verifyNoInteractions(readerMapper)
-        verify(participantReaderMapper, times(1)).toDto(any(), any())
+        verify(participantReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).searchParticipants(
-            eventId,
-            searched,
-        )
     }
 
     @Test
@@ -410,7 +416,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val uuid = UUID.randomUUID()
         val group = GroupWriterDto(name = "name", members = listOf(uuid))
-        `when`(service.createGroup(any(), any())).thenReturn(Mono.just(GroupModel()))
+        whenever(service.createGroup(any(), any())).thenReturn(Mono.just(GroupModel()))
+        whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
+        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -422,9 +430,11 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<GroupReaderDto>(OK)
-        verify(readerMapper, times(1)).toDto(any(), any())
-        verify(writerMapper, times(1)).toModel(any(), eq(eventId))
-        verify(service, times(1)).createGroup(any(), any())
+
+        verify(service).createGroup(any(), any())
+        verify(readerMapper).toDto(any(), any())
+        verifyNoInteractions(participantReaderMapper)
+        verify(writerMapper).toModel(any(), eq(eventId))
     }
 
     @ParameterizedTest
@@ -433,7 +443,6 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         group: GroupWriterDto,
         expectedCode: String,
     ) {
-        // Arrange
         // Act
         val result = webClient
             .authenticate()
@@ -444,6 +453,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.assertError(BAD_REQUEST, expectedCode)
+
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(participantReaderMapper)
         verifyNoInteractions(writerMapper)
@@ -456,7 +466,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val uuid = UUID.randomUUID()
         val group = GroupWriterDto(name = "name", members = listOf(uuid))
 
-        `when`(service.updateGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
+        whenever(service.updateGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
+        whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
+        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -468,9 +480,11 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<GroupReaderDto>(OK)
-        verify(readerMapper, times(1)).toDto(any(), any())
-        verify(writerMapper, times(1)).toModel(any(), eq(eventId))
-        verify(service, times(1)).updateGroupById(any(), eq(eventId), eq(uuid), any())
+
+        verify(readerMapper).toDto(any(), any())
+        verify(writerMapper).toModel(any(), eq(eventId))
+        verifyNoInteractions(participantReaderMapper)
+        verify(service).updateGroupById(any(), eq(eventId), eq(uuid), any())
     }
 
     @ParameterizedTest
@@ -506,7 +520,8 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val uuid2 = UUID.randomUUID()
         val memberIds = listOf(uuid1, uuid2)
 
-        `when`(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(Mono.just(Pair(memberIds, emptyList())))
+        whenever(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(Mono.just(Pair(memberIds, emptyList())))
+        whenever(addedGroupMembersReaderMapper.toDto(any(), any())).thenReturn(AddedGroupMembersReaderDto(emptyList(), emptyList()))
 
         // Act
         val result = webClient
@@ -520,7 +535,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         result.body<AddedGroupMembersReaderDto>(OK)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).addMembersToGroupById(any(), eq(eventId), eq(uuid), eq(memberIds))
+        verify(service).addMembersToGroupById(any(), eq(eventId), eq(uuid), eq(memberIds))
     }
 
     @Test
@@ -531,7 +546,13 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val uuid2 = UUID.randomUUID()
         val memberIds = listOf(uuid1, uuid2)
 
-        `when`(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(Mono.just(Pair(listOf(uuid1), listOf(uuid2))))
+        whenever(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(Mono.just(Pair(listOf(uuid1), listOf(uuid2))))
+        whenever(addedGroupMembersReaderMapper.toDto(any(), any())).thenReturn(
+            AddedGroupMembersReaderDto(
+                listOf(uuid1),
+                listOf(uuid2)
+            )
+        )
 
         // Act
         val result = webClient
@@ -545,7 +566,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         result.body<AddedGroupMembersReaderDto>(MULTI_STATUS)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).addMembersToGroupById(any(), eq(eventId), eq(uuid), eq(memberIds))
+        verify(service).addMembersToGroupById(any(), eq(eventId), eq(uuid), eq(memberIds))
     }
 
     @Test
@@ -554,7 +575,8 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val uuid = UUID.randomUUID()
         val uuid1 = UUID.randomUUID()
 
-        `when`(service.removeMemberFromGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
+        whenever(service.removeMemberFromGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -565,9 +587,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<GroupReaderDto>(OK)
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).removeMemberFromGroupById(any(), eq(eventId), eq(uuid), eq(uuid1))
+        verify(service).removeMemberFromGroupById(any(), eq(eventId), eq(uuid), eq(uuid1))
     }
 
     @Test
@@ -575,7 +597,8 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.disableGroupById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+        whenever(service.disableGroupById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -586,9 +609,10 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<GroupReaderDto>(OK)
-        verify(readerMapper, times(1)).toDto(any(), any())
+
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).disableGroupById(any(), eq(eventId), eq(uuid))
+        verify(service).disableGroupById(any(), eq(eventId), eq(uuid))
     }
 
     @Test
@@ -596,7 +620,8 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.enableGroupById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+        whenever(service.enableGroupById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -607,9 +632,10 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<GroupReaderDto>(OK)
-        verify(readerMapper, times(1)).toDto(any(), any())
+
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).enableGroupById(any(), eq(eventId), eq(uuid))
+        verify(service).enableGroupById(any(), eq(eventId), eq(uuid))
     }
 
     @Test
@@ -617,7 +643,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.deleteGroupById(any(), any())).thenReturn(Mono.empty())
+        whenever(service.deleteGroupById(any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
@@ -628,9 +654,10 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<Void>(OK)
+
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(participantReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).deleteGroupById(eq(eventId), eq(uuid))
+        verify(service).deleteGroupById(eq(eventId), eq(uuid))
     }
 }

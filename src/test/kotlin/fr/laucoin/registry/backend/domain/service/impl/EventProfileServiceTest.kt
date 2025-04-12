@@ -2,20 +2,31 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_BLOCK_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_DELETE_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_UPDATE_LAST_EVENT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.EventProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
-import fr.laucoin.registry.backend.domain.service.IEventService
+import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
-import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,19 +35,16 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
-import org.springframework.data.domain.Sort.Direction.DESC
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -44,554 +52,491 @@ import reactor.core.publisher.Mono
 class EventProfileServiceTest {
     private val repository: IEventProfileModelRepository = mock()
     private val profileService: IUserEventProfileService = mock()
-    private val eventService: IEventService = mock()
     private val roleService: IRoleService = mock()
-    private val userService: IUserService = mock()
-    private val service = EventProfileService(repository, profileService, eventService, roleService, userService)
+    private val userRepository: IUserModelRepository = mock()
+    private val maxUser: Int = 1
+    private val service = EventProfileService(profileService, repository, roleService, userRepository, maxUser)
 
     companion object {
-        private const val OTHER_EVENT_ROLE = "OTHER_EVENT_ROLE"
-        private const val EVENT_ROLE = "EVENT_ROLE"
-        private val profile0 = EventProfileModel().apply { role = EVENT_ROLE; event = EventModel().apply { name = "0" } }
-        private val profile1 = EventProfileModel().apply { role = EVENT_ROLE; event = EventModel().apply { name = "1" } }
-        private val profile2 = EventProfileModel().apply { role = EVENT_ROLE; event = EventModel().apply { name = "2" } }
-        private val profile3 = EventProfileModel().apply { role = EVENT_ROLE; event = EventModel().apply { name = "3" } }
-
-        private val profiles = arrayOf(profile0, profile1, profile2, profile3)
+        @JvmStatic
+        fun `Should createEventProfiles call repository findUserIdsWithEventProfile and saveAll`(): Stream<Arguments> {
+            val uuid1 = UUID.randomUUID()
+            val uuid2 = UUID.randomUUID()
+            return Stream.of(
+                Arguments.of(listOf(uuid1, uuid2), emptyList<UUID>(), listOf(uuid1, uuid2)),
+                Arguments.of(listOf(uuid1, uuid2), listOf(uuid2), listOf(uuid1)),
+            )
+        }
 
         @JvmStatic
-        fun `Should findEventProfilesByEventId return Event's Profile`(): Stream<Arguments> = Stream.of(
-            Arguments.of(ASC, null, profiles.toList()),
-            Arguments.of(DESC, null, profiles.toList().reversed()),
-            Arguments.of(ASC, "0", listOf(profile0)),
-            Arguments.of(ASC, "1", listOf(profile1)),
-            Arguments.of(ASC, "2", listOf(profile2)),
-            Arguments.of(ASC, "3", listOf(profile3)),
-            Arguments.of(DESC, "0", listOf(profile0)),
-            Arguments.of(DESC, "1", listOf(profile1)),
-            Arguments.of(DESC, "2", listOf(profile2)),
-            Arguments.of(DESC, "3", listOf(profile3)),
-            Arguments.of(ASC, "QWERTY", emptyList<EventProfileModel>()),
-            Arguments.of(DESC, "QWERTY", emptyList<EventProfileModel>()),
+        fun `Should updateEventProfileById call repository findById, findUserIdsWithEventProfile and throw because user are not allowed to edit that role`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    "INITIAL_ROLE_EVENT",
+                    "UPDATED_ROLE_EVENT",
+                    "UPDATED_ROLE_EVENT",
+                    EVENT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
+                ),
+                Arguments.of(
+                    "INITIAL_ROLE_EVENT",
+                    "UPDATED_ROLE_EVENT",
+                    "INITIAL_ROLE_EVENT",
+                    EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `Should findEventProfilesPage call repository findEventProfilesPageByEventId`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = EventProfileSearchParamModel(statusSearched = ACCEPTED)
+        whenever(repository.findEventProfilesPageByEventId(any(), any(), any())).thenReturn(
+            Mono.just(PageModel(1, 2, 3, 4, emptyList()))
         )
 
-        @JvmStatic
-        fun `Should updateEventProfileById throw RegistryException`(): Stream<Arguments> = Stream.of(
-            Arguments.of(listOf(OTHER_EVENT_ROLE), EVENT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER),
-            Arguments.of(listOf(EVENT_ROLE), EVENT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER),
+        // Act
+        service.findEventProfilesPage(eventId, pageable, params).block()
+
+        // Assert
+        verify(repository).findEventProfilesPageByEventId(eventId, pageable, params)
+    }
+
+    @Test
+    fun `Should findEventProfileById call repository findById`() {
+        // Arrange
+        val profile = EventProfileModel().apply {
+            role = "EVENT_ROLE"; event = EventModel().apply { id = eventId }
+        }
+        val uuid = UUID.randomUUID()
+        val onlyVisible = true
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+
+        // Act
+        service.findEventProfileById(eventId, uuid, onlyVisible).block()
+
+        // Assert
+        verify(repository).findById(eventId, uuid, onlyVisible)
+    }
+
+    @Test
+    fun `Should findEventProfileById call repository findById throw on empty result`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        val onlyVisible = true
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+
+        // Act
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+            service.findEventProfileById(eventId, uuid, onlyVisible).block()
+        }) as RegistryException
+
+        // Assert
+        assertEquals(NOT_FOUND, result.status)
+        assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
+        assertEquals(1, result.args?.size)
+        verify(repository).findById(eventId, uuid, onlyVisible)
+    }
+
+    @Test
+    fun `Should searchUsers call repository findWithLimit`() {
+        // Arrange
+        val text = "text"
+        whenever(userRepository.findWithLimit(any(), any())).thenReturn(Flux.empty())
+
+        // Act
+        service.searchUsers(text).blockFirst()
+
+        // Assert
+        verify(userRepository).findWithLimit(eq(maxUser), eq(UserSearchParamModel(text, visibilitySearched = true)))
+    }
+
+    @Test
+    fun `Should getAssignableEventRoles call repository findEventProfileByEventAndUserId and role service getAssignableEventRoles`() {
+        // Arrange
+        val profile = EventProfileModel().apply {
+            role = "EVENT_ROLE"; event = EventModel().apply { id = eventId }
+        }
+        whenever(repository.findEventProfileByEventAndUserId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(roleService.getAssignableEventRoles(any())).thenReturn(emptyList())
+
+        // Act
+        service.getAssignableEventRoles(currentUser(), eventId).blockFirst()
+
+        // Assert
+        verify(repository).findEventProfileByEventAndUserId(
+            eventId,
+            currentUser().id !!,
+            EventProfileSearchParamModel(
+                visibilitySearched = true,
+                availabilitySearched = true,
+                statusSearched = listOf(ACCEPTED),
+            ),
         )
+        verify(roleService).getAssignableEventRoles(profile)
+    }
+
+    @Test
+    fun `Should getAssignableEventRoles throw on repository findEventProfileByEventAndUserId return empty`() {
+        // Arrange
+        whenever(repository.findEventProfileByEventAndUserId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+        whenever(roleService.getAssignableEventRoles(any())).thenReturn(emptyList())
+
+        // Act
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+            service.getAssignableEventRoles(currentUser(), eventId).blockFirst()
+        }) as RegistryException
+
+        // Assert
+        assertEquals(NOT_FOUND, result.status)
+        assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
+        assertEquals(1, result.args?.size)
+        verify(repository).findEventProfileByEventAndUserId(
+            eventId,
+            currentUser().id !!,
+            EventProfileSearchParamModel(
+                visibilitySearched = true,
+                availabilitySearched = true,
+                statusSearched = listOf(ACCEPTED),
+            ),
+        )
+        verify(roleService, never()).getAssignableEventRoles(any())
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should findEventProfilesByEventId return Event's Profile`(
-        order: Direction,
-        searched: String?,
-        expectedList: List<EventProfileModel>,
+    fun `Should createEventProfiles call repository findUserIdsWithEventProfile and saveAll`(
+        wantedProfileForUserIds: List<UUID>,
+        userIdWithExistingProfile: List<UUID>,
+        expectedCreatedUserIds: List<UUID>,
     ) {
         // Arrange
-        `when`(
-            repository.findEventProfilesByEventId(
+        val profiles = wantedProfileForUserIds.map { EventProfileModel().apply { user = UserModel().apply { id = it } } }
+        val expectedProfiles = profiles.filter { expectedCreatedUserIds.contains(it.user?.id) }
+        whenever(
+            repository.findUserIdsWithEventProfileForEventWithProfileExclusion(
                 any(),
                 any(),
-                any(),
+                anyOrNull(),
                 any(),
                 anyOrNull(),
                 anyOrNull()
             )
-        ).thenReturn(Flux.just(*profiles))
+        ).thenReturn(Flux.just(*userIdWithExistingProfile.toTypedArray()))
+        whenever(repository.saveAll(any())).thenReturn(Flux.just(*expectedProfiles.toTypedArray()))
 
         // Act
-        val result = service.findEventProfilesByEventId(
-            eventId,
-            order,
-            onlyVisible = true,
-            status = ACCEPTED,
-            searched,
-            startAccess = null,
-            endAccess = null
-        ).collectList().block()
+        val result = service.createEventProfiles(currentUser(), eventId, wantedProfileForUserIds, profiles).block()
 
         // Assert
-        assertEquals(expectedList.size, result?.size)
-        expectedList.forEachIndexed { index, it ->
-            assertEquals(it, result?.get(index))
-        }
-
-        verify(repository).findEventProfilesByEventId(
+        assertEquals(expectedCreatedUserIds, result?.first)
+        assertEquals(userIdWithExistingProfile, result?.second)
+        verify(repository).findUserIdsWithEventProfileForEventWithProfileExclusion(
             eventId,
-            onlyVisible = true,
-            onlyUsable = false,
-            status = ACCEPTED,
-            startAccess = null,
-            endAccess = null
+            wantedProfileForUserIds,
+            profileIdToExclude = null,
+            statusSearched = listOf(ACCEPTED, INVITED),
+            startDateTimeSearched = null,
+            endDateTimeSearched = null,
         )
+        verify(repository).saveAll(expectedProfiles)
     }
 
     @Test
-    fun `Should findEventProfileByEventIdAndId return the Profile`() {
+    fun `Should createEventProfiles call repository findUserIdsWithEventProfile and throw because all profiles duplicated`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(
-            repository.findById(
-                any(),
-                any(),
-                any()
-            )
-        ).thenReturn(Mono.just(profile0))
-
-        // Act
-        service.findEventProfileByEventIdAndId(eventId, uuid, onlyVisible = true).block()
-
-        // Assert
-        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = true)
-    }
-
-    @Test
-    fun `Should searchUsers return the searched User`() {
-        // Arrange
-        val searched = "John"
-        `when`(userService.findUsers(any(), any(), any())).thenReturn(Flux.empty())
-
-        // Act
-        service.searchUsers(searched).collectList().block()
-
-        // Assert
-        verify(userService, times(1)).findUsers(order = ASC, onlyVisible = true, searched)
-    }
-
-    @Test
-    fun `Should getAssignableEventRoles return the list of assignable role`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val currentUser = currentUser().apply { id = uuid }
-        `when`(
-            repository.findEventProfileByEventAndUserId(
-                any(),
-                any(),
-                any(),
-                any(),
-                any()
-            )
-        ).thenReturn(Mono.just(profile0))
-        `when`(roleService.getAssignableEventRoles(any())).thenReturn(listOf(EVENT_ROLE))
-
-        // Act
-        service.getAssignableEventRoles(currentUser, eventId).blockFirst()
-
-        // Assert
-        verify(repository, times(1)).findEventProfileByEventAndUserId(
-            eventId,
-            uuid,
-            onlyVisible = true,
-            onlyUsable = true,
-            status = ACCEPTED,
-        )
-        verify(roleService, times(1)).getAssignableEventRoles(profile0)
-    }
-
-    @Test
-    fun `Should createSupportEventProfile create temporary Profile`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val currentUser = currentUser().apply { id = uuid }
-        `when`(
-            repository.findEventProfilesByEventId(
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.empty())
-        `when`(roleService.getLevel0RoleFromEventRoles()).thenReturn(EVENT_ROLE)
-        `when`(repository.create(any())).thenReturn(Mono.just(profile0))
-
-        // Act
-        service.createSupportEventProfile(currentUser, eventId).block()
-
-        // Assert
-        verify(repository, times(1)).findEventProfilesByEventId(
-            eq(eventId),
-            onlyVisible = eq(false),
-            onlyUsable = eq(false),
-            status = eq(null),
-            startAccess = any(),
-            endAccess = any()
-        )
-        verify(roleService, times(1)).getLevel0RoleFromEventRoles()
-        verify(repository, times(1)).create(any())
-    }
-
-    @Test
-    fun `Should createEventProfiles create and return Profiles`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val profiles = listOf(EventProfileModel())
-        `when`(
-            eventService.validateDateTimes(
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                any(),
-            )
-        ).thenReturn(Mono.just(UUID.randomUUID()))
-        `when`(
-            repository.findEventProfilesByEventId(
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.empty())
-        `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
-
-        // Act
-        service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles).block()
-
-        // Assert
-        verify(repository, times(1)).findEventProfilesByEventId(
-            eventId,
-            onlyVisible = false,
-            onlyUsable = false,
-            status = null,
-            startAccess = null,
-            endAccess = null
-        )
-        verify(repository, times(1)).saveAll(any())
-    }
-
-    @Test
-    fun `Should createEventProfiles succeed partially`() {
-        // Arrange
-        val uuid1 = UUID.randomUUID()
-        val uuid2 = UUID.randomUUID()
-        val profiles = listOf(EventProfileModel().apply {
-            user = UserModel().apply { id = uuid1 }
-            role = EVENT_ROLE; event = EventModel().apply { name = "0" }
-        })
-        `when`(
-            eventService.validateDateTimes(
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                any(),
-            )
-        ).thenReturn(Mono.just(UUID.randomUUID()))
-        `when`(
-            repository.findEventProfilesByEventId(
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(
-            Flux.just(
-                EventProfileModel().apply { user = UserModel().apply { id = uuid1 }; status = REJECTED },
-                EventProfileModel().apply { user = UserModel().apply { id = uuid1 }; status = ACCEPTED },
-            )
-        )
-        `when`(repository.saveAll(any())).thenReturn(Flux.just(EventProfileModel().apply { user = UserModel().apply { id = uuid2 } }))
-
-        // Act
-        val result = service.createEventProfiles(currentUser(), eventId, listOf(uuid1, uuid2), profiles).block()
-
-        // Assert
-        assertEquals(1, result?.first?.size)
-        verify(repository, times(1)).findEventProfilesByEventId(
-            eventId,
-            onlyVisible = false,
-            onlyUsable = false,
-            status = null,
-            startAccess = null,
-            endAccess = null
-        )
-        verify(repository, times(1)).saveAll(any())
-    }
-
-    @Test
-    fun `Should createEventProfiles failed due to date conflict`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val profiles = listOf(EventProfileModel().apply {
+        val users = listOf(uuid)
+        val profile = EventProfileModel().apply {
             user = UserModel().apply { id = uuid }
-            role = EVENT_ROLE; event = EventModel().apply { name = "0" }
-        })
-        `when`(
-            eventService.validateDateTimes(
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                any(),
-            )
-        ).thenReturn(Mono.just(UUID.randomUUID()))
-        `when`(
-            repository.findEventProfilesByEventId(
-                any(),
+            startAccess = CustomDateTimeModel(LocalDate.EPOCH)
+            endAccess = CustomDateTimeModel(LocalDate.EPOCH)
+        }
+        val profiles = listOf(profile)
+        whenever(
+            repository.findUserIdsWithEventProfileForEventWithProfileExclusion(
                 any(),
                 any(),
                 anyOrNull(),
+                any(),
                 anyOrNull(),
                 anyOrNull()
             )
-        ).thenReturn(
-            Flux.just(
-                EventProfileModel().apply { user = UserModel().apply { id = uuid }; status = REJECTED },
-                EventProfileModel().apply { user = UserModel().apply { id = uuid }; status = ACCEPTED },
-            )
-        )
-        `when`(repository.saveAll(any())).thenReturn(Flux.just(profile0))
+        ).thenReturn(Flux.just(uuid))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.createEventProfiles(currentUser(), eventId, listOf(uuid), profiles).block()
+            service.createEventProfiles(currentUser(), eventId, users, profiles).block()
         }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(EVENT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
-        verify(repository, times(1)).findEventProfilesByEventId(
+        verify(repository).findUserIdsWithEventProfileForEventWithProfileExclusion(
             eventId,
-            onlyVisible = false,
-            onlyUsable = false,
-            status = null,
-            startAccess = null,
-            endAccess = null
+            users,
+            profileIdToExclude = null,
+            statusSearched = listOf(ACCEPTED, INVITED),
+            startDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MIN),
+            endDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MAX),
         )
-        verify(repository, times(0)).saveAll(any())
+        verify(repository, never()).saveAll(any())
     }
 
     @Test
-    fun `Should updateEventProfileById update and return Event's Profile`() {
+    fun `Should updateEventProfileById call repository findById, findUserIdsWithEventProfile, call profileService validateNotLastEventRoleLevel0, call repository findEventProfileByEventAndUserId, call roleService getAssignableEventRoles and finally call repository update`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val profileId = UUID.randomUUID()
-        val currentUser = currentUser().apply { id = uuid }
-        val userProfile = EventProfileModel()
+        val profileRole = "ROLE_EVENT"
+        val currentUserProfile = EventProfileModel().apply {
+            role = profileRole
+            user = UserModel().apply { id = currentUser().id }
+            event = EventModel().apply { id = eventId }
+        }
         val profile = EventProfileModel().apply {
+            role = profileRole
             user = UserModel().apply { id = uuid }
             event = EventModel().apply { id = eventId }
-            role = EVENT_ROLE
+            startAccess = CustomDateTimeModel(LocalDate.EPOCH)
+            endAccess = CustomDateTimeModel(LocalDate.EPOCH)
         }
-        `when`(
-            eventService.validateDateTimes(
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                any(),
-            )
-        ).thenReturn(Mono.just(UUID.randomUUID()))
-        `when`(
-            repository.findEventProfilesByEventId(
-                any(),
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(
+            repository.findUserIdsWithEventProfileForEventWithProfileExclusion(
                 any(),
                 any(),
                 anyOrNull(),
+                any(),
                 anyOrNull(),
                 anyOrNull()
             )
-        ).thenReturn(Flux.empty())
-        `when`(
-            repository.findById(
-                any(),
-                any(),
-                any()
-            )
-        ).thenReturn(Mono.just(profile))
-        `when`(
-            repository.findEventProfileByEventAndUserId(
-                any(),
-                any(),
+        ).thenReturn(Flux.just())
+        whenever(profileService.validateNotLastEventRoleLevel0(any(), any(), any(), any())).thenReturn(Mono.just(profile))
+        whenever(repository.findEventProfileByEventAndUserId(any(), any(), any())).thenReturn(Mono.just(currentUserProfile))
+        whenever(roleService.getAssignableEventRoles(any())).thenReturn(listOf(profileRole))
+        whenever(repository.update(any())).thenReturn(Mono.just(profile))
+
+        // Act
+        val result = service.updateEventProfileById(currentUser(), eventId, uuid, profile).block()
+
+        // Assert
+        assertEquals(profile, result)
+        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findUserIdsWithEventProfileForEventWithProfileExclusion(
+            eventId,
+            listOf(uuid),
+            profileIdToExclude = null,
+            statusSearched = listOf(ACCEPTED, INVITED),
+            startDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MIN),
+            endDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MAX),
+        )
+        verify(profileService).validateNotLastEventRoleLevel0(
+            uuid,
+            eventId,
+            profile,
+            EVENT_PROFILE_UPDATE_LAST_EVENT_ADMINISTRATOR
+        )
+        verify(repository).findEventProfileByEventAndUserId(
+            eventId,
+            currentUser().id !!,
+            EventProfileSearchParamModel(
+                visibilitySearched = true,
+                availabilitySearched = true,
+                statusSearched = listOf(ACCEPTED),
+            ),
+        )
+        verify(roleService).getAssignableEventRoles(currentUserProfile)
+        verify(repository).update(profile)
+    }
+
+    @Test
+    fun `Should updateEventProfileById call repository findById, findUserIdsWithEventProfile, call profileService validateNotLastEventRoleLevel0, call repository findEventProfileByEventAndUserId, call roleService getAssignableEventRoles and throw because profile duplicated`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        val profileRole = "ROLE_EVENT"
+        val profile = EventProfileModel().apply {
+            role = profileRole
+            user = UserModel().apply { id = uuid }
+            event = EventModel().apply { id = eventId }
+        }
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(
+            repository.findUserIdsWithEventProfileForEventWithProfileExclusion(
                 any(),
                 any(),
                 anyOrNull(),
+                any(),
+                anyOrNull(),
+                anyOrNull()
             )
-        ).thenReturn(Mono.just(userProfile))
-        `when`(
-            profileService.validateNotLastEventRoleLevel0(
-                any(),
-                any(),
-                any(),
-                any(),
-            )
-        ).thenReturn(Mono.just(profile))
-        `when`(roleService.getAssignableEventRoles(any())).thenReturn(listOf(EVENT_ROLE))
-        `when`(repository.update(any())).thenReturn(Mono.just(profile))
+        ).thenReturn(Flux.just(uuid))
 
         // Act
-        service.updateEventProfileById(currentUser, eventId, profileId, profile).block()
+        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+            service.updateEventProfileById(currentUser(), eventId, uuid, profile).block()
+        }) as RegistryException
 
         // Assert
-        verify(repository, times(1)).findEventProfilesByEventId(
+        assertEquals(CONFLICT, result.status)
+        assertEquals(EVENT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
+        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findUserIdsWithEventProfileForEventWithProfileExclusion(
             eventId,
-            onlyVisible = false,
-            onlyUsable = false,
-            status = null,
-            startAccess = null,
-            endAccess = null
+            listOf(uuid),
+            profileIdToExclude = null,
+            statusSearched = listOf(ACCEPTED, INVITED),
+            startDateTimeSearched = null,
+            endDateTimeSearched = null,
         )
-        verify(repository, times(1)).findById(eventId, profileId, onlyVisible = false)
-        verify(repository, times(1)).findEventProfileByEventAndUserId(
-            eventId,
-            uuid,
-            onlyVisible = true,
-            onlyUsable = true,
-            status = ACCEPTED,
-        )
-        verify(roleService, times(1)).getAssignableEventRoles(userProfile)
-        verify(repository, times(1)).update(profile)
+        verify(profileService, never()).validateNotLastEventRoleLevel0(any(), any(), any(), any())
+        verify(repository, never()).findEventProfileByEventAndUserId(any(), any(), any())
+        verify(roleService, never()).getAssignableEventRoles(any())
+        verify(repository, never()).update(any())
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should updateEventProfileById throw RegistryException`(
-        assignableRoles: List<String>,
-        message: String,
+    fun `Should updateEventProfileById call repository findById, findUserIdsWithEventProfile and throw because user are not allowed to edit that role`(
+        profileToUpdateRole: String,
+        profileUpdatedRole: String,
+        allowedRoleString: String,
+        expectedErrorMessage: String,
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
-        val profileId = UUID.randomUUID()
-        val currentUser = currentUser().apply { id = uuid }
-        val userProfile = EventProfileModel()
-        val currentProfile = EventProfileModel().apply { user = currentUser; role = EVENT_ROLE }
-        val nextProfile = EventProfileModel().apply { user = currentUser; role = OTHER_EVENT_ROLE }
-        `when`(
-            eventService.validateDateTimes(
+        val currentUserProfile = EventProfileModel().apply {
+            role = "ROLE_EVENT"
+            user = UserModel().apply { id = currentUser().id }
+            event = EventModel().apply { id = eventId }
+        }
+        val profileToUpdate = EventProfileModel().apply {
+            role = profileToUpdateRole
+            user = UserModel().apply { id = uuid }
+            event = EventModel().apply { id = eventId }
+        }
+        val profileUpdated = EventProfileModel().apply {
+            role = profileUpdatedRole
+            user = UserModel().apply { id = uuid }
+            event = EventModel().apply { id = eventId }
+        }
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profileToUpdate))
+        whenever(
+            repository.findUserIdsWithEventProfileForEventWithProfileExclusion(
+                any(),
                 any(),
                 anyOrNull(),
-                anyOrNull(),
                 any(),
-            )
-        ).thenReturn(Mono.just(UUID.randomUUID()))
-        `when`(
-            repository.findEventProfilesByEventId(
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
                 anyOrNull(),
                 anyOrNull()
             )
         ).thenReturn(Flux.empty())
-        `when`(
-            repository.findById(
-                any(),
-                any(),
-                any()
-            )
-        ).thenReturn(Mono.just(currentProfile))
-        `when`(
-            repository.findEventProfileByEventAndUserId(
-                any(),
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-            )
-        ).thenReturn(Mono.just(userProfile))
-        `when`(roleService.getAssignableEventRoles(any())).thenReturn(assignableRoles)
+        whenever(repository.findEventProfileByEventAndUserId(any(), any(), any())).thenReturn(Mono.just(currentUserProfile))
+        whenever(roleService.getAssignableEventRoles(any())).thenReturn(listOf(allowedRoleString))
+
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.updateEventProfileById(currentUser, eventId, profileId, nextProfile).block()
+            service.updateEventProfileById(currentUser(), eventId, uuid, profileUpdated).block()
         }) as RegistryException
 
         // Assert
         assertEquals(FORBIDDEN, result.status)
-        assertEquals(message, result.message)
-
-        verify(repository, times(1)).findEventProfilesByEventId(
+        assertEquals(expectedErrorMessage, result.message)
+        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findUserIdsWithEventProfileForEventWithProfileExclusion(
             eventId,
-            onlyVisible = false,
-            onlyUsable = false,
-            status = null,
-            startAccess = null,
-            endAccess = null,
+            listOf(uuid),
+            profileIdToExclude = null,
+            statusSearched = listOf(ACCEPTED, INVITED),
+            startDateTimeSearched = null,
+            endDateTimeSearched = null,
         )
-        verify(repository, times(1)).findById(eventId, profileId, onlyVisible = false)
-        verify(repository, times(1)).findEventProfileByEventAndUserId(
+        verify(profileService, never()).validateNotLastEventRoleLevel0(any(), anyOrNull(), any(), any())
+        verify(repository).findEventProfileByEventAndUserId(
             eventId,
-            uuid,
-            onlyVisible = true,
-            onlyUsable = true,
-            status = ACCEPTED,
+            currentUser().id !!,
+            EventProfileSearchParamModel(
+                visibilitySearched = true,
+                availabilitySearched = true,
+                statusSearched = listOf(ACCEPTED),
+            ),
         )
-        verify(roleService, times(1)).getAssignableEventRoles(userProfile)
-        verify(repository, never()).create(any())
+        verify(roleService).getAssignableEventRoles(currentUserProfile)
+        verify(repository, never()).update(any())
     }
 
     @Test
-    fun `Should blockEventProfileById hide and return a Profile`() {
+    fun `Should blockEventProfileById call repository findById, call service profile validateNotLastEventRoleLevel0 and finally call repository update`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val profile = EventProfileModel().apply {
             user = UserModel().apply { id = uuid }
             event = EventModel().apply { id = eventId }
+            visible = true
         }
-        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(profile))
-        `when`(repository.update(any())).thenReturn(Mono.just(profile))
-        `when`(
-            profileService.validateNotLastEventRoleLevel0(
-                any(),
-                any(),
-                any(),
-                any(),
-            )
-        ).thenReturn(Mono.just(profile))
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(profileService.validateNotLastEventRoleLevel0(any(), any(), any(), any())).thenReturn(Mono.just(profile))
+        whenever(repository.update(any())).thenReturn(Mono.just(profile))
 
         // Act
         service.blockEventProfileById(currentUser(), eventId, uuid).block()
 
         // Assert
-        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = true)
-        verify(repository, times(1)).update(any())
+        verify(repository).findById(eventId, uuid, visibilitySearched = true)
+        verify(profileService).validateNotLastEventRoleLevel0(
+            uuid,
+            eventId,
+            profile,
+            EVENT_PROFILE_BLOCK_LAST_EVENT_ADMINISTRATOR,
+        )
+        verify(repository).update(profile.apply { visible = false })
     }
 
     @Test
-    fun `Should unblockEventProfileById restore and return a Profile`() {
+    fun `Should unblockEventProfileById call repository findById, call service profile validateNotLastEventRoleLevel0 and finally call repository update`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(profile0))
-        `when`(repository.update(any())).thenReturn(Mono.just(profile0))
+        val profile = EventProfileModel().apply {
+            user = UserModel().apply { id = uuid }
+            event = EventModel().apply { id = eventId }
+            visible = false
+        }
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(repository.update(any())).thenReturn(Mono.just(profile))
 
         // Act
         service.unblockEventProfileById(currentUser(), eventId, uuid).block()
 
         // Assert
-        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
-        verify(repository, times(1)).update(any())
+        verify(repository).findById(eventId, uuid, visibilitySearched = false)
+        verify(repository).update(profile.apply { visible = true })
     }
 
     @Test
-    fun `Should deleteEventProfileById delete a Profile`() {
+    fun `Should deleteEventProfileById call repository findById, call service profile validateNotLastEventRoleLevel0 and finally call repository deleteById`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val profile = EventProfileModel().apply {
-            id = uuid
             user = UserModel().apply { id = uuid }
             event = EventModel().apply { id = eventId }
+            visible = true
         }
-        `when`(repository.findById(any(), any(), any())).thenReturn(Mono.just(profile))
-        `when`(repository.deleteById(any())).thenReturn(Mono.empty())
-        `when`(
-            profileService.validateNotLastEventRoleLevel0(
-                any(),
-                any(),
-                any(),
-                any(),
-            )
-        ).thenReturn(Mono.just(profile))
+        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(profileService.validateNotLastEventRoleLevel0(any(), any(), any(), any())).thenReturn(Mono.just(profile))
+        whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
         service.deleteEventProfileById(currentUser(), eventId, uuid).block()
 
         // Assert
-        verify(repository, times(1)).findById(eventId, uuid, onlyVisible = false)
-        verify(repository, times(1)).deleteById(uuid)
+        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(profileService).validateNotLastEventRoleLevel0(
+            uuid,
+            eventId,
+            profile,
+            EVENT_PROFILE_DELETE_LAST_EVENT_ADMINISTRATOR,
+        )
+        verify(repository).deleteById(uuid)
     }
 }

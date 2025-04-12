@@ -1,45 +1,84 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
-import java.time.ZonedDateTime
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import java.time.LocalDateTime
 import java.util.Locale
 import java.util.UUID
+import java.util.stream.Stream
 import kotlin.test.assertEquals
-import org.junit.jupiter.api.Test
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class GroupWithoutMemberReaderDtoMapperTest {
     private val eventMapper: EventReaderDtoMapper = mock()
     private val mapper: GroupWithoutMemberReaderDtoMapper = GroupWithoutMemberReaderDtoMapper(eventMapper)
 
-    @Test
-    fun `Should toDto convert GroupModel to GroupReaderDto`() {
-        // Arrange
-        val group = GroupModel().apply {
-            id = UUID.randomUUID()
-            event = EventModel()
-            name = "Event"
-            begin = ZonedDateTime.now()
-            end = ZonedDateTime.now()
-            visible = true
-            creation = HistoryModel()
-            lastEdition = HistoryModel()
+    companion object {
+        @JvmStatic
+        fun `Should toDto convert GroupModel to GroupAndContentReaderDto`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    GroupModel(
+                        members = emptyList(),
+                    ).apply {
+                        id = UUID.randomUUID()
+                        name = "Event"
+                        startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
+                        startAvailability = CustomDateTimeModel(LocalDateTime.MAX)
+                        visible = true
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    0,
+                ),
+                Arguments.of(
+                    GroupModel(
+                        members = emptyList(),
+                    ).apply {
+                        id = UUID.randomUUID()
+                        event = EventModel()
+                        name = "Event"
+                        startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
+                        startAvailability = CustomDateTimeModel(LocalDateTime.MAX)
+                        visible = true
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    1,
+                ),
+            )
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should toDto convert GroupModel to GroupAndContentReaderDto`(
+        group: GroupModel,
+        expectedEventCast: Int,
+    ) {
+        // Arrange
+        whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
 
         // Act
         val result = mapper.toDto(group, Locale.getDefault())
 
         // Assert
-        verify(eventMapper, times(1)).toDto(group.event !!, Locale.getDefault())
+        verify(eventMapper, times(expectedEventCast)).toDto(group.event ?: EventModel(), Locale.getDefault())
 
         assertEquals(group.id, result.id)
         assertEquals(group.name, result.name)
-        assertEquals(group.begin, result.begin)
-        assertEquals(group.end, result.end)
+        assertEquals(group.startAvailability, result.startAvailability)
+        assertEquals(group.endAvailability, result.endAvailability)
         assertEquals(group.visible, result.visible)
         assertEquals(group.creation, result.creation)
         assertEquals(group.lastEdition, result.lastEdition)

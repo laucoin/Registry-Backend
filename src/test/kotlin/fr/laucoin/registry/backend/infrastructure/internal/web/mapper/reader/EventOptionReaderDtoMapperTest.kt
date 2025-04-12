@@ -8,11 +8,11 @@ import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.ACTIVITY_C
 import java.util.Locale
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.context.MessageSource
 
 class EventOptionReaderDtoMapperTest {
@@ -24,7 +24,7 @@ class EventOptionReaderDtoMapperTest {
         // Arrange
         val option: Pair<EventOptionEnum, Collection<EventOptionEnum>> = Pair(ACTIVITY_COMMUNICATION, listOf(ACTIVITY))
         val label = "translated"
-        `when`(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(label)
+        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(label)
 
         // Act
         val result = mapper.toDto(option, Locale.getDefault())

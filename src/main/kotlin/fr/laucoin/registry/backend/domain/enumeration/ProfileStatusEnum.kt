@@ -4,4 +4,5 @@ enum class ProfileStatusEnum {
     INVITED,
     ACCEPTED,
     REJECTED,
+    BLOCKED,
 }

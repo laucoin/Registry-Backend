@@ -3,12 +3,11 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
+import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
-import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -27,7 +26,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 @Component
 class TokenConverterService(
     private val userService: IUserService,
-    private val profileService: IUserEventProfileService,
+    private val profileRepository: IEventProfileModelRepository,
     private val roleService: IRoleService,
     @Value("\${registry.security.oauth2.claims.user-id}")
     private val userIdKey: String,
@@ -61,7 +60,7 @@ class TokenConverterService(
 
     private fun Mono<Jwt>.fetchUser(oidcId: UUID): Mono<CurrentUserModel> =
         flatMap {
-            userService.findUserByOidcId(oidcId, onlyVisible = false)
+            userService.findUserByOidcId(oidcId, visibilitySearched = null)
         }
 
     private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { it, handle ->
@@ -85,13 +84,21 @@ class TokenConverterService(
         oidcId: UUID, email: String, firstName: String?, lastName: String?
     ): Mono<CurrentUserModel> = switchIfEmpty { userService.createUser(oidcId, email, firstName, lastName) }
 
-    private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap {
-        profileService.findAllUserEventProfiles(it.id !!, onlyUsable = true, status = ACCEPTED)
+    private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap { it ->
+        it.promote(roleService.getAuthoritiesByUserRole(it.role))
+        profileRepository.findEventProfilesRolesByUserId(it.id !!)
             .collectList()
             .map { profiles ->
-                it.promote(roleService.getAuthoritiesByUserRole(it.role))
                 profiles.forEach { profile ->
-                    it.promote(roleService.getAuthoritiesByEventRole(profile.role !!, profile.event !!.id !!))
+                    it.promote(roleService.getAuthoritiesByEventRole(profile.role !!, profile.eventId !!, profile.eventVisible))
+                    if (profile.eventVisible == true) {
+                        it.promote(
+                            roleService.getOptionAuthoritiesByEvent(
+                                profile.eventId !!,
+                                eventOptions = profile.eventOptions ?: emptyList()
+                            )
+                        )
+                    }
                 }
                 it
             }

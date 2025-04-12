@@ -60,7 +60,6 @@ class PermissionServiceTest {
 
     @Test
     fun `Should hasPermission throw not implemented exception`() {
-        // Arrange
         // Act
         val result = assertThrows(RegistryException::class.java) {
             service.hasPermission(null, null, null, null)

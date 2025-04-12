@@ -1,247 +1,393 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
+import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileRoleCountEntity
+import fr.laucoin.registry.backend.domain.model.EventProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.EventProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.EventProfileRoleCountEntityMapper
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.EventProfileRoleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IEventProfileEntityRepository
 import fr.laucoin.registry.backend.test.ModelExt.eventId
-import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
+import fr.laucoin.registry.backend.test.ModelExt.eventProfileId
+import fr.laucoin.registry.backend.test.ModelExt.userIdWithoutProfile
+import fr.laucoin.registry.backend.test.TestContext
+import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
-import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.MethodOrderer
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.anyBoolean
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
+import org.junit.jupiter.api.TestMethodOrder
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.verifyNoInteractions
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
-class EventProfileModelPostgresRepositoryTest {
-    private val repository: IEventProfileEntityRepository = mock()
-    private val mapper: EventProfileEntityMapper = spy()
-    private val roleCountMapper: EventProfileRoleCountEntityMapper = spy()
-    private val modelRepository: EventProfileModelPostgresRepository =
-        EventProfileModelPostgresRepository(repository, mapper, roleCountMapper)
+class EventProfileModelPostgresRepositoryTest(
+    @Autowired private val repository: IEventProfileModelRepository
+): TestContext() {
+    @MockitoSpyBean
+    private lateinit var postgresRepository: IEventProfileEntityRepository
 
-    companion object {
-        @JvmStatic
-        fun `Should findEventProfilesByXId call repository findByXId`(): Stream<Arguments> = Stream.of(
-            Arguments.of(true, true, ACCEPTED, now(), null),
-            Arguments.of(true, true, INVITED, null, now()),
-            Arguments.of(true, true, REJECTED, now(), now()),
+    @MockitoSpyBean
+    private lateinit var mapper: EventProfileEntityMapper
+
+    @MockitoSpyBean
+    private lateinit var roleMapper: EventProfileRoleEntityMapper
+
+    @MockitoSpyBean
+    private lateinit var roleCountMapper: EventProfileRoleCountEntityMapper
+
+    @Test
+    fun `Should findEventProfilesPageByUserId call repository countByUserId and findByUserId`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = EventProfileSearchParamModel(statusSearched = null)
+
+        // Act
+        val result = repository.findEventProfilesPageByUserId(currentUser().id !!, pageable, params).block()
+
+        // Assert
+        assertNotNull(result)
+        assertEquals(0, result.pageNumber)
+        assertEquals(10, result.pageSize)
+        assertEquals(1, result.totalElements)
+        assertEquals(1, result.totalPages)
+        verify(postgresRepository).findByUserId(
+            currentUser().id !!,
+            textSearched = null,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+            dateTimeSearched = null,
+            pageable.limit,
+            pageable.offset,
+        )
+        verify(postgresRepository).countByUserId(
+            currentUser().id !!,
+            textSearched = null,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+            dateTimeSearched = null,
+        )
+        verify(mapper, times(1)).toModel(any())
+    }
+
+    @Test
+    fun `Should findEventProfilesPageByEventId call repository countByEventId and findByEventId`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = EventProfileSearchParamModel(statusSearched = null)
+
+        // Act
+        val result = repository.findEventProfilesPageByEventId(eventId, pageable, params).block()
+
+        // Assert
+        assertNotNull(result)
+        assertEquals(0, result.pageNumber)
+        assertEquals(10, result.pageSize)
+        assertEquals(2, result.totalElements)
+        assertEquals(1, result.totalPages)
+        verify(postgresRepository).findByEventId(
+            eventId,
+            textSearched = null,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+            dateTimeSearched = null,
+            pageable.limit,
+            pageable.offset,
+        )
+        verify(postgresRepository).countByEventId(
+            eventId,
+            textSearched = null,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+            dateTimeSearched = null,
+        )
+        verify(mapper, times(2)).toModel(any())
+    }
+
+    @Test
+    fun `Should findUserIdsWithEventProfileForEventWithProfileExclusion call repository findUserIdsWithEventProfileForEventWithProfileExclusion`() {
+        // Act
+        val result = repository.findUserIdsWithEventProfileForEventWithProfileExclusion(
+            eventId,
+            listOf(currentUser().id !!),
+            profileIdToExclude = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+            startDateTimeSearched = null,
+            endDateTimeSearched = null
+        ).collectList().block()
+
+        // Assert
+        assertEquals(1, result?.size)
+        verify(postgresRepository).findUserIdsWithEventProfileForEventWithProfileExclusion(
+            eventId,
+            listOf(currentUser().id !!),
+            profileIdToExclude = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+            startDateTimeSearched = null,
+            endDateTimeSearched = null
         )
     }
 
-    @ParameterizedTest
-    @MethodSource("Should findEventProfilesByXId call repository findByXId")
-    fun `Should findEventProfilesByEventId call repository findByEventId`(
-        onlyVisible: Boolean,
-        onlyUsable: Boolean,
-        status: ProfileStatusEnum?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ) {
-        // Arrange
-        val profile = EventProfileEntity()
-        `when`(
-            repository.findByEventId(
-                any(),
-                anyBoolean(),
-                anyBoolean(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.just(profile))
-
+    @Test
+    fun `Should findEventProfilesRolesByUserId call repository findAllRolesByUserId`() {
         // Act
-        modelRepository.findEventProfilesByEventId(eventId, onlyVisible, onlyUsable, status, startDateTime, endDateTime)
-            .blockFirst()
+        val result = repository.findEventProfilesRolesByUserId(currentUser().id !!)
+            .collectList()
+            .block()
 
         // Assert
-        verify(repository, times(1)).findByEventId(eventId, onlyVisible, onlyUsable, status, startDateTime, endDateTime)
-        verify(mapper, times(1)).toModel(profile)
-        verifyNoInteractions(roleCountMapper)
-    }
-
-    @ParameterizedTest
-    @MethodSource("Should findEventProfilesByXId call repository findByXId")
-    fun `Should findEventProfilesByUserId call repository findByUserId`(
-        onlyVisible: Boolean,
-        onlyActive: Boolean,
-        status: ProfileStatusEnum?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ) {
-        // Arrange
-        val userId = UUID.randomUUID()
-        val profile = EventProfileEntity()
-        `when`(
-            repository.findByUserId(
-                any(),
-                anyBoolean(),
-                anyBoolean(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.just(profile))
-
-        // Act
-        modelRepository.findEventProfilesByUserId(userId, onlyVisible, onlyActive, status, startDateTime, endDateTime).blockFirst()
-
-        // Assert
-        verify(repository, times(1)).findByUserId(userId, onlyVisible, onlyActive, status, startDateTime, endDateTime)
-        verify(mapper, times(1)).toModel(profile)
-        verifyNoInteractions(roleCountMapper)
+        assertNotNull(result)
+        verify(postgresRepository).findAllRolesByUserId(
+            currentUser().id !!,
+            visibilitySearched = null,
+            availabilitySearched = true,
+            statusSearched = listOf(ACCEPTED),
+        )
+        verify(roleMapper).toModel(any())
     }
 
     @Test
-    fun `Should findById call repository findByIdAndEventId`() {
+    fun `Should findEventProfileByUserIdAndId call repository findByUserIdAndId`() {
+        // Act
+        val result = repository.findEventProfileByUserIdAndId(
+            currentUser().id !!,
+            eventProfileId,
+            visibilitySearched = null
+        ).block()
+
+        // Assert
+        assertNotNull(result)
+        verify(postgresRepository).findByUserIdAndId(
+            currentUser().id !!,
+            eventProfileId,
+            visibilitySearched = null,
+        )
+        verify(mapper).toModel(any())
+    }
+
+    @Test
+    fun `Should findEventProfileByUserIdAndId call repository findByUserIdAndId and return null`() {
         // Arrange
-        val profile = EventProfileEntity()
         val uuid = UUID.randomUUID()
-        val onlyVisible = true
-        `when`(repository.findByIdAndEventId(any(), any(), any())).thenReturn(Mono.just(profile))
 
         // Act
-        modelRepository.findById(eventId, uuid, onlyVisible).block()
+        val result = repository.findEventProfileByUserIdAndId(currentUser().id !!, uuid, visibilitySearched = null).block()
 
         // Assert
-        verify(repository, times(1)).findByIdAndEventId(eventId, uuid, onlyVisible)
-        verify(mapper, times(1)).toModel(profile)
-        verifyNoInteractions(roleCountMapper)
+        assertNull(result)
+        verify(postgresRepository).findByUserIdAndId(
+            currentUser().id !!,
+            uuid,
+            visibilitySearched = null,
+        )
+        verify(mapper, never()).toModel(any())
     }
 
     @Test
-    fun `Should findEventProfilesByIdAndUserId call repository findByIdAndUserId`() {
+    fun `Should findById call repository findByEventIdAndId`() {
+        // Act
+        val result = repository.findById(eventId, eventProfileId, visibilitySearched = null).block()
+
+        // Assert
+        assertNotNull(result)
+        verify(postgresRepository).findByEventIdAndId(
+            eventId,
+            eventProfileId,
+            visibilitySearched = null,
+        )
+        verify(mapper).toModel(any())
+    }
+
+    @Test
+    fun `Should findById call repository findByEventIdAndId and return null`() {
         // Arrange
-        val profile = EventProfileEntity()
-        val userId = UUID.randomUUID()
         val uuid = UUID.randomUUID()
-        val onlyVisible = true
-        `when`(repository.findByIdAndUserId(any(), any(), any())).thenReturn(Mono.just(profile))
 
         // Act
-        modelRepository.findEventProfilesByIdAndUserId(userId, uuid, onlyVisible).block()
+        val result = repository.findById(eventId, uuid, visibilitySearched = null).block()
 
         // Assert
-        verify(repository, times(1)).findByIdAndUserId(userId, uuid, onlyVisible)
-        verify(mapper, times(1)).toModel(profile)
-        verifyNoInteractions(roleCountMapper)
+        assertNull(result)
+        verify(postgresRepository).findByEventIdAndId(
+            eventId,
+            uuid,
+            visibilitySearched = null,
+        )
+        verify(mapper, never()).toModel(any())
     }
 
     @Test
-    fun `Should findEventProfileByEventAndUserId call repository findEventProfileByEventAndUserId`() {
+    fun `Should findEventProfileByEventAndUserId call repository findUsableProfileByEventAndUserId`() {
         // Arrange
-        val profile = EventProfileEntity()
-        val userId = UUID.randomUUID()
-        val onlyVisible = true
-        val onlyActive = true
-        val status = ACCEPTED
-        `when`(repository.findEventProfileByEventAndUserId(any(), any(), any(), any(), any())).thenReturn(Mono.just(profile))
+        val params = EventProfileSearchParamModel(statusSearched = null)
 
         // Act
-        modelRepository.findEventProfileByEventAndUserId(eventId, userId, onlyVisible, onlyActive, status).block()
+        val result = repository.findEventProfileByEventAndUserId(eventId, currentUser().id !!, params).block()
 
         // Assert
-        verify(repository, times(1)).findEventProfileByEventAndUserId(eventId, userId, onlyVisible, onlyActive, status)
-        verify(mapper, times(1)).toModel(profile)
-        verifyNoInteractions(roleCountMapper)
+        assertNotNull(result)
+        verify(postgresRepository).findEventProfileByEventAndUserId(
+            eventId,
+            currentUser().id !!,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+        )
+        verify(mapper).toModel(any())
+    }
+
+    @Test
+    fun `Should findEventProfileByEventAndUserId call repository findUsableProfileByEventAndUserId and return null`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        val params = EventProfileSearchParamModel(statusSearched = null)
+
+        // Act
+        val result = repository.findEventProfileByEventAndUserId(eventId, uuid, searchParams = params).block()
+
+        // Assert
+        assertNull(result)
+        verify(postgresRepository).findEventProfileByEventAndUserId(
+            eventId,
+            uuid,
+            visibilitySearched = null,
+            availabilitySearched = null,
+            statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+        )
+        verify(mapper, never()).toModel(any())
     }
 
     @Test
     fun `Should findLevel0EventProfileRoleByUserId call repository findLevel0EventProfileRoleByUserId`() {
-        // Arrange
-        val count = EventProfileRoleCountEntity()
-        val userId = UUID.randomUUID()
-        val onlyVisible = true
-        `when`(repository.findLevel0EventProfileRoleByUserId(any(), any())).thenReturn(Flux.just(count))
-
         // Act
-        modelRepository.findLevel0EventProfileRoleByUserId(userId, onlyVisible).blockFirst()
+        val result =
+            repository.findLevel0EventProfileRoleByUserId(currentUser().id !!, visibilitySearched = null).collectList().block()
 
         // Assert
-        verify(repository, times(1)).findLevel0EventProfileRoleByUserId(userId, onlyVisible)
-        verifyNoInteractions(mapper)
-        verify(roleCountMapper, times(1)).toModel(count)
+        assertFalse(result.isNullOrEmpty())
+        verify(postgresRepository).findLevel0EventProfileRoleByUserId(
+            currentUser().id !!,
+            visibilitySearched = null,
+        )
+        verify(roleCountMapper).toModel(any())
     }
 
     @Test
     fun `Should findLevel0EventProfileRoleByEventId call repository findLevel0EventProfileRoleByEventId`() {
-        // Arrange
-        val profile = EventProfileEntity()
-        val onlyVisible = true
-        `when`(repository.findLevel0EventProfileRoleByEventId(any(), any())).thenReturn(Flux.just(profile))
-
         // Act
-        modelRepository.findLevel0EventProfileRoleByEventId(eventId, onlyVisible).blockFirst()
+        val result =
+            repository.findLevel0EventProfileRoleByEventId(eventId, visibilitySearched = null).collectList().block()
 
         // Assert
-        verify(repository, times(1)).findLevel0EventProfileRoleByEventId(eventId, onlyVisible)
-        verify(mapper, times(1)).toModel(profile)
-        verifyNoInteractions(roleCountMapper)
+        assertFalse(result.isNullOrEmpty())
+        verify(postgresRepository).findLevel0EventProfileRoleByEventId(
+            eventId,
+            visibilitySearched = null,
+        )
+        verify(mapper).toModel(any())
     }
 
-    @Test
-    fun `Should create call repository save`() {
-        // Arrange
-        val profile = EventProfileModel()
-        val profileEntity = EventProfileEntity()
-        `when`(repository.save(any())).thenReturn(Mono.just(profileEntity))
+    @Nested
+    @TestInstance(PER_CLASS)
+    @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+    inner class WritingTests {
+        private lateinit var uuid: UUID
 
-        // Act
-        modelRepository.create(profile).block()
+        @Test
+        @Order(1)
+        fun `Should create call repository save`() {
+            // Arrange
+            val eventProfile = EventProfileModel().apply {
+                user = UserModel().apply { id = userIdWithoutProfile }
+                event = EventModel().apply { id = eventId }
+                role = "EVENT_ADMINISTRATOR"
+                status = INVITED
+                create(currentUser())
+            }
 
-        // Assert
-        verify(repository, times(1)).save(any())
-        verify(mapper, times(1)).toEntity(profile)
-        verify(mapper, times(1)).toModel(profileEntity)
-        verifyNoInteractions(roleCountMapper)
-    }
+            // Act
+            val result = repository.create(eventProfile).block()
+            uuid = result !!.id !!
 
-    @Test
-    fun `Should saveAll call repository saveAll`() {
-        // Arrange
-        val profile = EventProfileModel()
-        val profileEntity = EventProfileEntity()
-        `when`(repository.saveAll(any<List<EventProfileEntity>>())).thenReturn(Flux.just(*arrayOf(profileEntity)))
+            // Assert
+            assertNotNull(result)
+            verify(postgresRepository).save(any())
+            verify(mapper).toEntity(any())
+            verify(mapper).toModel(any())
+        }
 
-        // Act
-        modelRepository.saveAll(listOf(profile)).blockFirst()
+        @Test
+        @Order(2)
+        fun `Should update call repository save`() {
+            // Arrange
+            val eventProfile = EventProfileModel().apply {
+                user = UserModel().apply { id = userIdWithoutProfile }
+                event = EventModel().apply { id = eventId }
+                role = "EVENT_ADMINISTRATOR"
+                status = ACCEPTED
+                create(currentUser())
+            }
 
-        // Assert
-        verify(repository, times(1)).saveAll(any<List<EventProfileEntity>>())
-        verify(mapper, times(1)).toEntity(profile)
-        verify(mapper, times(1)).toModel(profileEntity)
-        verifyNoInteractions(roleCountMapper)
-    }
+            // Act
+            val result = repository.update(eventProfile).block()
 
-    @Test
-    fun `Should deleteById call repository deleteById`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        `when`(repository.deleteById(any<UUID>())).thenReturn(Mono.empty())
+            // Assert
+            assertNotNull(result)
+            verify(postgresRepository).save(any())
+            verify(mapper).toEntity(any())
+            verify(mapper).toModel(any())
+        }
 
-        // Act
-        modelRepository.deleteById(uuid).block()
+        @Test
+        @Order(3)
+        fun `Should deleteById call repository deleteById`() {
+            // Act
+            repository.deleteById(uuid).block()
 
-        // Assert
-        verify(repository, times(1)).deleteById(uuid)
+            // Assert
+            verify(postgresRepository).deleteById(uuid)
+        }
+
+        @Test
+        @Order(4)
+        fun `Should saveAll call repository saveAll`() {
+            // Arrange
+            val eventProfile = EventProfileModel().apply {
+                user = UserModel().apply { id = userIdWithoutProfile }
+                event = EventModel().apply { id = eventId }
+                role = "EVENT_ADMINISTRATOR"
+                status = INVITED
+                create(currentUser())
+            }
+
+            // Act
+            val result = repository.saveAll(listOf(eventProfile)).collectList().block()
+
+            // Assert
+            assertFalse(result.isNullOrEmpty())
+            verify(mapper).toEntity(any())
+            verify(mapper).toModel(any())
+        }
     }
 }

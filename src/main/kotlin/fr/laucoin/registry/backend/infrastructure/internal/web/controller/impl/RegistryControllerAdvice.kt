@@ -6,11 +6,12 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UNKNOWN_ERROR
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IRegistryControllerAdvice
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ErrorDto
 import java.util.Locale
-import org.springframework.beans.TypeMismatchException
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.web.reactive.error.DefaultErrorAttributes
 import org.springframework.context.MessageSource
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
@@ -28,15 +29,16 @@ import reactor.core.publisher.Mono
 
 @RestControllerAdvice
 class RegistryControllerAdvice(
-    @Qualifier("errorsSource") private val translateService: MessageSource
-): IRegistryControllerAdvice {
+    @Qualifier("errorsSource") private val translateService: MessageSource,
+    private val errorAttributes: DefaultErrorAttributes
+): IRegistryControllerAdvice, LoggerService() {
     override fun handleRegistryException(exception: RegistryException): Mono<ResponseEntity<ErrorDto>> {
-        return handleSecurityException(exception.status, exception.code, exception.args?.toArray())
+        return buildError(exception.status, exception.code, exception.args?.toArray())
     }
 
     override fun handleWebExchangeBindException(exception: WebExchangeBindException): Mono<ResponseEntity<ErrorDto>> {
         val error = exception.allErrors.first()
-        return handleSecurityException(
+        return buildError(
             status = BAD_REQUEST,
             code = error.defaultMessage !!,
             args = error.arguments ?: emptyArray(),
@@ -44,17 +46,16 @@ class RegistryControllerAdvice(
     }
 
     override fun handleServerWebInputException(exception: ServerWebInputException): Mono<ResponseEntity<ErrorDto>> {
-        val error = exception.cause as TypeMismatchException
-        return handleSecurityException(
+        return buildError(
             status = BAD_REQUEST,
             code = PARAMETER_TYPE_MISMATCH,
-            args = arrayOf(error.value),
+            args = arrayOf(exception.cause),
         )
     }
 
     override fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): Mono<ResponseEntity<ErrorDto>> {
         val error: ParameterValidationResult = exception.valueResults.first()
-        return handleSecurityException(
+        return buildError(
             status = BAD_REQUEST,
             code = error.resolvableErrors.first().defaultMessage !!,
             args = arrayOf(error.argument),
@@ -62,28 +63,28 @@ class RegistryControllerAdvice(
     }
 
     override fun handleHandlerAuthorizationDeniedException(exception: AuthorizationDeniedException): Mono<ResponseEntity<ErrorDto>> {
-        return handleSecurityException(
+        return buildError(
             status = FORBIDDEN,
             code = NOT_ENOUGH_PERMISSION,
         )
     }
 
-    override fun handleException(exception: ResponseStatusException): Mono<ResponseEntity<ErrorDto>> {
-        return handleSecurityException(
+    override fun handleResponseStatusException(exception: ResponseStatusException): Mono<ResponseEntity<ErrorDto>> {
+        return buildError(
             status = HttpStatus.valueOf(exception.statusCode.value()),
             code = exception.statusCode.value().toString(),
         )
     }
 
     override fun handleException(exception: Exception): Mono<ResponseEntity<ErrorDto>> {
-        return handleSecurityException(
+        log.error("An unexpected error occurred", exception)
+        return buildError(
             status = INTERNAL_SERVER_ERROR,
-            code = UNKNOWN_ERROR,
-            args = arrayOf(exception.message),
+            code = "500",
         )
     }
 
-    private fun handleSecurityException(
+    private fun buildError(
         status: HttpStatus,
         code: String,
         args: Array<Any?>? = null,
@@ -95,7 +96,12 @@ class RegistryControllerAdvice(
                 statusName = status.name,
                 code = code,
                 title = translateService.getMessage("$ERROR_TITLE_PREFIX${status.value()}", null, locale),
-                message = translateService.getMessage("$ERROR_MESSAGE_PREFIX$code", args, locale),
+                message = translateService.getMessage(
+                    "$ERROR_MESSAGE_PREFIX$code",
+                    args,
+                    translateService.getMessage("$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR", null, locale),
+                    locale
+                ),
             )
 
             Mono.just(ResponseEntity.status(status).body(body))

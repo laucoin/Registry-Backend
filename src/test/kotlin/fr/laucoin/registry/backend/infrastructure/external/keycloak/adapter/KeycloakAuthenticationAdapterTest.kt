@@ -13,7 +13,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.spy
+import org.mockito.kotlin.spy
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.test.util.ReflectionTestUtils.setField

@@ -16,6 +16,7 @@ data class MovementWriterDto(
     var dateTime: ZonedDateTime?,
     @field:NotNull(message = MOVEMENT_TYPE_NULL)
     var type: MovementTypeEnum?,
+    var activityId: UUID?,
     @field:Valid
     @field:NotEmpty(message = MOVEMENT_CONTENT_EMPTY)
     var content: List<MovementContentWriterDto>?,

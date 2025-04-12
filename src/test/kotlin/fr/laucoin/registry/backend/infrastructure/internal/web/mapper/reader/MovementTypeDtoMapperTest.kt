@@ -5,12 +5,12 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import java.util.Locale
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.context.MessageSource
 
 class MovementTypeDtoMapperTest {
@@ -22,13 +22,13 @@ class MovementTypeDtoMapperTest {
         // Arrange
         val type = IN
         val translated = "translated"
-        `when`(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(translated)
+        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(translated)
 
         // Act
         val result = mapper.toDto(type, Locale.getDefault())
 
         // Assert
-        verify(translateService, times(1)).getMessage("${MOVEMENT_TYPE_PREFIX}$type", null, Locale.getDefault())
+        verify(translateService).getMessage("${MOVEMENT_TYPE_PREFIX}$type", null, Locale.getDefault())
 
         assertEquals(type.name, result.value)
         assertEquals(translated, result.label)

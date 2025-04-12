@@ -1,60 +1,134 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import java.time.ZonedDateTime
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
+import java.time.LocalDateTime
 import java.util.Locale
 import java.util.UUID
+import java.util.stream.Stream
 import kotlin.test.assertEquals
-import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.context.MessageSource
 
 class EventProfileReaderDtoMapperTest {
-    private val translateService: MessageSource = Mockito.mock()
+    private val translateService: MessageSource = mock()
     private val eventMapper: EventReaderDtoMapper = mock()
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
     private val mapper: EventProfileReaderDtoMapper = EventProfileReaderDtoMapper(translateService, eventMapper, partialUserMapper)
 
-    @Test
-    fun `Should toDto convert EventProfileModel to EventProfileReaderDto`() {
-        // Arrange
-        val profile = EventProfileModel().apply {
-            id = UUID.randomUUID()
-            event = EventModel()
-            user = UserModel()
-            role = "ROLE"
-            status = ACCEPTED
-            startAccess = ZonedDateTime.now()
-            endAccess = ZonedDateTime.now()
-            visible = true
-            creation = HistoryModel()
-            lastEdition = HistoryModel()
+    companion object {
+        @JvmStatic
+        fun `Should toDto convert EventProfileModel to EventProfileReaderDto`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    EventProfileModel().apply {
+                        id = UUID.randomUUID()
+                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
+                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        visible = false
+                        status = null
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    BLOCKED.name,
+                    1,
+                    0,
+                    0,
+                ),
+                Arguments.of(
+                    EventProfileModel().apply {
+                        id = UUID.randomUUID()
+                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
+                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        status = ACCEPTED
+                        visible = false
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    BLOCKED.name,
+                    1,
+                    0,
+                    0,
+                ),
+                Arguments.of(
+                    EventProfileModel().apply {
+                        id = UUID.randomUUID()
+                        event = EventModel()
+                        user = UserModel()
+                        role = "ROLE"
+                        status = ACCEPTED
+                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
+                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        visible = true
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    ACCEPTED.name,
+                    1,
+                    1,
+                    1,
+                ),
+                Arguments.of(
+                    EventProfileModel().apply {
+                        id = UUID.randomUUID()
+                        event = EventModel()
+                        user = UserModel()
+                        role = "ROLE"
+                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
+                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        status = null
+                        visible = true
+                        creation = HistoryModel()
+                        lastEdition = HistoryModel()
+                    },
+                    null,
+                    1,
+                    1,
+                    1,
+                ),
+            )
         }
-        val translated = "translated"
-        `when`(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(translated)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should toDto convert EventProfileModel to EventProfileReaderDto`(
+        profile: EventProfileModel,
+        expectedStatusValue: String?,
+        expectedTranslation: Int,
+        expectedEventCast: Int,
+        expectedUserCast: Int,
+    ) {
+        // Arrange
+        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
+        whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
+        whenever(partialUserMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
 
         // Act
         val result = mapper.toDto(profile, Locale.getDefault())
 
         // Assert
-        verify(eventMapper, times(1)).toDto(profile.event !!, Locale.getDefault())
-        verify(partialUserMapper, times(1)).toDto(profile.user !!, Locale.getDefault())
+        verify(eventMapper, times(expectedEventCast)).toDto(profile.event ?: EventModel(), Locale.getDefault())
+        verify(partialUserMapper, times(expectedUserCast)).toDto(profile.user ?: UserModel(), Locale.getDefault())
 
         assertEquals(profile.id, result.id)
-        assertEquals(translated, result.role?.label)
         assertEquals(profile.role, result.role?.value)
-        assertEquals(translated, result.status?.label)
-        assertEquals(profile.status?.name, result.status?.value)
+        assertEquals(expectedStatusValue, result.status?.value)
         assertEquals(profile.startAccess, profile.startAccess)
         assertEquals(profile.endAccess, profile.endAccess)
         assertEquals(profile.visible, result.visible)

@@ -24,7 +24,6 @@ class StringExtTest {
     @ParameterizedTest
     @MethodSource
     fun `Should getStringBetween return String between`(value: String?, delimiter: String, expected: String?) {
-        // Arrange
         // Act
         val result = value.getStringBetween(delimiter)
 

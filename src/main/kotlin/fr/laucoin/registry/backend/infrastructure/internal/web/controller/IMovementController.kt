@@ -1,16 +1,21 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_D
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto.MovementContentReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -18,10 +23,11 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
@@ -44,7 +50,7 @@ import reactor.core.publisher.Mono
 interface IMovementController {
     @Operation(
         summary = "Find Movements",
-        description = "Find or get paginated Movements",
+        description = "Find or get paginated Movements without content",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -58,21 +64,41 @@ interface IMovementController {
     fun findMovements(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestParam(defaultValue = "0") offset: Int,
-        @RequestParam(defaultValue = "20") limit: Int,
-        @RequestParam(defaultValue = "DESC") order: Direction,
-        @RequestParam(defaultValue = "true") onlyVisible: Boolean,
-        @RequestParam(required = false) searched: String?,
-        @RequestParam(required = false) type: MovementTypeEnum?,
+        @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
+        @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+            200,
+            message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+        ) pageSize: Int,
+        @RequestParam(required = false) visibilitySearched: Boolean?,
+        @RequestParam(required = false) typeSearched: MovementTypeEnum?,
         @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
+        @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,
         @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
-    ): Mono<PageDto<MovementReaderDto>>
+        @DateTimeFormat(iso = DATE_TIME) endDateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<MovementReaderDto>>
+
+    @Operation(
+        summary = "Find Movements contents",
+        description = "Find or get content of given Movements IDs",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_R')")
+    @GetMapping("/contents")
+    fun findMovementsContents(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @RequestParam(required = true) movementIds: List<UUID>,
+    ): Flux<Pair<UUID, List<MovementContentReaderDto>>>
 
     @Operation(
         summary = "Find Movement",
-        description = "Find Movement by ID",
+        description = "Find Movement by ID with content",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -105,7 +131,7 @@ interface IMovementController {
     fun searchParticipantsAndGroups(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestParam searched: String?
+        @RequestParam textSearched: String?
     ): Mono<MovementParticipantsAndGroupsReaderDto>
 
     @Operation(
@@ -124,12 +150,12 @@ interface IMovementController {
     fun searchVehicles(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestParam searched: String?
+        @RequestParam textSearched: String?
     ): Flux<VehicleReaderDto>
 
     @Operation(
-        summary = "Get available Movement Type",
-        description = "Get all movement type you are allowed to assign",
+        summary = "Search Activities",
+        description = "Search Activities to add in a Movement",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -138,12 +164,13 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
-    @GetMapping("/types")
-    fun getAvailableMovementTypes(
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @GetMapping("/search/activities")
+    fun searchActivities(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-    ): Flux<LabelDto>
+        @RequestParam textSearched: String?
+    ): Flux<ActivityReaderDto>
 
     @Operation(
         summary = "Create Movement",

@@ -20,16 +20,14 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
 
@@ -37,7 +35,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
     @MockitoBean
     private lateinit var authenticationPort: IAuthenticationPort
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var mapper: CurrentUserReaderDtoMapper
 
     companion object {
@@ -74,7 +72,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should getLoginUri return 200`() {
         // Arrange
         val redirectUri = "redirectUri"
-        `when`(authenticationPort.getLoginUri(any())).thenReturn(AuthenticationUriModel("uri"))
+        whenever(authenticationPort.getLoginUri(any())).thenReturn(AuthenticationUriModel("uri"))
 
         // Act
         val result = webClient
@@ -84,7 +82,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Assert
         result.body<AuthenticationUriModel>(OK)
-        verify(authenticationPort, times(1)).getLoginUri(redirectUri)
+        verify(authenticationPort).getLoginUri(redirectUri)
     }
 
     @ParameterizedTest
@@ -105,7 +103,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should getLogoutUri return 200`() {
         // Arrange
         val redirectUri = "redirectUri"
-        `when`(authenticationPort.getLogoutUri(any())).thenReturn(AuthenticationUriModel("uri"))
+        whenever(authenticationPort.getLogoutUri(any())).thenReturn(AuthenticationUriModel("uri"))
 
         // Act
         val result = webClient
@@ -115,7 +113,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Assert
         result.body<AuthenticationUriModel>(OK)
-        verify(authenticationPort, times(1)).getLogoutUri(redirectUri)
+        verify(authenticationPort).getLogoutUri(redirectUri)
     }
 
     @ParameterizedTest
@@ -139,7 +137,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
             redirectUri = "redirectUri",
             authorizationCode = "code",
         )
-        `when`(authenticationPort.getAuthenticationToken(any(), any())).thenReturn(
+        whenever(authenticationPort.getAuthenticationToken(any(), any())).thenReturn(
             Mono.just(
                 TokenModel(
                     accessToken = "accessToken",
@@ -160,7 +158,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Assert
         result.body<TokenModel>(OK)
-        verify(authenticationPort, times(1)).getAuthenticationToken(body.authorizationCode !!, body.redirectUri !!)
+        verify(authenticationPort).getAuthenticationToken(body.authorizationCode !!, body.redirectUri !!)
     }
 
     @ParameterizedTest
@@ -189,7 +187,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should refreshToken return 200`() {
         // Arrange
         val body = RefreshAuthenticationInfoModel(refreshToken = "refreshToken")
-        `when`(authenticationPort.refreshAuthenticationToken(any())).thenReturn(
+        whenever(authenticationPort.refreshAuthenticationToken(any())).thenReturn(
             Mono.just(
                 TokenModel(
                     accessToken = "accessToken",
@@ -210,7 +208,7 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Assert
         result.body<TokenModel>(OK)
-        verify(authenticationPort, times(1)).refreshAuthenticationToken(body.refreshToken !!)
+        verify(authenticationPort).refreshAuthenticationToken(body.refreshToken !!)
     }
 
     @ParameterizedTest
@@ -243,6 +241,6 @@ class SecurityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Assert
         result.body<CurrentUserModel>(OK)
-        verify(mapper, times(1)).toDto(any(), any())
+        verify(mapper).toDto(any(), any())
     }
 }

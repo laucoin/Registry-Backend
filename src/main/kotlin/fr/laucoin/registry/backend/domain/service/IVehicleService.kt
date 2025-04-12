@@ -1,41 +1,34 @@
 package fr.laucoin.registry.backend.domain.service
 
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
-import java.time.ZonedDateTime
+import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IVehicleService {
-    fun findVehiclesByEventId(
+    fun findVehiclesPage(
         eventId: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        onlyPresent: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?,
-    ): Flux<VehicleModel>
+        pageable: PageableModel,
+        searchParams: VehicleSearchParamModel,
+    ): Mono<PageModel<VehicleModel>>
 
-    fun findVehicleById(eventId: UUID, id: UUID, onlyVisible: Boolean): Mono<VehicleModel>
-    fun findVehicleMovements(
+    fun findVehicleById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+
+    fun findVehicleMovementsPage(
         eventId: UUID,
         id: UUID,
-        order: Direction,
-        onlyVisible: Boolean,
-        searched: String?,
-        type: MovementTypeEnum?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<MovementModel>
+        pageable: PageableModel,
+        searchParams: MovementSearchParamModel,
+    ): Mono<PageModel<MovementModel>>
 
-    fun createVehicle(currentUser: UserModel, vehicle: VehicleModel): Mono<VehicleModel>
-    fun updateVehicleById(currentUser: UserModel, eventId: UUID, id: UUID, vehicle: VehicleModel): Mono<VehicleModel>
-    fun disableVehicleById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<VehicleModel>
-    fun enableVehicleById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<VehicleModel>
-    fun deleteVehicleById(currentUser: UserModel, eventId: UUID, id: UUID): Mono<Void>
+    fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel>
+    fun updateVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, vehicle: VehicleModel): Mono<VehicleModel>
+    fun disableVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<VehicleModel>
+    fun enableVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<VehicleModel>
+    fun deleteVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void>
 }

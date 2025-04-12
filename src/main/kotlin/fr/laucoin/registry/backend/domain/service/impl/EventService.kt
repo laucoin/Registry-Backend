@@ -4,21 +4,24 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventError.EVENT_D
 import fr.laucoin.registry.backend.domain.constant.EventOptionsConst.optionsRules
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_R
 import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum
+import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
+import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
 import fr.laucoin.registry.backend.domain.extension.DateExt.notInRange
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.EventSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IEventModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IEventService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
-import java.time.ZonedDateTime
-import java.util.Objects
+import java.time.LocalTime
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -32,23 +35,18 @@ class EventService(
     private val transactionalOperator: TransactionalOperator,
     private val roleService: IRoleService,
 ): IEventService, GenericService() {
-    override fun findEvents(
+    override fun findEventsPage(
         currentUser: CurrentUserModel,
-        order: Direction,
-        onlyVisible: Boolean,
-        searched: String?,
-        startDateTime: ZonedDateTime?,
-        endDateTime: ZonedDateTime?
-    ): Flux<EventModel> {
-        val userEventIds: List<UUID> = roleService.getEventIdFromCurrentUserProfiles(currentUser)
-        val eventReader: Boolean = roleService.getAuthoritiesByUserRole(currentUser.role).contains(REGISTRY_EVENT_R)
-        return repository.findAll(onlyVisible, startDateTime, endDateTime)
-            .filter { eventReader || userEventIds.contains(it.id) }
-            .searchAndSort(order, searched, compareBy { it.name })
+        pageable: PageableModel,
+        searchParams: EventSearchParamModel,
+    ): Mono<PageModel<EventModel>> {
+        return if (roleService.getAuthoritiesByUserRole(currentUser.role).contains(REGISTRY_EVENT_R)) {
+            repository.findPage(pageable, searchParams)
+        } else repository.findPage(roleService.getEventIdsFromCurrentUserProfiles(currentUser), pageable, searchParams)
     }
 
-    override fun findEventById(id: UUID, onlyVisible: Boolean): Mono<EventModel> {
-        return repository.findById(id, onlyVisible)
+    override fun findEventById(id: UUID, visibilitySearched: Boolean?): Mono<EventModel> {
+        return repository.findById(id, visibilitySearched)
             .notFoundIfEmpty(id)
     }
 
@@ -56,8 +54,8 @@ class EventService(
         return Flux.fromIterable(optionsRules.map { Pair(it.key, it.value) })
     }
 
-    override fun validateDateTime(id: UUID, dateTime: ZonedDateTime?, errorCode: String): Mono<UUID> {
-        return findEventById(id, onlyVisible = false)
+    override fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID> {
+        return findEventById(id, visibilitySearched = null)
             .handle { it, handle ->
                 if (dateTime.notInRange(it.begin, it.end)) {
                     log.warn("Failed to editing, date {} is out of event range [{}, {}]", dateTime, it.begin, it.end)
@@ -72,8 +70,8 @@ class EventService(
             }
     }
 
-    override fun validateDateTimes(id: UUID, start: ZonedDateTime?, end: ZonedDateTime?, errorCode: String): Mono<UUID> {
-        return findEventById(id, onlyVisible = false)
+    override fun validateDateTimes(id: UUID, start: CustomDateTimeModel?, end: CustomDateTimeModel?, errorCode: String): Mono<UUID> {
+        return findEventById(id, visibilitySearched = null)
             .handle { it, handle ->
                 if (start.notInRange(it.begin, it.end) || end.notInRange(it.begin, it.end)) {
                     log.warn(
@@ -94,7 +92,7 @@ class EventService(
             }
     }
 
-    override fun createEvent(currentUser: UserModel, event: EventModel): Mono<EventModel> {
+    override fun createEvent(currentUser: CurrentUserModel, event: EventModel): Mono<EventModel> {
         return repository.create(event.apply { create(currentUser) })
             .flatMap {
                 userEventProfileService.createUserEventProfileFromEvent(currentUser, it)
@@ -103,9 +101,9 @@ class EventService(
             .`as`(transactionalOperator::transactional)
     }
 
-    override fun updateEventById(currentUser: UserModel, id: UUID, event: EventModel): Mono<EventModel> {
-        return findEventById(id, onlyVisible = false)
-            .validateBeginDate(event)
+    override fun updateEventById(currentUser: CurrentUserModel, id: UUID, event: EventModel): Mono<EventModel> {
+        return findEventById(id, visibilitySearched = null)
+            .validateDates(event)
             .map {
                 it.apply {
                     name = event.name
@@ -117,16 +115,13 @@ class EventService(
             .updateEvent(currentUser)
     }
 
-    private fun Mono<EventModel>.updateEvent(currentUser: UserModel) = flatMap {
+    private fun Mono<EventModel>.updateEvent(currentUser: CurrentUserModel) = flatMap {
         repository.update(it.apply { update(currentUser) })
     }
 
-    private fun Mono<EventModel>.validateBeginDate(event: EventModel): Mono<EventModel> = flatMap {
-        if (
-            (Objects.nonNull(event.begin) && (Objects.isNull(it.begin) || it.begin !!.isBefore(event.begin)))
-            || (Objects.nonNull(event.end) && (Objects.isNull(it.end) || it.end !!.isAfter(event.end)))
-        ) {
-            repository.validDateTime(it.id !!, event.begin, event.end)
+    private fun Mono<EventModel>.validateDates(event: EventModel): Mono<EventModel> = flatMap {
+        if (it.begin.isBefore(event.begin) || it.end.isAfter(event.end)) {
+            repository.validDateTime(it.id !!, event.begin?.toLocalDateTime(LocalTime.MIN), event.end?.toLocalDateTime(LocalTime.MAX))
                 .handle { valid, handle ->
                     if (! valid) {
                         log.warn("Failed, {} is out of event range [{}, {}]", it, it.begin, it.end)
@@ -136,20 +131,20 @@ class EventService(
         } else Mono.just(it)
     }
 
-    override fun disableEventById(currentUser: UserModel, id: UUID): Mono<EventModel> {
-        return findEventById(id, onlyVisible = true)
+    override fun disableEventById(currentUser: CurrentUserModel, id: UUID): Mono<EventModel> {
+        return findEventById(id, visibilitySearched = true)
             .updateVisibility(visibility = false)
             .updateEvent(currentUser)
     }
 
-    override fun enableEventById(currentUser: UserModel, id: UUID): Mono<EventModel> {
-        return findEventById(id, onlyVisible = false)
+    override fun enableEventById(currentUser: CurrentUserModel, id: UUID): Mono<EventModel> {
+        return findEventById(id, visibilitySearched = false)
             .updateVisibility(visibility = true)
             .updateEvent(currentUser)
     }
 
     override fun deleteEventById(id: UUID): Mono<Void> {
-        return findEventById(id, onlyVisible = false)
+        return findEventById(id, visibilitySearched = null)
             .flatMap { repository.deleteById(id) }
     }
 }

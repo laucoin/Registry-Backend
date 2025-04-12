@@ -1,12 +1,9 @@
 package fr.laucoin.registry.backend.domain.handler
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ACCEPTED_LANGUAGE_HEADER
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import java.util.Locale
 import java.util.Objects
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
-import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.stereotype.Component
 import org.springframework.web.server.ServerWebExchange
@@ -32,10 +29,6 @@ class HeadersHandler(
                     locale = Locale.forLanguageTag(language)
                     return@forEach
                 }
-            }
-
-            if (requestedLanguages.isNotEmpty() && Objects.isNull(locale)) {
-                throw RegistryException(BAD_REQUEST, NOT_ACCEPTED_LANGUAGE_HEADER)
             }
 
             return locale ?: Locale.getDefault()

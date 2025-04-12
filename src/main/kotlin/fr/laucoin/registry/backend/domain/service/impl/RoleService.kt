@@ -1,8 +1,12 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_D
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_PREFIX
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_R
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_U
+import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IRoleModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import java.util.Objects
@@ -47,18 +51,41 @@ class RoleService(
         } else roles.first()
     }
 
-    override fun getAuthoritiesByUserRole(role: String?): List<String> = userRoles[role]?.second.orEmpty()
+    override fun getAuthoritiesByUserRole(role: String?): List<String> {
+        return if (! userRoles.containsKey(role)) {
+            log.warn("User role \"{}\" not found in \"{}\"", role, userRoles.keys)
+            emptyList()
+        } else userRoles[role] !!.second
+    }
 
-    override fun getAuthoritiesByEventRole(role: String, eventId: UUID): List<String> =
-        eventRoles[role]?.second?.map { "${eventId}_$it" }.orEmpty()
+    override fun getAuthoritiesByEventRole(role: String, eventId: UUID, visibility: Boolean?): List<String> {
+        if (! eventRoles.containsKey(role)) {
+            log.warn("Event role \"{}\" not found in \"{}\"", role, eventRoles.keys)
+            return emptyList()
+        }
 
-    override fun getEventIdFromCurrentUserProfiles(currentUser: CurrentUserModel): List<UUID> {
+        val roleAuthoritiesMapping = eventRoles[role]
+        return when {
+            Objects.isNull(roleAuthoritiesMapping) || (visibility != true && roleAuthoritiesMapping !!.first != 0) -> emptyList()
+            visibility != true && roleAuthoritiesMapping !!.first == 0 ->
+                roleAuthoritiesMapping.second.filter { listOf(REGISTRY_EVENT_R, REGISTRY_EVENT_U, REGISTRY_EVENT_D).contains(it) }
+                    .map { "${eventId}_$it" }
+
+            else -> roleAuthoritiesMapping !!.second.map { "${eventId}_$it" }
+        }
+    }
+
+    override fun getOptionAuthoritiesByEvent(eventId: UUID, eventOptions: List<EventOptionEnum>): List<String> {
+        return eventOptions.map { "${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}$it" }
+    }
+
+    override fun getEventIdsFromCurrentUserProfiles(currentUser: CurrentUserModel): List<UUID> {
         return currentUser.authorities
             .mapNotNull { uuidRegex.find(it.authority)?.value }
             .map { UUID.fromString(it) }.distinct()
     }
 
-    override fun getAssignableUserRoles(currentUser: UserModel): List<String> {
+    override fun getAssignableUserRoles(currentUser: CurrentUserModel): List<String> {
         return findAssignableRoles(currentUser.role, userRoles)
     }
 

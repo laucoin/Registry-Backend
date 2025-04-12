@@ -13,8 +13,11 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMP
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
@@ -26,7 +29,6 @@ import java.util.Objects
 import java.util.UUID
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -41,40 +43,33 @@ class UserService(
     private val transactionalOperator: TransactionalOperator,
     private val roleService: IRoleService,
 ): ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
-    private lateinit var serviceAccount: UserModel
+    private lateinit var serviceAccount: CurrentUserModel
 
     override fun onApplicationEvent(event: ContextRefreshedEvent) {
         repository.findServiceAccount()
             .subscribe { serviceAccount = it }
     }
 
-    override fun findUsers(order: Direction, onlyVisible: Boolean, searched: String?): Flux<UserModel> {
-        return repository.findAll(onlyVisible)
-            .filter { isNotServiceAccount(it) }
-            .searchAndSort(order, searched, compareBy { it.lastName })
+    override fun findUsersPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>> {
+        return repository.findPage(pageable, searchParams)
     }
 
-    override fun findUserById(id: UUID, onlyVisible: Boolean): Mono<UserModel> {
-        return repository.findById(id, onlyVisible)
+    override fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {
+        return repository.findById(id, visibilitySearched)
             .filter { isNotServiceAccount(it) }
             .notFoundIfEmpty(id)
     }
 
-    private fun findUserByIdWithEligibleRole(currentUser: UserModel, id: UUID, onlyVisible: Boolean): Mono<UserModel> {
-        val eligibleRoles = roleService.getAssignableUserRoles(currentUser)
-        return findUserById(id, onlyVisible)
-            .filter { Objects.isNull(it.role) || eligibleRoles.contains(it.role) }
-            .notFoundIfEmpty(id)
-    }
+    private fun isNotServiceAccount(user: UserModel): Boolean = user.id != serviceAccount.id
 
-    override fun findUserByOidcId(id: UUID, onlyVisible: Boolean): Mono<CurrentUserModel> {
-        return repository.findByOidcId(id, onlyVisible)
+    override fun findUserByOidcId(id: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel> {
+        return repository.findByOidcId(id, visibilitySearched)
             .filter { isNotServiceAccount(it) }
     }
 
-    override fun getServiceAccount(): UserModel = serviceAccount
+    override fun serviceAccount(): UserModel = serviceAccount
 
-    override fun getAssignableUserRoles(currentUser: CurrentUserModel): Flux<String> {
+    override fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String> {
         return Flux.fromIterable(roleService.getAssignableUserRoles(currentUser))
     }
 
@@ -102,10 +97,6 @@ class UserService(
             .`as`(transactionalOperator::transactional)
     }
 
-    private fun updateUser(currentUser: UserModel, user: UserModel): Mono<UserModel> {
-        return repository.update(user.apply { update(currentUser) })
-    }
-
     override fun updateUserIfPersonalDataChanged(
         user: CurrentUserModel,
         email: String,
@@ -127,9 +118,14 @@ class UserService(
             .map { user }
     }
 
+    private fun updateUser(currentUser: CurrentUserModel, user: UserModel): Mono<UserModel> {
+        return repository.update(user.apply { update(currentUser) })
+    }
+
     override fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel> {
-        return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = true)
-            .validateRole(currentUser, role, USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN)
+        val assignableRoles = roleService.getAssignableUserRoles(currentUser)
+        return findUserByIdWithEligibleRole(assignableRoles, id, visibilitySearched = true)
+            .validateRole(currentUser, assignableRoles, role, USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN)
             .validateNotLastRoleLevel0(USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE)
             .flatMap {
                 it.role = role
@@ -137,8 +133,15 @@ class UserService(
             }
     }
 
+    private fun findUserByIdWithEligibleRole(assignableRoles: List<String>, id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {
+        return findUserById(id, visibilitySearched)
+            .filter { Objects.isNull(it.role) || assignableRoles.contains(it.role) }
+            .notFoundIfEmpty(id)
+    }
+
     override fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
-        return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = true)
+        val allowedRoles = roleService.getAssignableUserRoles(currentUser)
+        return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = true)
             .validateNotCurrentUser(currentUser, USER_BLOCK_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR)
             .validateNotLastEventRoleLevel0(USER_BLOCK_LAST_EVENT_ADMINISTRATOR)
@@ -147,13 +150,15 @@ class UserService(
     }
 
     override fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
-        return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = false)
+        val allowedRoles = roleService.getAssignableUserRoles(currentUser)
+        return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = false)
             .updateVisibility(visibility = true)
             .flatMap { updateUser(currentUser, it) }
     }
 
     override fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
-        return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = false)
+        val allowedRoles = roleService.getAssignableUserRoles(currentUser)
+        return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
             .validateNotCurrentUser(currentUser, USER_IMPERSONATE_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR)
             .validateNotLastEventRoleLevel0(USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR)
@@ -164,7 +169,8 @@ class UserService(
     }
 
     override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {
-        return findUserByIdWithEligibleRole(currentUser, id, onlyVisible = false)
+        val allowedRoles = roleService.getAssignableUserRoles(currentUser)
+        return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
             .validateNotCurrentUser(currentUser, USER_DELETE_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
             .validateNotLastEventRoleLevel0(USER_DELETE_LAST_EVENT_ADMINISTRATOR)
@@ -172,7 +178,7 @@ class UserService(
     }
 
     private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) = handle { it, handle ->
-        if (it.id == currentUser.id) {
+        if (it.id === currentUser.id) {
             log.warn("The user {} is the current user", currentUser.id)
             handle.error(RegistryException(FORBIDDEN, error))
         } else handle.next(it)
@@ -184,8 +190,8 @@ class UserService(
             return@flatMap Mono.just(userToUpdate)
         }
 
-        repository.findByRoleLevel(roleLevel = 0, onlyVisible = true)
-            .filter { userToUpdate.id != it.id }
+        repository.findByRoleLevel(roleLevel = 0, visibilitySearched = true)
+            .filter { userToUpdate.id !== it.id }
             .collectList()
             .handle { it, handle ->
                 if (it.isEmpty()) {
@@ -199,10 +205,12 @@ class UserService(
         userEventProfileService.validateNotLastEventRoleLevel0(it.id !!, eventId = null, it, error)
     }
 
-    private fun isNotServiceAccount(user: UserModel): Boolean = user.id != serviceAccount.id
-
-    private fun Mono<UserModel>.validateRole(currentUser: UserModel, role: String?, error: String) = handle { it, handle ->
-        val eligibleRoles = roleService.getAssignableUserRoles(currentUser)
+    private fun Mono<UserModel>.validateRole(
+        currentUser: CurrentUserModel,
+        eligibleRoles: List<String>,
+        role: String?,
+        error: String,
+    ) = handle { it, handle ->
         if (Objects.nonNull(role) && ! eligibleRoles.contains(role)) {
             log.warn("The role {} is not assignable by the user {}", role, currentUser.id)
             handle.error(RegistryException(FORBIDDEN, error))

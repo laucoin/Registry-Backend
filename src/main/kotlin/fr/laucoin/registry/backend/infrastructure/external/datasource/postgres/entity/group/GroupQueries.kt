@@ -11,27 +11,48 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_END_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_END_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_OPTIONS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_START_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_START_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.VISIBLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_BEGIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_MEMBERS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BEGIN
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 
 object GroupQueries {
+    const val SELECT_CONTENT_TO_CONTENT = """
+        $PARTICIPANT_TABLE.$PARTICIPANT_FIRST_NAME as $MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME,
+        $PARTICIPANT_TABLE.$PARTICIPANT_LAST_NAME as $MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME,
+        $PARTICIPANT_TABLE.$PARTICIPANT_BIRTHDAY as $MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY
+    """
+
+    const val CONTENT_TO_CONTENT_JOIN = """
+        INNER JOIN $PARTICIPANT_TABLE
+            ON t.$GROUP_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
+            AND $PARTICIPANT_TABLE.$PARTICIPANT_PURGED IS FALSE
+    """
+
     const val SELECT_CONTENT = """
         JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -39,8 +60,14 @@ object GroupQueries {
                 'firstName', $PARTICIPANT_TABLE.$PARTICIPANT_FIRST_NAME,
                 'lastName', $PARTICIPANT_TABLE.$PARTICIPANT_LAST_NAME,
                 'birthday', $PARTICIPANT_TABLE.$PARTICIPANT_BIRTHDAY,
-                'begin', $PARTICIPANT_TABLE.$PARTICIPANT_BEGIN,
-                'end', $PARTICIPANT_TABLE.$PARTICIPANT_END,
+                'begin', JSON_BUILD_OBJECT(
+                    'date', $PARTICIPANT_TABLE.$PARTICIPANT_START_AVAILABILITY_DATE,
+                    'time', $PARTICIPANT_TABLE.$PARTICIPANT_START_AVAILABILITY_TIME
+                ),
+                'end', JSON_BUILD_OBJECT(
+                    'date', $PARTICIPANT_TABLE.$PARTICIPANT_END_AVAILABILITY_DATE,
+                    'time', $PARTICIPANT_TABLE.$PARTICIPANT_END_AVAILABILITY_TIME
+                ),
                 'user', NULL,
                 'purged', $PARTICIPANT_TABLE.$PARTICIPANT_PURGED
             )
@@ -50,30 +77,52 @@ object GroupQueries {
     const val CONTENT_JOIN = """
         LEFT JOIN $GROUP_CONTENT_TABLE
             ON t.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID
-        INNER JOIN $PARTICIPANT_TABLE
+        LEFT JOIN $PARTICIPANT_TABLE
             ON $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
             AND $PARTICIPANT_TABLE.$PARTICIPANT_PURGED IS FALSE
             AND $PARTICIPANT_TABLE.$VISIBLE IS TRUE
     """
 
     const val GROUP_BY_GROUP = """
-        t.$ID, t.$GROUP_NAME, t.$GROUP_BEGIN, t.$GROUP_END,
-         event_tb.$ID, $LINKED_EVENT_NAME, $LINKED_EVENT_START_TIME, $LINKED_EVENT_END_TIME, $LINKED_EVENT_OPTIONS,
+         t.$ID, t.$GROUP_NAME, t.$GROUP_START_AVAILABILITY_DATE, t.$GROUP_START_AVAILABILITY_TIME, t.$GROUP_END_AVAILABILITY_DATE, t.$GROUP_END_AVAILABILITY_TIME,
+         event_tb.$ID, $LINKED_EVENT_NAME, $LINKED_EVENT_START_DATE, $LINKED_EVENT_START_TIME, $LINKED_EVENT_END_DATE, $LINKED_EVENT_END_TIME, $LINKED_EVENT_OPTIONS,
          $CREATOR_FIRST_NAME, $CREATOR_LAST_NAME, $CREATOR_EMAIL,
          $LAST_MODIFIER_FIRST_NAME, $LAST_MODIFIER_LAST_NAME, $LAST_MODIFIER_EMAIL,
         t.$VISIBLE, t.$CREATOR_ID, t.$CREATED_AT, t.$LAST_MODIFIER_ID, t.$LAST_MODIFIER_DATE
     """
 
-    const val IN_DATE_RANGE_CLAUSE = """
-        (:startDateTime IS NULL OR :startDateTime <= t.$GROUP_END) AND
-        (:endDateTime IS NULL OR :endDateTime >= t.$GROUP_BEGIN)
+    const val GROUP_TEXT_SEARCH_CLAUSE = """
+        (
+            :textSearched IS NULL OR UNACCENT(t.$GROUP_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%'
+        )
+    """
+    const val GROUP_PRESENCE_CLAUSE = """
+        (
+            :presenceSearched IS NULL OR :presenceSearched = (
+                (
+                    COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
+                    OR (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                ) AND
+                (
+                    COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
+                    OR (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                )
+            )
+        )
     """
 
-    const val PRESENT_CLAUSE = """
-        (:onlyPresent IS FALSE OR (
-            (t.$GROUP_BEGIN IS NULL OR t.$GROUP_BEGIN <= CURRENT_TIMESTAMP)
-            AND (t.$GROUP_END IS NULL OR t.$GROUP_END <= CURRENT_TIMESTAMP)
-        ))
+    const val DATE_IN_GROUP_DATES_RANGE_CLAUSE = """
+        (
+            :dateTimeSearched IS NULL OR (
+                (
+                    COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CAST(:dateTimeSearched AS DATE)
+                    OR (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CAST(:dateTimeSearched AS TIME))
+                ) AND
+                (
+                    COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CAST(:dateTimeSearched AS DATE)
+                    OR (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CAST(:dateTimeSearched AS TIME))
+                )
+            )
+        )
     """
-
 }

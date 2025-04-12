@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
@@ -25,8 +26,12 @@ class PreferencesEntityMapper: IEntityMapper<PreferencesModel, PreferencesEntity
             id = entity.selectedProfileId
             role = entity.selectedProfileRole
             status = entity.selectedProfileStatus
-            startAccess = entity.selectedProfileStartAccess
-            endAccess = entity.selectedProfileEndAccess
+            startAccess =
+                if (Objects.isNull(entity.selectedProfileStartAccessDate)) null
+                else CustomDateTimeModel(entity.selectedProfileStartAccessDate !!, entity.selectedProfileStartAccessTime)
+            endAccess =
+                if (Objects.isNull(entity.selectedProfileEndAccessDate)) null
+                else CustomDateTimeModel(entity.selectedProfileEndAccessDate !!, entity.selectedProfileEndAccessTime)
             event = mapEventEntity(entity)
         }
     }
@@ -36,8 +41,12 @@ class PreferencesEntityMapper: IEntityMapper<PreferencesModel, PreferencesEntity
         else EventModel().apply {
             id = entity.selectedProfileId
             name = entity.selectedProfileEventName
-            begin = entity.selectedProfileEventStartTime
-            end = entity.selectedProfileEventEndTime
+            begin =
+                if (Objects.isNull(entity.selectedProfileEventStartDate)) null
+                else CustomDateTimeModel(entity.selectedProfileEventStartDate !!, entity.selectedProfileEventStartTime)
+            end =
+                if (Objects.isNull(entity.selectedProfileEventEndDate)) null
+                else CustomDateTimeModel(entity.selectedProfileEventEndDate !!, entity.selectedProfileEventEndTime)
             options = entity.selectedProfileEventOptions
         }
     }

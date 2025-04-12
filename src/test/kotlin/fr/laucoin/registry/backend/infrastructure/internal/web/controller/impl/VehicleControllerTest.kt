@@ -1,12 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_BRAND_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_BRAND_TOO_LONG
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_LICENSE_PLATE_NULL_OR_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_LICENSE_PLATE_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_MODEL_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_MODEL_TOO_LONG
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_REGISTRATION_NULL_OR_BLANK
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_REGISTRATION_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_START_LATER_THAN_END
+import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_C
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_D
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_HISTORY_R
@@ -14,16 +18,21 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
+import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IVehicleService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.VehicleWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.VehicleWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.assertPage
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
@@ -31,344 +40,298 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZonedDateTime
-import java.util.Objects
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.domain.Sort.Direction
-import org.springframework.data.domain.Sort.Direction.ASC
-import org.springframework.data.domain.Sort.Direction.DESC
-import org.springframework.http.HttpMethod
-import org.springframework.http.HttpMethod.DELETE
-import org.springframework.http.HttpMethod.GET
-import org.springframework.http.HttpMethod.PATCH
-import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
-import reactor.core.publisher.Flux
+import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Mono
 
 class VehicleControllerTest(@Autowired private val webClient: WebTestClient): TestContext() {
     @MockitoBean
     private lateinit var service: IVehicleService
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var readerMapper: VehicleReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var movementReaderMapper: MovementReaderDtoMapper
 
-    @MockitoSpyBean
+    @MockitoBean
     private lateinit var writerMapper: VehicleWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/vehicles"
+        private val locale = Locale.ENGLISH
 
         @JvmStatic
-        fun `Should findVehicles return 200`(): Stream<Arguments> = Stream.of(
-            Arguments.of(null, null, null, null, null, null, null, null),
-            Arguments.of(50, null, null, null, null, null, null, null),
-            Arguments.of(null, 25, null, null, null, null, null, null),
-            Arguments.of(null, null, ASC, null, null, null, null, null),
-            Arguments.of(null, null, DESC, null, null, null, null, null),
-            Arguments.of(null, null, null, true, null, null, null, null),
-            Arguments.of(null, null, null, false, null, null, null, null),
-            Arguments.of(null, null, null, null, true, null, null, null),
-            Arguments.of(null, null, null, null, false, null, null, null),
-            Arguments.of(null, null, null, null, null, "searched", null, null),
-            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
-            Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
-        )
+        fun `Should findVehicles prepare param, call service and finally cast the result`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("not locale", null, null, null, null, null, null),
+                Arguments.of(null, 0, null, null, null, null, null),
+                Arguments.of(null, null, 200, null, null, null, null),
+                Arguments.of(null, null, null, null, null, null, null),
+                Arguments.of(null, null, null, "text", null, null, null),
+                Arguments.of(null, null, null, null, true, null, null),
+                Arguments.of(null, null, null, null, null, UsableElementStatusEnum.IN, null),
+                Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+            )
+        }
+
+        @JvmStatic
+        fun `Should findVehicles throw due to wrong params`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(- 1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+                Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
+                Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+            )
+        }
+
+        @JvmStatic
+        fun `Should findVehicleMovements prepare param, call service and finally cast the result`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(null, null, null, null, null, null),
+                Arguments.of(0, null, null, null, null, null),
+                Arguments.of(null, 200, null, null, null, null),
+                Arguments.of(null, null, null, null, null, null),
+                Arguments.of(null, null, true, null, null, null),
+                Arguments.of(null, null, null, IN, null, null),
+                Arguments.of(null, null, null, null, "2024-11-14T18:34:33.000Z", null),
+                Arguments.of(null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+            )
+        }
+
+        @JvmStatic
+        fun `Should findVehicleMovements throw due to wrong params`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(- 1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+                Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
+                Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+            )
+        }
 
         @JvmStatic
         fun `Wrong VehicleDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
                 VehicleWriterDto(
-                    registration = null,
+                    licensePlate = null,
                     brand = "Toyota",
                     model = "Hilux",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
-                VEHICLE_REGISTRATION_NULL_OR_BLANK
+                VEHICLE_LICENSE_PLATE_NULL_OR_BLANK
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "",
+                    licensePlate = "",
                     brand = "Toyota",
                     model = "Hilux",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
-                VEHICLE_REGISTRATION_NULL_OR_BLANK
+                VEHICLE_LICENSE_PLATE_NULL_OR_BLANK
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CDAB-123-CDAB-123-CD",
+                    licensePlate = "AB-123-CDAB-123-CDAB-123-CD",
                     brand = "Toyota",
                     model = "Hilux",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
-                VEHICLE_REGISTRATION_TOO_LONG
+                VEHICLE_LICENSE_PLATE_TOO_LONG
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CD",
+                    licensePlate = "AB-123-CD",
                     brand = null,
                     model = "Hilux",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
                 VEHICLE_BRAND_NULL_OR_BLANK
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CD",
+                    licensePlate = "AB-123-CD",
                     brand = "",
                     model = "Hilux",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
                 VEHICLE_BRAND_NULL_OR_BLANK
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CD",
+                    licensePlate = "AB-123-CD",
                     brand = "ToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyota",
                     model = "Hilux",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
                 VEHICLE_BRAND_TOO_LONG
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CD",
+                    licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = null,
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
                 VEHICLE_MODEL_NULL_OR_BLANK
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CD",
+                    licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = "",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
                 VEHICLE_MODEL_NULL_OR_BLANK
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CD",
+                    licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = "HiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHilux",
-                    begin = ZonedDateTime.now(),
-                    end = ZonedDateTime.now().plusDays(1),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
                 ),
                 VEHICLE_MODEL_TOO_LONG
             ),
             Arguments.of(
                 VehicleWriterDto(
-                    registration = "AB-123-CD",
+                    licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = "Hilux",
-                    begin = ZonedDateTime.now().plusDays(1),
-                    end = ZonedDateTime.now(),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
                 ),
                 VEHICLE_START_LATER_THAN_END
             ),
         )
-
-        @JvmStatic
-        fun `Should findVehicleMovements return 200`(): Stream<Arguments> = Stream.of(
-            Arguments.of(null, null, null, null, null, null, null, null),
-            Arguments.of(50, null, null, null, null, null, null, null),
-            Arguments.of(null, 25, null, null, null, null, null, null),
-            Arguments.of(null, null, ASC, null, null, null, null, null),
-            Arguments.of(null, null, DESC, null, null, null, null, null),
-            Arguments.of(null, null, null, true, null, null, null, null),
-            Arguments.of(null, null, null, false, null, null, null, null),
-            Arguments.of(null, null, null, null, "searched", null, null, null),
-            Arguments.of(null, null, null, null, null, IN, null, null),
-            Arguments.of(null, null, null, null, null, OUT, null, null),
-            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
-            Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
-        )
-
-        @JvmStatic
-        fun `Vehicle management routes`(): Stream<Arguments> {
-            val uuid = UUID.randomUUID()
-            val vehicle = VehicleWriterDto(registration = "AB-123-CD", brand = "Toyota", model = "Hilux")
-            return Stream.of(
-                Arguments.of(GET, BASE_URL, listOf(eventId), null),
-                Arguments.of(GET, "$BASE_URL/{id}", listOf(eventId, uuid), null),
-                Arguments.of(GET, "$BASE_URL/{id}/movements", listOf(eventId, uuid), null),
-                Arguments.of(POST, BASE_URL, listOf(eventId), vehicle),
-                Arguments.of(PATCH, "$BASE_URL/{id}", listOf(eventId, uuid), vehicle),
-                Arguments.of(PATCH, "$BASE_URL/{id}/disable", listOf(eventId, uuid), null),
-                Arguments.of(PATCH, "$BASE_URL/{id}/enable", listOf(eventId, uuid), null),
-                Arguments.of(DELETE, "$BASE_URL/{id}", listOf(eventId, uuid), null),
-            )
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("Vehicle management routes")
-    fun `Should return 401`(
-        method: HttpMethod, uri: String, params: List<String>, body: Any?
-    ) {
-        // Arrange
-        val request = webClient
-            .method(method)
-            .uri(uriBuilder(uri, params, listOf()))
-
-        if (Objects.nonNull(body)) {
-            request.bodyValue(body !!)
-        }
-
-        // Act
-        val result = request.exchange()
-
-        // Assert
-        result.expectStatus().isUnauthorized
-        verifyNoInteractions(readerMapper)
-        verifyNoInteractions(writerMapper)
-        verifyNoInteractions(service)
-    }
-
-    @ParameterizedTest
-    @MethodSource("Vehicle management routes")
-    fun `Should return 403`(
-        method: HttpMethod, uri: String, params: List<String>, body: Any?
-    ) {
-        // Arrange
-        val request = webClient
-            .authenticate()
-            .method(method)
-            .uri(uriBuilder(uri, params, listOf()))
-
-        if (Objects.nonNull(body)) {
-            request.bodyValue(body !!)
-        }
-
-        // Act
-        val result = request.exchange()
-
-        // Assert
-        result.expectStatus().isForbidden
-        verifyNoInteractions(readerMapper)
-        verifyNoInteractions(writerMapper)
-        verifyNoInteractions(service)
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should findVehicles return 200`(
-        offset: Int?,
-        limit: Int?,
-        order: Direction?,
-        onlyVisible: Boolean?,
-        onlyPresent: Boolean?,
-        searched: String?,
-        startDateTime: String?,
-        endDateTime: String?,
+    fun `Should findVehicles prepare param, call service and finally cast the result`(
+        requestedLocale: String?,
+        pageNumber: Int?,
+        pageSize: Int?,
+        textSearched: String?,
+        visibilitySearched: Boolean?,
+        statusSearched: UsableElementStatusEnum?,
+        dateTimeSearched: String?,
     ) {
         // Arrange
-        val expectedOrder = order ?: ASC
-        val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOnlyPresent = onlyPresent ?: false
-        val expectedOffset = offset ?: 0
-        val expectedLimit = limit ?: 20
-        val expectedSize = 0
-
-        `when`(
-            service.findVehiclesByEventId(
-                any(),
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.empty())
+        val expectedPageNumber = pageNumber ?: 0
+        val expectedPageSize = pageSize ?: 20
+        val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+        val searchParams = VehicleSearchParamModel(
+            textSearched = textSearched,
+            visibilitySearched = visibilitySearched,
+            statusSearched = statusSearched,
+            dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+        )
+        val page = PageModel(pageable, totalElements = 1, listOf(VehicleModel()))
+        whenever(service.findVehiclesPage(any(), any(), any())).thenReturn(Mono.just(page))
+        whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+            PageModel(pageable, totalElements = 1, listOf(VehicleReaderDto())),
+        )
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_R))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_R), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
                     listOf(eventId),
                     listOf(
-                        Pair("offset", offset),
-                        Pair("limit", limit),
-                        Pair("order", order),
-                        Pair("onlyVisible", onlyVisible),
-                        Pair("onlyPresent", onlyPresent),
-                        Pair("searched", searched),
-                        Pair("startDateTime", startDateTime),
-                        Pair("endDateTime", endDateTime),
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                        Pair("textSearched", textSearched),
+                        Pair("visibilitySearched", visibilitySearched),
+                        Pair("statusSearched", statusSearched),
+                        Pair("dateTimeSearched", dateTimeSearched),
+                    ),
+                )
+            )
+            .header(ACCEPT_LANGUAGE, requestedLocale)
+            .exchange()
+
+        // Assert
+        result.body<PageModel<*>>(OK)
+
+        verify(service).findVehiclesPage(eventId, pageable, searchParams)
+        verify(readerMapper).toDtoPage(page, locale)
+        verifyNoInteractions(movementReaderMapper)
+        verifyNoInteractions(writerMapper)
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findVehicles throw due to wrong params`(
+        pageNumber: Int?,
+        pageSize: Int?,
+        expectedMessage: String,
+    ) {
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_R), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
+            .get()
+            .uri(
+                uriBuilder(
+                    BASE_URL,
+                    listOf(eventId),
+                    listOf(
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
                     ),
                 )
             )
             .exchange()
 
         // Assert
-        val body = result.body<PageDto<*>>(OK)
+        result.assertError(BAD_REQUEST, expectedMessage)
 
-        assertNotNull(body)
-        body !!.assertPage(
-            expectedTotalElements = expectedSize,
-            expectedOffset = expectedOffset,
-            expectedLimit = expectedLimit,
-        )
-
-        verify(readerMapper, times(1)).toDtoPage(any(), any())
-        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementReaderMapper)
-        verify(service, times(1)).findVehiclesByEventId(
-            eventId = eq(eventId),
-            order = eq(expectedOrder),
-            onlyVisible = eq(expectedOnlyVisible),
-            onlyPresent = eq(expectedOnlyPresent),
-            searched = eq(searched),
-            startDateTime = anyOrNull(),
-            endDateTime = anyOrNull(),
-        )
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(service)
     }
 
     @Test
     fun `Should findVehicleById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        `when`(service.findVehicleById(any(), any(), any())).thenReturn(Mono.just(VehicleModel()))
+        whenever(service.findVehicleById(any(), any(), anyOrNull())).thenReturn(Mono.just(VehicleModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_R))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_R), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .get()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -376,102 +339,115 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Assert
         result.body<VehicleReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(service).findVehicleById(eventId, uuid, visibilitySearched = null)
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
         verifyNoInteractions(movementReaderMapper)
-        verify(service, times(1)).findVehicleById(eventId, uuid, onlyVisible = false)
     }
 
     @ParameterizedTest
     @MethodSource
-    fun `Should findVehicleMovements return 200`(
-        offset: Int?,
-        limit: Int?,
-        order: Direction?,
-        onlyVisible: Boolean?,
-        searched: String?,
-        type: MovementTypeEnum?,
-        startDateTime: String?,
-        endDateTime: String?,
+    fun `Should findVehicleMovements prepare param, call service and finally cast the result`(
+        pageNumber: Int?,
+        pageSize: Int?,
+        visibilitySearched: Boolean?,
+        typeSearched: MovementTypeEnum?,
+        startDateTimeSearched: String?,
+        endDateTimeSearched: String?,
     ) {
         // Arrange
         val uuid = UUID.randomUUID()
-
-        val expectedOrder = order ?: DESC
-        val expectedOnlyVisible = onlyVisible ?: true
-        val expectedOffset = offset ?: 0
-        val expectedLimit = limit ?: 20
-        val expectedSize = 0
-
-        `when`(
-            service.findVehicleMovements(
-                any(),
-                any(),
-                any(),
-                any(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull(),
-                anyOrNull()
-            )
-        ).thenReturn(Flux.empty())
+        val expectedPageNumber = pageNumber ?: 0
+        val expectedPageSize = pageSize ?: 20
+        val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+        val searchParams = MovementSearchParamModel(
+            visibilitySearched = visibilitySearched,
+            typeSearched = typeSearched,
+            startDateTimeSearched = startDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+            endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+        )
+        val page = PageModel(pageable, totalElements = 1, listOf(MovementModel()))
+        whenever(service.findVehicleMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
+        whenever(movementReaderMapper.toDtoPage(any(), any())).thenReturn(
+            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto())),
+        )
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_HISTORY_R))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_HISTORY_R), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/{id}/movements",
                     listOf(eventId, uuid),
                     listOf(
-                        Pair("offset", offset),
-                        Pair("limit", limit),
-                        Pair("order", order),
-                        Pair("onlyVisible", onlyVisible),
-                        Pair("searched", searched),
-                        Pair("type", type),
-                        Pair("startDateTime", startDateTime),
-                        Pair("endDateTime", endDateTime),
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                        Pair("visibilitySearched", visibilitySearched),
+                        Pair("typeSearched", typeSearched),
+                        Pair("startDateTimeSearched", startDateTimeSearched),
+                        Pair("endDateTimeSearched", endDateTimeSearched),
                     ),
                 )
             )
             .exchange()
 
         // Assert
-        val body = result.body<PageDto<*>>(OK)
+        result.body<PageModel<*>>(OK)
 
-        assertNotNull(body)
-        body !!.assertPage(
-            expectedTotalElements = expectedSize,
-            expectedOffset = expectedOffset,
-            expectedLimit = expectedLimit,
-        )
-
-        verify(movementReaderMapper, times(1)).toDtoPage(any(), any())
+        verify(service).findVehicleMovementsPage(eventId, uuid, pageable, searchParams)
+        verify(movementReaderMapper).toDtoPage(page, locale)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).findVehicleMovements(
-            eventId = eq(eventId),
-            id = eq(uuid),
-            order = eq(expectedOrder),
-            onlyVisible = eq(expectedOnlyVisible),
-            searched = eq(searched),
-            type = eq(type),
-            startDateTime = anyOrNull(),
-            endDateTime = anyOrNull(),
-        )
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should findVehicleMovements throw due to wrong params`(
+        pageNumber: Int?,
+        pageSize: Int?,
+        expectedMessage: String,
+    ) {
+        // Arrange
+        val uuid = UUID.randomUUID()
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_HISTORY_R), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
+            .get()
+            .uri(
+                uriBuilder(
+                    "$BASE_URL/{id}/movements",
+                    listOf(eventId, uuid),
+                    listOf(
+                        Pair("pageNumber", pageNumber),
+                        Pair("pageSize", pageSize),
+                    ),
+                )
+            )
+            .exchange()
+
+        // Assert
+        result.assertError(BAD_REQUEST, expectedMessage)
+
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(movementReaderMapper)
+        verifyNoInteractions(writerMapper)
+        verifyNoInteractions(service)
     }
 
     @Test
     fun `Should createVehicle return 200`() {
         // Arrange
-        val vehicle = VehicleWriterDto(registration = "AB-123-CD", brand = "Toyota", model = "Hilux")
-        `when`(service.createVehicle(any(), any())).thenReturn(Mono.just(VehicleModel()))
+        val vehicle = VehicleWriterDto(licensePlate = "AB-123-CD", brand = "Toyota", model = "Hilux")
+
+        whenever(service.createVehicle(any(), any())).thenReturn(Mono.just(VehicleModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+        whenever(writerMapper.toModel(any(), any())).thenReturn(VehicleModel())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_C))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_C), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .post()
             .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
             .bodyValue(vehicle)
@@ -480,10 +456,10 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Assert
         result.body<VehicleReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(service).createVehicle(any(), any())
+        verify(readerMapper).toDto(any(), any())
+        verify(writerMapper).toModel(vehicle, eventId)
         verifyNoInteractions(movementReaderMapper)
-        verify(writerMapper, times(1)).toModel(vehicle, eventId)
-        verify(service, times(1)).createVehicle(any(), any())
     }
 
     @ParameterizedTest
@@ -492,7 +468,6 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         vehicle: VehicleWriterDto,
         expectedCode: String,
     ) {
-        // Arrange
         // Act
         val result = webClient
             .authenticate()
@@ -515,13 +490,15 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
     fun `Should updateEventProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val vehicle = VehicleWriterDto(registration = "AB-123-CD", brand = "Toyota", model = "Hilux")
+        val vehicle = VehicleWriterDto(licensePlate = "AB-123-CD", brand = "Toyota", model = "Hilux")
 
-        `when`(service.updateVehicleById(any(), any(), any(), any())).thenReturn(Mono.just(VehicleModel()))
+        whenever(service.updateVehicleById(any(), any(), any(), any())).thenReturn(Mono.just(VehicleModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+        whenever(writerMapper.toModel(any(), any())).thenReturn(VehicleModel())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_U))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_U), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .bodyValue(vehicle)
@@ -530,10 +507,10 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Assert
         result.body<VehicleReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(service).updateVehicleById(any(), eq(eventId), eq(uuid), any())
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementReaderMapper)
-        verify(writerMapper, times(1)).toModel(vehicle, eventId)
-        verify(service, times(1)).updateVehicleById(any(), eq(eventId), eq(uuid), any())
+        verify(writerMapper).toModel(vehicle, eventId)
     }
 
     @ParameterizedTest
@@ -567,11 +544,12 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.disableVehicleById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
+        whenever(service.disableVehicleById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_U))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_U), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -579,10 +557,10 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Assert
         result.body<VehicleReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(service).disableVehicleById(any(), eq(eventId), eq(uuid))
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).disableVehicleById(any(), eq(eventId), eq(uuid))
     }
 
     @Test
@@ -590,11 +568,12 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.enableVehicleById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
+        whenever(service.enableVehicleById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_U))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_U), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .patch()
             .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -602,10 +581,10 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Assert
         result.body<VehicleReaderDto>(OK)
 
-        verify(readerMapper, times(1)).toDto(any(), any())
+        verify(service).enableVehicleById(any(), eq(eventId), eq(uuid))
+        verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).enableVehicleById(any(), eq(eventId), eq(uuid))
     }
 
     @Test
@@ -613,11 +592,11 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Arrange
         val uuid = UUID.randomUUID()
 
-        `when`(service.deleteVehicleById(any(), any(), any())).thenReturn(Mono.empty())
+        whenever(service.deleteVehicleById(any(), any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_D))
+            .authenticate(buildAuthority(REGISTRY_EVENT_VEHICLE_D), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
             .delete()
             .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
             .exchange()
@@ -628,6 +607,6 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service, times(1)).deleteVehicleById(any(), eq(eventId), eq(uuid))
+        verify(service).deleteVehicleById(any(), eq(eventId), eq(uuid))
     }
 }

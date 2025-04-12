@@ -1,79 +1,115 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
+import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USABLE_ELEMENT_STATUS_PREFIX
+import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.EventModel
-import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.Locale
-import java.util.UUID
+import java.util.stream.Stream
 import kotlin.test.assertEquals
-import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.springframework.context.MessageSource
 
 class ParticipantReaderDtoMapperTest {
+    private val translateService: MessageSource = mock()
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
-    private val eventMapper: EventReaderDtoMapper = Mockito.mock()
+    private val eventMapper: EventReaderDtoMapper = mock()
     private val groupMapper: GroupWithoutMemberReaderDtoMapper = mock()
-    private val mapper: ParticipantReaderDtoMapper = ParticipantReaderDtoMapper(partialUserMapper, eventMapper, groupMapper)
+    private val mapper: ParticipantReaderDtoMapper =
+        ParticipantReaderDtoMapper(translateService, partialUserMapper, eventMapper, groupMapper)
 
-    @Test
-    fun `Should toDto convert ParticipantModel to ParticipantReaderDto`() {
-        // Arrange
-        val participant = ParticipantModel().apply {
-            id = UUID.randomUUID()
-            event = EventModel()
-            firstName = "John"
-            lastName = "DOE"
-            birthday = LocalDate.now()
-            groups = emptyList()
-            user = UserModel()
-            begin = ZonedDateTime.now()
-            end = ZonedDateTime.now()
-            purged = false
-            visible = true
-            creation = HistoryModel()
-            lastEdition = HistoryModel()
+    companion object {
+        @JvmStatic
+        fun `Should toDto convert ParticipantModel to ParticipantReaderDto`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(
+                    ParticipantModel(),
+                    false,
+                    0,
+                    0,
+                    0,
+                ),
+                Arguments.of(
+                    ParticipantModel().apply { birthday = LocalDate.now() },
+                    false,
+                    0,
+                    0,
+                    0,
+                ),
+                Arguments.of(
+                    ParticipantModel().apply { birthday = LocalDate.EPOCH },
+                    true,
+                    0,
+                    0,
+                    0,
+                ),
+                Arguments.of(
+                    ParticipantModel().apply {
+                        event = EventModel()
+                        status = IN
+                        user = UserModel()
+                        birthday = LocalDate.now().minusYears(18)
+                    },
+                    true,
+                    1,
+                    1,
+                    1,
+                ),
+            )
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    fun `Should toDto convert ParticipantModel to ParticipantReaderDto`(
+        participant: ParticipantModel,
+        expectedMajor: Boolean,
+        expectedTranslation: Int,
+        expectedEventCast: Int,
+        expectedUserCast: Int,
+    ) {
+        // Arrange
+        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
+        whenever(partialUserMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
+        whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
+        whenever(groupMapper.toDtoList(any(), any())).thenReturn(listOf(GroupReaderDto()))
 
         // Act
         val result = mapper.toDto(participant, Locale.getDefault())
 
         // Assert
-        verify(partialUserMapper, times(1)).toDto(participant.user !!, Locale.getDefault())
-        verify(groupMapper, times(1)).toDtoList(participant.groups, Locale.getDefault())
-        verify(eventMapper, times(1)).toDto(participant.event !!, Locale.getDefault())
+        verify(translateService, times(expectedTranslation)).getMessage(
+            "$USABLE_ELEMENT_STATUS_PREFIX${participant.status}",
+            null,
+            Locale.getDefault(),
+        )
+        verify(partialUserMapper, times(expectedUserCast)).toDto(participant.user ?: UserModel(), Locale.getDefault())
+        verify(eventMapper, times(expectedEventCast)).toDto(participant.event ?: EventModel(), Locale.getDefault())
+        verify(groupMapper, times(2)).toDtoList(participant.groups, Locale.getDefault())
 
         assertEquals(participant.id, result.id)
         assertEquals(participant.firstName, result.firstName)
         assertEquals(participant.lastName, result.lastName)
         assertEquals(participant.birthday, result.birthday)
-        assertEquals(false, result.major)
-        assertEquals(0, result.groups.size)
-        assertEquals(participant.begin, result.begin)
-        assertEquals(participant.end, result.end)
+        assertEquals(expectedMajor, result.major)
+        assertEquals(participant.startAvailability, result.startAvailability)
+        assertEquals(participant.endAvailability, result.endAvailability)
         assertEquals(participant.purged, result.purged)
         assertEquals(participant.visible, result.visible)
         assertEquals(participant.creation, result.creation)
         assertEquals(participant.lastEdition, result.lastEdition)
-    }
-
-    @Test
-    fun `Should toDto with major case true`() {
-        // Arrange
-        val participant = ParticipantModel().apply {
-            birthday = LocalDate.now().minusYears(18L)
-        }
-
-        // Act
-        val result = mapper.toDto(participant, Locale.getDefault())
-
-        // Assert
-        assertEquals(participant.birthday, result.birthday)
-        assertEquals(true, result.major)
     }
 }

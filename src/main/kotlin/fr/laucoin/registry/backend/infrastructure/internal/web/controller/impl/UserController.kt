@@ -1,17 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IUserController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.PageDto.Companion.paginate
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UserRoleReaderDtoMapper
 import java.util.Locale
 import java.util.UUID
-import org.springframework.data.domain.Sort.Direction
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -24,24 +24,25 @@ class UserController(
 ): IUserController {
     override fun findUsers(
         locale: Locale,
-        offset: Int,
-        limit: Int,
-        order: Direction,
-        onlyVisible: Boolean,
-        searched: String?
-    ): Mono<PageDto<UserReaderDto>> {
-        return service.findUsers(order, onlyVisible, searched)
-            .paginate(offset, limit)
+        pageNumber: Int,
+        pageSize: Int,
+        textSearched: String?,
+        visibilitySearched: Boolean?
+    ): Mono<PageModel<UserReaderDto>> {
+        return service.findUsersPage(
+            PageableModel(pageNumber * pageSize, pageSize),
+            UserSearchParamModel(textSearched, visibilitySearched)
+        )
             .map { readerMapper.toDtoPage(it, locale) }
     }
 
     override fun findUserById(locale: Locale, id: UUID): Mono<UserReaderDto> {
-        return service.findUserById(id, onlyVisible = false)
+        return service.findUserById(id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun getAssignableUserRoles(currentUser: CurrentUserModel, locale: Locale): Flux<LabelDto> {
-        return service.getAssignableUserRoles(currentUser)
+        return service.assignableUserRoles(currentUser)
             .map { userRoleReaderMapper.toDto(it, locale) }
     }
 

@@ -1,35 +1,32 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant
 
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATED_AT
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATOR_EMAIL
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATOR_FIRST_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATOR_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATOR_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_EMAIL
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_FIRST_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_END_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_OPTIONS
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_START_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.VISIBLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_BEGIN
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BEGIN
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_AVAILABLE_GROUPS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_GROUPS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_EMAIL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_ID
@@ -40,76 +37,74 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_TABLE
 
 object ParticipantQueries {
-    const val SELECT_LINKED_GROUPS = """
-        JSON_AGG(
-            JSON_BUILD_OBJECT(
-                'id', $GROUP_TABLE.$ID,
-                'name', $GROUP_TABLE.$GROUP_NAME,
-                'begin', $GROUP_TABLE.$GROUP_BEGIN,
-                'end', $GROUP_TABLE.$GROUP_END,
-                'visible', $GROUP_TABLE.$VISIBLE
-            )
-        ) AS $PARTICIPANT_GROUPS
+    private const val PARTICIPANT_PREFIX = "participant_"
+    const val WITH_PARTICIPANT_LAST_MOVEMENT = """
+        last_movement AS (
+            SELECT plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME, plm.$PARTICIPANT_PREFIX$ID, t.$MOVEMENT_TYPE
+            FROM $MOVEMENT_TABLE t
+            INNER JOIN (
+                SELECT MAX(t.$MOVEMENT_DATE_TIME) as $PARTICIPANT_LAST_MOVEMENT_DATE_TIME, $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
+                FROM $MOVEMENT_TABLE t
+                INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+                GROUP BY $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
+            ) AS plm ON plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
+            WHERE t.$VISIBLE IS TRUE
+        )
     """
+
+    const val SELECT_LAST_MOVEMENT = """
+        last_movement.type AS $PARTICIPANT_LAST_MOVEMENT_TYPE,
+        last_movement.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME
+    """
+
+    const val LAST_MOVEMENT_JOIN = """
+        LEFT JOIN last_movement ON last_movement.$PARTICIPANT_PREFIX$ID = t.$ID
+    """
+
+    private const val GROUP_PREFIX = "group_"
+    const val WITH_PARTICIPANT_GROUPS = """
+        filtered_groups AS (
+            SELECT t.$ID as $PARTICIPANT_PREFIX$ID,
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'id', $GROUP_TABLE.$ID,
+                    'name', $GROUP_TABLE.$GROUP_NAME
+                )
+            ) FILTER (WHERE $GROUP_TABLE.$ID IS NOT NULL) as $PARTICIPANT_GROUPS,
+            JSON_AGG(group_presence.$ID) FILTER (WHERE group_presence.$ID IS NOT NULL) as $PARTICIPANT_AVAILABLE_GROUPS,
+            JSON_AGG(group_presence_on_date.$ID) FILTER (WHERE group_presence_on_date.$ID IS NOT NULL) as available_groups_on_date
+            FROM $PARTICIPANT_TABLE t
+            LEFT JOIN $GROUP_CONTENT_TABLE ON $GROUP_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID = t.$ID
+            LEFT JOIN $GROUP_TABLE ON $GROUP_TABLE.$ID = $GROUP_CONTENT_TABLE.$GROUP_PREFIX$ID AND $GROUP_TABLE.$VISIBLE IS TRUE
+            LEFT JOIN $GROUP_TABLE group_presence ON group_presence.$ID = $GROUP_CONTENT_TABLE.$GROUP_PREFIX$ID AND group_presence.$VISIBLE IS TRUE
+                AND (
+                    (
+                        COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
+                        OR (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    ) AND (
+                        COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
+                        OR (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    )
+                )
+            LEFT JOIN $GROUP_TABLE group_presence_on_date ON group_presence_on_date.$ID = $GROUP_CONTENT_TABLE.$GROUP_PREFIX$ID AND group_presence_on_date.$VISIBLE IS TRUE
+                AND :dateTimeSearched IS NULL OR (
+                    (
+                        COALESCE(group_presence_on_date.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CAST(:dateTimeSearched AS DATE)
+                        OR (COALESCE(group_presence_on_date.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(group_presence_on_date.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CAST(:dateTimeSearched AS TIME))
+                    ) AND (
+                        COALESCE(group_presence_on_date.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CAST(:dateTimeSearched AS DATE)
+                        OR (COALESCE(group_presence_on_date.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(group_presence_on_date.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CAST(:dateTimeSearched AS TIME))
+                    )
+                )
+            WHERE t.$LINKED_EVENT_ID = :eventId
+            GROUP BY t.$ID
+        )
+    """
+
+    const val SELECT_LINKED_GROUPS = "fg.$PARTICIPANT_GROUPS, fg.$PARTICIPANT_AVAILABLE_GROUPS"
 
     const val GROUPS_JOIN = """
-        LEFT JOIN $GROUP_CONTENT_TABLE
-            ON t.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID
-        LEFT JOIN $GROUP_TABLE
-            ON $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID = $GROUP_TABLE.$ID
-            AND $GROUP_TABLE.$VISIBLE IS TRUE
-    """
-
-    const val GROUP_BY_PARTICIPANT = """
-        t.$ID, t.$PARTICIPANT_FIRST_NAME, t.$PARTICIPANT_LAST_NAME, t.$PARTICIPANT_BIRTHDAY, t.$PARTICIPANT_BEGIN,
-        t.$PARTICIPANT_END, t.$PARTICIPANT_PURGED, $PARTICIPANT_USER_FIRST_NAME, $PARTICIPANT_USER_LAST_NAME, $PARTICIPANT_USER_EMAIL,
-         event_tb.$ID, $LINKED_EVENT_NAME, $LINKED_EVENT_START_TIME, $LINKED_EVENT_END_TIME, $LINKED_EVENT_OPTIONS,
-         $CREATOR_FIRST_NAME, $CREATOR_LAST_NAME, $CREATOR_EMAIL,
-         $LAST_MODIFIER_FIRST_NAME, $LAST_MODIFIER_LAST_NAME, $LAST_MODIFIER_EMAIL,
-        t.$VISIBLE, t.$CREATOR_ID, t.$CREATED_AT, t.$LAST_MODIFIER_ID, t.$LAST_MODIFIER_DATE
-    """
-
-    const val NOT_PURGED_CLAUSE = "t.$PARTICIPANT_PURGED IS FALSE"
-
-    const val IN_DATE_RANGE_CLAUSE = """
-        (:startDateTime IS NULL OR :startDateTime <= t.$PARTICIPANT_END) AND
-        (:endDateTime IS NULL OR :endDateTime >= t.$PARTICIPANT_BEGIN)
-    """
-
-    // TODO: Add a clause to consider the less convenient group of participants
-    private const val LINKED_GROUP_TABLE = "group_tb"
-    private const val PARTICIPANT_PREFIX = "participant_"
-    private const val GROUP_PREFIX = "group_"
-    const val PRESENT_CLAUSE = """
-        (:onlyPresent IS FALSE OR (
-            (
-                (t.$PARTICIPANT_BEGIN IS NULL AND (
-                    $LINKED_GROUP_TABLE.$GROUP_PREFIX$GROUP_BEGIN IS NULL OR $LINKED_GROUP_TABLE.$GROUP_PREFIX$GROUP_BEGIN <= CURRENT_TIMESTAMP
-                )) OR t.$PARTICIPANT_BEGIN <= CURRENT_TIMESTAMP
-            )
-            AND (
-                (t.$PARTICIPANT_END IS NULL AND (
-                    $LINKED_GROUP_TABLE.$GROUP_PREFIX$GROUP_END IS NULL OR $LINKED_GROUP_TABLE.$GROUP_PREFIX$GROUP_END <= CURRENT_TIMESTAMP
-                )) OR t.$PARTICIPANT_END <= CURRENT_TIMESTAMP
-            )
-        ))
-    """
-    const val GROUP_JOIN = """
-        LEFT JOIN (
-            SELECT gc.$PARTICIPANT_PREFIX$ID,
-            CASE
-                WHEN COUNT(CASE WHEN g.$GROUP_BEGIN IS NULL THEN 1 END) > 0 THEN NULL
-                ELSE MIN(g.$GROUP_BEGIN)
-            END AS $GROUP_PREFIX$GROUP_BEGIN,
-            CASE
-                WHEN COUNT(CASE WHEN g.$GROUP_END IS NULL THEN 1 END) > 0 THEN NULL
-                ELSE MAX(g.$GROUP_END)
-            END AS $GROUP_PREFIX$GROUP_END
-            FROM $GROUP_CONTENT_TABLE gc
-            INNER JOIN $GROUP_TABLE g ON g.$ID = gc.$GROUP_PREFIX$ID
-            WHERE g.$VISIBLE IS TRUE
-            GROUP BY gc.$PARTICIPANT_PREFIX$ID
-        ) $LINKED_GROUP_TABLE ON t.$ID = $LINKED_GROUP_TABLE.$PARTICIPANT_PREFIX$ID
+        LEFT JOIN filtered_groups fg ON t.$ID = fg.$PARTICIPANT_PREFIX$ID
     """
 
     private const val LINKED_USER_TABLE = "user_tb"
@@ -122,5 +117,62 @@ object ParticipantQueries {
         LEFT JOIN $USER_TABLE $LINKED_USER_TABLE ON t.$PARTICIPANT_USER_ID = $LINKED_USER_TABLE.$ID
         AND $LINKED_USER_TABLE.$PARTICIPANT_PURGED IS FALSE
         AND $LINKED_USER_TABLE.$VISIBLE IS TRUE
+    """
+
+    const val NOT_PURGED_CLAUSE = "t.$PARTICIPANT_PURGED IS FALSE"
+
+    const val PARTICIPANT_TEXT_SEARCH_CLAUSE = """
+        (
+            :textSearched IS NULL OR
+                UNACCENT(t.$PARTICIPANT_FIRST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT(t.$PARTICIPANT_LAST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%'
+        )
+    """
+
+    const val PARTICIPANT_AVAILABILITY_CLAUSE = """
+        (
+            :availabilitySearched IS NULL OR :availabilitySearched = (
+                (
+                    (
+                        t.$PARTICIPANT_START_AVAILABILITY_DATE IS NULL AND (
+                            fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
+                            OR (fg.$PARTICIPANT_AVAILABLE_GROUPS IS NOT NULL AND json_array_length(fg.$PARTICIPANT_AVAILABLE_GROUPS) > 0)
+                        )
+                    ) OR
+                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) < CURRENT_DATE
+                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                ) AND
+                (
+                    (
+                        t.$PARTICIPANT_END_AVAILABILITY_DATE IS NULL AND (
+                            fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
+                            OR (fg.$PARTICIPANT_AVAILABLE_GROUPS IS NOT NULL AND json_array_length(fg.$PARTICIPANT_AVAILABLE_GROUPS) > 0)
+                        )
+                    ) OR
+                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) > CURRENT_DATE
+                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                )
+            )
+        )
+    """
+
+    const val PARTICIPANT_PRESENCE_CLAUSE = "(:presenceSearched IS NULL OR :presenceSearched = (last_movement.type = 'IN'))"
+
+    const val DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE = """
+        (
+            :dateTimeSearched IS NULL OR (
+                (
+                    fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
+                    OR (fg.available_groups_on_date IS NOT NULL AND json_array_length(fg.available_groups_on_date) > 0)
+                ) AND
+                (
+                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) < CAST(:dateTimeSearched AS DATE)
+                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CAST(:dateTimeSearched AS TIME))
+                ) AND
+                (
+                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) > CAST(:dateTimeSearched AS DATE)
+                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CAST(:dateTimeSearched AS TIME))
+                )
+            )
+        )
     """
 }
