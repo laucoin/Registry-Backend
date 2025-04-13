@@ -32,6 +32,8 @@ registry:
   feature:
     documentation:
       enabled: true
+    observability:
+      enabled: true
     profile:
       searched:
         max-user-result: 1
@@ -53,8 +55,8 @@ registry:
     oauth2:
       base-url: ${external.keycloak.base-url}
       realm: ${external.keycloak.realm}
-      client-id: ${external.keycloak.swagger.client-id}
-      client-secret: ${external.keycloak.swagger.client-secret}
+      client-id: ${external.keycloak.client-id}
+      client-secret: ${external.keycloak.client-secret}
       url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
       claims:
         user-id: "sub"

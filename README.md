@@ -61,7 +61,6 @@ Install [Java 21 or later](https://www.oracle.com/fr/java/technologies/downloads
    -Dexternal.keycloak.client-id=<oidc-provider-client-id> # For example: registry
    -Dexternal.keycloak.client-secret=<oidc-provider-client-secret> # For example: XXXX
    -Dexternal.keycloak.swagger.client-id=<oidc-provider-client-id> # For example: registry
-   -Dexternal.keycloak.swagger.client-secret=<oidc-provider-client-secret> # For example: XXXX
    -Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
    -Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
    -Dregistry.feature.documentation.enabled=false # true only for development

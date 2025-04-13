@@ -21,6 +21,8 @@ registry:
       email: luc.aucoin1998@gmail.com
       url: https://laucoin.fr
   feature:
+    observability:
+      enabled: true
     profile:
       searched:
         max-user-result: 10
@@ -42,8 +44,8 @@ registry:
     oauth2:
       base-url: ${external.keycloak.base-url}
       realm: ${external.keycloak.realm}
-      client-id: ${external.keycloak.swagger.client-id}
-      client-secret: ${external.keycloak.swagger.client-secret}
+      client-id: ${external.keycloak.client-id}
+      client-secret: ${external.keycloak.client-secret}
       url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
       claims:
         user-id: sub
@@ -84,5 +86,10 @@ springdoc:
     path: /swagger-ui.html
     enabled: ${registry.feature.documentation.enabled:false}
     oauth:
-      client-id: ${registry.security.oauth2.client-id}
-      client-secret: ${registry.security.oauth2.client-secret}
+      client-id: ${external.keycloak.swagger.client-id}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus

@@ -33,6 +33,8 @@ class SecurityConfig(
     private val frontendUrl: String,
     @Value("\${registry.feature.documentation.enabled:false}")
     private val documentationEnabled: Boolean,
+    @Value("\${registry.feature.observability.enabled:false}")
+    private val observabilityEnabled: Boolean,
 ) {
 
     @Bean
@@ -55,6 +57,9 @@ class SecurityConfig(
     private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
         if (documentationEnabled) {
             it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**").permitAll()
+        }
+        if (observabilityEnabled) {
+            it.pathMatchers(GET, "/actuator/**").permitAll()
         }
         it.pathMatchers(GET, "/api/authentication/login/uri", "/api/authentication/logout/uri").permitAll()
         it.pathMatchers(POST, "/api/authentication/token", "/api/authentication/token/refresh").permitAll()

@@ -1,13 +1,13 @@
 -- Insert data into tb_user
 INSERT INTO tb_user (id, oidc_id, type, first_name, last_name, email, role, birthday, last_login, created_by,
                      last_modified_by)
-VALUES ('9cd10ea7-96c1-4f82-8366-d11d2e3ec300', '07805018-b5db-435f-99db-ff8c3d79016e', 'USER', 'Jane', 'SMITH',
+VALUES ('9cd10ea7-96c1-4f82-8366-d11d2e3ec300', '2836f228-1ec8-40f3-8c22-62d0d23c6338', 'USER', 'Jane', 'SMITH',
         'administrator@sgdf.fr', 'USER_ADMINISTRATOR', '1980-01-01', '2025-03-01 15:28:51.144372 +00:00',
         '9cd10ea7-96c1-4f82-8366-d11d2e3ec300', '9cd10ea7-96c1-4f82-8366-d11d2e3ec300'),
-       ('fd705f30-3cbd-478d-ab37-107724321dca', 'f3072b36-2bdc-4173-a2b6-9338da7692cb', 'USER', 'John', 'DOE',
+       ('fd705f30-3cbd-478d-ab37-107724321dca', '81d64662-0c95-44d1-9412-e7f9fcff9d27', 'USER', 'John', 'DOE',
         'coordinator@sgdf.fr', 'USER', '1990-01-01', '2025-03-01 15:28:51.144372 +00:00',
         'fd705f30-3cbd-478d-ab37-107724321dca', 'fd705f30-3cbd-478d-ab37-107724321dca'),
-       ('e22a08da-b8b8-4b78-86c8-8557ddfbb945', '907e58d8-92d6-4756-9c0d-c5ce80f0b02f', 'USER', 'Charles', 'PINA',
+       ('e22a08da-b8b8-4b78-86c8-8557ddfbb945', 'ecd56c29-bb98-4366-93e6-1eb70a6efb17', 'USER', 'Charles', 'PINA',
         'participant@sgdf.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00',
         'e22a08da-b8b8-4b78-86c8-8557ddfbb945', 'e22a08da-b8b8-4b78-86c8-8557ddfbb945');
 
