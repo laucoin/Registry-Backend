@@ -38,9 +38,6 @@ services:
     command:
       - start-dev
     restart: 'unless-stopped'
-    volumes:
-      - ./docker-volume/keycloak/realm:/opt/keycloak/data/import
-      - ./docker-volume/keycloak/provider:/opt/keycloak/providers
     depends_on:
       registry_database:
         condition: service_healthy

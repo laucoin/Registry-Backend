@@ -11,13 +11,14 @@ plugins {
 
 group = "fr.laucoin.registry"
 
+val prometheusVersion = "1.14.5"
+val lokiAppenderVersion = "1.6.0"
 val swaggerVersion = "2.7.0"
-val jacocoVersion = "0.8.12"
-val mockitoVersion = "5.14.2"
-val testArch = "1.3.0"
 val mockWebServer = "5.0.0-alpha.14"
+val testArch = "1.3.0"
 val mockitoKotlinVersion = "5.4.0"
 val testContainerVersion = "1.20.4"
+val jacocoVersion = "0.8.12"
 
 val tuTarget = BigDecimal(0.8)
 
@@ -32,23 +33,35 @@ repositories {
 }
 
 dependencies {
+    // Security 🔒
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 
+    // Web 👨‍💻
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+
+    // Kotlin ♥️
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
-
+    // Data 💾
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.postgresql:r2dbc-postgresql")
 
+    // Monitoring & Observability 👀
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus:$prometheusVersion")
+    implementation("com.github.loki4j:loki-logback-appender:$lokiAppenderVersion")
+
+    // Documentation 📚
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
+
+    // Test 🧪
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -86,10 +99,10 @@ tasks.withType<Test> {
     finalizedBy(tasks.jacocoTestCoverageVerification, tasks.jacocoTestReport)
 }
 
-val targetName: String by project
+val targetName: String? by project
 
 tasks.withType<BootJar> {
-    archiveFileName.set(targetName)
+    archiveFileName.set(targetName ?: "registry-backend.jar")
 }
 
 release {

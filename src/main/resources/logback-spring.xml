@@ -1,7 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <conversionRule conversionWord="customLoggerLevel" converterClass="fr.laucoin.registry.backend.config.LoggerConfig"/>
 
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>
                 %d{yyyy-MM-dd HH:mm:ss.SSS} [%cyan(%-20thread)] %customLoggerLevel(%-5level) - %msg%n
@@ -9,7 +10,7 @@
         </encoder>
     </appender>
 
-    <root level="info">
-        <appender-ref ref="CONSOLE"/>
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
     </root>
 </configuration>
