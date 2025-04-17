@@ -1,8 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_AND_REASON_ARE_DEFINED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_PARTICIPANT_ID_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_AND_REASON_ARE_INCOMPATIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
@@ -12,10 +14,12 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_VEHICLE
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.OTHER
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -25,17 +29,18 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.service.IMovementService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto.MovementContentReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto.MovementContentWriterDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ActivityReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementActivityReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementContentReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.MovementWriterDtoMapper
@@ -57,6 +62,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -91,7 +97,10 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     private lateinit var vehicleReaderMapper: VehicleReaderDtoMapper
 
     @MockitoBean
-    private lateinit var activityReaderMapper: ActivityReaderDtoMapper
+    private lateinit var activityReasonReaderMapper: MovementActivityReasonReaderDtoMapper
+
+    @MockitoBean
+    private lateinit var reasonReaderMapper: MovementReasonReaderDtoMapper
 
     @MockitoBean
     private lateinit var writerMapper: MovementWriterDtoMapper
@@ -126,6 +135,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
                 MovementWriterDto(
                     dateTime = null,
                     type = IN,
+                    reason = null,
                     activityId = null,
                     content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
                 ),
@@ -135,23 +145,45 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
                 MovementWriterDto(
                     dateTime = now(),
                     type = null,
+                    reason = null,
                     activityId = null,
                     content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
                 ),
                 MOVEMENT_TYPE_NULL,
             ),
             Arguments.of(
-                MovementWriterDto(dateTime = now(), type = IN, activityId = null, content = null),
+                MovementWriterDto(
+                    dateTime = now(),
+                    type = IN,
+                    reason = OTHER,
+                    activityId = null,
+                    content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
+                ),
+                MOVEMENT_TYPE_AND_REASON_ARE_INCOMPATIBLE,
+            ),
+            Arguments.of(
+                MovementWriterDto(
+                    dateTime = now(),
+                    type = OUT,
+                    reason = OTHER,
+                    activityId = UUID.randomUUID(),
+                    content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
+                ),
+                MOVEMENT_ACTIVITY_AND_REASON_ARE_DEFINED,
+            ),
+            Arguments.of(
+                MovementWriterDto(dateTime = now(), type = IN, reason = null, activityId = null, content = null),
                 MOVEMENT_CONTENT_EMPTY,
             ),
             Arguments.of(
-                MovementWriterDto(dateTime = now(), type = IN, activityId = null, content = emptyList()),
+                MovementWriterDto(dateTime = now(), type = IN, reason = null, activityId = null, content = emptyList()),
                 MOVEMENT_CONTENT_EMPTY,
             ),
             Arguments.of(
                 MovementWriterDto(
                     dateTime = now(),
                     type = IN,
+                    reason = null,
                     activityId = null,
                     content = listOf(MovementContentWriterDto(participantId = null))
                 ),
@@ -306,6 +338,48 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     }
 
     @Test
+    fun `Should searchReasonsAndActivities return 200`() {
+        // Arrange
+        val searched = "text"
+        whenever(service.searchActivities(any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
+        whenever(activityReasonReaderMapper.toDto(any(), any())).thenReturn(
+            MovementReasonsReaderDto(
+                value = "value",
+                label = "label",
+                kind = REASON,
+                type = IN,
+            )
+        )
+        whenever(reasonReaderMapper.toDto(any(), any())).thenReturn(
+            MovementReasonsReaderDto(
+                value = "value",
+                label = "label",
+                kind = REASON,
+                type = IN,
+            )
+        )
+
+        // Act
+        val result = webClient
+            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_METADATA_R))
+            .get()
+            .uri(uriBuilder("$BASE_URL/search/reasons", listOf(eventId), listOf(Pair("textSearched", searched))))
+            .exchange()
+
+        // Assert
+        result.body<List<*>>(OK)
+
+        verify(service).searchActivities(eventId, searched)
+        verifyNoInteractions(readerMapper)
+        verifyNoInteractions(movementTypeReaderMapper)
+        verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
+        verifyNoInteractions(vehicleReaderMapper)
+        verify(activityReasonReaderMapper).toDto(any(), any())
+        verify(reasonReaderMapper, atLeastOnce()).toDto(any(), any())
+        verifyNoInteractions(writerMapper)
+    }
+
+    @Test
     fun `Should searchParticipantsAndGroups return 200`() {
         // Arrange
         val searched = "text"
@@ -339,7 +413,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         verifyNoInteractions(movementTypeReaderMapper)
         verify(movementParticipantsAndGroupsReaderMapper).toDto(any(), any())
         verifyNoInteractions(vehicleReaderMapper)
-        verifyNoInteractions(activityReaderMapper)
+        verifyNoInteractions(activityReasonReaderMapper)
+        verifyNoInteractions(reasonReaderMapper)
         verifyNoInteractions(writerMapper)
     }
 
@@ -365,33 +440,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
         verify(vehicleReaderMapper).toDto(any(), any())
-        verifyNoInteractions(activityReaderMapper)
-        verifyNoInteractions(writerMapper)
-    }
-
-    @Test
-    fun `Should searchActivities return 200`() {
-        // Arrange
-        val searched = "text"
-        whenever(service.searchActivities(any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
-        whenever(activityReaderMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
-
-        // Act
-        val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_METADATA_R), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
-            .get()
-            .uri(uriBuilder("$BASE_URL/search/activities", listOf(eventId), listOf(Pair("textSearched", searched))))
-            .exchange()
-
-        // Assert
-        result.body<List<*>>(OK)
-
-        verify(service).searchActivities(eventId, searched)
-        verifyNoInteractions(readerMapper)
-        verifyNoInteractions(movementTypeReaderMapper)
-        verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
-        verifyNoInteractions(vehicleReaderMapper)
-        verify(activityReaderMapper).toDto(any(), any())
+        verifyNoInteractions(activityReasonReaderMapper)
+        verifyNoInteractions(reasonReaderMapper)
         verifyNoInteractions(writerMapper)
     }
 
@@ -402,6 +452,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val movement = MovementWriterDto(
             dateTime = now(),
             type = IN,
+            reason = null,
             activityId = null,
             content = listOf(MovementContentWriterDto(participantId = uuid))
         )
@@ -459,6 +510,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val movement = MovementWriterDto(
             dateTime = now(),
             type = IN,
+            reason = null,
             activityId = null,
             content = listOf(MovementContentWriterDto(participantId = uuid))
         )

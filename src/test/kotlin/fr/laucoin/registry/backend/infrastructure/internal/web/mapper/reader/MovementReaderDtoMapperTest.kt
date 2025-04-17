@@ -1,12 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_TYPE_PREFIX
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReasonsReaderDto
 import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -24,10 +26,11 @@ import org.springframework.context.MessageSource
 class MovementReaderDtoMapperTest {
     private val translateService: MessageSource = mock()
     private val eventMapper: EventReaderDtoMapper = mock()
-    private val activityMapper: ActivityReaderDtoMapper = mock()
+    private val activityReasonMapper: MovementActivityReasonReaderDtoMapper = mock()
+    private val reasonMapper: MovementReasonReaderDtoMapper = mock()
     private val movementContentMapper: MovementContentReaderDtoMapper = mock()
     private val mapper: MovementReaderDtoMapper =
-        MovementReaderDtoMapper(translateService, eventMapper, activityMapper, movementContentMapper)
+        MovementReaderDtoMapper(translateService, eventMapper, activityReasonMapper, reasonMapper, movementContentMapper)
 
     companion object {
         @JvmStatic
@@ -59,7 +62,14 @@ class MovementReaderDtoMapperTest {
     ) {
         // Arrange
         whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
-        whenever(activityMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
+        whenever(activityReasonMapper.toDto(any(), any())).thenReturn(
+            MovementReasonsReaderDto(
+                value = "value",
+                label = "label",
+                kind = REASON,
+                type = IN,
+            )
+        )
         whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
         whenever(movementContentMapper.toDtoList(any(), any())).thenReturn(emptyList())
 
@@ -74,7 +84,7 @@ class MovementReaderDtoMapperTest {
         )
         verify(movementContentMapper).toDtoList(movement.content, Locale.getDefault())
         verify(eventMapper, times(expectedEventCast)).toDto(movement.event ?: EventModel(), Locale.getDefault())
-        verify(activityMapper, times(expectedActivityCast)).toDto(movement.activity ?: ActivityModel(), Locale.getDefault())
+        verify(activityReasonMapper, times(expectedActivityCast)).toDto(movement.activity ?: ActivityModel(), Locale.getDefault())
 
         assertEquals(movement.id, result.id)
         assertEquals(movement.dateTime, result.dateTime)

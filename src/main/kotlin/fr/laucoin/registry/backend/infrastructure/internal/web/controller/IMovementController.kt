@@ -8,14 +8,13 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto.MovementContentReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -116,6 +115,26 @@ interface IMovementController {
     ): Mono<MovementReaderDto>
 
     @Operation(
+        summary = "Search Reasons (and Activity as reason)",
+        description = "Search Reasons (and Activity as reason) to add in a Movement",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @GetMapping("/search/reasons")
+    fun searchReasonsAndActivities(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @RequestParam textSearched: String?,
+        @RequestParam typeSearched: MovementTypeEnum?,
+    ): Flux<MovementReasonsReaderDto>
+
+    @Operation(
         summary = "Search Participants and/or Groups",
         description = "Search Participants and/or Groups to add in a Movement",
         parameters = [
@@ -152,25 +171,6 @@ interface IMovementController {
         @PathVariable eventId: UUID,
         @RequestParam textSearched: String?
     ): Flux<VehicleReaderDto>
-
-    @Operation(
-        summary = "Search Activities",
-        description = "Search Activities to add in a Movement",
-        parameters = [
-            Parameter(
-                name = ACCEPT_LANGUAGE,
-                description = "Locale, used for metadata and error translation.",
-                `in` = HEADER
-            ),
-        ],
-    )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
-    @GetMapping("/search/activities")
-    fun searchActivities(
-        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
-        @RequestParam textSearched: String?
-    ): Flux<ActivityReaderDto>
 
     @Operation(
         summary = "Create Movement",

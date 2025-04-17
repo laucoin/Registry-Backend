@@ -18,6 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantQueries.SELECT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantQueries.SELECT_LINKED_GROUPS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantQueries.SELECT_LINKED_USER
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantQueries.SELECT_PARTICIPANT_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantQueries.USER_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT
@@ -42,10 +43,10 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
     @Query(
         """
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_PURGED_CLAUSE AND $EVENT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
-        ORDER BY t.$PARTICIPANT_LAST_NAME
+        ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
     )
@@ -80,11 +81,11 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
     @Query(
         """
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $GROUP_CONTENT_TABLE ON t.id = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID AND $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID = :groupId
         WHERE $NOT_PURGED_CLAUSE AND $EVENT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
-        ORDER BY t.$PARTICIPANT_LAST_NAME
+        ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
     )
@@ -147,10 +148,10 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
     @Query(
         """
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_PURGED_CLAUSE AND $EVENT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
-        ORDER BY t.$PARTICIPANT_LAST_NAME
+        ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
         LIMIT :limit
         """
     )

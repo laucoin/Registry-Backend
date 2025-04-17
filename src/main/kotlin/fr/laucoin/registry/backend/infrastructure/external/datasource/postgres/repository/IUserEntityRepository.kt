@@ -15,6 +15,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserQueries.NOT_SERVICE_ACCOUNT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserQueries.PREFERENCES_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserQueries.SELECT_PREFERENCES
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserQueries.SELECT_USER_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserQueries.USER_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
@@ -32,9 +33,9 @@ import reactor.core.publisher.Mono
 interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
     @Query(
         """
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
-        ORDER BY t.$USER_LAST_NAME
+        ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
     )
@@ -50,9 +51,9 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 
     @Query(
         """
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
-        ORDER BY t.$USER_LAST_NAME
+        ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit
         """
     )

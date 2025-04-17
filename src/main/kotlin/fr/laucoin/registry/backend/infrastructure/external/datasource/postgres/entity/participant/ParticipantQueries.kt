@@ -18,11 +18,9 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_AVAILABLE_GROUPS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_TYPE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
@@ -121,12 +119,14 @@ object ParticipantQueries {
 
     const val NOT_PURGED_CLAUSE = "t.$PARTICIPANT_PURGED IS FALSE"
 
-    const val PARTICIPANT_TEXT_SEARCH_CLAUSE = """
-        (
-            :textSearched IS NULL OR
-                UNACCENT(t.$PARTICIPANT_FIRST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT(t.$PARTICIPANT_LAST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%'
-        )
+    const val SELECT_PARTICIPANT_SEARCH = """
+        CASE
+            WHEN :textSearched IS NULL THEN 1
+            ELSE similarity(t.search_text, :textSearched)
+        END AS similarity_score
     """
+
+    const val PARTICIPANT_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 
     const val PARTICIPANT_AVAILABILITY_CLAUSE = """
         (

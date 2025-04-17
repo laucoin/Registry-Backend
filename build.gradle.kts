@@ -11,13 +11,13 @@ plugins {
 
 group = "fr.laucoin.registry"
 
-val prometheusVersion = "1.14.5"
-val lokiAppenderVersion = "1.6.0"
-val swaggerVersion = "2.7.0"
+val apacheTextVersion = "1.13.1"
+val prometheusVersion = "1.14.6"
+val swaggerVersion = "2.8.6"
 val mockWebServer = "5.0.0-alpha.14"
-val testArch = "1.3.0"
+val testArch = "1.4.0"
 val mockitoKotlinVersion = "5.4.0"
-val testContainerVersion = "1.20.4"
+val testContainerVersion = "1.20.6"
 val jacocoVersion = "0.8.12"
 
 val tuTarget = BigDecimal(0.8)
@@ -48,6 +48,7 @@ dependencies {
     // Data 💾
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.apache.commons:commons-text:$apacheTextVersion")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
@@ -56,7 +57,6 @@ dependencies {
     // Monitoring & Observability 👀
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus:$prometheusVersion")
-    implementation("com.github.loki4j:loki-logback-appender:$lokiAppenderVersion")
 
     // Documentation 📚
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")

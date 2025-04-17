@@ -34,9 +34,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileFields.EVENT_PROFILE_STATUS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileFields.EVENT_PROFILE_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.PREFERENCE_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_EMAIL
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_FIRST_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_TYPE
 
@@ -69,10 +66,12 @@ object UserQueries {
 
     const val NOT_SERVICE_ACCOUNT = "t.$USER_TYPE <> 'SERVICE_ACCOUNT'"
 
-    const val USER_TEXT_SEARCH_CLAUSE = """
-        (
-            :textSearched IS NULL OR
-                UNACCENT(t.$USER_FIRST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT(t.$USER_LAST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT(t.$USER_EMAIL) ILIKE '%' || UNACCENT(:textSearched) || '%'
-        )
+    const val SELECT_USER_SEARCH = """
+        CASE
+            WHEN :textSearched IS NULL THEN 1
+            ELSE similarity(t.search_text, :textSearched)
+        END AS similarity_score
     """
+
+    const val USER_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 }

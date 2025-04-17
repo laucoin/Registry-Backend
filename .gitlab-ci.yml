@@ -21,7 +21,7 @@ include:
 
 "👨‍💻 Execute `gradle build -x test` 👩‍💻":
   stage: "🧪 Test code 🧪"
-  image: gradle:8.11-jdk21-alpine
+  image: gradle:8.13-jdk21-alpine
   rules:
     - if: '$CI_COMMIT_MESSAGE =~ /^\[Gradle Release Plugin\]/ || $CI_COMMIT_REF_SLUG == "main"'
       when: never
@@ -58,7 +58,7 @@ include:
   stage: "🆕 Release 🆕"
   needs:
     - job: "📝 Generate changelog 📝"
-  image: gradle:8.11-jdk21-alpine
+  image: gradle:8.13-jdk21-alpine
   rules:
     - if: '$RELEASE =~ /^\d+\.\d+\.\d+$/'
   before_script:

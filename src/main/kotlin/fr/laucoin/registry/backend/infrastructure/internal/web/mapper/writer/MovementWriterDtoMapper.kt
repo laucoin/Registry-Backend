@@ -16,6 +16,7 @@ class MovementWriterDtoMapper(
         return MovementModel().apply {
             dateTime = dto.dateTime !!
             type = dto.type
+            reason = dto.reason
             activity = if (Objects.nonNull(dto.activityId)) ActivityModel().apply { id = dto.activityId } else null
             content = dto.content !!.map { contentMapper.toModel(it) }
             event = EventModel().apply { id = eventId }

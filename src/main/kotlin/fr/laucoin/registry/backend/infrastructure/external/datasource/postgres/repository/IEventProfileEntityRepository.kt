@@ -24,6 +24,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileQueries.EVENT_PROFILE_USABLE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileQueries.JOIN_USER
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileQueries.LINKED_USER_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileQueries.SELECT_EVENT_PROFILE_USER_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileQueries.SELECT_LINKED_USER
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileRoleCountEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.EventProfileRoleEntity
@@ -88,10 +89,10 @@ interface IEventProfileEntityRepository: ReactiveCrudRepository<EventProfileEnti
 
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_EVENT_PROFILE_USER_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $EVENT_PROFILE_TABLE t $JOIN_USER $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$LINKED_EVENT_ID = :eventId AND $EVENT_PROFILE_TEXT_USER_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $EVENT_PROFILE_USABLE_CLAUSE AND $EVENT_PROFILE_STATUS_CLAUSE AND $DATE_IN_EVENT_PROFILE_DATES_RANGE_CLAUSE
-        ORDER BY $LINKED_USER_TABLE.$USER_LAST_NAME
+        ORDER BY similarity_score DESC, $LINKED_USER_TABLE.$USER_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
     )

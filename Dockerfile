@@ -1,5 +1,5 @@
 # Use an appropriate base image that has Java and Gradle installed
-FROM gradle:8.11.0-jdk21-alpine AS temp_build_image
+FROM gradle:8.13.0-jdk21-alpine AS temp_build_image
 
 # Set the working directory inside the container
 ENV APP_HOME=/usr/app

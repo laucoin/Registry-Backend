@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
 import java.time.ZonedDateTime
+import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
@@ -17,7 +18,8 @@ class MovementEntityMapper(
         return MovementModel().apply {
             dateTime = entity.dateTime ?: ZonedDateTime.now()
             type = entity.type
-            activity = activityMapper.toModel(ActivityEntity().apply {
+            reason = entity.reason
+            activity = if (Objects.nonNull(entity.activityId)) activityMapper.toModel(ActivityEntity().apply {
                 id = entity.activityId
                 name = entity.activityName
                 description = entity.activityDescription
@@ -28,7 +30,7 @@ class MovementEntityMapper(
                 startAvailabilityTime = entity.activityStartAvailabilityTime
                 endAvailabilityDate = entity.activityEndAvailabilityDate
                 endAvailabilityTime = entity.activityEndAvailabilityTime
-            })
+            }) else null
         }.fillWithEventAndEntity(entity)
     }
 
@@ -36,6 +38,7 @@ class MovementEntityMapper(
         return MovementEntity().apply {
             dateTime = model.dateTime
             type = model.type
+            reason = model.reason
             activityId = model.activity?.id
         }.fillWithEventAndModel(model)
     }

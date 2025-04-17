@@ -393,17 +393,27 @@ $$
                                                      (current_event_end_date + current_event_end_time)))) *
                                 INTERVAL '1 second';
 
-                        INSERT INTO tb_movement (id, date_time, type, activity_id, event_id, created_by,
+                        INSERT INTO tb_movement (id, date_time, type, reason, activity_id, event_id, created_by,
                                                  last_modified_by)
                         VALUES (CASE WHEN i = 1 THEN '63f4c4e8-bd07-445b-8a6e-899ac490cf0c' ELSE gen_random_uuid() END,
                                 current_event_begin_date + random_interval,
                                 CASE WHEN i % 2 = 0 THEN 'IN' ELSE 'OUT' END,
                                 CASE
-                                    WHEN i % 10 = 0 THEN (SELECT id
-                                                          FROM tb_activity ta
-                                                          WHERE id = '95806471-9c01-477a-84ea-8c37fd0cc8c5'
-                                                          ORDER BY RANDOM()
-                                                          LIMIT 1) END,
+                                    WHEN i % 5 != 0 AND i % 15 != 0 THEN (SELECT UNNEST(
+                                                                                         CASE
+                                                                                             WHEN i % 2 = 0
+                                                                                                 THEN ARRAY ['ARRIVAL', 'VISIT']
+                                                                                             ELSE ARRAY ['SHOPPING', 'MEDICAL', 'LOGISTICS', 'FINAL_EXIT', 'OTHER']
+                                                                                             END
+                                                                                 )
+                                                                          ORDER BY RANDOM()
+                                                                          LIMIT 1) END,
+                                CASE
+                                    WHEN i % 5 = 0 AND i % 15 != 0 THEN (SELECT id
+                                                                         FROM tb_activity ta
+                                                                         WHERE id = '95806471-9c01-477a-84ea-8c37fd0cc8c5'
+                                                                         ORDER BY RANDOM()
+                                                                         LIMIT 1) END,
                                 current_event_id,
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));
