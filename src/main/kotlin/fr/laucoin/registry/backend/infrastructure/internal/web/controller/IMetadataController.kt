@@ -45,8 +45,8 @@ interface IMetadataController {
     fun getEventProfileStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
 
     @Operation(
-        summary = "Get available Movement Type",
-        description = "Get all movement type you are allowed to assign",
+        summary = "Get Movement Type",
+        description = "Get all movement type",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -57,4 +57,18 @@ interface IMetadataController {
     )
     @GetMapping("/movements/types")
     fun getMovementTypes(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+
+    @Operation(
+        summary = "Get Participant Type",
+        description = "Get all participant type",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @GetMapping("/participants/types")
+    fun getParticipantTypes(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
 }

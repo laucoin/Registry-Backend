@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityEntity
@@ -15,7 +19,7 @@ class MovementEntityMapper(
     private val activityMapper: ActivityEntityMapper
 ): IEntityMapper<MovementModel, MovementEntity> {
     override fun toModel(entity: MovementEntity): MovementModel {
-        return MovementModel().apply {
+        return MovementModel(contentType = determineContentType(entity)).apply {
             dateTime = entity.dateTime ?: ZonedDateTime.now()
             type = entity.type
             reason = entity.reason
@@ -32,6 +36,10 @@ class MovementEntityMapper(
                 endAvailabilityTime = entity.activityEndAvailabilityTime
             }) else null
         }.fillWithEventAndEntity(entity)
+    }
+
+    private fun determineContentType(entity: MovementEntity): ParticipantTypeEnum {
+        return entity.reason?.participantType ?: if (entity.type == IN || Objects.nonNull(entity.activityId)) REGISTERED else GUEST
     }
 
     override fun toEntity(model: MovementModel): MovementEntity {

@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USABLE_ELEMENT_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -16,20 +15,19 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 
 class ParticipantReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
+    private val typeMapper: ParticipantTypeReaderDtoMapper = mock()
+    private val statusMapper: UsableElementStatusReaderDtoMapper = mock()
     private val eventMapper: EventReaderDtoMapper = mock()
     private val groupMapper: GroupWithoutMemberReaderDtoMapper = mock()
     private val mapper: ParticipantReaderDtoMapper =
-        ParticipantReaderDtoMapper(translateService, partialUserMapper, eventMapper, groupMapper)
+        ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, eventMapper, groupMapper)
 
     companion object {
         @JvmStatic
@@ -40,19 +38,16 @@ class ParticipantReaderDtoMapperTest {
                     false,
                     0,
                     0,
-                    0,
                 ),
                 Arguments.of(
                     ParticipantModel().apply { birthday = LocalDate.now() },
                     false,
                     0,
                     0,
-                    0,
                 ),
                 Arguments.of(
                     ParticipantModel().apply { birthday = LocalDate.EPOCH },
                     true,
-                    0,
                     0,
                     0,
                 ),
@@ -66,7 +61,6 @@ class ParticipantReaderDtoMapperTest {
                     true,
                     1,
                     1,
-                    1,
                 ),
             )
         }
@@ -77,12 +71,10 @@ class ParticipantReaderDtoMapperTest {
     fun `Should toDto convert ParticipantModel to ParticipantReaderDto`(
         participant: ParticipantModel,
         expectedMajor: Boolean,
-        expectedTranslation: Int,
         expectedEventCast: Int,
         expectedUserCast: Int,
     ) {
         // Arrange
-        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
         whenever(partialUserMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
         whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
         whenever(groupMapper.toDtoList(any(), any())).thenReturn(listOf(GroupReaderDto()))
@@ -91,11 +83,6 @@ class ParticipantReaderDtoMapperTest {
         val result = mapper.toDto(participant, Locale.getDefault())
 
         // Assert
-        verify(translateService, times(expectedTranslation)).getMessage(
-            "$USABLE_ELEMENT_STATUS_PREFIX${participant.status}",
-            null,
-            Locale.getDefault(),
-        )
         verify(partialUserMapper, times(expectedUserCast)).toDto(participant.user ?: UserModel(), Locale.getDefault())
         verify(eventMapper, times(expectedEventCast)).toDto(participant.event ?: EventModel(), Locale.getDefault())
         verify(groupMapper, times(2)).toDtoList(participant.groups, Locale.getDefault())

@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_EVENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -51,6 +52,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -62,6 +64,7 @@ class MovementServiceTest {
     private val vehicleRepository: IVehicleModelRepository = mock()
     private val activityRepository: IActivityModelRepository = mock()
     private val groupRepository: IGroupModelRepository = mock()
+    private val transactionalOperator: TransactionalOperator = mock()
     private val maxParticipants: Int = 1
     private val maxGroups: Int = 1
     private val maxVehicles: Int = 1
@@ -73,6 +76,7 @@ class MovementServiceTest {
         vehicleRepository,
         activityRepository,
         groupRepository,
+        transactionalOperator,
         maxParticipants,
         maxGroups,
         maxVehicles,
@@ -264,7 +268,7 @@ class MovementServiceTest {
     @Test
     fun `Should findMovementById call repository findById`() {
         // Arrange
-        val movement = MovementModel().apply { event = EventModel().apply { id = eventId } }
+        val movement = MovementModel(contentType = REGISTERED).apply { event = EventModel().apply { id = eventId } }
         val uuid = UUID.randomUUID()
         val onlyVisible = true
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
@@ -293,6 +297,7 @@ class MovementServiceTest {
     fun `Should searchParticipantsAndGroups call repository findWithLimit and findWithLimit`() {
         // Arrange
         val textSearched = "test"
+        val typeSearched = REGISTERED
         val uuid = UUID.randomUUID()
         val group = GroupModel().apply { id = uuid }
         val member = ParticipantModel()
@@ -301,7 +306,7 @@ class MovementServiceTest {
         whenever(groupRepository.findContent(any(), any())).thenReturn(Flux.just(Pair(uuid, listOf(member))))
 
         // Act
-        val result = service.searchParticipantsAndGroups(eventId, textSearched).block()
+        val result = service.searchParticipantsAndGroups(eventId, typeSearched, textSearched).block()
 
         // Assert
         assertEquals(0, result?.t1?.size)
@@ -310,7 +315,7 @@ class MovementServiceTest {
         verify(participantRepository).findWithLimit(
             maxParticipants,
             eventId,
-            ParticipantSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true)
+            ParticipantSearchParamModel(textSearched, typeSearched, visibilitySearched = true, presenceSearched = true)
         )
         verify(groupRepository).findWithLimit(
             maxGroups,
@@ -341,10 +346,11 @@ class MovementServiceTest {
     fun `Should searchActivities call repository findWithLimit`() {
         // Arrange
         val textSearched = "test"
+        val typeSearched = REGISTERED
         whenever(activityRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchActivities(eventId, textSearched).blockFirst()
+        service.searchActivities(eventId, typeSearched, textSearched).blockFirst()
 
         // Assert
         verify(activityRepository).findWithLimit(
@@ -365,7 +371,7 @@ class MovementServiceTest {
         // Arrange
         val movementDateTime = ZonedDateTime.now()
 
-        val movement = MovementModel().apply {
+        val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -384,6 +390,7 @@ class MovementServiceTest {
             Flux.just(*movementContent.mapNotNull { it.vehicle }.toTypedArray())
         )
         whenever(repository.create(any())).thenReturn(Mono.just(movement))
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         service.createMovement(currentUser(), movement).block()
@@ -410,6 +417,7 @@ class MovementServiceTest {
             visibilitySearched = null
         )
         verify(repository).create(movement)
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @Test
@@ -420,7 +428,7 @@ class MovementServiceTest {
         val activityId = UUID.randomUUID()
         val movementActivity = ActivityModel().apply { id = activityId }
 
-        val movement = MovementModel().apply {
+        val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -429,6 +437,7 @@ class MovementServiceTest {
 
         whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
         whenever(activityRepository.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -451,6 +460,7 @@ class MovementServiceTest {
         verify(participantRepository, never()).findAllByIds(any(), any(), anyOrNull())
         verify(vehicleRepository, never()).findAllByIds(any(), any(), anyOrNull())
         verify(repository, never()).create(any())
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @Test
@@ -461,7 +471,7 @@ class MovementServiceTest {
         val activityId = UUID.randomUUID()
         val movementActivity = ActivityModel().apply { id = activityId; visible = false }
 
-        val movement = MovementModel().apply {
+        val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -470,6 +480,7 @@ class MovementServiceTest {
 
         whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
         whenever(activityRepository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movementActivity))
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -492,6 +503,7 @@ class MovementServiceTest {
         verify(participantRepository, never()).findAllByIds(any(), any(), anyOrNull())
         verify(vehicleRepository, never()).findAllByIds(any(), any(), anyOrNull())
         verify(repository, never()).create(any())
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @Test
@@ -507,7 +519,7 @@ class MovementServiceTest {
             MovementContentModel().apply { participant = movementParticipant2 },
         )
 
-        val movement = MovementModel().apply {
+        val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -516,6 +528,7 @@ class MovementServiceTest {
 
         whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -538,6 +551,7 @@ class MovementServiceTest {
         )
         verify(vehicleRepository, never()).findAllByIds(any(), any(), anyOrNull())
         verify(repository, never()).create(any())
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @ParameterizedTest
@@ -549,7 +563,7 @@ class MovementServiceTest {
         // Arrange
         val movementDateTime = ZonedDateTime.now()
 
-        val movement = MovementModel().apply {
+        val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -558,6 +572,7 @@ class MovementServiceTest {
 
         whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*participants.toTypedArray()))
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -580,6 +595,7 @@ class MovementServiceTest {
         )
         verify(vehicleRepository, never()).findAllByIds(any(), any(), anyOrNull())
         verify(repository, never()).create(any())
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @Test
@@ -597,7 +613,7 @@ class MovementServiceTest {
             MovementContentModel().apply { participant = movementParticipant2; vehicle = movementVehicle },
         )
 
-        val movement = MovementModel().apply {
+        val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -609,6 +625,7 @@ class MovementServiceTest {
             Flux.just(*movementContent.map(MovementContentModel::participant).toTypedArray())
         )
         whenever(vehicleRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -635,6 +652,7 @@ class MovementServiceTest {
             visibilitySearched = null,
         )
         verify(repository, never()).create(any())
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @Test
@@ -652,7 +670,7 @@ class MovementServiceTest {
             MovementContentModel().apply { participant = movementParticipant2; vehicle = movementVehicle },
         )
 
-        val movement = MovementModel().apply {
+        val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -666,6 +684,7 @@ class MovementServiceTest {
         whenever(vehicleRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
             Flux.just(*movementContent.mapNotNull(MovementContentModel::vehicle).toTypedArray())
         )
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -692,6 +711,7 @@ class MovementServiceTest {
             visibilitySearched = null,
         )
         verify(repository, never()).create(any())
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @ParameterizedTest
@@ -711,14 +731,14 @@ class MovementServiceTest {
         val movementDateTime = ZonedDateTime.now()
 
         val uuid = UUID.randomUUID()
-        val movementToUpdate = MovementModel().apply {
+        val movementToUpdate = MovementModel(contentType = REGISTERED).apply {
             id = uuid
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
             activity = previousMovementActivity
             content = previousMovementContent
         }
-        val movementUpdated = MovementModel().apply {
+        val movementUpdated = MovementModel(contentType = REGISTERED).apply {
             id = uuid
             event = EventModel().apply { id = eventId }
             dateTime = movementDateTime
@@ -738,6 +758,7 @@ class MovementServiceTest {
             Flux.just(*newMovementVehicle.toTypedArray())
         )
         whenever(repository.update(any())).thenReturn(Mono.just(movementUpdated))
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         service.updateMovementById(currentUser(), eventId, uuid, movementUpdated).block()
@@ -764,13 +785,14 @@ class MovementServiceTest {
             visibilitySearched = null
         )
         verify(repository).update(any())
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @Test
     fun `Should disableMovementById hide and return a Movement`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val movement = MovementModel().apply { id = uuid; visible = true }
+        val movement = MovementModel(contentType = REGISTERED).apply { id = uuid; visible = true }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
         whenever(repository.update(any())).thenReturn(Mono.just(movement))
 
@@ -786,7 +808,7 @@ class MovementServiceTest {
     fun `Should enableMovementById restore and return a Movement`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val movement = MovementModel().apply { id = uuid; visible = false }
+        val movement = MovementModel(contentType = REGISTERED).apply { id = uuid; visible = false }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
         whenever(repository.update(any())).thenReturn(Mono.just(movement))
 
@@ -802,7 +824,7 @@ class MovementServiceTest {
     fun `Should deleteMovementById delete a Movement`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val movement = MovementModel().apply { id = uuid }
+        val movement = MovementModel(contentType = REGISTERED).apply { id = uuid }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 

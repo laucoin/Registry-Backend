@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
@@ -16,7 +17,8 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.Moveme
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto.MovementContentReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.GuestMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantMovementWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
@@ -130,8 +132,9 @@ interface IMovementController {
     fun searchReasonsAndActivities(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
+        @RequestParam(required = true) typeSearched: MovementTypeEnum,
+        @RequestParam(required = true) contentTypeSearched: ParticipantTypeEnum,
         @RequestParam textSearched: String?,
-        @RequestParam typeSearched: MovementTypeEnum?,
     ): Flux<MovementReasonsReaderDto>
 
     @Operation(
@@ -150,7 +153,8 @@ interface IMovementController {
     fun searchParticipantsAndGroups(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestParam textSearched: String?
+        @RequestParam(required = true) contentTypeSearched: ParticipantTypeEnum,
+        @RequestParam textSearched: String?,
     ): Mono<MovementParticipantsAndGroupsReaderDto>
 
     @Operation(
@@ -174,7 +178,7 @@ interface IMovementController {
 
     @Operation(
         summary = "Create Movement",
-        description = "Create Movement and related Movement Content",
+        description = "Create Movement and related Content",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -189,12 +193,12 @@ interface IMovementController {
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
-        @RequestBody @Valid movement: MovementWriterDto,
+        @RequestBody @Valid movement: ParticipantMovementWriterDto,
     ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Update Movement",
-        description = "Update Movement",
+        description = "Update Movement and related Content",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -210,7 +214,48 @@ interface IMovementController {
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable eventId: UUID,
         @PathVariable id: UUID,
-        @RequestBody @Valid movement: MovementWriterDto,
+        @RequestBody @Valid movement: ParticipantMovementWriterDto,
+    ): Mono<MovementReaderDto>
+
+    @Operation(
+        summary = "Create Guest Movement",
+        description = "Create Movement and related Guest Content",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_C')")
+    @PostMapping("/guests")
+    fun createGuestsMovement(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @RequestBody @Valid movement: GuestMovementWriterDto,
+    ): Mono<MovementReaderDto>
+
+    @Operation(
+        summary = "Update Guest Movement",
+        description = "Update Movement and related Guest Content",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
+    @PatchMapping("/guests/{id}")
+    fun updateGuestsMovementById(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable eventId: UUID,
+        @PathVariable id: UUID,
+        @RequestBody @Valid movement: GuestMovementWriterDto,
     ): Mono<MovementReaderDto>
 
     @Operation(

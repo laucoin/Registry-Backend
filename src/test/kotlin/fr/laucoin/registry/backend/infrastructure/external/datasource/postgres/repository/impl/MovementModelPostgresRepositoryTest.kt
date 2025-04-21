@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
@@ -333,7 +334,7 @@ class MovementModelPostgresRepositoryTest(
         @Order(1)
         fun `Should create call repository save`() {
             // Arrange
-            val movement = MovementModel().apply {
+            val movement = MovementModel(contentType = REGISTERED).apply {
                 dateTime = movementDateTime
                 type = IN
                 event = EventModel().apply { id = eventId }
@@ -355,7 +356,7 @@ class MovementModelPostgresRepositoryTest(
         @Order(2)
         fun `Should update call repository save and add member in movement`() {
             // Arrange
-            val movement = MovementModel().apply {
+            val movement = MovementModel(contentType = REGISTERED).apply {
                 id = uuid
                 dateTime = movementDateTime
                 type = IN
@@ -380,7 +381,7 @@ class MovementModelPostgresRepositoryTest(
         @Order(3)
         fun `Should update call repository save and remove member in movement`() {
             // Arrange
-            val movement = MovementModel().apply {
+            val movement = MovementModel(contentType = REGISTERED).apply {
                 id = uuid
                 dateTime = movementDateTime
                 type = IN

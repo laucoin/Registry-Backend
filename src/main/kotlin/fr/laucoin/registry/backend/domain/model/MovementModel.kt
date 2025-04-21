@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.model
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
@@ -11,6 +12,7 @@ data class MovementModel(
     var type: MovementTypeEnum? = null,
     var reason: MovementReasonEnum? = null,
     var activity: ActivityModel? = null,
+    var contentType: ParticipantTypeEnum,
     var content: List<MovementContentModel> = emptyList(),
 ): GenericEventModel() {
     data class MovementContentModel(
@@ -31,6 +33,15 @@ data class MovementModel(
 
     fun getNewContentVehicleIds(movement: MovementModel): List<UUID> {
         return getNewContent(movement).mapNotNull { it.vehicle?.id }
+    }
+
+    fun isGuestsMovement(): Boolean {
+        return contentType === ParticipantTypeEnum.GUEST
+    }
+
+    fun atLeastOldGuestIfGuestsEntrance(movement: MovementModel): Boolean {
+        if (type != MovementTypeEnum.IN || contentType != ParticipantTypeEnum.GUEST) return false
+        return content.any { old -> movement.content.any { new -> old.participant?.id == new.participant?.id } }
     }
 
     fun getOldContentIds(movement: MovementModel): List<UUID> {

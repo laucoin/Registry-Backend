@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_POOL_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_BRAND
@@ -40,6 +42,9 @@ data class MovementContentEntity(
     @ReadOnlyProperty
     @Column(MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY)
     var participantBirthday: LocalDate? = null,
+    @ReadOnlyProperty
+    @Column(MOVEMENT_CONTENT_PARTICIPANT_TYPE)
+    var participantType: ParticipantTypeEnum? = null,
 
     @Column(MOVEMENT_CONTENT_VEHICLE_ID)
     var vehicleId: UUID? = null,

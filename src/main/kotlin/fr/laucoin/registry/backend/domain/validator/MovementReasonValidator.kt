@@ -1,51 +1,48 @@
 package fr.laucoin.registry.backend.domain.validator
 
 import fr.laucoin.registry.backend.domain.annotation.MovementReason
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
-import fr.laucoin.registry.backend.domain.model.RegistryException
-import jakarta.validation.ConstraintValidator
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
-import kotlin.reflect.KProperty1
-import kotlin.reflect.full.memberProperties
-import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
+import java.util.Optional
+import java.util.UUID
 
-class MovementReasonValidator: ConstraintValidator<MovementReason, Any> {
-    private val log = LoggerFactory.getLogger(this::class.java)
-    private lateinit var typeField: String
-    private lateinit var reasonField: String
+class MovementReasonValidator: GenericValidator<MovementReason, Any>() {
+    private lateinit var participantType: ParticipantTypeEnum
+    private var hasActivity: Boolean = false
 
     override fun initialize(constraintAnnotation: MovementReason) {
-        typeField = constraintAnnotation.type
-        reasonField = constraintAnnotation.reason
+        participantType = constraintAnnotation.participantType
+        hasActivity = constraintAnnotation.hasActivity
     }
 
     override fun isValid(value: Any, context: ConstraintValidatorContext): Boolean {
-        val properties = value::class.memberProperties
-        val typeFieldProperty = properties.firstOrNull { it.name == typeField }
-        val reasonFieldProperty = properties.firstOrNull { it.name == reasonField }
+        val type: MovementTypeEnum? = Optional.ofNullable(extractValue("type", value))
+            .map { MovementTypeEnum.valueOf(it.toString()) }
+            .orElse(null)
+        val reason: MovementReasonEnum? = Optional.ofNullable(extractValue("reason", value))
+            .map { MovementReasonEnum.valueOf(it.toString()) }
+            .orElse(null)
+        val activityId: UUID? = extractActivityValue(value)
 
-        if (Objects.isNull(typeFieldProperty) || Objects.isNull(reasonFieldProperty)) {
-            val exception = RegistryException(INTERNAL_SERVER_ERROR, NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME)
-            log.error(
-                "One of the given field names ({}, {}) don't exist for the object ({})",
-                typeFieldProperty,
-                reasonFieldProperty,
-                value,
-                exception
-            )
-            throw exception
+        return when {
+            Objects.isNull(type) -> true
+            Objects.isNull(reason) && participantType === GUEST -> type === OUT
+            Objects.isNull(reason) && Objects.isNull(activityId) && participantType === REGISTERED -> type === IN
+            else -> Objects.nonNull(activityId) || (reason !!.type == type && reason.participantType == participantType)
         }
+    }
 
-        val typeValue = (typeFieldProperty as KProperty1<*, *>).getter.call(value)
-        val reasonValue = (reasonFieldProperty as KProperty1<*, *>).getter.call(value)
-
-        if (Objects.isNull(typeValue) || Objects.isNull(reasonValue)) {
-            return true
-        }
-
-        return MovementReasonEnum.valueOf(reasonValue.toString()).type.name == typeValue.toString()
+    private fun extractActivityValue(value: Any): UUID? {
+        return if (hasActivity) Optional.ofNullable(extractValue("activityId", value))
+            .map { UUID.fromString(it.toString()) }
+            .orElse(null)
+        else null
     }
 }

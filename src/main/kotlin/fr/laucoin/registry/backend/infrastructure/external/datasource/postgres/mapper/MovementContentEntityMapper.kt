@@ -27,6 +27,7 @@ class MovementContentEntityMapper: IEntityReaderMapper<MovementContentModel, Mov
             firstName = entity.participantFirstName
             lastName = entity.participantLastName
             birthday = entity.participantBirthday
+            type = entity.participantType
         }
     }
 

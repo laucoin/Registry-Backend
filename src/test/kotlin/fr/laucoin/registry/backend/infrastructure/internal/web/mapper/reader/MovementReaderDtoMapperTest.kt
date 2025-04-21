@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -36,9 +37,9 @@ class MovementReaderDtoMapperTest {
         @JvmStatic
         fun `Should toDto convert MovementModel to MovementReaderDto`(): Stream<Arguments> {
             return Stream.of(
-                Arguments.of(MovementModel(), 0, 0, 0),
+                Arguments.of(MovementModel(contentType = REGISTERED), 0, 0, 0),
                 Arguments.of(
-                    MovementModel().apply {
+                    MovementModel(contentType = REGISTERED).apply {
                         type = MovementTypeEnum.IN
                         activity = ActivityModel()
                         event = EventModel()

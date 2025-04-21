@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_EVENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -71,7 +72,7 @@ class GroupService(
         return participantRepository.findWithLimit(
             maxParticipantResult,
             eventId,
-            ParticipantSearchParamModel(textSearched, visibilitySearched = true)
+            ParticipantSearchParamModel(textSearched, typeSearched = REGISTERED, visibilitySearched = true)
         )
     }
 
@@ -163,6 +164,7 @@ class GroupService(
 
     private fun validateMembers(eventId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
         return participantRepository.findAllByIds(eventId, newMemberIds, visibilitySearched = null)
+            .filter { it.type == REGISTERED }
             .collectList()
             .handle { it, handle ->
                 when {

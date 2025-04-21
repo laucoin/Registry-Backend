@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupEntityRepository
 import java.util.UUID
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -102,7 +101,6 @@ class GroupModelPostgresRepository(
             .`as`(transactionalOperator::transactional)
     }
 
-    @Transactional
     fun Mono<GroupModel>.saveNewMembers(element: GroupModel): Mono<GroupModel> {
         return flatMap { group ->
             val newMembers = group.getNewMembers(element)
@@ -114,7 +112,6 @@ class GroupModelPostgresRepository(
         }
     }
 
-    @Transactional
     fun Mono<GroupModel>.removeDeletedMembers(element: GroupModel): Mono<GroupModel> {
         return flatMap { group ->
             val removedMembers = group.getOldMemberIds(element)

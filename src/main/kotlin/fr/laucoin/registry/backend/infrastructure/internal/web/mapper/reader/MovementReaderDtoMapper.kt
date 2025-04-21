@@ -28,6 +28,7 @@ class MovementReaderDtoMapper(
             reason = if (Objects.nonNull(model.reason)) reasonReaderDtoMapper.toDto(model.reason !!, locale)
             else if (Objects.nonNull(model.activity)) activityReasonReaderDtoMapper.toDto(model.activity !!, locale)
             else null,
+            contentType = model.contentType,
             content = movementContentMapper.toDtoList(model.content, locale),
         ).apply {
             id = model.id

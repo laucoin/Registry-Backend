@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -54,9 +55,9 @@ class GroupServiceTest {
         fun `Should createGroup check date, members and throw because a member is not visible or purged`(): Stream<Arguments> {
             val uuid = UUID.randomUUID()
             return Stream.of(
-                Arguments.of(ParticipantModel().apply { id = uuid; visible = false; purged = false }),
-                Arguments.of(ParticipantModel().apply { id = uuid; visible = true; purged = true }),
-                Arguments.of(ParticipantModel().apply { id = uuid; visible = false; purged = true }),
+                Arguments.of(ParticipantModel().apply { id = uuid; visible = false; purged = false; type = REGISTERED }),
+                Arguments.of(ParticipantModel().apply { id = uuid; visible = true; purged = true; type = REGISTERED }),
+                Arguments.of(ParticipantModel().apply { id = uuid; visible = false; purged = true; type = REGISTERED }),
             )
         }
 
@@ -166,7 +167,7 @@ class GroupServiceTest {
         verify(participantRepository).findWithLimit(
             maxParticipants,
             eventId,
-            ParticipantSearchParamModel(textSearched, visibilitySearched = true)
+            ParticipantSearchParamModel(textSearched, REGISTERED, visibilitySearched = true)
         )
     }
 
@@ -174,7 +175,7 @@ class GroupServiceTest {
     fun `Should createGroup check date, members and call repository create`() {
         // Arrange
         val participantId = UUID.randomUUID()
-        val participant = ParticipantModel().apply { id = participantId; visible = true; purged = false }
+        val participant = ParticipantModel().apply { id = participantId; visible = true; purged = false; type = REGISTERED }
         val group = GroupModel().apply {
             event = EventModel().apply { id = eventId }
             members = listOf(ParticipantModel().apply { id = participantId })
@@ -265,7 +266,8 @@ class GroupServiceTest {
             event = EventModel().apply { id = eventId }
             members = updatedParticipantIds.map { ParticipantModel().apply { id = it } }
         }
-        val newParticipants = newParticipantIds.map { ParticipantModel().apply { id = it; visible = true; purged = false } }
+        val newParticipants =
+            newParticipantIds.map { ParticipantModel().apply { id = it; visible = true; purged = false; type = REGISTERED } }
         whenever(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(groupToUpdate))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newParticipants.toTypedArray()))
@@ -301,7 +303,8 @@ class GroupServiceTest {
             event = EventModel().apply { id = eventId }
             members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
         }
-        val newParticipants = newParticipantIds.map { ParticipantModel().apply { id = it; visible = true; purged = false } }
+        val newParticipants =
+            newParticipantIds.map { ParticipantModel().apply { id = it; visible = true; purged = false; type = REGISTERED } }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newParticipants.toTypedArray()))
         whenever(repository.update(any())).thenReturn(Mono.just(group))

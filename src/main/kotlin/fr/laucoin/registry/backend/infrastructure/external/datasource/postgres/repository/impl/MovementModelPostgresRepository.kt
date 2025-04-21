@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementEntityRepository
 import java.util.UUID
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -217,7 +216,6 @@ class MovementModelPostgresRepository(
             .`as`(transactionalOperator::transactional)
     }
 
-    @Transactional
     fun Mono<MovementModel>.saveNewContent(element: MovementModel): Mono<MovementModel> {
         return flatMap { movement ->
             val newContent = movement.getNewContent(element)
@@ -229,7 +227,6 @@ class MovementModelPostgresRepository(
         }
     }
 
-    @Transactional
     fun Mono<MovementModel>.removeDeletedContent(element: MovementModel): Mono<MovementModel> {
         return flatMap { movement ->
             val removedIds = movement.getOldContentIds(element)

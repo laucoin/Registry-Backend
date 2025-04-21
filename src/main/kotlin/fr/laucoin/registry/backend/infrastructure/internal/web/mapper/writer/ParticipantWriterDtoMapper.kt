@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -18,6 +19,7 @@ class ParticipantWriterDtoMapper(
             firstName = dto.firstName
             lastName = dto.lastName
             birthday = dto.birthday
+            type = REGISTERED
             startAvailability =
                 if (Objects.nonNull(dto.startAvailability)) customDateTimeMapper.toModel(dto.startAvailability !!) else null
             endAvailability = if (Objects.nonNull(dto.endAvailability)) customDateTimeMapper.toModel(dto.endAvailability !!) else null

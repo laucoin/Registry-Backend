@@ -7,6 +7,7 @@ import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.VALUE_PARAMETER
 import kotlin.reflect.KClass
 
+@Repeatable
 @Target(VALUE_PARAMETER)
 @Retention(RUNTIME)
 @Constraint(validatedBy = [ProfileAcceptOrRejectValidator::class])

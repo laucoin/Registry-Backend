@@ -123,7 +123,7 @@ $$
 
                 FOR i IN 1..50
                     LOOP
-                        INSERT INTO tb_participant (id, first_name, last_name, birthday, start_availability_date,
+                        INSERT INTO tb_participant (id, first_name, last_name, birthday, type, start_availability_date,
                                                     start_availability_time, end_availability_date,
                                                     end_availability_time,
                                                     user_id, event_id, created_by, last_modified_by)
@@ -141,6 +141,7 @@ $$
                                     ELSE (CURRENT_TIMESTAMP - INTERVAL '18 years') + (RANDOM() * (EXTRACT(EPOCH FROM
                                                                                                           (CURRENT_TIMESTAMP - (CURRENT_TIMESTAMP - INTERVAL '18 years'))) *
                                                                                                   INTERVAL '1 second')) END,
+                                CASE WHEN i % 20 = 0 THEN 'GUEST' ELSE 'REGISTERED' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE event_begin_date +
@@ -397,14 +398,12 @@ $$
                                                  last_modified_by)
                         VALUES (CASE WHEN i = 1 THEN '63f4c4e8-bd07-445b-8a6e-899ac490cf0c' ELSE gen_random_uuid() END,
                                 current_event_begin_date + random_interval,
-                                CASE WHEN i % 2 = 0 THEN 'IN' ELSE 'OUT' END,
+                                CASE WHEN i % 2 = 0 THEN 'OUT' ELSE 'IN' END,
                                 CASE
                                     WHEN i % 5 != 0 AND i % 15 != 0 THEN (SELECT UNNEST(
                                                                                          CASE
                                                                                              WHEN i % 2 = 0
-                                                                                                 THEN ARRAY ['ARRIVAL', 'VISIT']
-                                                                                             ELSE ARRAY ['SHOPPING', 'MEDICAL', 'LOGISTICS', 'FINAL_EXIT', 'OTHER']
-                                                                                             END
+                                                                                                 THEN ARRAY ['SHOPPING', 'MEDICAL', 'OTHER'] END
                                                                                  )
                                                                           ORDER BY RANDOM()
                                                                           LIMIT 1) END,

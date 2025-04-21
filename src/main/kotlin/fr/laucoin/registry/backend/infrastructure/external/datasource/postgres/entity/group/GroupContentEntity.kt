@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
 import java.time.LocalDate
 import java.util.UUID
@@ -32,4 +34,7 @@ data class GroupContentEntity(
     @ReadOnlyProperty
     @Column(GROUP_CONTENT_PARTICIPANT_BIRTHDAY)
     var participantBirthday: LocalDate? = null,
+    @ReadOnlyProperty
+    @Column(GROUP_CONTENT_PARTICIPANT_TYPE)
+    var participantType: ParticipantTypeEnum? = null,
 )
