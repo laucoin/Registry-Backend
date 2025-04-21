@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleQueries.DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleQueries.LAST_MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleQueries.SELECT_LAST_MOVEMENT
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleQueries.SELECT_VEHICLE_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleQueries.VEHICLE_AVAILABILITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleQueries.VEHICLE_PRESENCE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleQueries.VEHICLE_TEXT_SEARCH_CLAUSE
@@ -32,10 +33,10 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
     @Query(
         """
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $EVENT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
-        ORDER BY t.$VEHICLE_BRAND
+        ORDER BY similarity_score DESC, t.$VEHICLE_BRAND
         LIMIT :limit OFFSET :offset
         """
     )
@@ -81,10 +82,10 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
     @Query(
         """
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $EVENT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
-        ORDER BY t.$VEHICLE_BRAND
+        ORDER BY similarity_score DESC, t.$VEHICLE_BRAND
         LIMIT :limit
         """
     )

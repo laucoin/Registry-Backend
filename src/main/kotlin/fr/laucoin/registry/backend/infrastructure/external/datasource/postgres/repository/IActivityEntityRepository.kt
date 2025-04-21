@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityQueries.ACTIVITY_AVAILABILITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityQueries.ACTIVITY_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityQueries.DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityQueries.SELECT_ACTIVITY_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_CLAUSE
@@ -27,10 +28,10 @@ import reactor.core.publisher.Mono
 interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID> {
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $EVENT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
-        ORDER BY t.$ACTIVITY_NAME
+        ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
         LIMIT :limit OFFSET :offset
         """
     )
@@ -70,10 +71,10 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $EVENT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
-        ORDER BY t.$ACTIVITY_NAME
+        ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
         LIMIT :limit
         """
     )

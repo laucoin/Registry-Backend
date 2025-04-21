@@ -8,13 +8,10 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_BRAND
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_LAST_MOVEMENT_TYPE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_LICENSE_PLATE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_MODEL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_START_AVAILABILITY_TIME
 
@@ -43,12 +40,14 @@ object VehicleQueries {
         LEFT JOIN last_movement ON last_movement.$VEHICLE_PREFIX$ID = t.$ID
     """
 
-    const val VEHICLE_TEXT_SEARCH_CLAUSE = """
-        (
-            :textSearched IS NULL OR
-                UNACCENT(t.$VEHICLE_LICENSE_PLATE) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT(t.$VEHICLE_BRAND) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT(t.$VEHICLE_MODEL) ILIKE '%' || UNACCENT(:textSearched) || '%'
-        )
+    const val SELECT_VEHICLE_SEARCH = """
+        CASE
+            WHEN :textSearched IS NULL THEN 1
+            ELSE similarity(t.search_text, :textSearched)
+        END AS similarity_score
     """
+
+    const val VEHICLE_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 
     const val VEHICLE_AVAILABILITY_CLAUSE = """
         (

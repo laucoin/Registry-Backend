@@ -5,6 +5,7 @@ logging:
     org.springframework.web: ${registry.server.logging-level}
     org.springframework.security.oauth2: ${registry.server.logging-level}
     org.springframework.security.oauth2.client: ${registry.server.logging-level}
+    org.flywaydb: ${registry.server.logging-level}
 
 server:
   port: ${registry.server.port}

@@ -6,7 +6,7 @@ import java.time.ZonedDateTime
 data class MovementReaderDto(
     var dateTime: ZonedDateTime = ZonedDateTime.now(),
     var type: LabelDto? = null,
-    var activity: ActivityReaderDto? = null,
+    var reason: MovementReasonsReaderDto? = null,
     var content: List<MovementContentReaderDto> = emptyList(),
 ): GenericEventReaderDto() {
     data class MovementContentReaderDto(

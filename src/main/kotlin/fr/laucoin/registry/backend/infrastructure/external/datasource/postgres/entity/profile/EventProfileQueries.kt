@@ -39,13 +39,16 @@ object EventProfileQueries {
             :textSearched IS NULL OR UNACCENT($LINKED_EVENT_TABLE.$EVENT_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%'
         )
     """
-
-    const val EVENT_PROFILE_TEXT_USER_SEARCH_CLAUSE = """
-        (
-            :textSearched IS NULL OR
-                UNACCENT($LINKED_USER_TABLE.$USER_FIRST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT($LINKED_USER_TABLE.$USER_LAST_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT($LINKED_USER_TABLE.$USER_EMAIL) ILIKE '%' || UNACCENT(:textSearched) || '%'
-        )
+    const val SELECT_EVENT_PROFILE_USER_SEARCH = """
+        CASE
+            WHEN :textSearched IS NULL THEN 1
+            ELSE similarity($LINKED_USER_TABLE.search_text, :textSearched)
+        END AS similarity_score
     """
+
+    const val EVENT_PROFILE_TEXT_USER_SEARCH_CLAUSE =
+        "(:textSearched IS NULL OR similarity($LINKED_USER_TABLE.search_text, :textSearched) > 0)"
+
     const val EVENT_PROFILE_USABLE_CLAUSE = """
         (
             :availabilitySearched IS NULL OR :availabilitySearched = (

@@ -171,7 +171,7 @@ class MovementService(
                 if (Objects.isNull(movement.activity) || it.activity?.id === movement.activity !!.id) Mono.just(it)
                 else validateActivity(
                     movement.event !!.id !!,
-                    movement,
+                    it,
                     movement.activity !!.id !!,
                 )
             }
@@ -188,6 +188,8 @@ class MovementService(
             .map {
                 it.apply {
                     it.dateTime = movement.dateTime
+                    it.type = movement.type
+                    it.reason = movement.reason
                     it.activity = movement.activity
                     it.content = movement.content
                 }

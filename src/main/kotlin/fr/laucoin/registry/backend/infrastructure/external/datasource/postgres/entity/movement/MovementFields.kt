@@ -23,6 +23,7 @@ object MovementFields {
 
     const val MOVEMENT_DATE_TIME = "date_time"
     const val MOVEMENT_TYPE = "type"
+    const val MOVEMENT_REASON = "reason"
 
     private const val MOVEMENT_ACTIVITY_PREFIX = "activity_"
     const val MOVEMENT_ACTIVITY_ID = "$MOVEMENT_ACTIVITY_PREFIX$ID"

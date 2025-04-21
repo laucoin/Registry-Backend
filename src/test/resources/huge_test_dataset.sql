@@ -389,15 +389,26 @@ $$
                                                      (current_event_end_date + current_event_end_time)))) *
                                 INTERVAL '1 second';
 
-                        INSERT INTO tb_movement (date_time, type, activity_id, event_id, created_by, last_modified_by)
+                        INSERT INTO tb_movement (date_time, type, reason, activity_id, event_id, created_by,
+                                                 last_modified_by)
                         VALUES (current_event_begin_date + random_interval,
                                 CASE WHEN i % 2 = 0 THEN 'IN' ELSE 'OUT' END,
                                 CASE
-                                    WHEN i % 10 = 0 THEN (SELECT id
-                                                          FROM tb_activity ta
-                                                          WHERE event_id = current_event_id
-                                                          ORDER BY RANDOM()
-                                                          LIMIT 1) END,
+                                    WHEN i % 5 != 0 AND i % 15 != 0 THEN (SELECT UNNEST(
+                                                                                         CASE
+                                                                                             WHEN i % 2 = 0
+                                                                                                 THEN ARRAY ['ARRIVAL', 'VISIT']
+                                                                                             ELSE ARRAY ['SHOPPING', 'MEDICAL', 'LOGISTICS', 'FINAL_EXIT', 'OTHER']
+                                                                                             END
+                                                                                 )
+                                                                          ORDER BY RANDOM()
+                                                                          LIMIT 1) END,
+                                CASE
+                                    WHEN i % 5 = 0 AND i % 15 != 0 THEN (SELECT id
+                                                                         FROM tb_activity ta
+                                                                         WHERE ta.event_id = current_event_id
+                                                                         ORDER BY RANDOM()
+                                                                         LIMIT 1) END,
                                 current_event_id,
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));

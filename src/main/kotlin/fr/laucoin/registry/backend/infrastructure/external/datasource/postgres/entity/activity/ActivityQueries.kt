@@ -1,19 +1,19 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity
 
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_DESCRIPTION
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_END_AVAILABILITY_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 
 object ActivityQueries {
-    const val ACTIVITY_TEXT_SEARCH_CLAUSE = """
-        (
-            :textSearched IS NULL OR
-                UNACCENT(t.$ACTIVITY_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%' OR UNACCENT(t.$ACTIVITY_DESCRIPTION) ILIKE '%' || UNACCENT(:textSearched) || '%'
-        )
+    const val SELECT_ACTIVITY_SEARCH = """
+        CASE
+            WHEN :textSearched IS NULL THEN 1
+            ELSE similarity(t.search_text, :textSearched)
+        END AS similarity_score
     """
+
+    const val ACTIVITY_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 
     const val ACTIVITY_AVAILABILITY_CLAUSE = """
         (

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement
 
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericEventEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_DESCRIPTION
@@ -13,6 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import java.time.LocalDate
@@ -29,6 +31,9 @@ data class MovementEntity(
     var dateTime: ZonedDateTime? = null,
     @Column(MOVEMENT_TYPE)
     var type: MovementTypeEnum? = null,
+
+    @Column(MOVEMENT_REASON)
+    var reason: MovementReasonEnum? = null,
 
     @Column(MOVEMENT_ACTIVITY_ID)
     var activityId: UUID? = null,

@@ -9,5 +9,6 @@ object TranslationKeyConst {
     const val EVENT_PROFILE_ROLE_PREFIX = "event-profile.role."
     const val EVENT_PROFILE_STATUS_PREFIX = "event-profile.status."
     const val MOVEMENT_TYPE_PREFIX = "movement.type."
+    const val MOVEMENT_REASON_PREFIX = "movement.reason."
     const val USABLE_ELEMENT_STATUS_PREFIX = "usable.element.status."
 }
