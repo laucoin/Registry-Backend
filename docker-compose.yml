@@ -18,6 +18,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
   registry_keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: registry_keycloak
