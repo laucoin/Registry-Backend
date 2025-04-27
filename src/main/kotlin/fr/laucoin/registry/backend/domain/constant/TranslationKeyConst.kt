@@ -11,4 +11,5 @@ object TranslationKeyConst {
     const val MOVEMENT_TYPE_PREFIX = "movement.type."
     const val MOVEMENT_REASON_PREFIX = "movement.reason."
     const val USABLE_ELEMENT_STATUS_PREFIX = "usable.element.status."
+    const val PARTICIPANT_TYPE_PREFIX = "participant.type."
 }

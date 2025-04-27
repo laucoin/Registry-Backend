@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -41,6 +42,7 @@ class ParticipantController(
         pageNumber: Int,
         pageSize: Int,
         textSearched: String?,
+        typeSearched: ParticipantTypeEnum?,
         visibilitySearched: Boolean?,
         statusSearched: UsableElementStatusEnum?,
         dateTimeSearched: ZonedDateTime?
@@ -48,7 +50,7 @@ class ParticipantController(
         return service.findParticipantsPage(
             eventId,
             PageableModel(pageNumber * pageSize, pageSize),
-            ParticipantSearchParamModel(textSearched, visibilitySearched, statusSearched, dateTimeSearched),
+            ParticipantSearchParamModel(textSearched, typeSearched, visibilitySearched, statusSearched, dateTimeSearched),
         ).map { readerMapper.toDtoPage(it, locale) }
     }
 

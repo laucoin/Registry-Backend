@@ -14,6 +14,7 @@ class GroupContentEntityMapper: IEntityReaderMapper<ParticipantModel, GroupConte
             firstName = entity.participantFirstName
             lastName = entity.participantLastName
             birthday = entity.participantBirthday
+            type = entity.participantType
         }
     }
 

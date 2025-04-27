@@ -1,35 +1,30 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USABLE_ELEMENT_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import java.time.LocalDate
 import java.util.Locale
 import java.util.Objects
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
 
 @Component
 class ParticipantReaderDtoMapper(
-    @Qualifier("messagesSource") private val translateService: MessageSource,
     private val partialUserMapper: PartialUserReaderDtoMapper,
+    private val typeMapper: ParticipantTypeReaderDtoMapper,
+    private val statusMapper: UsableElementStatusReaderDtoMapper,
     private val eventMapper: EventReaderDtoMapper,
-    private val groupMapper: GroupWithoutMemberReaderDtoMapper
+    private val groupMapper: GroupWithoutMemberReaderDtoMapper,
 ): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
     override fun toDto(model: ParticipantModel, locale: Locale): ParticipantReaderDto {
         return ParticipantReaderDto(
             firstName = model.firstName,
             lastName = model.lastName,
             birthday = model.birthday,
+            type = if (Objects.nonNull(model.type)) typeMapper.toDto(model.type !!, locale) else null,
             major = isMajor(model.birthday),
             groups = groupMapper.toDtoList(model.groups, locale),
             availableGroups = groupMapper.toDtoList(model.availableGroups, locale),
-            status = if (Objects.nonNull(model.status)) LabelDto(
-                model.status !!.name,
-                translateService.getMessage("$USABLE_ELEMENT_STATUS_PREFIX${model.status}", null, locale),
-            ) else null,
+            status = if (Objects.nonNull(model.status)) statusMapper.toDto(model.status !!, locale) else null,
             startAvailability = model.startAvailability,
             endAvailability = model.endAvailability,
             user = if (Objects.nonNull(model.user)) partialUserMapper.toDto(model.user !!, locale) else null,
@@ -44,8 +39,8 @@ class ParticipantReaderDtoMapper(
     }
 
     private fun isMajor(birthday: LocalDate?): Boolean {
-        val now = LocalDate.now()
-        val minBirthday = now.minusYears(18)
+        val today = LocalDate.now()
+        val minBirthday = today.minusYears(18)
         return birthday?.let {
             minBirthday.isAfter(it)
             || minBirthday.isEqual(it)

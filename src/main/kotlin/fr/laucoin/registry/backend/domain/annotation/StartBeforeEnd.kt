@@ -6,6 +6,7 @@ import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
+@Repeatable
 @Target(CLASS)
 @Retention(RUNTIME)
 @Constraint(validatedBy = [StartBeforeEndValidator::class])

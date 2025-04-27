@@ -7,12 +7,11 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.isEqualOrAfter
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
-import java.time.LocalDateTime.now
 import java.util.Objects
 
 object AvailabilityElementExt {
     fun ParticipantModel.buildStatus(lastMovementType: MovementTypeEnum?): UsableElementStatusEnum {
-        val now = CustomDateTimeModel(now())
+        val now = CustomDateTimeModel.now()
         val available = (
                 (
                         Objects.isNull(startAvailability?.date) && (groups.isEmpty() || availableGroups.isNotEmpty())
@@ -27,7 +26,7 @@ object AvailabilityElementExt {
     }
 
     fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): UsableElementStatusEnum {
-        val now = CustomDateTimeModel(now())
+        val now = CustomDateTimeModel.now()
         val available = startAvailability.isBeforeOrEqual(now) && endAvailability.isEqualOrAfter(now)
         return status(available, lastMovementType)
     }

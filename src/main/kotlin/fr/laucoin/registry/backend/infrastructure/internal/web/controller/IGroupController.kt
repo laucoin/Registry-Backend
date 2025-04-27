@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_U
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -118,6 +119,7 @@ interface IGroupController {
             message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
         ) pageSize: Int,
         @RequestParam(required = false) textSearched: String?,
+        @RequestParam(required = false) typeSearched: ParticipantTypeEnum?,
         @RequestParam(required = false) visibilitySearched: Boolean?,
         @RequestParam(required = false) statusSearched: UsableElementStatusEnum?,
         @RequestParam(required = false)

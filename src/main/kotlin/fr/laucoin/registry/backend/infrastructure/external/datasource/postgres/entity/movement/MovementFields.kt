@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_BRAND
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_MODEL
@@ -44,6 +45,7 @@ object MovementFields {
     const val MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME = "$PARTICIPANT_PREFIX$PARTICIPANT_FIRST_NAME"
     const val MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME = "$PARTICIPANT_PREFIX$PARTICIPANT_LAST_NAME"
     const val MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY = "$PARTICIPANT_PREFIX$PARTICIPANT_BIRTHDAY"
+    const val MOVEMENT_CONTENT_PARTICIPANT_TYPE = "$PARTICIPANT_PREFIX$PARTICIPANT_TYPE"
 
     private const val VEHICLE_PREFIX = "vehicle_"
     const val MOVEMENT_CONTENT_VEHICLE_ID = "$VEHICLE_PREFIX$ID"

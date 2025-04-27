@@ -56,7 +56,7 @@ class SecurityConfig(
 
     private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
         if (documentationEnabled) {
-            it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**").permitAll()
+            it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui/**").permitAll()
         }
         if (observabilityEnabled) {
             it.pathMatchers(GET, "/actuator/**").permitAll()

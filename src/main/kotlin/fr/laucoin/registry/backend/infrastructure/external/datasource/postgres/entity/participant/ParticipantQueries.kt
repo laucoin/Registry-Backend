@@ -128,6 +128,8 @@ object ParticipantQueries {
 
     const val PARTICIPANT_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 
+    const val PARTICIPANT_TYPE_SEARCH_CLAUSE = "(:typeSearched IS NULL OR t.type = :typeSearched)"
+
     const val PARTICIPANT_AVAILABILITY_CLAUSE = """
         (
             :availabilitySearched IS NULL OR :availabilitySearched = (

@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
 
 object GroupFields {
     const val GROUP_TABLE = "tb_group"
@@ -21,6 +22,7 @@ object GroupFields {
     const val GROUP_CONTENT_PARTICIPANT_FIRST_NAME = "$PARTICIPANT_PREFIX$PARTICIPANT_FIRST_NAME"
     const val GROUP_CONTENT_PARTICIPANT_LAST_NAME = "$PARTICIPANT_PREFIX$PARTICIPANT_LAST_NAME"
     const val GROUP_CONTENT_PARTICIPANT_BIRTHDAY = "$PARTICIPANT_PREFIX$PARTICIPANT_BIRTHDAY"
+    const val GROUP_CONTENT_PARTICIPANT_TYPE = "$PARTICIPANT_PREFIX$PARTICIPANT_TYPE"
 
     private const val GROUP_PREFIX = "group_"
     const val GROUP_CONTENT_GROUP_ID = "$GROUP_PREFIX$ID"

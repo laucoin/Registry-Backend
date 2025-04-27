@@ -8,6 +8,7 @@ data class ParticipantReaderDto(
     var firstName: String? = null,
     var lastName: String? = null,
     var birthday: LocalDate? = null,
+    var type: LabelDto? = null,
     var major: Boolean? = null,
     var groups: List<GroupWithoutMemberReaderDto> = emptyList(),
     var availableGroups: List<GroupWithoutMemberReaderDto> = emptyList(),

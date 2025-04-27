@@ -37,6 +37,7 @@ class ParticipantEntityMapper(private val gson: Gson): IEntityMapper<Participant
             firstName = entity.firstName
             lastName = entity.lastName
             birthday = entity.birthday
+            type = entity.type
             groups = gson.fromJson<List<GroupModel>?>(entity.groups, groupListType).filter { Objects.nonNull(it.id) }
             availableGroups = groups.filter { presentGroupIds.contains(it.id) }
             startAvailability = if (Objects.isNull(entity.startAvailabilityDate)) null
@@ -54,6 +55,7 @@ class ParticipantEntityMapper(private val gson: Gson): IEntityMapper<Participant
             firstName = model.firstName
             lastName = model.lastName
             birthday = model.birthday
+            type = model.type
             startAvailabilityDate = model.startAvailability?.date
             startAvailabilityTime = model.startAvailability?.time
             endAvailabilityDate = model.endAvailability?.date

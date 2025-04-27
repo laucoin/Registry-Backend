@@ -19,7 +19,11 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_START_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
@@ -27,9 +31,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
@@ -39,12 +40,14 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
 
 object GroupQueries {
     const val SELECT_CONTENT_TO_CONTENT = """
-        $PARTICIPANT_TABLE.$PARTICIPANT_FIRST_NAME as $MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME,
-        $PARTICIPANT_TABLE.$PARTICIPANT_LAST_NAME as $MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME,
-        $PARTICIPANT_TABLE.$PARTICIPANT_BIRTHDAY as $MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY
+        $PARTICIPANT_TABLE.$PARTICIPANT_FIRST_NAME as $GROUP_CONTENT_PARTICIPANT_FIRST_NAME,
+        $PARTICIPANT_TABLE.$PARTICIPANT_LAST_NAME as $GROUP_CONTENT_PARTICIPANT_LAST_NAME,
+        $PARTICIPANT_TABLE.$PARTICIPANT_BIRTHDAY as $GROUP_CONTENT_PARTICIPANT_BIRTHDAY,
+        $PARTICIPANT_TABLE.$PARTICIPANT_TYPE as $GROUP_CONTENT_PARTICIPANT_TYPE
     """
 
     const val CONTENT_TO_CONTENT_JOIN = """

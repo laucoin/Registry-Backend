@@ -1,13 +1,13 @@
 -- Insert data into tb_user
 INSERT INTO tb_user (id, oidc_id, type, first_name, last_name, email, role, birthday, last_login, created_by,
                      last_modified_by)
-VALUES ('9cd10ea7-96c1-4f82-8366-d11d2e3ec300', '2836f228-1ec8-40f3-8c22-62d0d23c6338', 'USER', 'Jane', 'SMITH',
+VALUES ('9cd10ea7-96c1-4f82-8366-d11d2e3ec300', '08513d7b-cce1-4efe-bb27-8d936c4a12b4', 'USER', 'Jane', 'SMITH',
         'administrator@sgdf.fr', 'USER_ADMINISTRATOR', '1980-01-01', '2025-03-01 15:28:51.144372 +00:00',
         '9cd10ea7-96c1-4f82-8366-d11d2e3ec300', '9cd10ea7-96c1-4f82-8366-d11d2e3ec300'),
-       ('fd705f30-3cbd-478d-ab37-107724321dca', '81d64662-0c95-44d1-9412-e7f9fcff9d27', 'USER', 'John', 'DOE',
+       ('fd705f30-3cbd-478d-ab37-107724321dca', 'c1a62b72-cbc4-4c34-a40a-8a574ff59da5', 'USER', 'John', 'DOE',
         'coordinator@sgdf.fr', 'USER', '1990-01-01', '2025-03-01 15:28:51.144372 +00:00',
         'fd705f30-3cbd-478d-ab37-107724321dca', 'fd705f30-3cbd-478d-ab37-107724321dca'),
-       ('e22a08da-b8b8-4b78-86c8-8557ddfbb945', 'ecd56c29-bb98-4366-93e6-1eb70a6efb17', 'USER', 'Charles', 'PINA',
+       ('e22a08da-b8b8-4b78-86c8-8557ddfbb945', '5d4a06a8-5c23-4795-b534-446f706af099', 'USER', 'Charles', 'PINA',
         'participant@sgdf.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00',
         'e22a08da-b8b8-4b78-86c8-8557ddfbb945', 'e22a08da-b8b8-4b78-86c8-8557ddfbb945');
 
@@ -123,7 +123,7 @@ $$
 
                 FOR i IN 1..500
                     LOOP
-                        INSERT INTO tb_participant (first_name, last_name, birthday, start_availability_date,
+                        INSERT INTO tb_participant (first_name, last_name, birthday, type, start_availability_date,
                                                     start_availability_time, end_availability_date,
                                                     end_availability_time,
                                                     user_id, event_id, created_by, last_modified_by)
@@ -140,6 +140,7 @@ $$
                                     ELSE (CURRENT_TIMESTAMP - INTERVAL '18 years') + (RANDOM() * (EXTRACT(EPOCH FROM
                                                                                                           (CURRENT_TIMESTAMP - (CURRENT_TIMESTAMP - INTERVAL '18 years'))) *
                                                                                                   INTERVAL '1 second')) END,
+                                CASE WHEN i % 20 = 0 THEN 'GUEST' ELSE 'REGISTERED' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE event_begin_date +
@@ -238,6 +239,7 @@ $$
                         INTO member_id
                         FROM tb_participant
                         WHERE event_id = current_event_id
+                          AND type = 'REGISTERED'
                         ORDER BY RANDOM()
                         LIMIT 1;
 
@@ -397,9 +399,7 @@ $$
                                     WHEN i % 5 != 0 AND i % 15 != 0 THEN (SELECT UNNEST(
                                                                                          CASE
                                                                                              WHEN i % 2 = 0
-                                                                                                 THEN ARRAY ['ARRIVAL', 'VISIT']
-                                                                                             ELSE ARRAY ['SHOPPING', 'MEDICAL', 'LOGISTICS', 'FINAL_EXIT', 'OTHER']
-                                                                                             END
+                                                                                                 THEN ARRAY ['SHOPPING', 'MEDICAL', 'OTHER'] END
                                                                                  )
                                                                           ORDER BY RANDOM()
                                                                           LIMIT 1) END,
@@ -446,6 +446,7 @@ $$
                         INTO new_participant_id, new_participant_major
                         FROM tb_participant
                         WHERE event_id = current_event_id
+                          AND type = 'REGISTERED'
                         ORDER BY RANDOM()
                         LIMIT 1;
                         new_vehicle_id = CASE

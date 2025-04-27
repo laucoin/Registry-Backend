@@ -20,6 +20,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REA
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -34,8 +35,8 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.Moveme
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto.MovementContentReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.MovementWriterDto.MovementContentWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantMovementWriterDto.ParticipantMovementContentWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementActivityReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementContentReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
@@ -43,7 +44,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.Mov
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.VehicleReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.MovementWriterDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantMovementWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.eventId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
@@ -103,7 +104,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     private lateinit var reasonReaderMapper: MovementReasonReaderDtoMapper
 
     @MockitoBean
-    private lateinit var writerMapper: MovementWriterDtoMapper
+    private lateinit var writerMapper: ParticipantMovementWriterDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/events/{eventId}/movements"
@@ -132,60 +133,60 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         @JvmStatic
         fun `Wrong MovementDto`(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                MovementWriterDto(
+                ParticipantMovementWriterDto(
                     dateTime = null,
                     type = IN,
                     reason = null,
                     activityId = null,
-                    content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
+                    content = listOf(ParticipantMovementContentWriterDto(participantId = UUID.randomUUID()))
                 ),
                 MOVEMENT_DATETIME_NULL,
             ),
             Arguments.of(
-                MovementWriterDto(
+                ParticipantMovementWriterDto(
                     dateTime = now(),
                     type = null,
                     reason = null,
                     activityId = null,
-                    content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
+                    content = listOf(ParticipantMovementContentWriterDto(participantId = UUID.randomUUID()))
                 ),
                 MOVEMENT_TYPE_NULL,
             ),
             Arguments.of(
-                MovementWriterDto(
+                ParticipantMovementWriterDto(
                     dateTime = now(),
                     type = IN,
                     reason = OTHER,
                     activityId = null,
-                    content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
+                    content = listOf(ParticipantMovementContentWriterDto(participantId = UUID.randomUUID()))
                 ),
                 MOVEMENT_TYPE_AND_REASON_ARE_INCOMPATIBLE,
             ),
             Arguments.of(
-                MovementWriterDto(
+                ParticipantMovementWriterDto(
                     dateTime = now(),
                     type = OUT,
                     reason = OTHER,
                     activityId = UUID.randomUUID(),
-                    content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID()))
+                    content = listOf(ParticipantMovementContentWriterDto(participantId = UUID.randomUUID()))
                 ),
                 MOVEMENT_ACTIVITY_AND_REASON_ARE_DEFINED,
             ),
             Arguments.of(
-                MovementWriterDto(dateTime = now(), type = IN, reason = null, activityId = null, content = null),
+                ParticipantMovementWriterDto(dateTime = now(), type = IN, reason = null, activityId = null, content = null),
                 MOVEMENT_CONTENT_EMPTY,
             ),
             Arguments.of(
-                MovementWriterDto(dateTime = now(), type = IN, reason = null, activityId = null, content = emptyList()),
+                ParticipantMovementWriterDto(dateTime = now(), type = IN, reason = null, activityId = null, content = emptyList()),
                 MOVEMENT_CONTENT_EMPTY,
             ),
             Arguments.of(
-                MovementWriterDto(
+                ParticipantMovementWriterDto(
                     dateTime = now(),
                     type = IN,
                     reason = null,
                     activityId = null,
-                    content = listOf(MovementContentWriterDto(participantId = null))
+                    content = listOf(ParticipantMovementContentWriterDto(participantId = null))
                 ),
                 MOVEMENT_CONTENT_PARTICIPANT_ID_NULL,
             ),
@@ -213,10 +214,10 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
             startDateTimeSearched = startDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
             endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
         )
-        val page = PageModel(pageable, totalElements = 1, listOf(MovementModel()))
+        val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
         whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(page))
         whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
-            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto())),
+            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
         )
 
         // Act
@@ -317,8 +318,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should findMovementById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        whenever(service.findMovementById(any(), any(), anyOrNull())).thenReturn(Mono.just(MovementModel()))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto())
+        whenever(service.findMovementById(any(), any(), anyOrNull())).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
         // Act
         val result = webClient
@@ -341,7 +342,10 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should searchReasonsAndActivities return 200`() {
         // Arrange
         val searched = "text"
-        whenever(service.searchActivities(any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
+        val typeSearched = IN
+        val contentTypeSearched = REGISTERED
+        whenever(service.searchActivities(any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
+        whenever(service.searchReasons(any(), any())).thenReturn(Flux.just(OTHER))
         whenever(activityReasonReaderMapper.toDto(any(), any())).thenReturn(
             MovementReasonsReaderDto(
                 value = "value",
@@ -363,13 +367,24 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val result = webClient
             .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_METADATA_R))
             .get()
-            .uri(uriBuilder("$BASE_URL/search/reasons", listOf(eventId), listOf(Pair("textSearched", searched))))
+            .uri(
+                uriBuilder(
+                    "$BASE_URL/search/reasons",
+                    listOf(eventId),
+                    listOf(
+                        Pair("typeSearched", typeSearched),
+                        Pair("contentTypeSearched", contentTypeSearched),
+                        Pair("textSearched", searched)
+                    )
+                )
+            )
             .exchange()
 
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchActivities(eventId, searched)
+        verify(service).searchActivities(eventId, contentTypeSearched, searched)
+        verify(service).searchReasons(contentTypeSearched, typeSearched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -383,7 +398,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should searchParticipantsAndGroups return 200`() {
         // Arrange
         val searched = "text"
-        whenever(service.searchParticipantsAndGroups(any(), anyOrNull())).thenReturn(
+        val typeSearched = REGISTERED
+        whenever(service.searchParticipantsAndGroups(any(), any(), anyOrNull())).thenReturn(
             Mono.just(
                 Tuples.of(
                     listOf(ParticipantModel()),
@@ -402,13 +418,19 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val result = webClient
             .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_METADATA_R))
             .get()
-            .uri(uriBuilder("$BASE_URL/search/participants-and-groups", listOf(eventId), listOf(Pair("textSearched", searched))))
+            .uri(
+                uriBuilder(
+                    "$BASE_URL/search/participants-and-groups",
+                    listOf(eventId),
+                    listOf(Pair("contentTypeSearched", typeSearched), Pair("textSearched", searched))
+                )
+            )
             .exchange()
 
         // Assert
         result.body<MovementParticipantsAndGroupsReaderDto>(OK)
 
-        verify(service).searchParticipantsAndGroups(eventId, searched)
+        verify(service).searchParticipantsAndGroups(eventId, typeSearched, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verify(movementParticipantsAndGroupsReaderMapper).toDto(any(), any())
@@ -449,16 +471,16 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should createMovement return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val movement = MovementWriterDto(
+        val movement = ParticipantMovementWriterDto(
             dateTime = now(),
             type = IN,
             reason = null,
             activityId = null,
-            content = listOf(MovementContentWriterDto(participantId = uuid))
+            content = listOf(ParticipantMovementContentWriterDto(participantId = uuid))
         )
-        whenever(service.createMovement(any(), any())).thenReturn(Mono.just(MovementModel()))
-        whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel())
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto())
+        whenever(service.createMovement(any(), any(), any())).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
+        whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
         // Act
         val result = webClient
@@ -471,7 +493,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<MovementReaderDto>(OK)
 
-        verify(service).createMovement(any(), any())
+        verify(service).createMovement(any(), any(), any())
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -481,7 +503,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     @ParameterizedTest
     @MethodSource("Wrong MovementDto")
     fun `Should createMovement return 400`(
-        movement: MovementWriterDto,
+        movement: ParticipantMovementWriterDto,
         expectedCode: String,
     ) {
         // Arrange
@@ -507,17 +529,25 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should updateMovementById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val movement = MovementWriterDto(
+        val movement = ParticipantMovementWriterDto(
             dateTime = now(),
             type = IN,
             reason = null,
             activityId = null,
-            content = listOf(MovementContentWriterDto(participantId = uuid))
+            content = listOf(ParticipantMovementContentWriterDto(participantId = uuid))
         )
 
-        whenever(service.updateMovementById(any(), any(), any(), any())).thenReturn(Mono.just(MovementModel()))
-        whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel())
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto())
+        whenever(
+            service.updateMovementById(
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
+        whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
         // Act
         val result = webClient
@@ -534,13 +564,13 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
         verify(writerMapper).toModel(any(), eq(eventId))
-        verify(service).updateMovementById(any(), eq(eventId), eq(uuid), any())
+        verify(service).updateMovementById(any(), eq(eventId), eq(uuid), any(), any())
     }
 
     @ParameterizedTest
     @MethodSource("Wrong MovementDto")
     fun `Should updateMovementById return 400`(
-        movement: MovementWriterDto,
+        movement: ParticipantMovementWriterDto,
         expectedCode: String,
     ) {
         // Arrange
@@ -569,8 +599,14 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.disableMovementById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(MovementModel()))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto())
+        whenever(
+            service.disableMovementById(
+                any(),
+                eq(eventId),
+                eq(uuid)
+            )
+        ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
         // Act
         val result = webClient
@@ -594,8 +630,14 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.enableMovementById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(MovementModel()))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto())
+        whenever(
+            service.enableMovementById(
+                any(),
+                eq(eventId),
+                eq(uuid)
+            )
+        ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 
         // Act

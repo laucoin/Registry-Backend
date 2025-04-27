@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.repository
 
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -28,4 +29,10 @@ interface IParticipantModelRepository: IGenericReadEventModelRepository<Particip
     fun findByUserId(eventId: UUID, userId: UUID): Flux<ParticipantModel>
 
     fun findWithLimit(limit: Int, eventId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
+
+    fun updateAllEndAvailability(ids: List<UUID>, endAvailability: CustomDateTimeModel): Flux<ParticipantModel>
+
+    fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel>
+
+    fun deleteAll(ids: List<UUID>): Mono<Void>
 }

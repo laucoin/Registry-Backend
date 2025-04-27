@@ -19,10 +19,7 @@ import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
-import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -105,14 +102,14 @@ class UserEventProfileService(
     }
 
     override fun createSupportEventProfile(currentUser: CurrentUserModel, eventId: UUID): Mono<EventProfileModel> {
-        val now = ZonedDateTime.now(ZoneId.of("UTC")).toLocalTime()
+        val now = CustomDateTimeModel.now()
         val profile = EventProfileModel().apply {
             user = currentUser
             event = EventModel().apply { id = eventId }
             role = roleService.getLevel0RoleFromEventRoles()
             status = ACCEPTED
-            startAccess = CustomDateTimeModel(LocalDate.now(), now)
-            endAccess = CustomDateTimeModel(LocalDate.now(), now.plusHours(1))
+            startAccess = now
+            endAccess = now.apply { time !!.plusHours(1) }
             create(currentUser)
         }
 

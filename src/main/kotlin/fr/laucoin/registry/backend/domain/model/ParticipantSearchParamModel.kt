@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.Companion.isAvailable
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.Companion.isPresent
@@ -7,6 +8,7 @@ import java.time.ZonedDateTime
 
 data class ParticipantSearchParamModel(
     var textSearched: String? = null,
+    var typeSearched: ParticipantTypeEnum? = null,
     var visibilitySearched: Boolean? = null,
     var availabilitySearched: Boolean? = null,
     var presenceSearched: Boolean? = null,
@@ -14,6 +16,7 @@ data class ParticipantSearchParamModel(
 ) {
     constructor(
         textSearched: String? = null,
+        typeSearched: ParticipantTypeEnum? = null,
         visibilitySearched: Boolean? = null,
         statusSearched: UsableElementStatusEnum? = null,
         dateTimeSearched: ZonedDateTime?,

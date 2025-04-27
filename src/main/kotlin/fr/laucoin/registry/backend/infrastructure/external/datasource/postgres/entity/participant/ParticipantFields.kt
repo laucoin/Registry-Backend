@@ -6,6 +6,7 @@ object ParticipantFields {
     const val PARTICIPANT_FIRST_NAME = "first_name"
     const val PARTICIPANT_LAST_NAME = "last_name"
     const val PARTICIPANT_BIRTHDAY = "birthday"
+    const val PARTICIPANT_TYPE = "type"
     const val PARTICIPANT_GROUPS = "groups"
     const val PARTICIPANT_AVAILABLE_GROUPS = "available_groups"
     const val PARTICIPANT_LAST_MOVEMENT_TYPE = "last_movement_type"

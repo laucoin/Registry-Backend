@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.EventModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -85,6 +86,7 @@ class ParticipantModelPostgresRepositoryTest(
         verify(postgresRepository).findAll(
             eventId,
             textSearched = null,
+            typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
             presenceSearched = null,
@@ -95,6 +97,7 @@ class ParticipantModelPostgresRepositoryTest(
         verify(postgresRepository).countAll(
             eventId,
             textSearched = null,
+            typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
             presenceSearched = null,
@@ -121,6 +124,7 @@ class ParticipantModelPostgresRepositoryTest(
             eventId,
             groupId,
             textSearched = null,
+            typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
             presenceSearched = null,
@@ -132,6 +136,7 @@ class ParticipantModelPostgresRepositoryTest(
             eventId,
             groupId,
             textSearched = null,
+            typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
             presenceSearched = null,
@@ -185,6 +190,7 @@ class ParticipantModelPostgresRepositoryTest(
         verify(postgresRepository).findWithLimit(
             eventId,
             textSearched = null,
+            typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
             presenceSearched = null,
@@ -243,6 +249,7 @@ class ParticipantModelPostgresRepositoryTest(
                 firstName = "test"
                 lastName = "test"
                 birthday = LocalDate.EPOCH
+                type = REGISTERED
                 event = EventModel().apply { id = eventId }
                 create(currentUser())
             }
@@ -267,6 +274,7 @@ class ParticipantModelPostgresRepositoryTest(
                 firstName = "test updated"
                 lastName = "test updated"
                 birthday = LocalDate.EPOCH
+                type = REGISTERED
                 groups = listOf(GroupModel().apply { id = groupId })
                 event = EventModel().apply { id = eventId }
                 purged = false
@@ -294,6 +302,7 @@ class ParticipantModelPostgresRepositoryTest(
                 firstName = "test updated"
                 lastName = "test updated"
                 birthday = LocalDate.EPOCH
+                type = REGISTERED
                 event = EventModel().apply { id = eventId }
                 purged = false
                 create(currentUser())

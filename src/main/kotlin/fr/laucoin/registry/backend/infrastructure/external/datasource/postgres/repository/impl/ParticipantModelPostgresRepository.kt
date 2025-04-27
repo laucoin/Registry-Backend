@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -11,7 +12,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IParticipantEntityRepository
 import java.util.UUID
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -33,6 +33,7 @@ class ParticipantModelPostgresRepository(
             repository.countAll(
                 eventId,
                 searchParams.textSearched,
+                searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
                 searchParams.presenceSearched,
@@ -41,6 +42,7 @@ class ParticipantModelPostgresRepository(
             repository.findAll(
                 eventId,
                 searchParams.textSearched,
+                searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
                 searchParams.presenceSearched,
@@ -64,6 +66,7 @@ class ParticipantModelPostgresRepository(
                 eventId,
                 groupId,
                 searchParams.textSearched,
+                searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
                 searchParams.presenceSearched,
@@ -73,6 +76,7 @@ class ParticipantModelPostgresRepository(
                 eventId,
                 groupId,
                 searchParams.textSearched,
+                searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
                 searchParams.presenceSearched,
@@ -98,12 +102,31 @@ class ParticipantModelPostgresRepository(
         return repository.findWithLimit(
             eventId,
             searchParams.textSearched,
+            searchParams.typeSearched,
             searchParams.visibilitySearched,
             searchParams.availabilitySearched,
             searchParams.presenceSearched,
             searchParams.dateTimeSearched,
             limit,
         ).map(mapper::toModel)
+    }
+
+    override fun updateAllEndAvailability(
+        ids: List<UUID>,
+        endAvailability: CustomDateTimeModel
+    ): Flux<ParticipantModel> {
+        return if (ids.isEmpty()) Flux.empty()
+        else repository.updateAllEndAvailability(ids, endAvailability.time, endAvailability.date).map(mapper::toModel)
+    }
+
+    override fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel> {
+        return if (guests.isEmpty()) Flux.empty()
+        else repository.saveAll(guests.map(mapper::toEntity)).map(mapper::toModel)
+    }
+
+    override fun deleteAll(ids: List<UUID>): Mono<Void> {
+        return if (ids.isEmpty()) Mono.empty()
+        else repository.deleteAllById(ids)
     }
 
     override fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
@@ -124,7 +147,6 @@ class ParticipantModelPostgresRepository(
             .`as`(transactionalOperator::transactional)
     }
 
-    @Transactional
     fun Mono<ParticipantModel>.saveNewGroups(element: ParticipantModel): Mono<ParticipantModel> {
         return flatMap { participant ->
             val newGroups = participant.getNewGroups(element)
@@ -136,7 +158,6 @@ class ParticipantModelPostgresRepository(
         }
     }
 
-    @Transactional
     fun Mono<ParticipantModel>.removeDeletedGroups(element: ParticipantModel): Mono<ParticipantModel> {
         return flatMap { participant ->
             val removedGroups = participant.getOldGroupIds(element)
