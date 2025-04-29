@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UsableElementStatusReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
@@ -24,7 +24,7 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
     private lateinit var movementTypeReaderMapper: MovementTypeReaderDtoMapper
 
     @MockitoBean
-    private lateinit var profileStatusReaderMapper: EventProfileStatusReaderDtoMapper
+    private lateinit var profileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper
 
     @MockitoBean
     private lateinit var elementStatusMapper: UsableElementStatusReaderDtoMapper
@@ -34,7 +34,7 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
     }
 
     @Test
-    fun `Should getEventProfileStatus return 200`() {
+    fun `Should getProjectProfileStatus return 200`() {
         // Arrange
         whenever(profileStatusReaderMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
 

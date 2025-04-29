@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class GroupReaderDtoMapper(
-    private val eventMapper: EventReaderDtoMapper,
+    private val projectMapper: ProjectReaderDtoMapper,
     private val participantMapper: ParticipantReaderDtoMapper,
 ): IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
     override fun toDto(model: GroupModel, locale: Locale): GroupReaderDto {
@@ -16,7 +16,7 @@ class GroupReaderDtoMapper(
             members = participantMapper.toDtoList(model.members, locale),
         ).apply {
             id = model.id
-            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
+            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
             name = model.name
             startAvailability = model.startAvailability
             endAvailability = model.endAvailability

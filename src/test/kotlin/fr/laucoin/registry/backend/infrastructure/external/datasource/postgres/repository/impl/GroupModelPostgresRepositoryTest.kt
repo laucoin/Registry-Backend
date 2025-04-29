@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.m
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.GroupEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.TestContext
@@ -90,7 +90,7 @@ class GroupModelPostgresRepositoryTest(
         val params = GroupSearchParamModel()
 
         // Act
-        val result = repository.findPage(eventId, pageable, params).block()
+        val result = repository.findPage(projectId, pageable, params).block()
 
         // Assert
         assertNotNull(result)
@@ -99,7 +99,7 @@ class GroupModelPostgresRepositoryTest(
         assertEquals(4, result.totalElements)
         assertEquals(1, result.totalPages)
         verify(postgresRepository).findAll(
-            eventId,
+            projectId,
             textSearched = null,
             visibilitySearched = null,
             presenceSearched = null,
@@ -108,7 +108,7 @@ class GroupModelPostgresRepositoryTest(
             pageable.offset,
         )
         verify(postgresRepository).countAll(
-            eventId,
+            projectId,
             textSearched = null,
             visibilitySearched = null,
             presenceSearched = null,
@@ -124,11 +124,11 @@ class GroupModelPostgresRepositoryTest(
         expectedContentRepositoryCall: Int,
     ) {
         // Act
-        repository.findContent(eventId, ids).collectList().block()
+        repository.findContent(projectId, ids).collectList().block()
 
         // Assert
         verify(contentPostgresRepository, times(expectedContentRepositoryCall)).findAllByGroupIds(
-            eventId,
+            projectId,
             ids,
         )
         verify(contentMapper, atLeast(expectedContentRepositoryCall)).toModel(any())
@@ -141,12 +141,12 @@ class GroupModelPostgresRepositoryTest(
         expectedDatabaseCall: Int,
     ) {
         // Act
-        val result = repository.findAllByIds(eventId, ids, visibilitySearched = null).collectList().block()
+        val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
 
         // Assert
         assertNotNull(result)
         verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
-            eventId,
+            projectId,
             ids,
             visibilitySearched = null,
         )
@@ -160,13 +160,13 @@ class GroupModelPostgresRepositoryTest(
         val params = GroupSearchParamModel()
 
         // Act
-        val result = repository.findWithLimit(size, eventId, params).collectList().block()
+        val result = repository.findWithLimit(size, projectId, params).collectList().block()
 
         // Assert
         assertNotNull(result)
         assertEquals(4, result.size)
         verify(postgresRepository).findWithLimit(
-            eventId,
+            projectId,
             textSearched = null,
             visibilitySearched = null,
             presenceSearched = null,
@@ -179,17 +179,17 @@ class GroupModelPostgresRepositoryTest(
     @Test
     fun `Should findById call repository findById`() {
         // Act
-        val result = repository.findById(eventId, groupId, visibilitySearched = null).block()
+        val result = repository.findById(projectId, groupId, visibilitySearched = null).block()
 
         // Assert
         assertNotNull(result)
         verify(postgresRepository).findById(
-            eventId,
+            projectId,
             groupId,
             visibilitySearched = null,
         )
         verify(contentPostgresRepository).findAllByGroupIds(
-            eventId,
+            projectId,
             listOf(groupId),
         )
         verify(mapper).toModel(any())
@@ -201,17 +201,17 @@ class GroupModelPostgresRepositoryTest(
         val uuid = UUID.randomUUID()
 
         // Act
-        val result = repository.findById(eventId, uuid, visibilitySearched = null).block()
+        val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
 
         // Assert
         assertNull(result)
         verify(postgresRepository).findById(
-            eventId,
+            projectId,
             uuid,
             visibilitySearched = null,
         )
         verify(contentPostgresRepository).findAllByGroupIds(
-            eventId,
+            projectId,
             listOf(uuid),
         )
         verify(mapper, never()).toModel(any())
@@ -229,7 +229,7 @@ class GroupModelPostgresRepositoryTest(
             // Arrange
             val group = GroupModel().apply {
                 name = "test"
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 create(currentUser())
             }
 
@@ -251,7 +251,7 @@ class GroupModelPostgresRepositoryTest(
             val group = GroupModel().apply {
                 id = uuid
                 name = "test update"
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 members = listOf(ParticipantModel().apply { id = participantId })
                 create(currentUser())
             }
@@ -262,8 +262,8 @@ class GroupModelPostgresRepositoryTest(
             // Assert
             assertNotNull(result)
             verify(postgresRepository).save(any())
-            verify(postgresRepository).findById(eventId, uuid, visibilitySearched = null)
-            verify(contentPostgresRepository).findAllByGroupIds(eventId, listOf(uuid))
+            verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+            verify(contentPostgresRepository).findAllByGroupIds(projectId, listOf(uuid))
             verify(mapper).toEntity(any())
             verify(mapper, times(2)).toModel(any())
         }
@@ -275,7 +275,7 @@ class GroupModelPostgresRepositoryTest(
             val group = GroupModel().apply {
                 id = uuid
                 name = "test update"
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 members = emptyList()
                 create(currentUser())
             }
@@ -286,8 +286,8 @@ class GroupModelPostgresRepositoryTest(
             // Assert
             assertNotNull(result)
             verify(postgresRepository).save(any())
-            verify(postgresRepository).findById(eventId, uuid, visibilitySearched = null)
-            verify(contentPostgresRepository).findAllByGroupIds(eventId, listOf(uuid))
+            verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+            verify(contentPostgresRepository).findAllByGroupIds(projectId, listOf(uuid))
             verify(mapper).toEntity(any())
             verify(mapper, times(2)).toModel(any())
         }

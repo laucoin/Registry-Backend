@@ -16,7 +16,7 @@ class RoleModelPostgresRepository(
         return repository.findUserRoles().map(mapper::toModel)
     }
 
-    override fun findEventRoles(): Flux<RoleModel> {
-        return repository.findEventRoles().map(mapper::toModel)
+    override fun findProjectRoles(): Flux<RoleModel> {
+        return repository.findProjectRoles().map(mapper::toModel)
     }
 }

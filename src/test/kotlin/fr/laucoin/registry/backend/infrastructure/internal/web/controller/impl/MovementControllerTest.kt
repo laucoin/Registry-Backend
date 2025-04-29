@@ -9,12 +9,12 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_METADATA_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_VEHICLE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.OTHER
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -45,7 +45,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.Mov
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantMovementWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -107,7 +107,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     private lateinit var writerMapper: ParticipantMovementWriterDtoMapper
 
     companion object {
-        private const val BASE_URL = "/api/events/{eventId}/movements"
+        private const val BASE_URL = "/api/projects/{projectId}/movements"
 
         @JvmStatic
         fun `Should findMovements return 200`(): Stream<Arguments> = Stream.of(
@@ -222,12 +222,12 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -244,7 +244,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findMovementsPage(eventId, pageable, searchParams)
+        verify(service).findMovementsPage(projectId, pageable, searchParams)
         verify(readerMapper).toDtoPage(any(), any())
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -260,12 +260,12 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     ) {
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -300,15 +300,15 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
             .get()
-            .uri(uriBuilder("$BASE_URL/contents", listOf(eventId), listOf(Pair("movementIds", uuid))))
+            .uri(uriBuilder("$BASE_URL/contents", listOf(projectId), listOf(Pair("movementIds", uuid))))
             .exchange()
 
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).findMovementsContent(eventId, listOf(uuid))
+        verify(service).findMovementsContent(projectId, listOf(uuid))
         verifyNoInteractions(readerMapper)
         verify(readerContentMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
@@ -323,15 +323,15 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
             .get()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<MovementReaderDto>(OK)
 
-        verify(service).findMovementById(eventId, uuid, visibilitySearched = null)
+        verify(service).findMovementById(projectId, uuid, visibilitySearched = null)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -365,12 +365,12 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_METADATA_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/search/reasons",
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("typeSearched", typeSearched),
                         Pair("contentTypeSearched", contentTypeSearched),
@@ -383,7 +383,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchActivities(eventId, contentTypeSearched, searched)
+        verify(service).searchActivities(projectId, contentTypeSearched, searched)
         verify(service).searchReasons(contentTypeSearched, typeSearched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
@@ -416,12 +416,12 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_METADATA_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/search/participants-and-groups",
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(Pair("contentTypeSearched", typeSearched), Pair("textSearched", searched))
                 )
             )
@@ -430,7 +430,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<MovementParticipantsAndGroupsReaderDto>(OK)
 
-        verify(service).searchParticipantsAndGroups(eventId, typeSearched, searched)
+        verify(service).searchParticipantsAndGroups(projectId, typeSearched, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verify(movementParticipantsAndGroupsReaderMapper).toDto(any(), any())
@@ -449,15 +449,15 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_METADATA_R), buildAuthority(REGISTRY_EVENT_OPTION_VEHICLE))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
             .get()
-            .uri(uriBuilder("$BASE_URL/search/vehicles", listOf(eventId), listOf(Pair("textSearched", searched))))
+            .uri(uriBuilder("$BASE_URL/search/vehicles", listOf(projectId), listOf(Pair("textSearched", searched))))
             .exchange()
 
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchVehicles(eventId, searched)
+        verify(service).searchVehicles(projectId, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -484,9 +484,9 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_C))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(movement)
             .exchange()
 
@@ -497,7 +497,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
-        verify(writerMapper).toModel(any(), eq(eventId))
+        verify(writerMapper).toModel(any(), eq(projectId))
     }
 
     @ParameterizedTest
@@ -511,7 +511,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val result = webClient
             .authenticate()
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(movement)
             .exchange()
 
@@ -551,9 +551,9 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(movement)
             .exchange()
 
@@ -563,8 +563,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
-        verify(writerMapper).toModel(any(), eq(eventId))
-        verify(service).updateMovementById(any(), eq(eventId), eq(uuid), any(), any())
+        verify(writerMapper).toModel(any(), eq(projectId))
+        verify(service).updateMovementById(any(), eq(projectId), eq(uuid), any(), any())
     }
 
     @ParameterizedTest
@@ -580,7 +580,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val result = webClient
             .authenticate()
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(movement)
             .exchange()
 
@@ -602,7 +602,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         whenever(
             service.disableMovementById(
                 any(),
-                eq(eventId),
+                eq(projectId),
                 eq(uuid)
             )
         ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
@@ -610,15 +610,15 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<MovementReaderDto>(OK)
 
-        verify(service).disableMovementById(any(), eq(eventId), eq(uuid))
+        verify(service).disableMovementById(any(), eq(projectId), eq(uuid))
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -633,7 +633,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         whenever(
             service.enableMovementById(
                 any(),
-                eq(eventId),
+                eq(projectId),
                 eq(uuid)
             )
         ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
@@ -642,15 +642,15 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<MovementReaderDto>(OK)
 
-        verify(service).enableMovementById(any(), eq(eventId), eq(uuid))
+        verify(service).enableMovementById(any(), eq(projectId), eq(uuid))
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -666,15 +666,15 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_MOVEMENT_D))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_D))
             .delete()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<Void>(OK)
 
-        verify(service).deleteMovementById(eventId, uuid)
+        verify(service).deleteMovementById(projectId, uuid)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)

@@ -1,11 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import java.time.LocalDateTime
 import java.util.Locale
@@ -22,9 +22,9 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class GroupReaderDtoMapperTest {
-    private val eventMapper: EventReaderDtoMapper = mock()
+    private val projectMapper: ProjectReaderDtoMapper = mock()
     private val memberMapper: ParticipantReaderDtoMapper = mock()
-    private val mapper: GroupReaderDtoMapper = GroupReaderDtoMapper(eventMapper, memberMapper)
+    private val mapper: GroupReaderDtoMapper = GroupReaderDtoMapper(projectMapper, memberMapper)
 
     companion object {
         @JvmStatic
@@ -35,7 +35,7 @@ class GroupReaderDtoMapperTest {
                         members = emptyList(),
                     ).apply {
                         id = UUID.randomUUID()
-                        name = "Event"
+                        name = "Project"
                         startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
                         startAvailability = CustomDateTimeModel(LocalDateTime.MAX)
                         visible = true
@@ -49,9 +49,9 @@ class GroupReaderDtoMapperTest {
                         members = emptyList(),
                     ).apply {
                         id = UUID.randomUUID()
-                        event = EventModel()
+                        project = ProjectModel()
                         members = listOf(ParticipantModel())
-                        name = "Event"
+                        name = "Project"
                         startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
                         startAvailability = CustomDateTimeModel(LocalDateTime.MAX)
                         visible = true
@@ -68,17 +68,17 @@ class GroupReaderDtoMapperTest {
     @MethodSource
     fun `Should toDto convert GroupModel to GroupAndContentReaderDto`(
         group: GroupModel,
-        expectedEventCast: Int,
+        expectedProjectCast: Int,
     ) {
         // Arrange
-        whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
+        whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
         whenever(memberMapper.toDtoList(any(), any())).thenReturn(listOf(ParticipantReaderDto()))
 
         // Act
         val result = mapper.toDto(group, Locale.getDefault())
 
         // Assert
-        verify(eventMapper, times(expectedEventCast)).toDto(group.event ?: EventModel(), Locale.getDefault())
+        verify(projectMapper, times(expectedProjectCast)).toDto(group.project ?: ProjectModel(), Locale.getDefault())
         verify(memberMapper).toDtoList(group.members, Locale.getDefault())
 
         assertEquals(group.id, result.id)

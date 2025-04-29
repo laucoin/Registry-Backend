@@ -26,20 +26,20 @@ class GroupModelPostgresRepository(
     private val contentMapper: GroupContentEntityMapper,
 ): IGroupModelRepository {
     override fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: GroupSearchParamModel,
     ): Mono<PageModel<GroupModel>> {
         return Mono.zip(
             repository.countAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.presenceSearched,
                 searchParams.dateTimeSearched,
             ),
             repository.findAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.presenceSearched,
@@ -52,22 +52,22 @@ class GroupModelPostgresRepository(
         }
     }
 
-    override fun findContent(eventId: UUID, groupIds: List<UUID>): Flux<Pair<UUID, List<ParticipantModel>>> {
+    override fun findContent(projectId: UUID, groupIds: List<UUID>): Flux<Pair<UUID, List<ParticipantModel>>> {
         return if (groupIds.isEmpty()) Flux.empty()
-        else contentRepository.findAllByGroupIds(eventId, groupIds)
+        else contentRepository.findAllByGroupIds(projectId, groupIds)
             .groupBy(GroupContentEntity::groupId)
             .flatMap {
                 it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
             }
     }
 
-    override fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel> {
-        return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(eventId, ids, visibilitySearched).map(mapper::toModel)
+    override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel> {
+        return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched).map(mapper::toModel)
     }
 
-    override fun findWithLimit(limit: Int, eventId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel> {
+    override fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel> {
         return repository.findWithLimit(
-            eventId,
+            projectId,
             searchParams.textSearched,
             searchParams.visibilitySearched,
             searchParams.presenceSearched,
@@ -76,10 +76,10 @@ class GroupModelPostgresRepository(
         ).map(mapper::toModel)
     }
 
-    override fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel> {
+    override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel> {
         return Mono.zip(
-            repository.findById(eventId, id, visibilitySearched).map(mapper::toModel),
-            findContent(eventId, listOf(id)).collectList()
+            repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
+            findContent(projectId, listOf(id)).collectList()
                 .handle { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
         ).map {
             it.t1.members = it.t2
@@ -95,7 +95,7 @@ class GroupModelPostgresRepository(
 
     override fun update(element: GroupModel): Mono<GroupModel> {
         return save(element)
-            .flatMap { findById(element.event !!.id !!, element.id !!, visibilitySearched = null) }
+            .flatMap { findById(element.project !!.id !!, element.id !!, visibilitySearched = null) }
             .removeDeletedMembers(element)
             .saveNewMembers(element)
             .`as`(transactionalOperator::transactional)

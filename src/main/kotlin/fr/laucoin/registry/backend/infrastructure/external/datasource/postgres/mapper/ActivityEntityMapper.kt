@@ -5,8 +5,8 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.NumericRangeModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndModel
 import java.util.Objects
 import kotlin.time.Duration
 import org.springframework.stereotype.Component
@@ -25,7 +25,7 @@ class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
             else CustomDateTimeModel(entity.startAvailabilityDate !!, entity.startAvailabilityTime)
             endAvailability = if (Objects.isNull(entity.endAvailabilityDate)) null
             else CustomDateTimeModel(entity.endAvailabilityDate !!, entity.endAvailabilityTime)
-        }.fillWithEventAndEntity(entity)
+        }.fillWithProjectAndEntity(entity)
     }
 
     override fun toEntity(model: ActivityModel): ActivityEntity {
@@ -39,6 +39,6 @@ class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
             startAvailabilityTime = model.startAvailability?.time
             endAvailabilityDate = model.endAvailability?.date
             endAvailabilityTime = model.endAvailability?.time
-        }.fillWithEventAndModel(model)
+        }.fillWithProjectAndModel(model)
     }
 }

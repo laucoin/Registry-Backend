@@ -1,11 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic
 
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_BEGIN_DATE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_BEGIN_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_END_DATE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_END_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.event.EventFields.EVENT_OPTIONS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_BEGIN_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_BEGIN_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_END_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_END_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_OPTIONS
 
 object GenericFields {
     const val ID = "id"
@@ -25,13 +25,13 @@ object GenericFields {
     const val LAST_MODIFIER_LAST_NAME = "${LAST_MODIFIER_PREFIX}last_name"
     const val LAST_MODIFIER_EMAIL = "${LAST_MODIFIER_PREFIX}email"
 
-    private const val EVENT_PREFIX = "event_"
-    const val LINKED_EVENT_ID = "$EVENT_PREFIX$ID"
-    const val LINKED_EVENT_NAME = "$EVENT_PREFIX$EVENT_NAME"
-    const val LINKED_EVENT_START_DATE = "$EVENT_PREFIX$EVENT_BEGIN_DATE"
-    const val LINKED_EVENT_START_TIME = "$EVENT_PREFIX$EVENT_BEGIN_TIME"
-    const val LINKED_EVENT_END_DATE = "$EVENT_PREFIX$EVENT_END_DATE"
-    const val LINKED_EVENT_END_TIME = "$EVENT_PREFIX$EVENT_END_TIME"
-    const val LINKED_EVENT_OPTIONS = "$EVENT_PREFIX$EVENT_OPTIONS"
-    const val LINKED_EVENT_VISIBLE = "$EVENT_PREFIX$VISIBLE"
+    private const val PROJECT_PREFIX = "project_"
+    const val LINKED_PROJECT_ID = "$PROJECT_PREFIX$ID"
+    const val LINKED_PROJECT_NAME = "$PROJECT_PREFIX$PROJECT_NAME"
+    const val LINKED_PROJECT_START_DATE = "$PROJECT_PREFIX$PROJECT_BEGIN_DATE"
+    const val LINKED_PROJECT_START_TIME = "$PROJECT_PREFIX$PROJECT_BEGIN_TIME"
+    const val LINKED_PROJECT_END_DATE = "$PROJECT_PREFIX$PROJECT_END_DATE"
+    const val LINKED_PROJECT_END_TIME = "$PROJECT_PREFIX$PROJECT_END_TIME"
+    const val LINKED_PROJECT_OPTIONS = "$PROJECT_PREFIX$PROJECT_OPTIONS"
+    const val LINKED_PROJECT_VISIBLE = "$PROJECT_PREFIX$VISIBLE"
 }

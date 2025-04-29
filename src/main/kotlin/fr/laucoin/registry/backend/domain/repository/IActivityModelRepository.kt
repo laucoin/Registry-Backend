@@ -8,15 +8,15 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-interface IActivityModelRepository: IGenericReadEventModelRepository<ActivityModel>,
+interface IActivityModelRepository: IGenericReadProjectModelRepository<ActivityModel>,
                                     IGenericWriteModelRepository<ActivityModel> {
     fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: ActivitySearchParamModel,
     ): Mono<PageModel<ActivityModel>>
 
-    fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel>
+    fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel>
 
-    fun findWithLimit(limit: Int, eventId: UUID, searchParams: ActivitySearchParamModel): Flux<ActivityModel>
+    fun findWithLimit(limit: Int, projectId: UUID, searchParams: ActivitySearchParamModel): Flux<ActivityModel>
 }

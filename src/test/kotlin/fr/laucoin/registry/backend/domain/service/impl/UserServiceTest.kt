@@ -3,9 +3,9 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_EVENT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_EVENT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -17,7 +17,7 @@ import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IRoleService
-import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
+import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.Objects
@@ -51,10 +51,10 @@ import reactor.core.publisher.Mono
 class UserServiceTest {
     private val repository: IUserModelRepository = mock()
     private val preferencesService: IPreferencesService = mock()
-    private val userEventProfileService: IUserEventProfileService = mock()
+    private val userProjectProfileService: IUserProjectProfileService = mock()
     private val transactionalOperator: TransactionalOperator = mock()
     private val roleService: IRoleService = mock()
-    private val service = UserService(repository, preferencesService, userEventProfileService, transactionalOperator, roleService)
+    private val service = UserService(repository, preferencesService, userProjectProfileService, transactionalOperator, roleService)
 
     private val serviceAccountId = UUID.randomUUID()
     private val serviceAccount = CurrentUserModel().apply { id = serviceAccountId; role = USER_ROLE }
@@ -138,7 +138,7 @@ class UserServiceTest {
     }
 
     @Test
-    fun `Should onApplicationEvent call repository findServiceAccount`() {
+    fun `Should onApplicationProject call repository findServiceAccount`() {
         // Arrange
         val event: ContextRefreshedEvent = mock()
         val serviceAccount = CurrentUserModel()
@@ -222,7 +222,7 @@ class UserServiceTest {
         assertEquals(serviceAccount, result)
         verifyNoInteractions(repository)
         verifyNoInteractions(preferencesService)
-        verifyNoInteractions(userEventProfileService)
+        verifyNoInteractions(userProjectProfileService)
         verifyNoInteractions(transactionalOperator)
         verifyNoInteractions(roleService)
     }
@@ -360,7 +360,7 @@ class UserServiceTest {
         whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
         whenever(repository.update(any())).thenReturn(Mono.just(UserModel()))
         whenever(
-            userEventProfileService.validateNotLastEventRoleLevel0(
+            userProjectProfileService.validateNotLastProjectRoleLevel0(
                 any(),
                 anyOrNull(),
                 any(),
@@ -375,11 +375,11 @@ class UserServiceTest {
         verify(roleService).getAssignableUserRoles(currentUser)
         verify(roleService).getLevelByUserRole(USER_ROLE)
         verify(repository).update(any())
-        verify(userEventProfileService).validateNotLastEventRoleLevel0(
+        verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
             uuid,
-            eventId = null,
+            projectId = null,
             foundUser,
-            error = USER_BLOCK_LAST_EVENT_ADMINISTRATOR
+            error = USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
         )
     }
 
@@ -403,7 +403,7 @@ class UserServiceTest {
         verify(repository).findById(uuid, visibilitySearched = true)
         verify(roleService).getAssignableUserRoles(currentUser())
         verify(roleService, never()).getLevelByUserRole(anyOrNull())
-        verify(userEventProfileService, never()).validateNotLastEventRoleLevel0(any(), anyOrNull(), any(), any())
+        verify(userProjectProfileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
         verify(repository, never()).update(any())
     }
 
@@ -438,7 +438,7 @@ class UserServiceTest {
         whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
         whenever(repository.update(any())).thenReturn(Mono.just(UserModel()))
         whenever(
-            userEventProfileService.validateNotLastEventRoleLevel0(
+            userProjectProfileService.validateNotLastProjectRoleLevel0(
                 any(),
                 anyOrNull(),
                 any(),
@@ -453,11 +453,11 @@ class UserServiceTest {
         verify(roleService).getAssignableUserRoles(currentUser)
         verify(roleService).getLevelByUserRole(USER_ROLE)
         verify(repository).update(any())
-        verify(userEventProfileService).validateNotLastEventRoleLevel0(
+        verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
             uuid,
-            eventId = null,
+            projectId = null,
             foundUser,
-            USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR
+            USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
         )
     }
 
@@ -473,7 +473,7 @@ class UserServiceTest {
         whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
         whenever(
-            userEventProfileService.validateNotLastEventRoleLevel0(
+            userProjectProfileService.validateNotLastProjectRoleLevel0(
                 any(),
                 anyOrNull(),
                 any(),
@@ -488,11 +488,11 @@ class UserServiceTest {
         verify(roleService).getAssignableUserRoles(currentUser)
         verify(roleService).getLevelByUserRole(USER_ROLE)
         verify(repository).deleteById(any())
-        verify(userEventProfileService).validateNotLastEventRoleLevel0(
+        verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
             uuid,
-            eventId = null,
+            projectId = null,
             foundUser,
-            USER_DELETE_LAST_EVENT_ADMINISTRATOR
+            USER_DELETE_LAST_PROJECT_ADMINISTRATOR
         )
     }
 }

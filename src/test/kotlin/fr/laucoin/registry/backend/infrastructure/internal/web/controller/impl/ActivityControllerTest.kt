@@ -10,12 +10,12 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOW
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_HISTORY_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_U
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_ACTIVITY
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_HISTORY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
@@ -34,7 +34,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.Numeri
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ActivityReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ActivityWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -81,7 +81,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
     private lateinit var writerMapper: ActivityWriterDtoMapper
 
     companion object {
-        private const val BASE_URL = "/api/events/{eventId}/activities"
+        private const val BASE_URL = "/api/projects/{projectId}/activities"
         private val locale = Locale.ENGLISH
 
         @JvmStatic
@@ -102,12 +102,12 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         fun `Should findActivities throw due to wrong params`(): Stream<Arguments> {
             return Stream.of(
                 Arguments.of("not uuid", null, null, null, null, null, null, PARAMETER_TYPE_MISMATCH),
-                Arguments.of(eventId.toString(), - 1, null, null, null, null, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
-                Arguments.of(eventId.toString(), null, 0, null, null, null, null, PAGE_SIZE_IS_LOWER_THAN_ONE),
-                Arguments.of(eventId.toString(), null, 201, null, null, null, null, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
-                Arguments.of(eventId.toString(), null, null, null, "not boolean", null, null, PARAMETER_TYPE_MISMATCH),
-                Arguments.of(eventId.toString(), null, null, null, null, "not boolean", null, PARAMETER_TYPE_MISMATCH),
-                Arguments.of(eventId.toString(), null, null, null, null, null, "2024/11/14 18:34:33", PARAMETER_TYPE_MISMATCH),
+                Arguments.of(projectId.toString(), - 1, null, null, null, null, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+                Arguments.of(projectId.toString(), null, 0, null, null, null, null, PAGE_SIZE_IS_LOWER_THAN_ONE),
+                Arguments.of(projectId.toString(), null, 201, null, null, null, null, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+                Arguments.of(projectId.toString(), null, null, null, "not boolean", null, null, PARAMETER_TYPE_MISMATCH),
+                Arguments.of(projectId.toString(), null, null, null, null, "not boolean", null, PARAMETER_TYPE_MISMATCH),
+                Arguments.of(projectId.toString(), null, null, null, null, null, "2024/11/14 18:34:33", PARAMETER_TYPE_MISMATCH),
             )
         }
 
@@ -245,12 +245,12 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_R), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -267,7 +267,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findActivitiesPage(eventId, pageable, searchParams)
+        verify(service).findActivitiesPage(projectId, pageable, searchParams)
         verify(readerMapper).toDtoPage(page, locale)
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
@@ -276,7 +276,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
     @ParameterizedTest
     @MethodSource
     fun `Should findActivities throw due to wrong params`(
-        activityEventId: String?,
+        activityProjectId: String?,
         pageNumber: Int?,
         pageSize: Int?,
         textSearched: String?,
@@ -287,12 +287,12 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
     ) {
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_R), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    if (Objects.nonNull(activityEventId)) listOf(activityEventId !!) else emptyList(),
+                    if (Objects.nonNull(activityProjectId)) listOf(activityProjectId !!) else emptyList(),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -323,15 +323,15 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_R), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .get()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<ActivityReaderDto>(OK)
 
-        verify(service).findActivityById(eventId, uuid, visibilitySearched = null)
+        verify(service).findActivityById(projectId, uuid, visibilitySearched = null)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
         verifyNoInteractions(movementReaderMapper)
@@ -366,12 +366,12 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_HISTORY_R), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_HISTORY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/{id}/movements",
-                    listOf(eventId, uuid),
+                    listOf(projectId, uuid),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -387,7 +387,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findActivityMovementsPage(eventId, uuid, pageable, searchParams)
+        verify(service).findActivityMovementsPage(projectId, uuid, pageable, searchParams)
         verify(movementReaderMapper).toDtoPage(page, locale)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(writerMapper)
@@ -405,12 +405,12 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_HISTORY_R), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_HISTORY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/{id}/movements",
-                    listOf(eventId, uuid),
+                    listOf(projectId, uuid),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -439,9 +439,9 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_C), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_C), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(activity)
             .exchange()
 
@@ -450,7 +450,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         verify(service).createActivity(any(), any())
         verify(readerMapper).toDto(any(), any())
-        verify(writerMapper).toModel(activity, eventId)
+        verify(writerMapper).toModel(activity, projectId)
         verifyNoInteractions(movementReaderMapper)
     }
 
@@ -464,7 +464,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         val result = webClient
             .authenticate()
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(activity)
             .exchange()
 
@@ -479,7 +479,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
 
     @Test
-    fun `Should updateEventProfile return 200`() {
+    fun `Should updateProjectProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val activity = ActivityWriterDto(name = "Activity 1")
@@ -490,19 +490,19 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_U), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_U), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(activity)
             .exchange()
 
         // Assert
         result.body<ActivityReaderDto>(OK)
 
-        verify(service).updateActivityById(any(), eq(eventId), eq(uuid), any())
+        verify(service).updateActivityById(any(), eq(projectId), eq(uuid), any())
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementReaderMapper)
-        verify(writerMapper).toModel(activity, eventId)
+        verify(writerMapper).toModel(activity, projectId)
     }
 
     @ParameterizedTest
@@ -518,7 +518,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         val result = webClient
             .authenticate()
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(activity)
             .exchange()
 
@@ -536,20 +536,20 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.disableActivityById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ActivityModel()))
+        whenever(service.disableActivityById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ActivityModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_U), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_U), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<ActivityReaderDto>(OK)
 
-        verify(service).disableActivityById(any(), eq(eventId), eq(uuid))
+        verify(service).disableActivityById(any(), eq(projectId), eq(uuid))
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
@@ -560,20 +560,20 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.enableActivityById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ActivityModel()))
+        whenever(service.enableActivityById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ActivityModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_U), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_U), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<ActivityReaderDto>(OK)
 
-        verify(service).enableActivityById(any(), eq(eventId), eq(uuid))
+        verify(service).enableActivityById(any(), eq(projectId), eq(uuid))
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
@@ -588,9 +588,9 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_ACTIVITY_D), buildAuthority(REGISTRY_EVENT_OPTION_ACTIVITY))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_D), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
             .delete()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -599,6 +599,6 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).deleteActivityById(any(), eq(eventId), eq(uuid))
+        verify(service).deleteActivityById(any(), eq(projectId), eq(uuid))
     }
 }

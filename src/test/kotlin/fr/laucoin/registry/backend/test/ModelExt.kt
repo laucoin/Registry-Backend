@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 
 object ModelExt {
 
-    val eventId: UUID = UUID.fromString("b7432b97-cfc6-4109-aaaa-38d348523f1e")
-    val eventProfileId: UUID = UUID.fromString("28d92461-addb-42d5-9301-18ef6e966608")
+    val projectId: UUID = UUID.fromString("b7432b97-cfc6-4109-aaaa-38d348523f1e")
+    val projectProfileId: UUID = UUID.fromString("28d92461-addb-42d5-9301-18ef6e966608")
     val userIdWithoutProfile: UUID = UUID.fromString("e22a08da-b8b8-4b78-86c8-8557ddfbb945")
     val groupId: UUID = UUID.fromString("acb4943c-a911-4f1d-b899-69f6cfcfef90")
     val movementId: UUID = UUID.fromString("63f4c4e8-bd07-445b-8a6e-899ac490cf0c")

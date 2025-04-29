@@ -1,13 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.VehicleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IVehicleEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
@@ -65,7 +65,7 @@ class VehicleModelPostgresRepositoryTest(
         val params = VehicleSearchParamModel()
 
         // Act
-        val result = repository.findPage(eventId, pageable, params).block()
+        val result = repository.findPage(projectId, pageable, params).block()
 
         // Assert
         assertNotNull(result)
@@ -74,7 +74,7 @@ class VehicleModelPostgresRepositoryTest(
         assertEquals(5, result.totalElements)
         assertEquals(1, result.totalPages)
         verify(postgresRepository).findAll(
-            eventId,
+            projectId,
             textSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
@@ -84,7 +84,7 @@ class VehicleModelPostgresRepositoryTest(
             pageable.offset,
         )
         verify(postgresRepository).countAll(
-            eventId,
+            projectId,
             textSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
@@ -101,12 +101,12 @@ class VehicleModelPostgresRepositoryTest(
         expectedDatabaseCall: Int,
     ) {
         // Act
-        val result = repository.findAllByIds(eventId, ids, visibilitySearched = null).collectList().block()
+        val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
 
         // Assert
         assertNotNull(result)
         verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
-            eventId,
+            projectId,
             ids,
             visibilitySearched = null,
         )
@@ -120,13 +120,13 @@ class VehicleModelPostgresRepositoryTest(
         val params = VehicleSearchParamModel()
 
         // Act
-        val result = repository.findWithLimit(size, eventId, params).collectList().block()
+        val result = repository.findWithLimit(size, projectId, params).collectList().block()
 
         // Assert
         assertNotNull(result)
         assertEquals(5, result.size)
         verify(postgresRepository).findWithLimit(
-            eventId,
+            projectId,
             textSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
@@ -140,12 +140,12 @@ class VehicleModelPostgresRepositoryTest(
     @Test
     fun `Should findById call repository findById`() {
         // Act
-        val result = repository.findById(eventId, vehicleId, visibilitySearched = null).block()
+        val result = repository.findById(projectId, vehicleId, visibilitySearched = null).block()
 
         // Assert
         assertNotNull(result)
         verify(postgresRepository).findById(
-            eventId,
+            projectId,
             vehicleId,
             visibilitySearched = null,
         )
@@ -158,12 +158,12 @@ class VehicleModelPostgresRepositoryTest(
         val uuid = UUID.randomUUID()
 
         // Act
-        val result = repository.findById(eventId, uuid, visibilitySearched = null).block()
+        val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
 
         // Assert
         assertNull(result)
         verify(postgresRepository).findById(
-            eventId,
+            projectId,
             uuid,
             visibilitySearched = null,
         )
@@ -184,7 +184,7 @@ class VehicleModelPostgresRepositoryTest(
                 licensePlate = "AB-123-CD"
                 brand = "test"
                 model = "test"
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 create(currentUser())
             }
 
@@ -208,7 +208,7 @@ class VehicleModelPostgresRepositoryTest(
                 licensePlate = "AB-123-CD"
                 brand = "test update"
                 model = "test update"
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 create(currentUser())
             }
 

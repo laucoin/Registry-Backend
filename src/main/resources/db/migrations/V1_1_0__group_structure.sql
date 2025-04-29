@@ -7,7 +7,7 @@ CREATE TABLE tb_group
     start_availability_time TIME WITH TIME ZONE,
     end_availability_date   DATE,
     end_availability_time   TIME WITH TIME ZONE,
-    event_id                uuid                     NOT NULL,
+    project_id              uuid                     NOT NULL,
     created_date            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by              uuid,
     last_modified_date      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -30,12 +30,12 @@ ALTER TABLE tb_movement_content
     ADD COLUMN pool_name VARCHAR;
 
 -- tb_group foreign keys and indexes
-CREATE INDEX tb_group_index_event_id ON tb_group (event_id);
+CREATE INDEX tb_group_index_project_id ON tb_group (project_id);
 CREATE INDEX tb_group_index_created_by ON tb_group (created_by);
 CREATE INDEX tb_group_index_last_modified_by ON tb_group (last_modified_by);
 
 ALTER TABLE tb_group
-    ADD CONSTRAINT tb_group_event_fkey FOREIGN KEY (event_id) REFERENCES tb_event (id) ON DELETE CASCADE;
+    ADD CONSTRAINT tb_group_project_fkey FOREIGN KEY (project_id) REFERENCES tb_project (id) ON DELETE CASCADE;
 ALTER TABLE tb_group
     ADD CONSTRAINT tb_group_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 ALTER TABLE tb_group

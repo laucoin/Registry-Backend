@@ -115,7 +115,7 @@ interface IUserController {
 
     @Operation(
         summary = "Block User",
-        description = "Prevent a User from logging in",
+        description = "Prproject a User from logging in",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,

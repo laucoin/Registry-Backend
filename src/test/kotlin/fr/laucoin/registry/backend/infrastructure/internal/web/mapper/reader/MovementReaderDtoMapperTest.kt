@@ -6,9 +6,9 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReasonsReaderDto
 import java.util.Locale
 import java.util.stream.Stream
@@ -26,12 +26,12 @@ import org.springframework.context.MessageSource
 
 class MovementReaderDtoMapperTest {
     private val translateService: MessageSource = mock()
-    private val eventMapper: EventReaderDtoMapper = mock()
+    private val projectMapper: ProjectReaderDtoMapper = mock()
     private val activityReasonMapper: MovementActivityReasonReaderDtoMapper = mock()
     private val reasonMapper: MovementReasonReaderDtoMapper = mock()
     private val movementContentMapper: MovementContentReaderDtoMapper = mock()
     private val mapper: MovementReaderDtoMapper =
-        MovementReaderDtoMapper(translateService, eventMapper, activityReasonMapper, reasonMapper, movementContentMapper)
+        MovementReaderDtoMapper(translateService, projectMapper, activityReasonMapper, reasonMapper, movementContentMapper)
 
     companion object {
         @JvmStatic
@@ -42,7 +42,7 @@ class MovementReaderDtoMapperTest {
                     MovementModel(contentType = REGISTERED).apply {
                         type = MovementTypeEnum.IN
                         activity = ActivityModel()
-                        event = EventModel()
+                        project = ProjectModel()
                         content = emptyList()
                     },
                     1,
@@ -59,7 +59,7 @@ class MovementReaderDtoMapperTest {
         movement: MovementModel,
         expectedTranslation: Int,
         expectedActivityCast: Int,
-        expectedEventCast: Int,
+        expectedProjectCast: Int,
     ) {
         // Arrange
         whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
@@ -71,7 +71,7 @@ class MovementReaderDtoMapperTest {
                 type = IN,
             )
         )
-        whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
+        whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
         whenever(movementContentMapper.toDtoList(any(), any())).thenReturn(emptyList())
 
         // Act
@@ -84,7 +84,7 @@ class MovementReaderDtoMapperTest {
             Locale.getDefault(),
         )
         verify(movementContentMapper).toDtoList(movement.content, Locale.getDefault())
-        verify(eventMapper, times(expectedEventCast)).toDto(movement.event ?: EventModel(), Locale.getDefault())
+        verify(projectMapper, times(expectedProjectCast)).toDto(movement.project ?: ProjectModel(), Locale.getDefault())
         verify(activityReasonMapper, times(expectedActivityCast)).toDto(movement.activity ?: ActivityModel(), Locale.getDefault())
 
         assertEquals(movement.id, result.id)

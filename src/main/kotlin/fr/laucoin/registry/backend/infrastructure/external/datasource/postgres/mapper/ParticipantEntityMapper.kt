@@ -9,8 +9,8 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndModel
 import java.util.Objects
 import java.util.UUID
 import org.springframework.stereotype.Component
@@ -47,7 +47,7 @@ class ParticipantEntityMapper(private val gson: Gson): IEntityMapper<Participant
             status = buildStatus(entity.lastMovementType)
             user = formattedUser
             purged = entity.purged
-        }.fillWithEventAndEntity(entity)
+        }.fillWithProjectAndEntity(entity)
     }
 
     override fun toEntity(model: ParticipantModel): ParticipantEntity {
@@ -62,6 +62,6 @@ class ParticipantEntityMapper(private val gson: Gson): IEntityMapper<Participant
             endAvailabilityTime = model.endAvailability?.time
             userId = model.user?.id
             purged = model.purged
-        }.fillWithEventAndModel(model)
+        }.fillWithProjectAndModel(model)
     }
 }

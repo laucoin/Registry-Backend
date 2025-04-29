@@ -30,7 +30,7 @@ class VehicleController(
 ): IVehicleController {
     override fun findVehicles(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         pageNumber: Int,
         pageSize: Int,
         textSearched: String?,
@@ -39,20 +39,20 @@ class VehicleController(
         dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<VehicleReaderDto>> {
         return service.findVehiclesPage(
-            eventId,
+            projectId,
             PageableModel(pageNumber * pageSize, pageSize),
             VehicleSearchParamModel(textSearched, visibilitySearched, statusSearched, dateTimeSearched),
         ).map { readerMapper.toDtoPage(it, locale) }
     }
 
-    override fun findVehicleById(locale: Locale, eventId: UUID, id: UUID): Mono<VehicleReaderDto> {
-        return service.findVehicleById(eventId, id, visibilitySearched = null)
+    override fun findVehicleById(locale: Locale, projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
+        return service.findVehicleById(projectId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun findVehicleMovements(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageNumber: Int,
         pageSize: Int,
@@ -62,7 +62,7 @@ class VehicleController(
         endDateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<MovementReaderDto>> {
         return service.findVehicleMovementsPage(
-            eventId,
+            projectId,
             id,
             PageableModel(pageNumber * pageSize, pageSize),
             MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
@@ -72,45 +72,45 @@ class VehicleController(
     override fun createVehicle(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         vehicle: VehicleWriterDto
     ): Mono<VehicleReaderDto> {
-        return service.createVehicle(currentUser, writerMapper.toModel(vehicle, eventId))
+        return service.createVehicle(currentUser, writerMapper.toModel(vehicle, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateVehicleById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         vehicle: VehicleWriterDto,
     ): Mono<VehicleReaderDto> {
-        return service.updateVehicleById(currentUser, eventId, id, writerMapper.toModel(vehicle, eventId))
+        return service.updateVehicleById(currentUser, projectId, id, writerMapper.toModel(vehicle, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun disableVehicleById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
     ): Mono<VehicleReaderDto> {
-        return service.disableVehicleById(currentUser, eventId, id)
+        return service.disableVehicleById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun enableVehicleById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
     ): Mono<VehicleReaderDto> {
-        return service.enableVehicleById(currentUser, eventId, id)
+        return service.enableVehicleById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun deleteVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void> {
-        return service.deleteVehicleById(currentUser, eventId, id)
+    override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+        return service.deleteVehicleById(currentUser, projectId, id)
     }
 }

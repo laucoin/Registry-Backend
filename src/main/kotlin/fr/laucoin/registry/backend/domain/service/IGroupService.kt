@@ -13,36 +13,36 @@ import reactor.core.publisher.Mono
 
 interface IGroupService {
     fun findGroupsPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: GroupSearchParamModel,
     ): Mono<PageModel<GroupModel>>
 
     fun findGroupsMembers(
-        eventId: UUID,
+        projectId: UUID,
         groupIds: List<UUID>,
     ): Flux<Pair<UUID, List<ParticipantModel>>>
 
     fun findGroupMembersPageByGroupId(
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageable: PageableModel,
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>>
 
-    fun findGroupById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel>
-    fun searchParticipants(eventId: UUID, textSearched: String?): Flux<ParticipantModel>
+    fun findGroupById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel>
+    fun searchParticipants(projectId: UUID, textSearched: String?): Flux<ParticipantModel>
     fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel>
-    fun updateGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
+    fun updateGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
     fun addMembersToGroupById(
         currentUser: CurrentUserModel,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         memberIds: List<UUID>
     ): Mono<Pair<List<UUID>, List<UUID>>>
 
-    fun removeMemberFromGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel>
-    fun disableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel>
-    fun enableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel>
-    fun deleteGroupById(eventId: UUID, id: UUID): Mono<Void>
+    fun removeMemberFromGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, memberId: UUID): Mono<GroupModel>
+    fun disableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel>
+    fun enableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel>
+    fun deleteGroupById(projectId: UUID, id: UUID): Mono<Void>
 }

@@ -4,8 +4,8 @@ object RoleFields {
     const val USER_ROLE_PERMISSION_TABLE = "tb_user_role_permission"
     const val USER_ROLE_TABLE = "tb_user_role"
 
-    const val EVENT_ROLE_PERMISSION_TABLE = "tb_event_role_permission"
-    const val EVENT_ROLE_TABLE = "tb_event_role"
+    const val PROJECT_ROLE_PERMISSION_TABLE = "tb_project_role_permission"
+    const val PROJECT_ROLE_TABLE = "tb_project_role"
 
     const val ROLE_PERMISSIONS = "permissions"
     const val ROLE_PERMISSION = "permission"

@@ -29,7 +29,7 @@ class ActivityController(
 ): IActivityController {
     override fun findActivities(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         pageNumber: Int,
         pageSize: Int,
         textSearched: String?,
@@ -38,20 +38,20 @@ class ActivityController(
         dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<ActivityReaderDto>> {
         return service.findActivitiesPage(
-            eventId,
+            projectId,
             PageableModel(pageNumber * pageSize, pageSize),
             ActivitySearchParamModel(textSearched, visibilitySearched, availabilitySearched, dateTimeSearched),
         ).map { readerMapper.toDtoPage(it, locale) }
     }
 
-    override fun findActivityById(locale: Locale, eventId: UUID, id: UUID): Mono<ActivityReaderDto> {
-        return service.findActivityById(eventId, id, visibilitySearched = null)
+    override fun findActivityById(locale: Locale, projectId: UUID, id: UUID): Mono<ActivityReaderDto> {
+        return service.findActivityById(projectId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun findActivityMovements(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageNumber: Int,
         pageSize: Int,
@@ -61,7 +61,7 @@ class ActivityController(
         endDateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<MovementReaderDto>> {
         return service.findActivityMovementsPage(
-            eventId,
+            projectId,
             id,
             PageableModel(pageNumber * pageSize, pageSize),
             MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
@@ -71,45 +71,45 @@ class ActivityController(
     override fun createActivity(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         activity: ActivityWriterDto
     ): Mono<ActivityReaderDto> {
-        return service.createActivity(currentUser, writerMapper.toModel(activity, eventId))
+        return service.createActivity(currentUser, writerMapper.toModel(activity, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateActivityById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         activity: ActivityWriterDto,
     ): Mono<ActivityReaderDto> {
-        return service.updateActivityById(currentUser, eventId, id, writerMapper.toModel(activity, eventId))
+        return service.updateActivityById(currentUser, projectId, id, writerMapper.toModel(activity, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun disableActivityById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
     ): Mono<ActivityReaderDto> {
-        return service.disableActivityById(currentUser, eventId, id)
+        return service.disableActivityById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun enableActivityById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
     ): Mono<ActivityReaderDto> {
-        return service.enableActivityById(currentUser, eventId, id)
+        return service.enableActivityById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun deleteActivityById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void> {
-        return service.deleteActivityById(currentUser, eventId, id)
+    override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+        return service.deleteActivityById(currentUser, projectId, id)
     }
 }

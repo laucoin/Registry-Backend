@@ -17,4 +17,4 @@ data class ParticipantReaderDto(
     var endAvailability: CustomDateTimeModel? = null,
     var user: PartialUserReaderDto? = null,
     var purged: Boolean? = null,
-): GenericEventReaderDto()
+): GenericProjectReaderDto()

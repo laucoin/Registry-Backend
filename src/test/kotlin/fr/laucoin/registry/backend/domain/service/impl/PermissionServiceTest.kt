@@ -18,7 +18,7 @@ class PermissionServiceTest {
     private val service: PermissionService = PermissionService()
 
     companion object {
-        private const val RIGHT_ROLE = "ROLE_EVENT"
+        private const val RIGHT_ROLE = "ROLE_PROJECT"
         private const val WRONG_ROLE = "ROLE_USER"
         private val uuid = UUID.randomUUID()
 

@@ -2,12 +2,12 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_ALREADY_ADDED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -17,9 +17,9 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
-import fr.laucoin.registry.backend.domain.service.IEventService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IGroupService
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
 import java.util.stream.Stream
@@ -44,11 +44,11 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class GroupServiceTest {
-    private val eventService: IEventService = mock()
+    private val projectService: IProjectService = mock()
     private val repository: IGroupModelRepository = mock()
     private val participantRepository: IParticipantModelRepository = mock()
     private val maxParticipants = 1
-    private val service: IGroupService = GroupService(eventService, repository, participantRepository, maxParticipants)
+    private val service: IGroupService = GroupService(projectService, repository, participantRepository, maxParticipants)
 
     companion object {
         @JvmStatic
@@ -84,10 +84,10 @@ class GroupServiceTest {
         )
 
         // Act
-        service.findGroupsPage(eventId, pageable, params).block()
+        service.findGroupsPage(projectId, pageable, params).block()
 
         // Assert
-        verify(repository).findPage(eventId, pageable, params)
+        verify(repository).findPage(projectId, pageable, params)
     }
 
     @Test
@@ -97,10 +97,10 @@ class GroupServiceTest {
         whenever(repository.findContent(any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.findGroupsMembers(eventId, uuids).blockFirst()
+        service.findGroupsMembers(projectId, uuids).blockFirst()
 
         // Assert
-        verify(repository).findContent(eventId, uuids)
+        verify(repository).findContent(projectId, uuids)
     }
 
     @Test
@@ -114,25 +114,25 @@ class GroupServiceTest {
         )
 
         // Act
-        service.findGroupMembersPageByGroupId(eventId, uuid, pageable, params).block()
+        service.findGroupMembersPageByGroupId(projectId, uuid, pageable, params).block()
 
         // Assert
-        verify(participantRepository).findPageByGroupId(eventId, uuid, pageable, params)
+        verify(participantRepository).findPageByGroupId(projectId, uuid, pageable, params)
     }
 
     @Test
     fun `Should findGroupById call repository findById`() {
         // Arrange
-        val group = GroupModel().apply { event = EventModel().apply { id = eventId } }
+        val group = GroupModel().apply { project = ProjectModel().apply { id = projectId } }
         val uuid = UUID.randomUUID()
         val onlyVisible = true
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
 
         // Act
-        service.findGroupById(eventId, uuid, onlyVisible).block()
+        service.findGroupById(projectId, uuid, onlyVisible).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, onlyVisible)
+        verify(repository).findById(projectId, uuid, onlyVisible)
     }
 
     @Test
@@ -144,14 +144,14 @@ class GroupServiceTest {
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.findGroupById(eventId, uuid, onlyVisible).block()
+            service.findGroupById(projectId, uuid, onlyVisible).block()
         }) as RegistryException
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
         assertEquals(1, result.args?.size)
-        verify(repository).findById(eventId, uuid, onlyVisible)
+        verify(repository).findById(projectId, uuid, onlyVisible)
     }
 
     @Test
@@ -161,12 +161,12 @@ class GroupServiceTest {
         whenever(participantRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchParticipants(eventId, textSearched).blockFirst()
+        service.searchParticipants(projectId, textSearched).blockFirst()
 
         // Assert
         verify(participantRepository).findWithLimit(
             maxParticipants,
-            eventId,
+            projectId,
             ParticipantSearchParamModel(textSearched, REGISTERED, visibilitySearched = true)
         )
     }
@@ -177,10 +177,10 @@ class GroupServiceTest {
         val participantId = UUID.randomUUID()
         val participant = ParticipantModel().apply { id = participantId; visible = true; purged = false; type = REGISTERED }
         val group = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = listOf(ParticipantModel().apply { id = participantId })
         }
-        whenever(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(participant))
         whenever(repository.create(any())).thenReturn(Mono.just(group))
 
@@ -188,10 +188,10 @@ class GroupServiceTest {
         service.createGroup(currentUser(), group).block()
 
         // Assert
-        verify(eventService).validateDateTimes(
-            eventId, null, null, GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+        verify(projectService).validateDateTimes(
+            projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
         )
-        verify(participantRepository).findAllByIds(eventId, listOf(participantId), visibilitySearched = null)
+        verify(participantRepository).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
         verify(repository).create(group)
     }
 
@@ -200,10 +200,10 @@ class GroupServiceTest {
         // Arrange
         val participantId = UUID.randomUUID()
         val group = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = listOf(ParticipantModel().apply { id = participantId })
         }
-        whenever(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
 
         // Act
@@ -213,11 +213,11 @@ class GroupServiceTest {
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
-        assertEquals(GROUP_MEMBERS_NOT_FOUND_IN_GROUP_EVENT, result.message)
-        verify(eventService).validateDateTimes(
-            eventId, null, null, GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+        assertEquals(GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT, result.message)
+        verify(projectService).validateDateTimes(
+            projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
         )
-        verify(participantRepository).findAllByIds(eventId, listOf(participantId), visibilitySearched = null)
+        verify(participantRepository).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
         verify(repository, never()).create(any())
     }
 
@@ -227,10 +227,10 @@ class GroupServiceTest {
         // Arrange
         val participantId = UUID.randomUUID()
         val group = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = listOf(ParticipantModel().apply { id = participantId })
         }
-        whenever(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(participant))
 
         // Act
@@ -241,10 +241,10 @@ class GroupServiceTest {
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(GROUP_MEMBERS_NOT_VISIBLE, result.message)
-        verify(eventService).validateDateTimes(
-            eventId, null, null, GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+        verify(projectService).validateDateTimes(
+            projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
         )
-        verify(participantRepository).findAllByIds(eventId, listOf(participantId), visibilitySearched = null)
+        verify(participantRepository).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
         verify(repository, never()).create(any())
     }
 
@@ -259,29 +259,29 @@ class GroupServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         val groupToUpdate = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
         }
         val groupUpdated = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = updatedParticipantIds.map { ParticipantModel().apply { id = it } }
         }
         val newParticipants =
             newParticipantIds.map { ParticipantModel().apply { id = it; visible = true; purged = false; type = REGISTERED } }
-        whenever(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(groupToUpdate))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newParticipants.toTypedArray()))
         whenever(repository.update(any())).thenReturn(Mono.just(groupUpdated))
 
         // Act
-        service.updateGroupById(currentUser(), eventId, uuid, groupUpdated).block()
+        service.updateGroupById(currentUser(), projectId, uuid, groupUpdated).block()
 
         // Assert
-        verify(eventService).validateDateTimes(
-            eventId, null, null, GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+        verify(projectService).validateDateTimes(
+            projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(participantRepository, times(exceptedCallOnParticipantIds)).findAllByIds(
-            eventId,
+            projectId,
             newParticipantIds,
             visibilitySearched = null,
         )
@@ -300,7 +300,7 @@ class GroupServiceTest {
         val updatedParticipantIds = listOf(uuid1, uuid2, uuid3)
         val newParticipantIds = listOf(uuid2, uuid3)
         val group = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
         }
         val newParticipants =
@@ -310,12 +310,12 @@ class GroupServiceTest {
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
-        service.addMembersToGroupById(currentUser(), eventId, uuid, updatedParticipantIds).block()
+        service.addMembersToGroupById(currentUser(), projectId, uuid, updatedParticipantIds).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(participantRepository).findAllByIds(
-            eventId,
+            projectId,
             newParticipantIds,
             visibilitySearched = null,
         )
@@ -328,7 +328,7 @@ class GroupServiceTest {
         val uuid = UUID.randomUUID()
         val participantIds = listOf(UUID.randomUUID())
         val group = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = participantIds.map { ParticipantModel().apply { id = it } }
         }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
@@ -336,13 +336,13 @@ class GroupServiceTest {
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.addMembersToGroupById(currentUser(), eventId, uuid, participantIds).block()
+            service.addMembersToGroupById(currentUser(), projectId, uuid, participantIds).block()
         }) as RegistryException
 
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(GROUP_MEMBERS_ALREADY_ADDED, result.message)
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(repository, never()).update(any())
     }
 
@@ -356,17 +356,17 @@ class GroupServiceTest {
         val uuid3 = UUID.randomUUID()
         val previousParticipantIds = listOf(uuid1, uuid2, uuid3)
         val group = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
         }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
-        service.removeMemberFromGroupById(currentUser(), eventId, uuid, uuid3).block()
+        service.removeMemberFromGroupById(currentUser(), projectId, uuid, uuid3).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(repository).update(any())
     }
 
@@ -378,7 +378,7 @@ class GroupServiceTest {
         val uuid1 = UUID.randomUUID()
         val previousParticipantIds = listOf(uuid1)
         val group = GroupModel().apply {
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
         }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
@@ -386,45 +386,45 @@ class GroupServiceTest {
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.removeMemberFromGroupById(currentUser(), eventId, uuid, uuid1).block()
+            service.removeMemberFromGroupById(currentUser(), projectId, uuid, uuid1).block()
         }) as RegistryException
 
         // Assert
         assertEquals(FORBIDDEN, result.status)
         assertEquals(GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED, result.message)
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(repository, never()).update(any())
     }
 
     @Test
     fun `Should disableGroupById call existing group and call repository updateGroup`() {
         // Arrange
-        val group = GroupModel().apply { event = EventModel().apply { id = eventId }; visible = true }
+        val group = GroupModel().apply { project = ProjectModel().apply { id = projectId }; visible = true }
         val uuid = UUID.randomUUID()
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
-        service.disableGroupById(currentUser(), eventId, uuid).block()
+        service.disableGroupById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = true)
+        verify(repository).findById(projectId, uuid, visibilitySearched = true)
         verify(repository).update(group.apply { visible = false })
     }
 
     @Test
     fun `Should enableGroupById call existing group and call repository updateGroup`() {
         // Arrange
-        val group = GroupModel().apply { event = EventModel().apply { id = eventId }; visible = false }
+        val group = GroupModel().apply { project = ProjectModel().apply { id = projectId }; visible = false }
         val uuid = UUID.randomUUID()
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
-        service.enableGroupById(currentUser(), eventId, uuid).block()
+        service.enableGroupById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = false)
+        verify(repository).findById(projectId, uuid, visibilitySearched = false)
         verify(repository).update(group.apply { visible = true })
     }
 
@@ -432,15 +432,15 @@ class GroupServiceTest {
     fun `Should deleteGroupById call existing group, and call repository deleteById`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val group = GroupModel().apply { id = uuid; event = EventModel().apply { id = eventId }; visible = false }
+        val group = GroupModel().apply { id = uuid; project = ProjectModel().apply { id = projectId }; visible = false }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
-        service.deleteGroupById(eventId, uuid).block()
+        service.deleteGroupById(projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(repository).deleteById(uuid)
     }
 }

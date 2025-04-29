@@ -9,19 +9,19 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-interface IGroupModelRepository: IGenericReadEventModelRepository<GroupModel>, IGenericWriteModelRepository<GroupModel> {
+interface IGroupModelRepository: IGenericReadProjectModelRepository<GroupModel>, IGenericWriteModelRepository<GroupModel> {
     fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: GroupSearchParamModel,
     ): Mono<PageModel<GroupModel>>
 
     fun findContent(
-        eventId: UUID,
+        projectId: UUID,
         groupIds: List<UUID>,
     ): Flux<Pair<UUID, List<ParticipantModel>>>
 
-    fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>
+    fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>
 
-    fun findWithLimit(limit: Int, eventId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
+    fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
 }

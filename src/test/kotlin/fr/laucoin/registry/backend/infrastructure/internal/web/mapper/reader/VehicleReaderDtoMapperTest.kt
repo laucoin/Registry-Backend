@@ -2,9 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USABLE_ELEMENT_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.IN
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -21,8 +21,8 @@ import org.springframework.context.MessageSource
 
 class VehicleReaderDtoMapperTest {
     private val translateService: MessageSource = mock()
-    private val eventMapper: EventReaderDtoMapper = mock()
-    private val mapper: VehicleReaderDtoMapper = VehicleReaderDtoMapper(translateService, eventMapper)
+    private val projectMapper: ProjectReaderDtoMapper = mock()
+    private val mapper: VehicleReaderDtoMapper = VehicleReaderDtoMapper(translateService, projectMapper)
 
     companion object {
         @JvmStatic
@@ -35,7 +35,7 @@ class VehicleReaderDtoMapperTest {
                 ),
                 Arguments.of(
                     VehicleModel().apply {
-                        event = EventModel()
+                        project = ProjectModel()
                         status = IN
                     },
                     1,
@@ -50,11 +50,11 @@ class VehicleReaderDtoMapperTest {
     fun `Should toDto convert VehicleModel to VehicleReaderDto`(
         vehicle: VehicleModel,
         expectedTranslation: Int,
-        expectedEventCast: Int,
+        expectedProjectCast: Int,
     ) {
         // Arrange
         whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
-        whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
+        whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
 
         // Act
         val result = mapper.toDto(vehicle, Locale.getDefault())
@@ -65,7 +65,7 @@ class VehicleReaderDtoMapperTest {
             null,
             Locale.getDefault(),
         )
-        verify(eventMapper, times(expectedEventCast)).toDto(vehicle.event ?: EventModel(), Locale.getDefault())
+        verify(projectMapper, times(expectedProjectCast)).toDto(vehicle.project ?: ProjectModel(), Locale.getDefault())
 
         assertEquals(vehicle.id, result.id)
         assertEquals(vehicle.licensePlate, result.licensePlate)

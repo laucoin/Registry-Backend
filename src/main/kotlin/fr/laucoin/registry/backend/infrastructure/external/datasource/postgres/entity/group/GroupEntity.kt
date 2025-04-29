@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group
 
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericEventEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericProjectEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_NAME
@@ -24,4 +24,4 @@ data class GroupEntity(
     var endAvailabilityDate: LocalDate? = null,
     @Column(GROUP_END_AVAILABILITY_TIME)
     var endAvailabilityTime: LocalTime? = null,
-): GenericEventEntity()
+): GenericProjectEntity()

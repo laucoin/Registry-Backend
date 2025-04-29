@@ -3,12 +3,12 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_HISTORY_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_ACTIVITY_U
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_ACTIVITY
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_HISTORY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
 @Tag(name = "Activities management", description = "API for Activities-related operations")
-@RequestMapping("/api/events/{eventId}/activities")
+@RequestMapping("/api/projects/{projectId}/activities")
 interface IActivityController {
     @Operation(
         summary = "Find Activities",
@@ -55,11 +55,11 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_R')")
     @GetMapping
     fun findActivities(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
             200,
@@ -83,11 +83,11 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_R')")
     @GetMapping("/{id}")
     fun findActivityById(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<ActivityReaderDto>
 
@@ -102,11 +102,11 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_HISTORY_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_HISTORY_R')")
     @GetMapping("/{id}/movements")
     fun findActivityMovements(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -123,7 +123,7 @@ interface IActivityController {
 
     @Operation(
         summary = "Create Activity",
-        description = "Create Activity linked to the Event",
+        description = "Create Activity linked to the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -132,12 +132,12 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_C')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_C')")
     @PostMapping
     fun createActivity(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestBody @Valid activity: ActivityWriterDto,
     ): Mono<ActivityReaderDto>
 
@@ -152,19 +152,19 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
     @PatchMapping("/{id}")
     fun updateActivityById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid activity: ActivityWriterDto,
     ): Mono<ActivityReaderDto>
 
     @Operation(
         summary = "Disable Activity",
-        description = "Disable Activity, it will not visible anymore in the Event",
+        description = "Disable Activity, it will not visible anymore in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -173,18 +173,18 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
     @PatchMapping("/{id}/disable")
     fun disableActivityById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<ActivityReaderDto>
 
     @Operation(
         summary = "Enable Activity",
-        description = "Enable Activity, obviously it will be visible again in the Event",
+        description = "Enable Activity, obviously it will be visible again in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -193,12 +193,12 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
     @PatchMapping("/{id}/enable")
     fun enableActivityById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<ActivityReaderDto>
 
@@ -213,11 +213,11 @@ interface IActivityController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_ACTIVITY') && hasPermission(#eventId, '$REGISTRY_EVENT_ACTIVITY_D')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_D')")
     @DeleteMapping("/{id}")
     fun deleteActivityById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<Void>
 }

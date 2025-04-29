@@ -2,9 +2,9 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_ALREADY_ADDED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -18,7 +18,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
-import fr.laucoin.registry.backend.domain.service.IEventService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -31,74 +31,74 @@ import reactor.core.publisher.Mono
 
 @Service
 class GroupService(
-    private val eventService: IEventService,
+    private val projectService: IProjectService,
     private val repository: IGroupModelRepository,
     private val participantRepository: IParticipantModelRepository,
     @Value("\${registry.feature.group.searched.max-participant-result}")
     private val maxParticipantResult: Int,
 ): IGroupService, GenericService() {
     override fun findGroupsPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: GroupSearchParamModel,
     ): Mono<PageModel<GroupModel>> {
-        return repository.findPage(eventId, pageable, searchParams)
+        return repository.findPage(projectId, pageable, searchParams)
     }
 
-    override fun findGroupsMembers(eventId: UUID, groupIds: List<UUID>): Flux<Pair<UUID, List<ParticipantModel>>> {
-        return repository.findContent(eventId, groupIds)
+    override fun findGroupsMembers(projectId: UUID, groupIds: List<UUID>): Flux<Pair<UUID, List<ParticipantModel>>> {
+        return repository.findContent(projectId, groupIds)
     }
 
     override fun findGroupMembersPageByGroupId(
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageable: PageableModel,
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>> {
         return participantRepository.findPageByGroupId(
-            eventId,
+            projectId,
             id,
             pageable,
             searchParams,
         )
     }
 
-    override fun findGroupById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel> {
-        return repository.findById(eventId, id, visibilitySearched)
+    override fun findGroupById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel> {
+        return repository.findById(projectId, id, visibilitySearched)
             .notFoundIfEmpty(id)
     }
 
-    override fun searchParticipants(eventId: UUID, textSearched: String?): Flux<ParticipantModel> {
+    override fun searchParticipants(projectId: UUID, textSearched: String?): Flux<ParticipantModel> {
         return participantRepository.findWithLimit(
             maxParticipantResult,
-            eventId,
+            projectId,
             ParticipantSearchParamModel(textSearched, typeSearched = REGISTERED, visibilitySearched = true)
         )
     }
 
     override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
-        return eventService.validateDateTimes(
-            group.event !!.id !!,
+        return projectService.validateDateTimes(
+            group.project !!.id !!,
             group.startAvailability,
             group.endAvailability,
-            GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE,
+            GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
         )
-            .flatMap { validateMembers(group.event !!.id !!, group, group.members.mapNotNull { p -> p.id }) }
+            .flatMap { validateMembers(group.project !!.id !!, group, group.members.mapNotNull { p -> p.id }) }
             .flatMap { repository.create(group.apply { create(currentUser) }) }
     }
 
-    override fun updateGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, group: GroupModel): Mono<GroupModel> {
-        return eventService.validateDateTimes(
-            group.event !!.id !!,
+    override fun updateGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, group: GroupModel): Mono<GroupModel> {
+        return projectService.validateDateTimes(
+            group.project !!.id !!,
             group.startAvailability,
             group.endAvailability,
-            GROUP_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE,
+            GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
         )
-            .flatMap { findGroupById(eventId, id, visibilitySearched = null) }
+            .flatMap { findGroupById(projectId, id, visibilitySearched = null) }
             .flatMap {
                 val newMemberIds: List<UUID> = it.getNewMemberIds(group)
                 if (newMemberIds.isEmpty()) Mono.just(it)
-                else validateMembers(eventId, it, newMemberIds)
+                else validateMembers(projectId, it, newMemberIds)
             }
             .map {
                 it.apply {
@@ -113,11 +113,11 @@ class GroupService(
 
     override fun addMembersToGroupById(
         currentUser: CurrentUserModel,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         memberIds: List<UUID>
     ): Mono<Pair<List<UUID>, List<UUID>>> {
-        return findGroupById(eventId, id, visibilitySearched = null)
+        return findGroupById(projectId, id, visibilitySearched = null)
             .map { Pair(it, it.getNewMemberIds(memberIds)) }
             .handle { it, handle ->
                 if (it.second.isEmpty()) {
@@ -132,7 +132,7 @@ class GroupService(
                 }
             }
             .flatMap { (group, newMemberIds) ->
-                validateMembers(eventId, group, newMemberIds)
+                validateMembers(projectId, group, newMemberIds)
                     .map { _ -> newMemberIds.map { ParticipantModel().apply { this.id = it } } }
                     .map { group.apply { members = members.plus(it) } }
                     .updateGroup(currentUser)
@@ -140,8 +140,13 @@ class GroupService(
             }
     }
 
-    override fun removeMemberFromGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, memberId: UUID): Mono<GroupModel> {
-        return findGroupById(eventId, id, visibilitySearched = null)
+    override fun removeMemberFromGroupById(
+        currentUser: CurrentUserModel,
+        projectId: UUID,
+        id: UUID,
+        memberId: UUID
+    ): Mono<GroupModel> {
+        return findGroupById(projectId, id, visibilitySearched = null)
             .map { it.apply { members = members.filter { m -> m.id != memberId } } }
             .handle { it, handle ->
                 if (it.members.isEmpty()) {
@@ -162,8 +167,8 @@ class GroupService(
         repository.update(it.apply { update(currentUser) })
     }
 
-    private fun validateMembers(eventId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
-        return participantRepository.findAllByIds(eventId, newMemberIds, visibilitySearched = null)
+    private fun validateMembers(projectId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
+        return participantRepository.findAllByIds(projectId, newMemberIds, visibilitySearched = null)
             .filter { it.type == REGISTERED }
             .collectList()
             .handle { it, handle ->
@@ -171,7 +176,7 @@ class GroupService(
                     it.size != newMemberIds.size -> handle.error(
                         RegistryException(
                             NOT_FOUND,
-                            GROUP_MEMBERS_NOT_FOUND_IN_GROUP_EVENT,
+                            GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT,
                         )
                     )
 
@@ -187,20 +192,20 @@ class GroupService(
             }
     }
 
-    override fun disableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(eventId, id, visibilitySearched = true)
+    override fun disableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel> {
+        return findGroupById(projectId, id, visibilitySearched = true)
             .updateVisibility(visibility = false)
             .updateGroup(currentUser)
     }
 
-    override fun enableGroupById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(eventId, id, visibilitySearched = false)
+    override fun enableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel> {
+        return findGroupById(projectId, id, visibilitySearched = false)
             .updateVisibility(visibility = true)
             .updateGroup(currentUser)
     }
 
-    override fun deleteGroupById(eventId: UUID, id: UUID): Mono<Void> {
-        return findGroupById(eventId, id, visibilitySearched = null)
+    override fun deleteGroupById(projectId: UUID, id: UUID): Mono<Void> {
+        return findGroupById(projectId, id, visibilitySearched = null)
             .flatMap { repository.deleteById(id) }
     }
 }

@@ -1,18 +1,18 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_EVENT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -30,9 +30,9 @@ import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
-import fr.laucoin.registry.backend.domain.service.IEventService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IMovementService
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -59,7 +59,7 @@ import reactor.core.publisher.Mono
 
 class MovementServiceTest {
     private val repository: IMovementModelRepository = mock()
-    private val eventService: IEventService = mock()
+    private val projectService: IProjectService = mock()
     private val participantRepository: IParticipantModelRepository = mock()
     private val vehicleRepository: IVehicleModelRepository = mock()
     private val activityRepository: IActivityModelRepository = mock()
@@ -70,7 +70,7 @@ class MovementServiceTest {
     private val maxVehicles: Int = 1
     private val maxActivities: Int = 1
     private val service: IMovementService = MovementService(
-        eventService,
+        projectService,
         repository,
         participantRepository,
         vehicleRepository,
@@ -259,25 +259,25 @@ class MovementServiceTest {
         )
 
         // Act
-        service.findMovementsPage(eventId, pageable, params).block()
+        service.findMovementsPage(projectId, pageable, params).block()
 
         // Assert
-        verify(repository).findPage(eventId, pageable, params)
+        verify(repository).findPage(projectId, pageable, params)
     }
 
     @Test
     fun `Should findMovementById call repository findById`() {
         // Arrange
-        val movement = MovementModel(contentType = REGISTERED).apply { event = EventModel().apply { id = eventId } }
+        val movement = MovementModel(contentType = REGISTERED).apply { project = ProjectModel().apply { id = projectId } }
         val uuid = UUID.randomUUID()
         val onlyVisible = true
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
 
         // Act
-        service.findMovementById(eventId, uuid, onlyVisible).block()
+        service.findMovementById(projectId, uuid, onlyVisible).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, onlyVisible)
+        verify(repository).findById(projectId, uuid, onlyVisible)
     }
 
     @Test
@@ -287,10 +287,10 @@ class MovementServiceTest {
         whenever(repository.findContent(any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.findMovementsContent(eventId, ids).blockFirst()
+        service.findMovementsContent(projectId, ids).blockFirst()
 
         // Assert
-        verify(repository).findContent(eventId, ids)
+        verify(repository).findContent(projectId, ids)
     }
 
     @Test
@@ -306,7 +306,7 @@ class MovementServiceTest {
         whenever(groupRepository.findContent(any(), any())).thenReturn(Flux.just(Pair(uuid, listOf(member))))
 
         // Act
-        val result = service.searchParticipantsAndGroups(eventId, typeSearched, textSearched).block()
+        val result = service.searchParticipantsAndGroups(projectId, typeSearched, textSearched).block()
 
         // Assert
         assertEquals(0, result?.t1?.size)
@@ -314,15 +314,15 @@ class MovementServiceTest {
         assertEquals(1, result?.t2?.first()?.members?.size)
         verify(participantRepository).findWithLimit(
             maxParticipants,
-            eventId,
+            projectId,
             ParticipantSearchParamModel(textSearched, typeSearched, visibilitySearched = true, presenceSearched = true)
         )
         verify(groupRepository).findWithLimit(
             maxGroups,
-            eventId,
+            projectId,
             GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true)
         )
-        verify(groupRepository).findContent(eventId, listOf(uuid))
+        verify(groupRepository).findContent(projectId, listOf(uuid))
     }
 
     @Test
@@ -332,12 +332,12 @@ class MovementServiceTest {
         whenever(vehicleRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchVehicles(eventId, textSearched).blockFirst()
+        service.searchVehicles(projectId, textSearched).blockFirst()
 
         // Assert
         verify(vehicleRepository).findWithLimit(
             maxVehicles,
-            eventId,
+            projectId,
             VehicleSearchParamModel(textSearched, visibilitySearched = true, availabilitySearched = true),
         )
     }
@@ -350,12 +350,12 @@ class MovementServiceTest {
         whenever(activityRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchActivities(eventId, typeSearched, textSearched).blockFirst()
+        service.searchActivities(projectId, typeSearched, textSearched).blockFirst()
 
         // Assert
         verify(activityRepository).findWithLimit(
             maxActivities,
-            eventId,
+            projectId,
             ActivitySearchParamModel(textSearched, visibilitySearched = true, availabilitySearched = true),
         )
     }
@@ -373,13 +373,13 @@ class MovementServiceTest {
 
         val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             activity = movementActivity
             content = movementContent
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(activityRepository.findById(any(), any(), anyOrNull())).thenReturn(
             Mono.just(movementActivity ?: ActivityModel())
         )
@@ -396,23 +396,23 @@ class MovementServiceTest {
         service.createMovement(currentUser(), movement).block()
 
         // Assert
-        verify(eventService).validateDateTime(
-            eventId,
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, times(expectedCallToActivity)).findById(
-            eventId,
+            projectId,
             movementActivity?.id ?: UUID.randomUUID(),
             visibilitySearched = null
         )
         verify(participantRepository).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.participant?.id },
             visibilitySearched = null,
         )
         verify(vehicleRepository, times(expectedCallToVehicle)).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.vehicle?.id },
             visibilitySearched = null
         )
@@ -430,12 +430,12 @@ class MovementServiceTest {
 
         val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             activity = movementActivity
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(activityRepository.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
         whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
@@ -446,14 +446,14 @@ class MovementServiceTest {
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
-        assertEquals(MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_EVENT, result.message)
-        verify(eventService).validateDateTime(
-            eventId,
+        assertEquals(MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository).findById(
-            eventId,
+            projectId,
             movementActivity.id !!,
             visibilitySearched = null
         )
@@ -473,12 +473,12 @@ class MovementServiceTest {
 
         val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             activity = movementActivity
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(activityRepository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movementActivity))
         whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
@@ -490,13 +490,13 @@ class MovementServiceTest {
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(MOVEMENT_ACTIVITY_NOT_VISIBLE, result.message)
-        verify(eventService).validateDateTime(
-            eventId,
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository).findById(
-            eventId,
+            projectId,
             movementActivity.id !!,
             visibilitySearched = null
         )
@@ -521,12 +521,12 @@ class MovementServiceTest {
 
         val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             content = movementContent
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
         whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
@@ -537,15 +537,15 @@ class MovementServiceTest {
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
-        assertEquals(MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_EVENT, result.message)
-        verify(eventService).validateDateTime(
-            eventId,
+        assertEquals(MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
         verify(participantRepository).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.participant?.id },
             visibilitySearched = null,
         )
@@ -565,12 +565,12 @@ class MovementServiceTest {
 
         val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             content = movementContent
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*participants.toTypedArray()))
         whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
@@ -582,14 +582,14 @@ class MovementServiceTest {
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(MOVEMENT_PARTICIPANTS_NOT_VISIBLE, result.message)
-        verify(eventService).validateDateTime(
-            eventId,
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
         verify(participantRepository).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.participant?.id },
             visibilitySearched = null,
         )
@@ -615,12 +615,12 @@ class MovementServiceTest {
 
         val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             content = movementContent
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
             Flux.just(*movementContent.map(MovementContentModel::participant).toTypedArray())
         )
@@ -634,20 +634,20 @@ class MovementServiceTest {
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
-        assertEquals(MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_EVENT, result.message)
-        verify(eventService).validateDateTime(
-            eventId,
+        assertEquals(MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
         verify(participantRepository).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.participant?.id },
             visibilitySearched = null,
         )
         verify(vehicleRepository).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.vehicle?.id },
             visibilitySearched = null,
         )
@@ -672,12 +672,12 @@ class MovementServiceTest {
 
         val movement = MovementModel(contentType = REGISTERED).apply {
             id = UUID.randomUUID()
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             content = movementContent
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
             Flux.just(*movementContent.map(MovementContentModel::participant).toTypedArray())
         )
@@ -694,19 +694,19 @@ class MovementServiceTest {
         // Assert
         assertEquals(CONFLICT, result.status)
         assertEquals(MOVEMENT_VEHICLES_NOT_VISIBLE, result.message)
-        verify(eventService).validateDateTime(
-            eventId,
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
         verify(participantRepository).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.participant?.id },
             visibilitySearched = null,
         )
         verify(vehicleRepository).findAllByIds(
-            eventId,
+            projectId,
             movementContent.mapNotNull { it.vehicle?.id },
             visibilitySearched = null,
         )
@@ -733,20 +733,20 @@ class MovementServiceTest {
         val uuid = UUID.randomUUID()
         val movementToUpdate = MovementModel(contentType = REGISTERED).apply {
             id = uuid
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             activity = previousMovementActivity
             content = previousMovementContent
         }
         val movementUpdated = MovementModel(contentType = REGISTERED).apply {
             id = uuid
-            event = EventModel().apply { id = eventId }
+            project = ProjectModel().apply { id = projectId }
             dateTime = movementDateTime
             activity = updatedMovementActivity
             content = updatedMovementContent
         }
 
-        whenever(eventService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(eventId))
+        whenever(projectService.validateDateTime(any(), any(), any())).thenReturn(Mono.just(projectId))
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movementToUpdate))
         whenever(activityRepository.findById(any(), any(), anyOrNull())).thenReturn(
             Mono.just(updatedMovementActivity ?: ActivityModel())
@@ -761,26 +761,26 @@ class MovementServiceTest {
         whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
-        service.updateMovementById(currentUser(), eventId, uuid, movementUpdated).block()
+        service.updateMovementById(currentUser(), projectId, uuid, movementUpdated).block()
 
         // Assert
-        verify(eventService).validateDateTime(
-            eventId,
+        verify(projectService).validateDateTime(
+            projectId,
             CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
-            MOVEMENT_DATETIME_OUT_OF_EVENT_DATE_RANGE
+            MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, times(expectedCallToActivity)).findById(
-            eventId,
+            projectId,
             updatedMovementActivity?.id ?: UUID.randomUUID(),
             visibilitySearched = null,
         )
         verify(participantRepository, times(expectedCallToParticipant)).findAllByIds(
-            eventId,
+            projectId,
             newMovementParticipant.mapNotNull { it.id },
             visibilitySearched = null,
         )
         verify(vehicleRepository, times(expectedCallToVehicle)).findAllByIds(
-            eventId,
+            projectId,
             newMovementVehicle.mapNotNull { it.id },
             visibilitySearched = null
         )
@@ -797,10 +797,10 @@ class MovementServiceTest {
         whenever(repository.update(any())).thenReturn(Mono.just(movement))
 
         // Act
-        service.disableMovementById(currentUser(), eventId, uuid).block()
+        service.disableMovementById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = true)
+        verify(repository).findById(projectId, uuid, visibilitySearched = true)
         verify(repository).update(movement.apply { visible = false })
     }
 
@@ -813,10 +813,10 @@ class MovementServiceTest {
         whenever(repository.update(any())).thenReturn(Mono.just(movement))
 
         // Act
-        service.enableMovementById(currentUser(), eventId, uuid).block()
+        service.enableMovementById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = false)
+        verify(repository).findById(projectId, uuid, visibilitySearched = false)
         verify(repository).update(movement.apply { visible = true })
     }
 
@@ -829,10 +829,10 @@ class MovementServiceTest {
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
-        service.deleteMovementById(eventId, uuid).block()
+        service.deleteMovementById(projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(repository).deleteById(uuid)
     }
 }

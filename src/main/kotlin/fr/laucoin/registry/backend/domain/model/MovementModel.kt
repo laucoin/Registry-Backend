@@ -14,7 +14,7 @@ data class MovementModel(
     var activity: ActivityModel? = null,
     var contentType: ParticipantTypeEnum,
     var content: List<MovementContentModel> = emptyList(),
-): GenericEventModel() {
+): GenericProjectModel() {
     data class MovementContentModel(
         var id: UUID? = null,
         var poolName: String? = null,

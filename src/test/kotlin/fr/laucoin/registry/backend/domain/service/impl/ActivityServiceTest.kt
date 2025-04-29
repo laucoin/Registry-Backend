@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -14,8 +14,8 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IActivityModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.service.IActivityService
-import fr.laucoin.registry.backend.domain.service.IEventService
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.domain.service.IProjectService
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -35,9 +35,9 @@ import reactor.core.publisher.Mono
 
 class ActivityServiceTest {
     private val repository: IActivityModelRepository = mock()
-    private val eventService: IEventService = mock()
+    private val projectService: IProjectService = mock()
     private val movementRepository: IMovementModelRepository = mock()
-    private val service: IActivityService = ActivityService(eventService, repository, movementRepository)
+    private val service: IActivityService = ActivityService(projectService, repository, movementRepository)
 
     @Test
     fun `Should findActivitiesPage call repository findPage`() {
@@ -49,25 +49,25 @@ class ActivityServiceTest {
         )
 
         // Act
-        service.findActivitiesPage(eventId, pageable, params).block()
+        service.findActivitiesPage(projectId, pageable, params).block()
 
         // Assert
-        verify(repository).findPage(eventId, pageable, params)
+        verify(repository).findPage(projectId, pageable, params)
     }
 
     @Test
     fun `Should findActivityById call repository findById`() {
         // Arrange
-        val activity = ActivityModel().apply { event = EventModel().apply { id = eventId } }
+        val activity = ActivityModel().apply { project = ProjectModel().apply { id = projectId } }
         val uuid = UUID.randomUUID()
         val onlyVisible = true
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
 
         // Act
-        service.findActivityById(eventId, uuid, onlyVisible).block()
+        service.findActivityById(projectId, uuid, onlyVisible).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, onlyVisible)
+        verify(repository).findById(projectId, uuid, onlyVisible)
     }
 
     @Test
@@ -79,14 +79,14 @@ class ActivityServiceTest {
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.findActivityById(eventId, uuid, onlyVisible).block()
+            service.findActivityById(projectId, uuid, onlyVisible).block()
         }) as RegistryException
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
         assertEquals(1, result.args?.size)
-        verify(repository).findById(eventId, uuid, onlyVisible)
+        verify(repository).findById(projectId, uuid, onlyVisible)
     }
 
     @Test
@@ -100,28 +100,28 @@ class ActivityServiceTest {
         )
 
         // Act
-        service.findActivityMovementsPage(eventId, uuid, pageable, params).block()
+        service.findActivityMovementsPage(projectId, uuid, pageable, params).block()
 
         // Assert
-        verify(movementRepository).findPageByActivityId(eventId, uuid, pageable, params)
+        verify(movementRepository).findPageByActivityId(projectId, uuid, pageable, params)
     }
 
     @Test
     fun `Should createActivity check date and call repository create`() {
         // Arrange
-        val activity = ActivityModel().apply { event = EventModel().apply { id = eventId } }
-        whenever(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        val activity = ActivityModel().apply { project = ProjectModel().apply { id = projectId } }
+        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
         whenever(repository.create(any())).thenReturn(Mono.just(activity))
 
         // Act
         service.createActivity(currentUser(), activity).block()
 
         // Assert
-        verify(eventService).validateDateTimes(
-            eventId,
+        verify(projectService).validateDateTimes(
+            projectId,
             start = null,
             end = null,
-            ACTIVITY_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+            ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(repository).create(activity)
     }
@@ -130,54 +130,54 @@ class ActivityServiceTest {
     fun `Should updateActivityById check date, check existing activity, call repository updateActivity`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val activity = ActivityModel().apply { id = uuid; event = EventModel().apply { id = eventId } }
-        whenever(eventService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(eventId))
+        val activity = ActivityModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
+        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
         whenever(repository.update(any())).thenReturn(Mono.just(activity))
 
         // Act
-        service.updateActivityById(currentUser(), eventId, uuid, activity).block()
+        service.updateActivityById(currentUser(), projectId, uuid, activity).block()
 
         // Assert
-        verify(eventService).validateDateTimes(
-            eventId,
+        verify(projectService).validateDateTimes(
+            projectId,
             start = null,
             end = null,
-            ACTIVITY_PRESENCE_DATES_OUT_OF_EVENT_DATE_RANGE
+            ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
         )
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(repository).update(activity)
     }
 
     @Test
     fun `Should disableActivityById call existing activity and call repository update`() {
         // Arrange
-        val activity = ActivityModel().apply { event = EventModel().apply { id = eventId }; visible = true }
+        val activity = ActivityModel().apply { project = ProjectModel().apply { id = projectId }; visible = true }
         val uuid = UUID.randomUUID()
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
         whenever(repository.update(any())).thenReturn(Mono.just(activity))
 
         // Act
-        service.disableActivityById(currentUser(), eventId, uuid).block()
+        service.disableActivityById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = true)
+        verify(repository).findById(projectId, uuid, visibilitySearched = true)
         verify(repository).update(activity.apply { visible = false })
     }
 
     @Test
     fun `Should enableActivityById call existing activity and call repository update`() {
         // Arrange
-        val activity = ActivityModel().apply { event = EventModel().apply { id = eventId }; visible = false }
+        val activity = ActivityModel().apply { project = ProjectModel().apply { id = projectId }; visible = false }
         val uuid = UUID.randomUUID()
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
         whenever(repository.update(any())).thenReturn(Mono.just(activity))
 
         // Act
-        service.enableActivityById(currentUser(), eventId, uuid).block()
+        service.enableActivityById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = false)
+        verify(repository).findById(projectId, uuid, visibilitySearched = false)
         verify(repository).update(activity.apply { visible = true })
     }
 
@@ -185,17 +185,17 @@ class ActivityServiceTest {
     fun `Should deleteActivityById call existing activity, check no movement, and call repository deleteById`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val activity = ActivityModel().apply { id = uuid; event = EventModel().apply { id = eventId } }
+        val activity = ActivityModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
         whenever(movementRepository.countAllByActivityId(any(), any())).thenReturn(Mono.just(0))
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
-        service.deleteActivityById(currentUser(), eventId, uuid).block()
+        service.deleteActivityById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByActivityId(eventId, uuid)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
+        verify(movementRepository).countAllByActivityId(projectId, uuid)
         verify(repository).deleteById(uuid)
     }
 
@@ -203,20 +203,20 @@ class ActivityServiceTest {
     fun `Should deleteActivityById call existing activity, throw if movements are linked`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val activity = ActivityModel().apply { id = uuid; event = EventModel().apply { id = eventId } }
+        val activity = ActivityModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
         whenever(movementRepository.countAllByActivityId(any(), any())).thenReturn(Mono.just(1))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.deleteActivityById(currentUser(), eventId, uuid).block()
+            service.deleteActivityById(currentUser(), projectId, uuid).block()
         }) as RegistryException
 
         // Assert
         assertEquals(FORBIDDEN, result.status)
         assertEquals(ACTIVITY_DELETE_HAS_MOVEMENT, result.message)
-        verify(repository).findById(eventId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByActivityId(eventId, uuid)
+        verify(repository).findById(projectId, uuid, visibilitySearched = null)
+        verify(movementRepository).countAllByActivityId(projectId, uuid)
         verify(repository, never()).deleteById(any())
     }
 }

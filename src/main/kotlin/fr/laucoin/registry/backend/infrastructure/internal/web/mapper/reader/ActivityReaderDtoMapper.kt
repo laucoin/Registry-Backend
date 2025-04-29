@@ -8,7 +8,7 @@ import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
-class ActivityReaderDtoMapper(private val eventMapper: EventReaderDtoMapper):
+class ActivityReaderDtoMapper(private val projectMapper: ProjectReaderDtoMapper):
     IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
     override fun toDto(model: ActivityModel, locale: Locale): ActivityReaderDto {
         return ActivityReaderDto(
@@ -23,7 +23,7 @@ class ActivityReaderDtoMapper(private val eventMapper: EventReaderDtoMapper):
             endAvailability = model.endAvailability,
         ).apply {
             id = model.id
-            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
+            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
             visible = model.visible
             creation = model.creation
             lastEdition = model.lastEdition

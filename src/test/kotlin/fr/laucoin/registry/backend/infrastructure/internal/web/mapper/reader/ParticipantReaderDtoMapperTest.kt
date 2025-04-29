@@ -1,10 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.IN
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import java.time.LocalDate
@@ -24,10 +24,10 @@ class ParticipantReaderDtoMapperTest {
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
     private val typeMapper: ParticipantTypeReaderDtoMapper = mock()
     private val statusMapper: UsableElementStatusReaderDtoMapper = mock()
-    private val eventMapper: EventReaderDtoMapper = mock()
+    private val projectMapper: ProjectReaderDtoMapper = mock()
     private val groupMapper: GroupWithoutMemberReaderDtoMapper = mock()
     private val mapper: ParticipantReaderDtoMapper =
-        ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, eventMapper, groupMapper)
+        ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, projectMapper, groupMapper)
 
     companion object {
         @JvmStatic
@@ -53,7 +53,7 @@ class ParticipantReaderDtoMapperTest {
                 ),
                 Arguments.of(
                     ParticipantModel().apply {
-                        event = EventModel()
+                        project = ProjectModel()
                         status = IN
                         user = UserModel()
                         birthday = LocalDate.now().minusYears(18)
@@ -71,12 +71,12 @@ class ParticipantReaderDtoMapperTest {
     fun `Should toDto convert ParticipantModel to ParticipantReaderDto`(
         participant: ParticipantModel,
         expectedMajor: Boolean,
-        expectedEventCast: Int,
+        expectedProjectCast: Int,
         expectedUserCast: Int,
     ) {
         // Arrange
         whenever(partialUserMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
-        whenever(eventMapper.toDto(any(), any())).thenReturn(EventReaderDto())
+        whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
         whenever(groupMapper.toDtoList(any(), any())).thenReturn(listOf(GroupReaderDto()))
 
         // Act
@@ -84,7 +84,7 @@ class ParticipantReaderDtoMapperTest {
 
         // Assert
         verify(partialUserMapper, times(expectedUserCast)).toDto(participant.user ?: UserModel(), Locale.getDefault())
-        verify(eventMapper, times(expectedEventCast)).toDto(participant.event ?: EventModel(), Locale.getDefault())
+        verify(projectMapper, times(expectedProjectCast)).toDto(participant.project ?: ProjectModel(), Locale.getDefault())
         verify(groupMapper, times(2)).toDtoList(participant.groups, Locale.getDefault())
 
         assertEquals(participant.id, result.id)

@@ -49,7 +49,7 @@ class MovementController(
 
     override fun findMovements(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         pageNumber: Int,
         pageSize: Int,
         visibilitySearched: Boolean?,
@@ -58,7 +58,7 @@ class MovementController(
         endDateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<MovementReaderDto>> {
         return service.findMovementsPage(
-            eventId,
+            projectId,
             PageableModel(pageNumber * pageSize, pageSize),
             MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched)
         ).map { readerMapper.toDtoPage(it, locale) }
@@ -66,26 +66,26 @@ class MovementController(
 
     override fun findMovementsContents(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         movementIds: List<UUID>
     ): Flux<Pair<UUID, List<MovementContentReaderDto>>> {
-        return service.findMovementsContent(eventId, movementIds)
+        return service.findMovementsContent(projectId, movementIds)
             .map { Pair(it.first, it.second.map { content -> readerContentMapper.toDto(content, locale) }) }
     }
 
-    override fun findMovementById(locale: Locale, eventId: UUID, id: UUID): Mono<MovementReaderDto> {
-        return service.findMovementById(eventId, id, visibilitySearched = null)
+    override fun findMovementById(locale: Locale, projectId: UUID, id: UUID): Mono<MovementReaderDto> {
+        return service.findMovementById(projectId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun searchReasonsAndActivities(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         typeSearched: MovementTypeEnum,
         contentTypeSearched: ParticipantTypeEnum,
         textSearched: String?,
     ): Flux<MovementReasonsReaderDto> {
-        return service.searchActivities(eventId, contentTypeSearched, textSearched)
+        return service.searchActivities(projectId, contentTypeSearched, textSearched)
             .map { activityReasonReaderMapper.toDto(it, locale) }
             .mergeWith(searchReasons(locale, textSearched, typeSearched, contentTypeSearched))
     }
@@ -105,85 +105,95 @@ class MovementController(
 
     override fun searchParticipantsAndGroups(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         contentTypeSearched: ParticipantTypeEnum,
         textSearched: String?
     ): Mono<MovementParticipantsAndGroupsReaderDto> {
-        return service.searchParticipantsAndGroups(eventId, contentTypeSearched, textSearched)
+        return service.searchParticipantsAndGroups(projectId, contentTypeSearched, textSearched)
             .map { Pair(it.t1, it.t2) }
             .map { movementParticipantsAndGroupsMapper.toDto(it, locale) }
     }
 
     override fun searchVehicles(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         textSearched: String?
     ): Flux<VehicleReaderDto> {
-        return service.searchVehicles(eventId, textSearched)
+        return service.searchVehicles(projectId, textSearched)
             .map { vehiclesMapper.toDto(it, locale) }
     }
 
     override fun createMovement(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         movement: ParticipantMovementWriterDto,
     ): Mono<MovementReaderDto> {
-        return service.createMovement(currentUser, writerMapper.toModel(movement, eventId))
+        return service.createMovement(currentUser, writerMapper.toModel(movement, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateMovementById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         movement: ParticipantMovementWriterDto
     ): Mono<MovementReaderDto> {
-        return service.updateMovementById(currentUser, eventId, id, writerMapper.toModel(movement, eventId))
+        return service.updateMovementById(currentUser, projectId, id, writerMapper.toModel(movement, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun createGuestsMovement(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         movement: GuestMovementWriterDto
     ): Mono<MovementReaderDto> {
         return service.createMovement(
             currentUser,
-            guestMovementWriterMapper.toModel(movement, eventId),
-            guestWriterMapper.toModels(movement.guests ?: emptyList(), eventId),
+            guestMovementWriterMapper.toModel(movement, projectId),
+            guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId),
         ).map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateGuestsMovementById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         movement: GuestMovementWriterDto
     ): Mono<MovementReaderDto> {
         return service.updateMovementById(
             currentUser,
-            eventId,
+            projectId,
             id,
-            guestMovementWriterMapper.toModel(movement, eventId),
-            guestWriterMapper.toModels(movement.guests ?: emptyList(), eventId),
+            guestMovementWriterMapper.toModel(movement, projectId),
+            guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId),
         ).map { readerMapper.toDto(it, locale) }
     }
 
-    override fun disableMovementById(currentUser: CurrentUserModel, locale: Locale, eventId: UUID, id: UUID): Mono<MovementReaderDto> {
-        return service.disableMovementById(currentUser, eventId, id)
+    override fun disableMovementById(
+        currentUser: CurrentUserModel,
+        locale: Locale,
+        projectId: UUID,
+        id: UUID
+    ): Mono<MovementReaderDto> {
+        return service.disableMovementById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun enableMovementById(currentUser: CurrentUserModel, locale: Locale, eventId: UUID, id: UUID): Mono<MovementReaderDto> {
-        return service.enableMovementById(currentUser, eventId, id)
+    override fun enableMovementById(
+        currentUser: CurrentUserModel,
+        locale: Locale,
+        projectId: UUID,
+        id: UUID
+    ): Mono<MovementReaderDto> {
+        return service.enableMovementById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun deleteMovementById(eventId: UUID, id: UUID): Mono<Void> {
-        return service.deleteMovementById(eventId, id)
+    override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Void> {
+        return service.deleteMovementById(projectId, id)
     }
 }

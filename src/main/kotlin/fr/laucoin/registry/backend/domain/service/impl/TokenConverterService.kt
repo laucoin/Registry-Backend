@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMP
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
-import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import java.util.UUID
@@ -26,7 +26,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 @Component
 class TokenConverterService(
     private val userService: IUserService,
-    private val profileRepository: IEventProfileModelRepository,
+    private val profileRepository: IProjectProfileModelRepository,
     private val roleService: IRoleService,
     @Value("\${registry.security.oauth2.claims.user-id}")
     private val userIdKey: String,
@@ -86,16 +86,16 @@ class TokenConverterService(
 
     private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap { it ->
         it.promote(roleService.getAuthoritiesByUserRole(it.role))
-        profileRepository.findEventProfilesRolesByUserId(it.id !!)
+        profileRepository.findProjectProfilesRolesByUserId(it.id !!)
             .collectList()
             .map { profiles ->
                 profiles.forEach { profile ->
-                    it.promote(roleService.getAuthoritiesByEventRole(profile.role !!, profile.eventId !!, profile.eventVisible))
-                    if (profile.eventVisible == true) {
+                    it.promote(roleService.getAuthoritiesByProjectRole(profile.role !!, profile.projectId !!, profile.projectVisible))
+                    if (profile.projectVisible == true) {
                         it.promote(
-                            roleService.getOptionAuthoritiesByEvent(
-                                profile.eventId !!,
-                                eventOptions = profile.eventOptions ?: emptyList()
+                            roleService.getOptionAuthoritiesByProject(
+                                profile.projectId !!,
+                                projectOptions = profile.projectOptions ?: emptyList()
                             )
                         )
                     }

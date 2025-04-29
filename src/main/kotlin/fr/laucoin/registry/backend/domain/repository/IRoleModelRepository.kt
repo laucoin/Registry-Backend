@@ -5,5 +5,5 @@ import reactor.core.publisher.Flux
 
 interface IRoleModelRepository {
     fun findUserRoles(): Flux<RoleModel>
-    fun findEventRoles(): Flux<RoleModel>
+    fun findProjectRoles(): Flux<RoleModel>
 }

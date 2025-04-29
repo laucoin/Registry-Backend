@@ -10,7 +10,7 @@ data class MovementReaderDto(
     var reason: MovementReasonsReaderDto? = null,
     var contentType: ParticipantTypeEnum,
     var content: List<MovementContentReaderDto> = emptyList(),
-): GenericEventReaderDto() {
+): GenericProjectReaderDto() {
     data class MovementContentReaderDto(
         var poolName: String? = null,
         var participant: ParticipantReaderDto? = null,

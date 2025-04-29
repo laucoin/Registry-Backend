@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
-import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_EVENT_R
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
@@ -35,7 +35,7 @@ class CurrentUserReaderDtoMapperTest {
             return Stream.of(
                 Arguments.of(
                     CurrentUserModel(
-                        authorities = mutableListOf(SimpleGrantedAuthority(REGISTRY_EVENT_R)),
+                        authorities = mutableListOf(SimpleGrantedAuthority(REGISTRY_PROJECT_R)),
                         preferences = PreferencesModel(),
                     ).apply {
                         id = UUID.randomUUID()
@@ -56,7 +56,7 @@ class CurrentUserReaderDtoMapperTest {
                 ),
                 Arguments.of(
                     CurrentUserModel(
-                        authorities = mutableListOf(SimpleGrantedAuthority(REGISTRY_EVENT_R)),
+                        authorities = mutableListOf(SimpleGrantedAuthority(REGISTRY_PROJECT_R)),
                     ).apply {
                         id = UUID.randomUUID()
                         oidcId = UUID.randomUUID()
@@ -85,7 +85,7 @@ class CurrentUserReaderDtoMapperTest {
         expectedPreferencesCast: Int,
     ) {
         // Arrange
-        val authority = REGISTRY_EVENT_R
+        val authority = REGISTRY_PROJECT_R
         whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("Role translated")
         whenever(preferenceMapper.toDto(any(), any())).thenReturn(PreferenceReaderDto())
 

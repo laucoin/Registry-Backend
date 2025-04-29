@@ -3,10 +3,10 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
-import fr.laucoin.registry.backend.domain.model.EventProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
@@ -18,7 +18,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 @Service
 class PreferencesService(
     private val repository: IPreferencesModelRepository,
-    private val eventProfileRepository: IEventProfileModelRepository
+    private val projectProfileRepository: IProjectProfileModelRepository
 ): IPreferencesService, GenericService() {
     override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
         return repository.findByUserId(currentUser.id !!, visibilitySearched = null)
@@ -30,30 +30,30 @@ class PreferencesService(
             }
     }
 
-    override fun updateUserPreferenceSelectedEventProfileById(
+    override fun updateUserPreferenceSelectedProjectProfileById(
         currentUser: CurrentUserModel,
         profileId: UUID
     ): Mono<PreferencesModel> {
-        return eventProfileRepository.findEventProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
+        return projectProfileRepository.findProjectProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
             .notFoundIfEmpty(profileId)
             .selectedProfile(currentUser)
     }
 
-    override fun updateUserPreferenceSelectedEventProfileByEventId(
+    override fun updateUserPreferenceSelectedProjectProfileByProjectId(
         currentUser: CurrentUserModel,
-        eventId: UUID
+        projectId: UUID
     ): Mono<PreferencesModel> {
-        val search = EventProfileSearchParamModel(
+        val search = ProjectProfileSearchParamModel(
             visibilitySearched = true,
             availabilitySearched = true,
             statusSearched = listOf(ACCEPTED)
         )
-        return eventProfileRepository.findEventProfileByEventAndUserId(eventId, currentUser.id !!, search)
-            .notFoundIfEmpty(eventId)
+        return projectProfileRepository.findProjectProfileByProjectAndUserId(projectId, currentUser.id !!, search)
+            .notFoundIfEmpty(projectId)
             .selectedProfile(currentUser)
     }
 
-    private fun Mono<EventProfileModel>.selectedProfile(currentUser: CurrentUserModel): Mono<PreferencesModel> = flatMap { profile ->
+    private fun Mono<ProjectProfileModel>.selectedProfile(currentUser: CurrentUserModel): Mono<PreferencesModel> = flatMap { profile ->
         findByUser(currentUser).flatMap {
             if (it.selectedProfile?.id == profile.id) Mono.just(it)
             else {

@@ -17,7 +17,7 @@ data class ParticipantModel(
     var endAvailability: CustomDateTimeModel? = null,
     var user: UserModel? = null,
     var purged: Boolean? = null,
-): GenericEventModel() {
+): GenericProjectModel() {
     fun isNotUsable() = isNotVisible() || purged == true
 
     fun getNewGroups(participant: ParticipantModel): List<GroupModel> {

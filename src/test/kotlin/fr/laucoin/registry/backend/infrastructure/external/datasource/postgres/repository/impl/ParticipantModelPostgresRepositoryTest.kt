@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -11,7 +11,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ParticipantEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IParticipantEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.TestContext
@@ -75,7 +75,7 @@ class ParticipantModelPostgresRepositoryTest(
         val params = ParticipantSearchParamModel()
 
         // Act
-        val result = repository.findPage(eventId, pageable, params).block()
+        val result = repository.findPage(projectId, pageable, params).block()
 
         // Assert
         assertNotNull(result)
@@ -84,7 +84,7 @@ class ParticipantModelPostgresRepositoryTest(
         assertEquals(50, result.totalElements)
         assertEquals(5, result.totalPages)
         verify(postgresRepository).findAll(
-            eventId,
+            projectId,
             textSearched = null,
             typeSearched = null,
             visibilitySearched = null,
@@ -95,7 +95,7 @@ class ParticipantModelPostgresRepositoryTest(
             pageable.offset,
         )
         verify(postgresRepository).countAll(
-            eventId,
+            projectId,
             textSearched = null,
             typeSearched = null,
             visibilitySearched = null,
@@ -113,7 +113,7 @@ class ParticipantModelPostgresRepositoryTest(
         val params = ParticipantSearchParamModel()
 
         // Act
-        val result = repository.findPageByGroupId(eventId, groupId, pageable, params).block()
+        val result = repository.findPageByGroupId(projectId, groupId, pageable, params).block()
 
         // Assert
         assertNotNull(result)
@@ -121,7 +121,7 @@ class ParticipantModelPostgresRepositoryTest(
         assertEquals(10, result.pageSize)
         assertEquals(1, result.totalPages)
         verify(postgresRepository).findAllByGroupId(
-            eventId,
+            projectId,
             groupId,
             textSearched = null,
             typeSearched = null,
@@ -133,7 +133,7 @@ class ParticipantModelPostgresRepositoryTest(
             pageable.offset,
         )
         verify(postgresRepository).countAllByGroupId(
-            eventId,
+            projectId,
             groupId,
             textSearched = null,
             typeSearched = null,
@@ -152,12 +152,12 @@ class ParticipantModelPostgresRepositoryTest(
         expectedDatabaseCall: Int,
     ) {
         // Act
-        val result = repository.findAllByIds(eventId, ids, visibilitySearched = null).collectList().block()
+        val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
 
         // Assert
         assertNotNull(result)
         verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
-            eventId,
+            projectId,
             ids,
             visibilitySearched = null,
             dateTimeSearched = null,
@@ -168,10 +168,10 @@ class ParticipantModelPostgresRepositoryTest(
     @Test
     fun `Should findByUserId call repository findByUserId`() {
         // Act
-        repository.findByUserId(eventId, currentUser().id !!).collectList().block()
+        repository.findByUserId(projectId, currentUser().id !!).collectList().block()
 
         // Assert
-        verify(postgresRepository).findByUserId(eventId, currentUser().id !!, dateTimeSearched = null)
+        verify(postgresRepository).findByUserId(projectId, currentUser().id !!, dateTimeSearched = null)
         verify(mapper).toModel(any())
     }
 
@@ -182,13 +182,13 @@ class ParticipantModelPostgresRepositoryTest(
         val params = ParticipantSearchParamModel()
 
         // Act
-        val result = repository.findWithLimit(size, eventId, params).collectList().block()
+        val result = repository.findWithLimit(size, projectId, params).collectList().block()
 
         // Assert
         assertNotNull(result)
         assertEquals(10, result.size)
         verify(postgresRepository).findWithLimit(
-            eventId,
+            projectId,
             textSearched = null,
             typeSearched = null,
             visibilitySearched = null,
@@ -203,12 +203,12 @@ class ParticipantModelPostgresRepositoryTest(
     @Test
     fun `Should findById call repository findById`() {
         // Act
-        val result = repository.findById(eventId, participantId, visibilitySearched = null).block()
+        val result = repository.findById(projectId, participantId, visibilitySearched = null).block()
 
         // Assert
         assertNotNull(result)
         verify(postgresRepository).findById(
-            eventId,
+            projectId,
             participantId,
             visibilitySearched = null,
             dateTimeSearched = null,
@@ -222,12 +222,12 @@ class ParticipantModelPostgresRepositoryTest(
         val uuid = UUID.randomUUID()
 
         // Act
-        val result = repository.findById(eventId, uuid, visibilitySearched = null).block()
+        val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
 
         // Assert
         assertNull(result)
         verify(postgresRepository).findById(
-            eventId,
+            projectId,
             uuid,
             visibilitySearched = null,
             dateTimeSearched = null,
@@ -250,7 +250,7 @@ class ParticipantModelPostgresRepositoryTest(
                 lastName = "test"
                 birthday = LocalDate.EPOCH
                 type = REGISTERED
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 create(currentUser())
             }
 
@@ -276,7 +276,7 @@ class ParticipantModelPostgresRepositoryTest(
                 birthday = LocalDate.EPOCH
                 type = REGISTERED
                 groups = listOf(GroupModel().apply { id = groupId })
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 purged = false
                 create(currentUser())
             }
@@ -287,7 +287,7 @@ class ParticipantModelPostgresRepositoryTest(
             // Assert
             assertNotNull(result)
             verify(postgresRepository).save(any())
-            verify(postgresRepository).findById(eventId, uuid, visibilitySearched = null, dateTimeSearched = null)
+            verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
             verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>())
             verify(mapper).toEntity(any())
             verify(mapper, atLeastOnce()).toModel(any())
@@ -303,7 +303,7 @@ class ParticipantModelPostgresRepositoryTest(
                 lastName = "test updated"
                 birthday = LocalDate.EPOCH
                 type = REGISTERED
-                event = EventModel().apply { id = eventId }
+                project = ProjectModel().apply { id = projectId }
                 purged = false
                 create(currentUser())
             }
@@ -314,7 +314,7 @@ class ParticipantModelPostgresRepositoryTest(
             // Assert
             assertNotNull(result)
             verify(postgresRepository).save(any())
-            verify(postgresRepository).findById(eventId, uuid, visibilitySearched = null, dateTimeSearched = null)
+            verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
             verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(uuid, listOf(groupId))
             verify(mapper).toEntity(any())
             verify(mapper, atLeastOnce()).toModel(any())

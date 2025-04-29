@@ -9,26 +9,26 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-interface IParticipantModelRepository: IGenericReadEventModelRepository<ParticipantModel>,
+interface IParticipantModelRepository: IGenericReadProjectModelRepository<ParticipantModel>,
                                        IGenericWriteModelRepository<ParticipantModel> {
     fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>>
 
     fun findPageByGroupId(
-        eventId: UUID,
+        projectId: UUID,
         groupId: UUID,
         pageable: PageableModel,
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>>
 
-    fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
+    fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
 
-    fun findByUserId(eventId: UUID, userId: UUID): Flux<ParticipantModel>
+    fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel>
 
-    fun findWithLimit(limit: Int, eventId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
+    fun findWithLimit(limit: Int, projectId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
 
     fun updateAllEndAvailability(ids: List<UUID>, endAvailability: CustomDateTimeModel): Flux<ParticipantModel>
 

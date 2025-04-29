@@ -2,10 +2,10 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import java.util.UUID
@@ -29,8 +29,8 @@ import reactor.core.publisher.Mono
 
 class PreferencesServiceTest {
     private val repository: IPreferencesModelRepository = mock()
-    private val eventProfileRepository: IEventProfileModelRepository = mock()
-    private val service: IPreferencesService = PreferencesService(repository, eventProfileRepository)
+    private val projectProfileRepository: IProjectProfileModelRepository = mock()
+    private val service: IPreferencesService = PreferencesService(repository, projectProfileRepository)
 
     companion object {
         @JvmStatic
@@ -40,11 +40,11 @@ class PreferencesServiceTest {
         )
 
         @JvmStatic
-        fun `Should updateUserPreferenceSelectedEventProfileById update default profile`(): Stream<Arguments> {
+        fun `Should updateUserPreferenceSelectedProjectProfileById update default profile`(): Stream<Arguments> {
             val profileId = UUID.randomUUID()
             return Stream.of(
                 Arguments.of(profileId, PreferencesModel(), 1, 1),
-                Arguments.of(profileId, PreferencesModel(selectedProfile = EventProfileModel().apply { id = profileId }), 1, 0),
+                Arguments.of(profileId, PreferencesModel(selectedProfile = ProjectProfileModel().apply { id = profileId }), 1, 0),
             )
         }
     }
@@ -76,7 +76,7 @@ class PreferencesServiceTest {
 
     @ParameterizedTest
     @MethodSource
-    fun `Should updateUserPreferenceSelectedEventProfileById update default profile`(
+    fun `Should updateUserPreferenceSelectedProjectProfileById update default profile`(
         profileId: UUID,
         currentPreferences: PreferencesModel,
         expectedCallOnFindByUserId: Int,
@@ -85,36 +85,36 @@ class PreferencesServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         val currentUser = CurrentUserModel().apply { id = uuid }
-        val profile = EventProfileModel().apply { id = profileId }
+        val profile = ProjectProfileModel().apply { id = profileId }
 
-        whenever(eventProfileRepository.findEventProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+        whenever(projectProfileRepository.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
         whenever(repository.findByUserId(any(), anyOrNull())).thenReturn(Mono.just(currentPreferences))
         whenever(repository.save(any())).thenReturn(Mono.just(currentPreferences))
 
         // Act
-        service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId).block()
+        service.updateUserPreferenceSelectedProjectProfileById(currentUser, profileId).block()
 
         // Assert
-        verify(eventProfileRepository).findEventProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
+        verify(projectProfileRepository).findProjectProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
         verify(repository, times(expectedCallOnFindByUserId)).findByUserId(uuid, visibilitySearched = null)
         verify(repository, times(expectedCallOnSave)).save(any())
     }
 
     @Test
-    fun `Should updateUserPreferenceSelectedEventProfileById throw RegistryException`() {
+    fun `Should updateUserPreferenceSelectedProjectProfileById throw RegistryException`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val profileId = UUID.randomUUID()
         val currentUser = CurrentUserModel().apply { id = uuid }
-        whenever(eventProfileRepository.findEventProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+        whenever(projectProfileRepository.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId).block()
+            service.updateUserPreferenceSelectedProjectProfileById(currentUser, profileId).block()
         }) as RegistryException
 
         // Assert
-        verify(eventProfileRepository).findEventProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
+        verify(projectProfileRepository).findProjectProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
         verify(repository, never()).findByUserId(any(), anyOrNull())
         verify(repository, never()).save(any())
         assertEquals(NOT_FOUND, result.status)

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 class VehicleReaderDtoMapper(
     @Qualifier("messagesSource") private val translateService: MessageSource,
-    private val eventMapper: EventReaderDtoMapper,
+    private val projectMapper: ProjectReaderDtoMapper,
 ): IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
     override fun toDto(model: VehicleModel, locale: Locale): VehicleReaderDto {
         return VehicleReaderDto(
@@ -28,7 +28,7 @@ class VehicleReaderDtoMapper(
             endAvailability = model.endAvailability,
         ).apply {
             id = model.id
-            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
+            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
             visible = model.visible
             creation = model.creation
             lastEdition = model.lastEdition

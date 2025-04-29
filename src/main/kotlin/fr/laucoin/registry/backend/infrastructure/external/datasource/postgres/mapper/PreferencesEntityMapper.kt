@@ -1,13 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.EventModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferencesEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithModel
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithModel
 import java.util.Objects
 import org.springframework.stereotype.Component
 
@@ -20,9 +20,9 @@ class PreferencesEntityMapper: IEntityMapper<PreferencesModel, PreferencesEntity
         }.fillWithEntity(entity)
     }
 
-    private fun mapSelectedProfileEntity(entity: PreferencesEntity): EventProfileModel? {
+    private fun mapSelectedProfileEntity(entity: PreferencesEntity): ProjectProfileModel? {
         return if (Objects.isNull(entity.selectedProfileId)) null
-        else EventProfileModel().apply {
+        else ProjectProfileModel().apply {
             id = entity.selectedProfileId
             role = entity.selectedProfileRole
             status = entity.selectedProfileStatus
@@ -32,22 +32,22 @@ class PreferencesEntityMapper: IEntityMapper<PreferencesModel, PreferencesEntity
             endAccess =
                 if (Objects.isNull(entity.selectedProfileEndAccessDate)) null
                 else CustomDateTimeModel(entity.selectedProfileEndAccessDate !!, entity.selectedProfileEndAccessTime)
-            event = mapEventEntity(entity)
+            project = mapProjectEntity(entity)
         }
     }
 
-    private fun mapEventEntity(entity: PreferencesEntity): EventModel? {
-        return if (Objects.isNull(entity.selectedProfileEventId)) null
-        else EventModel().apply {
+    private fun mapProjectEntity(entity: PreferencesEntity): ProjectModel? {
+        return if (Objects.isNull(entity.selectedProfileProjectId)) null
+        else ProjectModel().apply {
             id = entity.selectedProfileId
-            name = entity.selectedProfileEventName
+            name = entity.selectedProfileProjectName
             begin =
-                if (Objects.isNull(entity.selectedProfileEventStartDate)) null
-                else CustomDateTimeModel(entity.selectedProfileEventStartDate !!, entity.selectedProfileEventStartTime)
+                if (Objects.isNull(entity.selectedProfileProjectStartDate)) null
+                else CustomDateTimeModel(entity.selectedProfileProjectStartDate !!, entity.selectedProfileProjectStartTime)
             end =
-                if (Objects.isNull(entity.selectedProfileEventEndDate)) null
-                else CustomDateTimeModel(entity.selectedProfileEventEndDate !!, entity.selectedProfileEventEndTime)
-            options = entity.selectedProfileEventOptions
+                if (Objects.isNull(entity.selectedProfileProjectEndDate)) null
+                else CustomDateTimeModel(entity.selectedProfileProjectEndDate !!, entity.selectedProfileProjectEndTime)
+            options = entity.selectedProfileProjectOptions
         }
     }
 

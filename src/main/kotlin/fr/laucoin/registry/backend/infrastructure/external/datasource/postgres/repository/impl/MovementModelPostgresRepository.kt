@@ -33,20 +33,20 @@ class MovementModelPostgresRepository(
     )
 
     override fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel,
     ): Mono<PageModel<MovementModel>> {
         return Mono.zip(
             repository.countAll(
-                eventId,
+                projectId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
             ),
             repository.findAll(
-                eventId,
+                projectId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
@@ -59,9 +59,9 @@ class MovementModelPostgresRepository(
         }
     }
 
-    override fun findContent(eventId: UUID, movementIds: List<UUID>): Flux<Pair<UUID, List<MovementContentModel>>> {
+    override fun findContent(projectId: UUID, movementIds: List<UUID>): Flux<Pair<UUID, List<MovementContentModel>>> {
         return if (movementIds.isEmpty()) Flux.empty()
-        else contentRepository.findAllByMovementIds(eventId, movementIds)
+        else contentRepository.findAllByMovementIds(projectId, movementIds)
             .groupBy(MovementContentEntity::movementId)
             .flatMap {
                 it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
@@ -69,14 +69,14 @@ class MovementModelPostgresRepository(
     }
 
     override fun findPageByParticipantId(
-        eventId: UUID,
+        projectId: UUID,
         participantId: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel
     ): Mono<PageModel<MovementModel>> {
         return Mono.zip(
             repository.countAllByParticipantId(
-                eventId,
+                projectId,
                 participantId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
@@ -84,7 +84,7 @@ class MovementModelPostgresRepository(
                 searchParams.endDateTimeSearched,
             ),
             repository.findAllByParticipantId(
-                eventId,
+                projectId,
                 participantId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
@@ -99,14 +99,14 @@ class MovementModelPostgresRepository(
     }
 
     override fun findPageByVehicleId(
-        eventId: UUID,
+        projectId: UUID,
         vehicleId: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel
     ): Mono<PageModel<MovementModel>> {
         return Mono.zip(
             repository.countAllByVehicleId(
-                eventId,
+                projectId,
                 vehicleId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
@@ -114,7 +114,7 @@ class MovementModelPostgresRepository(
                 searchParams.endDateTimeSearched,
             ),
             repository.findAllByVehicleId(
-                eventId,
+                projectId,
                 vehicleId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
@@ -129,14 +129,14 @@ class MovementModelPostgresRepository(
     }
 
     override fun findPageByActivityId(
-        eventId: UUID,
+        projectId: UUID,
         activityId: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel
     ): Mono<PageModel<MovementModel>> {
         return Mono.zip(
             repository.countAllByActivityId(
-                eventId,
+                projectId,
                 activityId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
@@ -144,7 +144,7 @@ class MovementModelPostgresRepository(
                 searchParams.endDateTimeSearched,
             ),
             repository.findAllByActivityId(
-                eventId,
+                projectId,
                 activityId,
                 searchParams.visibilitySearched,
                 searchParams.typeSearched,
@@ -158,9 +158,9 @@ class MovementModelPostgresRepository(
         }
     }
 
-    override fun countAllByParticipantId(eventId: UUID, participantId: UUID): Mono<Long> {
+    override fun countAllByParticipantId(projectId: UUID, participantId: UUID): Mono<Long> {
         return repository.countAllByParticipantId(
-            eventId,
+            projectId,
             participantId,
             emptySearch.visibilitySearched,
             emptySearch.typeSearched,
@@ -169,9 +169,9 @@ class MovementModelPostgresRepository(
         )
     }
 
-    override fun countAllByVehicleId(eventId: UUID, vehicleId: UUID): Mono<Long> {
+    override fun countAllByVehicleId(projectId: UUID, vehicleId: UUID): Mono<Long> {
         return repository.countAllByVehicleId(
-            eventId,
+            projectId,
             vehicleId,
             emptySearch.visibilitySearched,
             emptySearch.typeSearched,
@@ -180,9 +180,9 @@ class MovementModelPostgresRepository(
         )
     }
 
-    override fun countAllByActivityId(eventId: UUID, activityId: UUID): Mono<Long> {
+    override fun countAllByActivityId(projectId: UUID, activityId: UUID): Mono<Long> {
         return repository.countAllByActivityId(
-            eventId,
+            projectId,
             activityId,
             emptySearch.visibilitySearched,
             emptySearch.typeSearched,
@@ -191,10 +191,10 @@ class MovementModelPostgresRepository(
         )
     }
 
-    override fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {
+    override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {
         return Mono.zip(
-            repository.findById(eventId, id, visibilitySearched).map(mapper::toModel),
-            findContent(eventId, listOf(id)).collectList()
+            repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
+            findContent(projectId, listOf(id)).collectList()
                 .handle { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
         ).map {
             it.t1.content = it.t2
@@ -210,7 +210,7 @@ class MovementModelPostgresRepository(
 
     override fun update(element: MovementModel): Mono<MovementModel> {
         return save(element)
-            .flatMap { findById(element.event !!.id !!, element.id !!, visibilitySearched = null) }
+            .flatMap { findById(element.project !!.id !!, element.id !!, visibilitySearched = null) }
             .removeDeletedContent(element)
             .saveNewContent(element)
             .`as`(transactionalOperator::transactional)

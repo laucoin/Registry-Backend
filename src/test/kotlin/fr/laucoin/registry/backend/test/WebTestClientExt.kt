@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.test
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ErrorDto
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import java.net.URI
 import java.util.Objects
 import java.util.UUID
@@ -39,7 +39,7 @@ object WebTestClientExt {
         oidcId = UUID.fromString("07805018-b5db-435f-99db-ff8c3d79016e")
     }
 
-    fun buildAuthority(authority: String): String = "${eventId}_$authority"
+    fun buildAuthority(authority: String): String = "${projectId}_$authority"
 
     fun WebTestClient.authenticate(vararg authorities: String): WebTestClient {
         val currentUser = currentUser(*authorities)

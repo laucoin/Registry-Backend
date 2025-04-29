@@ -8,8 +8,8 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndModel
 import java.time.ZonedDateTime
 import java.util.Objects
 import org.springframework.stereotype.Component
@@ -35,7 +35,7 @@ class MovementEntityMapper(
                 endAvailabilityDate = entity.activityEndAvailabilityDate
                 endAvailabilityTime = entity.activityEndAvailabilityTime
             }) else null
-        }.fillWithEventAndEntity(entity)
+        }.fillWithProjectAndEntity(entity)
     }
 
     private fun determineContentType(entity: MovementEntity): ParticipantTypeEnum {
@@ -48,6 +48,6 @@ class MovementEntityMapper(
             type = model.type
             reason = model.reason
             activityId = model.activity?.id
-        }.fillWithEventAndModel(model)
+        }.fillWithProjectAndModel(model)
     }
 }

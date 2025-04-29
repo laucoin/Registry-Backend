@@ -7,7 +7,7 @@ data class GroupModel(
     var startAvailability: CustomDateTimeModel? = null,
     var endAvailability: CustomDateTimeModel? = null,
     var members: List<ParticipantModel> = emptyList(),
-): GenericEventModel() {
+): GenericProjectModel() {
     fun getNewMembers(group: GroupModel): List<ParticipantModel> {
         val currentParticipants = members.mapNotNull { it.id }
         return group.members

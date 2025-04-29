@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.EventProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectProfileReaderDto
 import java.util.Locale
 import java.util.stream.Stream
 import org.junit.jupiter.params.ParameterizedTest
@@ -15,7 +15,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class PreferenceReaderDtoMapperTest {
-    private val profileMapper: EventProfileReaderDtoMapper = mock()
+    private val profileMapper: ProjectProfileReaderDtoMapper = mock()
     private val mapper: PreferenceReaderDtoMapper = PreferenceReaderDtoMapper(profileMapper)
 
     companion object {
@@ -28,7 +28,7 @@ class PreferenceReaderDtoMapperTest {
                 ),
                 Arguments.of(
                     PreferencesModel().apply {
-                        selectedProfile = EventProfileModel()
+                        selectedProfile = ProjectProfileModel()
                     },
                     1,
                 ),
@@ -43,14 +43,14 @@ class PreferenceReaderDtoMapperTest {
         expectedProfileCast: Int,
     ) {
         // Arrange
-        whenever(profileMapper.toDto(any(), any())).thenReturn(EventProfileReaderDto())
+        whenever(profileMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
 
         // Act
         mapper.toDto(preferences, Locale.getDefault())
 
         // Assert
         verify(profileMapper, times(expectedProfileCast)).toDto(
-            preferences.selectedProfile ?: EventProfileModel(),
+            preferences.selectedProfile ?: ProjectProfileModel(),
             Locale.getDefault(),
         )
     }

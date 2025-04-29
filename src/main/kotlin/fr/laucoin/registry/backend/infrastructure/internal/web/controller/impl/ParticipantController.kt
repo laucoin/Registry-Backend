@@ -38,7 +38,7 @@ class ParticipantController(
 ): IParticipantController {
     override fun findParticipants(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         pageNumber: Int,
         pageSize: Int,
         textSearched: String?,
@@ -48,30 +48,30 @@ class ParticipantController(
         dateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<ParticipantReaderDto>> {
         return service.findParticipantsPage(
-            eventId,
+            projectId,
             PageableModel(pageNumber * pageSize, pageSize),
             ParticipantSearchParamModel(textSearched, typeSearched, visibilitySearched, statusSearched, dateTimeSearched),
         ).map { readerMapper.toDtoPage(it, locale) }
     }
 
-    override fun findParticipantById(locale: Locale, eventId: UUID, id: UUID): Mono<ParticipantReaderDto> {
-        return service.findParticipantById(eventId, id, visibilitySearched = null)
+    override fun findParticipantById(locale: Locale, projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
+        return service.findParticipantById(projectId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun searchUsers(locale: Locale, eventId: UUID, textSearched: String?): Flux<PartialUserReaderDto> {
-        return service.searchUsers(eventId, textSearched)
+    override fun searchUsers(locale: Locale, projectId: UUID, textSearched: String?): Flux<PartialUserReaderDto> {
+        return service.searchUsers(projectId, textSearched)
             .map { partialUserReaderMapper.toDto(it, locale) }
     }
 
-    override fun searchGroups(locale: Locale, eventId: UUID, textSearched: String?): Flux<GroupWithoutMemberReaderDto> {
-        return service.searchGroups(eventId, textSearched)
+    override fun searchGroups(locale: Locale, projectId: UUID, textSearched: String?): Flux<GroupWithoutMemberReaderDto> {
+        return service.searchGroups(projectId, textSearched)
             .map { groupReaderMapper.toDto(it, locale) }
     }
 
     override fun findParticipantMovements(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageNumber: Int,
         pageSize: Int,
@@ -81,7 +81,7 @@ class ParticipantController(
         endDateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<MovementReaderDto>> {
         return service.findParticipantMovementsPage(
-            eventId,
+            projectId,
             id,
             PageableModel(pageNumber * pageSize, pageSize),
             MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
@@ -91,45 +91,45 @@ class ParticipantController(
     override fun createParticipant(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         participant: ParticipantWriterDto
     ): Mono<ParticipantReaderDto> {
-        return service.createParticipant(currentUser, writerMapper.toModel(participant, eventId))
+        return service.createParticipant(currentUser, writerMapper.toModel(participant, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateParticipantById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         participant: ParticipantWriterDto,
     ): Mono<ParticipantReaderDto> {
-        return service.updateParticipantById(currentUser, eventId, id, writerMapper.toModel(participant, eventId))
+        return service.updateParticipantById(currentUser, projectId, id, writerMapper.toModel(participant, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun disableParticipantById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
     ): Mono<ParticipantReaderDto> {
-        return service.disableParticipantById(currentUser, eventId, id)
+        return service.disableParticipantById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun enableParticipantById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
     ): Mono<ParticipantReaderDto> {
-        return service.enableParticipantById(currentUser, eventId, id)
+        return service.enableParticipantById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun deleteParticipantById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void> {
-        return service.deleteParticipantById(currentUser, eventId, id)
+    override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+        return service.deleteParticipantById(currentUser, projectId, id)
     }
 }

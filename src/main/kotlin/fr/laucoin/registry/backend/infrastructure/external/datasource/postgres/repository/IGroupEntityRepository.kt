@@ -11,12 +11,12 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.GROUP_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.SELECT_CONTENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_JOIN
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_EVENT
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -30,15 +30,15 @@ import reactor.core.publisher.Mono
 interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $GROUP_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
+        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $GROUP_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         ORDER BY t.$GROUP_NAME
         LIMIT :limit OFFSET :offset
         """
     )
     fun findAll(
-        eventId: UUID,
+        projectId: UUID,
         textSearched: String?,
         visibilitySearched: Boolean?,
         presenceSearched: Boolean?,
@@ -51,11 +51,11 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
         """
         SELECT COUNT(t.$ID)
         FROM $GROUP_TABLE t
-        WHERE $EVENT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         """
     )
     fun countAll(
-        eventId: UUID,
+        projectId: UUID,
         textSearched: String?,
         visibilitySearched: Boolean?,
         presenceSearched: Boolean?,
@@ -64,24 +64,24 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $GROUP_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
+        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $GROUP_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         """
     )
-    fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupEntity>
+    fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupEntity>
 
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $GROUP_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
+        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $GROUP_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         ORDER BY t.$GROUP_NAME
         LIMIT :limit
         """
     )
     fun findWithLimit(
-        eventId: UUID,
+        projectId: UUID,
         textSearched: String?,
         visibilitySearched: Boolean?,
         presenceSearched: Boolean?,
@@ -91,11 +91,11 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 
     @Query(
         """
-        SELECT t.*, $SELECT_CONTENT, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $GROUP_TABLE t $CONTENT_JOIN $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
+        SELECT t.*, $SELECT_CONTENT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $GROUP_TABLE t $CONTENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         GROUP BY $GROUP_BY_GROUP
         """
     )
-    fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupEntity>
+    fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupEntity>
 }

@@ -3,13 +3,13 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_APPLICATION_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -22,7 +22,7 @@ import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IRoleService
-import fr.laucoin.registry.backend.domain.service.IUserEventProfileService
+import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import java.time.ZonedDateTime
 import java.util.Objects
@@ -39,7 +39,7 @@ import reactor.core.publisher.Mono
 class UserService(
     private val repository: IUserModelRepository,
     private val preferencesService: IPreferencesService,
-    private val userEventProfileService: IUserEventProfileService,
+    private val userProjectProfileService: IUserProjectProfileService,
     private val transactionalOperator: TransactionalOperator,
     private val roleService: IRoleService,
 ): ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
@@ -144,7 +144,7 @@ class UserService(
         return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = true)
             .validateNotCurrentUser(currentUser, USER_BLOCK_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR)
-            .validateNotLastEventRoleLevel0(USER_BLOCK_LAST_EVENT_ADMINISTRATOR)
+            .validateNotLastProjectRoleLevel0(USER_BLOCK_LAST_PROJECT_ADMINISTRATOR)
             .updateVisibility(visibility = false)
             .flatMap { updateUser(currentUser, it) }
     }
@@ -161,7 +161,7 @@ class UserService(
         return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
             .validateNotCurrentUser(currentUser, USER_IMPERSONATE_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR)
-            .validateNotLastEventRoleLevel0(USER_IMPERSONATE_LAST_EVENT_ADMINISTRATOR)
+            .validateNotLastProjectRoleLevel0(USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR)
             .flatMap {
                 it.impersonate()
                 updateUser(currentUser, it)
@@ -173,7 +173,7 @@ class UserService(
         return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
             .validateNotCurrentUser(currentUser, USER_DELETE_CURRENT_USER)
             .validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
-            .validateNotLastEventRoleLevel0(USER_DELETE_LAST_EVENT_ADMINISTRATOR)
+            .validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
             .flatMap { repository.deleteById(it.id !!) }
     }
 
@@ -201,8 +201,8 @@ class UserService(
             }
     }
 
-    private fun Mono<UserModel>.validateNotLastEventRoleLevel0(error: String) = flatMap {
-        userEventProfileService.validateNotLastEventRoleLevel0(it.id !!, eventId = null, it, error)
+    private fun Mono<UserModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
+        userProjectProfileService.validateNotLastProjectRoleLevel0(it.id !!, projectId = null, it, error)
     }
 
     private fun Mono<UserModel>.validateRole(

@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithModel
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithModel
 import org.springframework.stereotype.Component
 
 @Component

@@ -4,11 +4,11 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_METADATA_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_U
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -47,7 +47,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Participant's groups management", description = "API for Group-related operations")
-@RequestMapping("/api/events/{eventId}/groups")
+@RequestMapping("/api/projects/{projectId}/groups")
 interface IGroupController {
     @Operation(
         summary = "Find Groups",
@@ -60,11 +60,11 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
     @GetMapping
     fun findGroups(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
             200,
@@ -88,11 +88,11 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
     @GetMapping("/members")
     fun findGroupMembers(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(required = true) @Valid @NotEmpty groupIds: List<UUID>,
     ): Flux<Pair<UUID, List<ParticipantReaderDto>>>
 
@@ -107,11 +107,11 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
     @GetMapping("/{id}/members")
     fun findGroupMembersByGroupId(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -137,11 +137,11 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
     @GetMapping("/{id}")
     fun findGroupById(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<GroupReaderDto>
 
@@ -156,11 +156,11 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_METADATA_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_METADATA_R')")
     @GetMapping("/search/participants")
     fun searchParticipants(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam textSearched: String?
     ): Flux<ParticipantReaderDto>
 
@@ -175,12 +175,12 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_C')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_C')")
     @PostMapping
     fun createGroup(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestBody @Valid group: GroupWriterDto,
     ): Mono<GroupReaderDto>
 
@@ -195,12 +195,12 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
     @PatchMapping("/{id}")
     fun updateGroupById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid group: GroupWriterDto,
     ): Mono<GroupReaderDto>
@@ -216,12 +216,12 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
     @PatchMapping("/{id}/members")
     fun addMembersToGroupById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid @NotEmpty(message = GROUP_MEMBERS_EMPTY) memberIds: List<UUID>,
     ): Mono<ResponseEntity<AddedGroupMembersReaderDto>>
@@ -237,19 +237,19 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
     @DeleteMapping("/{id}/members/{memberId}")
     fun removeMemberFromGroupById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @PathVariable memberId: UUID,
     ): Mono<GroupReaderDto>
 
     @Operation(
         summary = "Disable Group",
-        description = "Disable Group, it will not visible anymore in the Event",
+        description = "Disable Group, it will not visible anymore in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -258,18 +258,18 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
     @PatchMapping("/{id}/disable")
     fun disableGroupById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<GroupReaderDto>
 
     @Operation(
         summary = "Enable Group",
-        description = "Enable Group, obviously it will be visible again in the Event",
+        description = "Enable Group, obviously it will be visible again in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -278,12 +278,12 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
     @PatchMapping("/{id}/enable")
     fun enableGroupById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<GroupReaderDto>
 
@@ -298,7 +298,7 @@ interface IGroupController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_GROUP_D')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_D')")
     @DeleteMapping("/{id}")
-    fun deleteGroupById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<Void>
+    fun deleteGroupById(@PathVariable projectId: UUID, @PathVariable id: UUID): Mono<Void>
 }
