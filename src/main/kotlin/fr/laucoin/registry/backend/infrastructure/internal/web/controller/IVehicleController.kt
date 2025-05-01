@@ -3,12 +3,12 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_VEHICLE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_HISTORY_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_VEHICLE_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_HISTORY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
 @Tag(name = "Vehicles management", description = "API for Vehicles-related operations")
-@RequestMapping("/api/events/{eventId}/vehicles")
+@RequestMapping("/api/projects/{projectId}/vehicles")
 interface IVehicleController {
     @Operation(
         summary = "Find Vehicles",
@@ -56,11 +56,11 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_R')")
     @GetMapping
     fun findVehicles(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
             200,
@@ -84,11 +84,11 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_R')")
     @GetMapping("/{id}")
     fun findVehicleById(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<VehicleReaderDto>
 
@@ -103,11 +103,11 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_HISTORY_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_HISTORY_R')")
     @GetMapping("/{id}/movements")
     fun findVehicleMovements(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -124,7 +124,7 @@ interface IVehicleController {
 
     @Operation(
         summary = "Create Vehicle",
-        description = "Create Vehicle linked to the Event",
+        description = "Create Vehicle linked to the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -133,12 +133,12 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_C')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_C')")
     @PostMapping
     fun createVehicle(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestBody @Valid vehicle: VehicleWriterDto,
     ): Mono<VehicleReaderDto>
 
@@ -153,19 +153,19 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
     @PatchMapping("/{id}")
     fun updateVehicleById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid vehicle: VehicleWriterDto,
     ): Mono<VehicleReaderDto>
 
     @Operation(
         summary = "Disable Vehicle",
-        description = "Disable Vehicle, it will not visible anymore in the Event",
+        description = "Disable Vehicle, it will not visible anymore in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -174,18 +174,18 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
     @PatchMapping("/{id}/disable")
     fun disableVehicleById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<VehicleReaderDto>
 
     @Operation(
         summary = "Enable Vehicle",
-        description = "Enable Vehicle, obviously it will be visible again in the Event",
+        description = "Enable Vehicle, obviously it will be visible again in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -194,12 +194,12 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
     @PatchMapping("/{id}/enable")
     fun enableVehicleById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<VehicleReaderDto>
 
@@ -214,11 +214,11 @@ interface IVehicleController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_OPTION_VEHICLE') && hasPermission(#eventId, '$REGISTRY_EVENT_VEHICLE_D')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_D')")
     @DeleteMapping("/{id}")
     fun deleteVehicleById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<Void>
 }

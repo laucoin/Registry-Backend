@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.EventModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.NumericRangeModel
 import java.time.LocalDateTime
@@ -19,8 +19,8 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 
 class ActivityReaderDtoMapperTest {
-    private val eventMapper: EventReaderDtoMapper = mock()
-    private val mapper: ActivityReaderDtoMapper = ActivityReaderDtoMapper(eventMapper)
+    private val projectMapper: ProjectReaderDtoMapper = mock()
+    private val mapper: ActivityReaderDtoMapper = ActivityReaderDtoMapper(projectMapper)
 
     companion object {
         @JvmStatic
@@ -29,7 +29,7 @@ class ActivityReaderDtoMapperTest {
                 Arguments.of(
                     ActivityModel().apply {
                         id = UUID.randomUUID()
-                        event = EventModel()
+                        project = ProjectModel()
                         name = "Activity 1"
                         description = "This is an activity very interesting"
                         duration = Duration.ZERO
@@ -64,13 +64,13 @@ class ActivityReaderDtoMapperTest {
     @MethodSource
     fun `Should toDto convert ActivityModel to ActivityReaderDto`(
         activity: ActivityModel,
-        expectedEventCast: Int,
+        expectedProjectCast: Int,
     ) {
         // Act
         val result = mapper.toDto(activity, Locale.getDefault())
 
         // Assert
-        verify(eventMapper, times(expectedEventCast)).toDto(activity.event ?: EventModel(), Locale.getDefault())
+        verify(projectMapper, times(expectedProjectCast)).toDto(activity.project ?: ProjectModel(), Locale.getDefault())
 
         assertEquals(activity.id, result.id)
         assertEquals(activity.name, result.name)

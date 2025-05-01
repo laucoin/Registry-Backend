@@ -3,11 +3,11 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_METADATA_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_MOVEMENT_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -47,7 +47,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Movements management", description = "API for Movements-related operations")
-@RequestMapping("/api/events/{eventId}/movements")
+@RequestMapping("/api/projects/{projectId}/movements")
 interface IMovementController {
     @Operation(
         summary = "Find Movements",
@@ -60,11 +60,11 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
     @GetMapping
     fun findMovements(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
             200,
@@ -89,11 +89,11 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
     @GetMapping("/contents")
     fun findMovementsContents(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(required = true) movementIds: List<UUID>,
     ): Flux<Pair<UUID, List<MovementContentReaderDto>>>
 
@@ -108,11 +108,11 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
     @GetMapping("/{id}")
     fun findMovementById(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<MovementReaderDto>
 
@@ -127,11 +127,11 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
     @GetMapping("/search/reasons")
     fun searchReasonsAndActivities(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(required = true) typeSearched: MovementTypeEnum,
         @RequestParam(required = true) contentTypeSearched: ParticipantTypeEnum,
         @RequestParam textSearched: String?,
@@ -148,11 +148,11 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
     @GetMapping("/search/participants-and-groups")
     fun searchParticipantsAndGroups(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(required = true) contentTypeSearched: ParticipantTypeEnum,
         @RequestParam textSearched: String?,
     ): Mono<MovementParticipantsAndGroupsReaderDto>
@@ -168,11 +168,11 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_METADATA_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
     @GetMapping("/search/vehicles")
     fun searchVehicles(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam textSearched: String?
     ): Flux<VehicleReaderDto>
 
@@ -187,12 +187,12 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_C')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
     @PostMapping
     fun createMovement(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestBody @Valid movement: ParticipantMovementWriterDto,
     ): Mono<MovementReaderDto>
 
@@ -207,12 +207,12 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
     @PatchMapping("/{id}")
     fun updateMovementById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid movement: ParticipantMovementWriterDto,
     ): Mono<MovementReaderDto>
@@ -228,12 +228,12 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_C')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
     @PostMapping("/guests")
     fun createGuestsMovement(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestBody @Valid movement: GuestMovementWriterDto,
     ): Mono<MovementReaderDto>
 
@@ -248,19 +248,19 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
     @PatchMapping("/guests/{id}")
     fun updateGuestsMovementById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid movement: GuestMovementWriterDto,
     ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Disable Movement",
-        description = "Disable Movement, it will not visible anymore in the Event",
+        description = "Disable Movement, it will not visible anymore in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -269,18 +269,18 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
     @PatchMapping("/{id}/disable")
     fun disableMovementById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<MovementReaderDto>
 
     @Operation(
         summary = "Enable Movement",
-        description = "Enable Movement, obviously it will be visible again in the Event",
+        description = "Enable Movement, obviously it will be visible again in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -289,12 +289,12 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
     @PatchMapping("/{id}/enable")
     fun enableMovementById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<MovementReaderDto>
 
@@ -309,7 +309,7 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_MOVEMENT_D')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_D')")
     @DeleteMapping("/{id}")
-    fun deleteMovementById(@PathVariable eventId: UUID, @PathVariable id: UUID): Mono<Void>
+    fun deleteMovementById(@PathVariable projectId: UUID, @PathVariable id: UUID): Mono<Void>
 }

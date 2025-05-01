@@ -10,4 +10,4 @@ data class VehicleReaderDto(
     var status: LabelDto? = null,
     var startAvailability: CustomDateTimeModel? = null,
     var endAvailability: CustomDateTimeModel? = null,
-): GenericEventReaderDto()
+): GenericProjectReaderDto()

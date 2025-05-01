@@ -1,13 +1,13 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_PREFIX
-import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.ACTIVITY
-import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.VEHICLE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_PREFIX
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.RoleModel
 import fr.laucoin.registry.backend.domain.repository.IRoleModelRepository
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -49,7 +49,7 @@ class RoleServiceTest {
         )
 
         @JvmStatic
-        fun `Should getLevelByEventRole return this right level`(): Stream<Arguments> = Stream.of(
+        fun `Should getLevelByProjectRole return this right level`(): Stream<Arguments> = Stream.of(
             Arguments.of("WRONG_ROLE", 0),
             Arguments.of("ROLE_0", 0),
             Arguments.of("ROLE_1_1", 1),
@@ -67,12 +67,12 @@ class RoleServiceTest {
         )
 
         @JvmStatic
-        fun `Should getAuthoritiesByEventRole return a list of associated authorities`(): Stream<Arguments> = Stream.of(
+        fun `Should getAuthoritiesByProjectRole return a list of associated authorities`(): Stream<Arguments> = Stream.of(
             Arguments.of("WRONG_ROLE", emptyList<String>()),
-            Arguments.of("ROLE_0", listOf("${eventId}_PERMISSION_0")),
-            Arguments.of("ROLE_1_1", listOf("${eventId}_PERMISSION_1")),
-            Arguments.of("ROLE_1_2", listOf("${eventId}_PERMISSION_1")),
-            Arguments.of("ROLE_2", listOf("${eventId}_PERMISSION_2")),
+            Arguments.of("ROLE_0", listOf("${projectId}_PERMISSION_0")),
+            Arguments.of("ROLE_1_1", listOf("${projectId}_PERMISSION_1")),
+            Arguments.of("ROLE_1_2", listOf("${projectId}_PERMISSION_1")),
+            Arguments.of("ROLE_2", listOf("${projectId}_PERMISSION_2")),
         )
 
         @JvmStatic
@@ -86,7 +86,7 @@ class RoleServiceTest {
     }
 
     @Test
-    fun `Should onApplicationEvent call user and event role`() {
+    fun `Should onApplicationProject call user and project role`() {
         // Arrange
         val event: ContextRefreshedEvent = mock()
         val userRole = RoleModel(
@@ -95,19 +95,19 @@ class RoleServiceTest {
             permissions = listOf("USER_PERMISSION_0"),
         )
         whenever(repository.findUserRoles()).thenReturn(Flux.just(userRole))
-        val eventRole = RoleModel(
-            role = "EVENT_ROLE_0",
+        val projectRole = RoleModel(
+            role = "PROJECT_ROLE_0",
             level = 0,
-            permissions = listOf("EVENT_PERMISSION_0"),
+            permissions = listOf("PROJECT_PERMISSION_0"),
         )
-        whenever(repository.findEventRoles()).thenReturn(Flux.just(eventRole))
+        whenever(repository.findProjectRoles()).thenReturn(Flux.just(projectRole))
 
         // Act
         service.onApplicationEvent(event)
 
         // Assert
         verify(repository).findUserRoles()
-        verify(repository).findEventRoles()
+        verify(repository).findProjectRoles()
     }
 
     @ParameterizedTest
@@ -128,27 +128,27 @@ class RoleServiceTest {
 
     @ParameterizedTest
     @MethodSource
-    fun `Should getLevelByEventRole return this right level`(
+    fun `Should getLevelByProjectRole return this right level`(
         role: String,
         expected: Int?,
     ) {
         // Arrange
-        setField(service, "eventRoles", roles)
+        setField(service, "projectRoles", roles)
 
         // Act
-        val result = service.getLevelByEventRole(role)
+        val result = service.getLevelByProjectRole(role)
 
         // Assert
         assertEquals(expected, result)
     }
 
     @Test
-    fun `Should getLevel0RoleFromEventRoles return this right role`() {
+    fun `Should getLevel0RoleFromProjectRoles return this right role`() {
         // Arrange
-        setField(service, "eventRoles", roles)
+        setField(service, "projectRoles", roles)
 
         // Act
-        val result = service.getLevel0RoleFromEventRoles()
+        val result = service.getLevel0RoleFromProjectRoles()
 
         // Assert
         assertEquals("ROLE_0", result)
@@ -193,52 +193,52 @@ class RoleServiceTest {
 
     @ParameterizedTest
     @MethodSource
-    fun `Should getAuthoritiesByEventRole return a list of associated authorities`(
+    fun `Should getAuthoritiesByProjectRole return a list of associated authorities`(
         role: String,
         expectedAuthorities: List<String>,
     ) {
         // Arrange
-        setField(service, "eventRoles", roles)
+        setField(service, "projectRoles", roles)
 
         // Act
-        val result = service.getAuthoritiesByEventRole(role, eventId, visibility = true)
+        val result = service.getAuthoritiesByProjectRole(role, projectId, visibility = true)
 
         // Assert
         assertEquals(expectedAuthorities, result)
     }
 
     @Test
-    fun `Should getOptionAuthoritiesByEvent return formatted authorities for event option`() {
+    fun `Should getOptionAuthoritiesByProject return formatted authorities for project option`() {
         // Arrange
         val options = listOf(VEHICLE, ACTIVITY)
 
         // Act
-        val result = service.getOptionAuthoritiesByEvent(eventId, options)
+        val result = service.getOptionAuthoritiesByProject(projectId, options)
 
         // Assert
         assertEquals(2, result.size)
-        assertEquals("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${VEHICLE}", result.first())
-        assertEquals("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${ACTIVITY}", result.last())
+        assertEquals("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${VEHICLE}", result.first())
+        assertEquals("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${ACTIVITY}", result.last())
     }
 
     @Test
-    fun `Should getEventIdsFromCurrentUserProfiles return formatted authorities for event option`() {
+    fun `Should getProjectIdsFromCurrentUserProfiles return formatted authorities for project option`() {
         // Arrange
         val authorities: MutableList<GrantedAuthority> = mutableListOf(
             SimpleGrantedAuthority("ROLE_0"),
             SimpleGrantedAuthority("ROLE_1"),
-            SimpleGrantedAuthority("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${VEHICLE}"),
-            SimpleGrantedAuthority("${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}${ACTIVITY}"),
+            SimpleGrantedAuthority("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${VEHICLE}"),
+            SimpleGrantedAuthority("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${ACTIVITY}"),
         )
         val currentUser: CurrentUserModel = mock()
         whenever(currentUser.authorities).thenReturn(authorities)
 
         // Act
-        val result = service.getEventIdsFromCurrentUserProfiles(currentUser)
+        val result = service.getProjectIdsFromCurrentUserProfiles(currentUser)
 
         // Assert
         assertEquals(1, result.size)
-        assertEquals(eventId, result.first())
+        assertEquals(projectId, result.first())
     }
 
     @ParameterizedTest
@@ -263,16 +263,16 @@ class RoleServiceTest {
 
     @ParameterizedTest
     @MethodSource("Assignable roles")
-    fun `Should getAssignableEventRoles return a list of assignable roles`(
-        eventProfileRole: String?,
+    fun `Should getAssignableProjectRoles return a list of assignable roles`(
+        projectProfileRole: String?,
         expectedAssignableRoles: List<String>,
     ) {
         // Arrange
-        setField(service, "eventRoles", roles)
-        val eventProfile = EventProfileModel().apply { role = eventProfileRole }
+        setField(service, "projectRoles", roles)
+        val projectProfile = ProjectProfileModel().apply { role = projectProfileRole }
 
         // Act
-        val result = service.getAssignableEventRoles(eventProfile)
+        val result = service.getAssignableProjectRoles(projectProfile)
 
         // Assert
         assertEquals(expectedAssignableRoles.size, result.size)

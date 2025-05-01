@@ -18,20 +18,20 @@ class ActivityModelPostgresRepository(
     private val mapper: ActivityEntityMapper,
 ): IActivityModelRepository {
     override fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: ActivitySearchParamModel,
     ): Mono<PageModel<ActivityModel>> {
         return Mono.zip(
             repository.countAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
                 searchParams.dateTimeSearched,
             ),
             repository.findAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
@@ -44,13 +44,13 @@ class ActivityModelPostgresRepository(
         }
     }
 
-    override fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel> {
-        return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(eventId, ids, visibilitySearched).map(mapper::toModel)
+    override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel> {
+        return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched).map(mapper::toModel)
     }
 
-    override fun findWithLimit(limit: Int, eventId: UUID, searchParams: ActivitySearchParamModel): Flux<ActivityModel> {
+    override fun findWithLimit(limit: Int, projectId: UUID, searchParams: ActivitySearchParamModel): Flux<ActivityModel> {
         return repository.findWithLimit(
-            eventId,
+            projectId,
             searchParams.textSearched,
             searchParams.visibilitySearched,
             searchParams.availabilitySearched,
@@ -59,8 +59,8 @@ class ActivityModelPostgresRepository(
         ).map(mapper::toModel)
     }
 
-    override fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
-        return repository.findById(eventId, id, visibilitySearched)
+    override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
+        return repository.findById(projectId, id, visibilitySearched)
             .map(mapper::toModel)
             .switchIfEmpty(Mono.empty())
     }

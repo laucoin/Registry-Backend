@@ -20,31 +20,31 @@ import reactor.util.function.Tuple2
 
 interface IMovementService {
     fun findMovementsPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel,
     ): Mono<PageModel<MovementModel>>
 
     fun findMovementsContent(
-        eventId: UUID,
+        projectId: UUID,
         movementIds: List<UUID>,
     ): Flux<Pair<UUID, List<MovementContentModel>>>
 
-    fun findMovementById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+    fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
     fun searchParticipantsAndGroups(
-        eventId: UUID,
+        projectId: UUID,
         typeSearched: ParticipantTypeEnum,
         textSearched: String?
     ): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>>
 
-    fun searchVehicles(eventId: UUID, textSearched: String?): Flux<VehicleModel>
+    fun searchVehicles(projectId: UUID, textSearched: String?): Flux<VehicleModel>
     fun searchReasons(
         contentTypeSearched: ParticipantTypeEnum,
         typeSearched: MovementTypeEnum,
     ): Flux<MovementReasonEnum>
 
     fun searchActivities(
-        eventId: UUID,
+        projectId: UUID,
         contentTypeSearched: ParticipantTypeEnum,
         textSearched: String?
     ): Flux<ActivityModel>
@@ -57,13 +57,13 @@ interface IMovementService {
 
     fun updateMovementById(
         currentUser: CurrentUserModel,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         movement: MovementModel,
         newGuests: List<ParticipantModel> = emptyList()
     ): Mono<MovementModel>
 
-    fun disableMovementById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<MovementModel>
-    fun enableMovementById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<MovementModel>
-    fun deleteMovementById(eventId: UUID, id: UUID): Mono<Void>
+    fun disableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel>
+    fun enableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel>
+    fun deleteMovementById(projectId: UUID, id: UUID): Mono<Void>
 }

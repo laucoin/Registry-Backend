@@ -15,18 +15,18 @@ import reactor.core.publisher.Mono
 
 interface IParticipantService {
     fun findParticipantsPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>>
 
-    fun findParticipantsByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
-    fun findParticipantById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
-    fun searchUsers(eventId: UUID, textSearched: String?): Flux<UserModel>
-    fun searchGroups(eventId: UUID, textSearched: String?): Flux<GroupModel>
+    fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
+    fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
+    fun searchUsers(projectId: UUID, textSearched: String?): Flux<UserModel>
+    fun searchGroups(projectId: UUID, textSearched: String?): Flux<GroupModel>
 
     fun findParticipantMovementsPage(
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel,
@@ -35,12 +35,12 @@ interface IParticipantService {
     fun createParticipant(currentUser: CurrentUserModel, participant: ParticipantModel): Mono<ParticipantModel>
     fun updateParticipantById(
         currentUser: CurrentUserModel,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         participant: ParticipantModel
     ): Mono<ParticipantModel>
 
-    fun disableParticipantById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<ParticipantModel>
-    fun enableParticipantById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<ParticipantModel>
-    fun deleteParticipantById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void>
+    fun disableParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantModel>
+    fun enableParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantModel>
+    fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
 }

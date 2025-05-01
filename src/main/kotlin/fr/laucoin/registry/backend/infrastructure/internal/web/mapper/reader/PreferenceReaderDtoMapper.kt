@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class PreferenceReaderDtoMapper(
-    private val profileMapper: EventProfileReaderDtoMapper,
+    private val profileMapper: ProjectProfileReaderDtoMapper,
 ): IGenericReaderDtoMapper<PreferencesModel, PreferenceReaderDto> {
     override fun toDto(model: PreferencesModel, locale: Locale): PreferenceReaderDto {
         return PreferenceReaderDto(

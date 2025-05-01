@@ -9,12 +9,12 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityQueries.SELECT_ACTIVITY_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.EVENT_JOIN
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_EVENT
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -28,15 +28,15 @@ import reactor.core.publisher.Mono
 interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID> {
     @Query(
         """
-        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $ACTIVITY_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
         LIMIT :limit OFFSET :offset
         """
     )
     fun findAll(
-        eventId: UUID,
+        projectId: UUID,
         textSearched: String?,
         visibilitySearched: Boolean?,
         availabilitySearched: Boolean?,
@@ -49,11 +49,11 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
         """
         SELECT COUNT(t.$ID)
         FROM $ACTIVITY_TABLE t
-        WHERE $EVENT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
         """
     )
     fun countAll(
-        eventId: UUID,
+        projectId: UUID,
         textSearched: String?,
         visibilitySearched: Boolean?,
         availabilitySearched: Boolean?,
@@ -62,24 +62,24 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $ACTIVITY_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
+        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         """
     )
-    fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityEntity>
+    fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityEntity>
 
     @Query(
         """
-        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $ACTIVITY_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
         LIMIT :limit
         """
     )
     fun findWithLimit(
-        eventId: UUID,
+        projectId: UUID,
         textSearched: String?,
         visibilitySearched: Boolean?,
         availabilitySearched: Boolean?,
@@ -89,10 +89,10 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 
     @Query(
         """
-        SELECT t.*, $SELECT_LINKED_EVENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $ACTIVITY_TABLE t $EVENT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $EVENT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
+        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
     )
-    fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityEntity>
+    fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityEntity>
 }

@@ -9,12 +9,12 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_START_LATER_THAN_END
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_HISTORY_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_METADATA_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
@@ -39,7 +39,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.Mov
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -92,7 +92,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     private lateinit var writerMapper: ParticipantWriterDtoMapper
 
     companion object {
-        private const val BASE_URL = "/api/events/{eventId}/participants"
+        private const val BASE_URL = "/api/projects/{projectId}/participants"
 
         @JvmStatic
         fun `Should findParticipants return 200`(): Stream<Arguments> = Stream.of(
@@ -218,12 +218,12 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -240,7 +240,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findParticipantsPage(eventId, pageable, searchParams)
+        verify(service).findParticipantsPage(projectId, pageable, searchParams)
         verify(readerMapper).toDtoPage(page, Locale.ENGLISH)
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(movementReaderMapper)
@@ -256,12 +256,12 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
     ) {
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -289,9 +289,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
             .get()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -301,7 +301,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verifyNoInteractions(movementReaderMapper)
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).findParticipantById(eventId, uuid, visibilitySearched = null)
+        verify(service).findParticipantById(projectId, uuid, visibilitySearched = null)
     }
 
     @ParameterizedTest
@@ -333,12 +333,12 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_HISTORY_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/{id}/movements",
-                    listOf(eventId, uuid),
+                    listOf(projectId, uuid),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -354,7 +354,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findParticipantMovementsPage(eventId, uuid, pageable, searchParams)
+        verify(service).findParticipantMovementsPage(projectId, uuid, pageable, searchParams)
         verify(movementReaderMapper).toDtoPage(page, Locale.ENGLISH)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(writerMapper)
@@ -374,12 +374,12 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_HISTORY_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/{id}/movements",
-                    listOf(eventId, uuid),
+                    listOf(projectId, uuid),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -409,17 +409,17 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_METADATA_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_METADATA_R))
             .get()
             .uri(
-                uriBuilder("$BASE_URL/search/users", listOf(eventId), listOf(Pair("textSearched", searched)))
+                uriBuilder("$BASE_URL/search/users", listOf(projectId), listOf(Pair("textSearched", searched)))
             )
             .exchange()
 
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchUsers(eventId, searched)
+        verify(service).searchUsers(projectId, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(groupReaderMapper)
         verify(partialUserReaderMapper).toDto(any(), any())
@@ -436,17 +436,17 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_METADATA_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_METADATA_R))
             .get()
             .uri(
-                uriBuilder("$BASE_URL/search/groups", listOf(eventId), listOf(Pair("textSearched", searched)))
+                uriBuilder("$BASE_URL/search/groups", listOf(projectId), listOf(Pair("textSearched", searched)))
             )
             .exchange()
 
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchGroups(eventId, searched)
+        verify(service).searchGroups(projectId, searched)
         verifyNoInteractions(readerMapper)
         verify(groupReaderMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
@@ -463,9 +463,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_C))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_C))
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(participant)
             .exchange()
 
@@ -474,7 +474,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
-        verify(writerMapper).toModel(participant, eventId)
+        verify(writerMapper).toModel(participant, projectId)
         verify(service).createParticipant(any(), any())
     }
 
@@ -494,9 +494,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_C))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_C))
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(participant)
             .exchange()
 
@@ -505,7 +505,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
-        verify(writerMapper).toModel(participant, eventId)
+        verify(writerMapper).toModel(participant, projectId)
         verify(service).createParticipant(any(), any())
     }
 
@@ -519,7 +519,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         val result = webClient
             .authenticate()
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(participant)
             .exchange()
 
@@ -535,7 +535,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
 
     @Test
-    fun `Should updateEventProfile return 200`() {
+    fun `Should updateProjectProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
@@ -546,9 +546,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(participant)
             .exchange()
 
@@ -557,8 +557,8 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
-        verify(writerMapper).toModel(participant, eventId)
-        verify(service).updateParticipantById(any(), eq(eventId), eq(uuid), any())
+        verify(writerMapper).toModel(participant, projectId)
+        verify(service).updateParticipantById(any(), eq(projectId), eq(uuid), any())
     }
 
     @ParameterizedTest
@@ -574,7 +574,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         val result = webClient
             .authenticate()
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(participant)
             .exchange()
 
@@ -593,14 +593,14 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.disableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.disableParticipantById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -609,7 +609,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).disableParticipantById(any(), eq(eventId), eq(uuid))
+        verify(service).disableParticipantById(any(), eq(projectId), eq(uuid))
     }
 
     @Test
@@ -617,14 +617,14 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.enableParticipantById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.enableParticipantById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -633,7 +633,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).enableParticipantById(any(), eq(eventId), eq(uuid))
+        verify(service).enableParticipantById(any(), eq(projectId), eq(uuid))
     }
 
     @Test
@@ -645,9 +645,9 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_PARTICIPANT_D))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_D))
             .delete()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -657,6 +657,6 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verifyNoInteractions(groupReaderMapper)
         verifyNoInteractions(partialUserReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).deleteParticipantById(any(), eq(eventId), eq(uuid))
+        verify(service).deleteParticipantById(any(), eq(projectId), eq(uuid))
     }
 }

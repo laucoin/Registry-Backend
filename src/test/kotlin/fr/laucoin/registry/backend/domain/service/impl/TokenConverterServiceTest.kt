@@ -3,15 +3,15 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
-import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum
-import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum.VEHICLE
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventProfileRoleModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
-import fr.laucoin.registry.backend.domain.repository.IEventProfileModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -40,7 +40,7 @@ import reactor.core.publisher.Mono
 class TokenConverterServiceTest {
     private val roleService: IRoleService = mock()
     private val userService: IUserService = mock()
-    private val profileRepository: IEventProfileModelRepository = mock()
+    private val profileRepository: IProjectProfileModelRepository = mock()
     private val service = TokenConverterService(
         userService, profileRepository, roleService, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY
     )
@@ -74,7 +74,7 @@ class TokenConverterServiceTest {
             }
             return Stream.of(
                 Arguments.of(currentUser, currentUser, null, 0, 1),
-                Arguments.of(null, currentUser, emptyList<EventOptionEnum>(), 1, 0),
+                Arguments.of(null, currentUser, emptyList<ProjectOptionEnum>(), 1, 0),
                 Arguments.of(currentUser, currentUser, listOf(VEHICLE), 0, 1),
             )
         }
@@ -152,7 +152,7 @@ class TokenConverterServiceTest {
     fun `Should convert return Authentication`(
         databaseUser: CurrentUserModel?,
         currentUser: CurrentUserModel,
-        eventOptions: List<EventOptionEnum>?,
+        projectOptions: List<ProjectOptionEnum>?,
         expectedUserCreation: Int,
         expectedUserUpdate: Int,
     ) {
@@ -182,16 +182,16 @@ class TokenConverterServiceTest {
         whenever(userService.updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull()))
             .thenReturn(Mono.just(currentUser.apply { id = userId; oidcId = userOidcId; role = userRole }))
 
-        val eventRole = "EVENT_ROLE"
-        val role = EventProfileRoleModel(
-            eventId,
-            eventOptions = eventOptions,
-            role = eventRole
+        val projectRole = "PROJECT_ROLE"
+        val role = ProjectProfileRoleModel(
+            projectId,
+            projectOptions = projectOptions,
+            role = projectRole
         )
 
-        whenever(profileRepository.findEventProfilesRolesByUserId(any())).thenReturn(Flux.just(role))
+        whenever(profileRepository.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.just(role))
         whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
-        whenever(roleService.getAuthoritiesByEventRole(any(), any(), anyOrNull())).thenReturn(emptyList())
+        whenever(roleService.getAuthoritiesByProjectRole(any(), any(), anyOrNull())).thenReturn(emptyList())
 
         // Act
         service.convert(jwt).block()
@@ -210,8 +210,8 @@ class TokenConverterServiceTest {
             eq(currentUser.firstName),
             eq(currentUser.lastName),
         )
-        verify(profileRepository).findEventProfilesRolesByUserId(userId)
+        verify(profileRepository).findProjectProfilesRolesByUserId(userId)
         verify(roleService).getAuthoritiesByUserRole(userRole)
-        verify(roleService).getAuthoritiesByEventRole(eq(eventRole), eq(eventId), anyOrNull())
+        verify(roleService).getAuthoritiesByProjectRole(eq(projectRole), eq(projectId), anyOrNull())
     }
 }

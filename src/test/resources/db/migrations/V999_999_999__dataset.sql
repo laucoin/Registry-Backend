@@ -18,10 +18,10 @@ VALUES ('fd705f30-3cbd-478d-ab37-107724321dca', 'fd705f30-3cbd-478d-ab37-1077243
        ('e22a08da-b8b8-4b78-86c8-8557ddfbb945', 'e22a08da-b8b8-4b78-86c8-8557ddfbb945',
         'e22a08da-b8b8-4b78-86c8-8557ddfbb945');
 
--- Insert data into tb_event
-INSERT INTO tb_event (id, name, begin_date, begin_time, end_date, end_time, created_by, last_modified_by)
+-- Insert data into tb_project
+INSERT INTO tb_project (id, name, begin_date, begin_time, end_date, end_time, created_by, last_modified_by)
 VALUES ('b7432b97-cfc6-4109-aaaa-38d348523f1e',
-        'Event',
+        'Project',
         NOW() - (RANDOM() * INTERVAL '30 days'),
         NOW() - (RANDOM() * INTERVAL '30 minutes'),
         NOW() + (RANDOM() * INTERVAL '30 days'),
@@ -29,25 +29,25 @@ VALUES ('b7432b97-cfc6-4109-aaaa-38d348523f1e',
         (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
         (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));
 
--- Insert data into tb_event_profile
+-- Insert data into tb_project_profile
 DO
 $$
     DECLARE
-        event_id         uuid;
-        event_begin_date DATE;
-        event_begin_time TIME WITH TIME ZONE;
-        event_end_date   DATE;
-        event_end_time   TIME WITH TIME ZONE;
-        user_id          uuid;
-        begin_seconds    DOUBLE PRECISION;
-        end_seconds      DOUBLE PRECISION;
+        project_id         uuid;
+        project_begin_date DATE;
+        project_begin_time TIME WITH TIME ZONE;
+        project_end_date   DATE;
+        project_end_time   TIME WITH TIME ZONE;
+        user_id            uuid;
+        begin_seconds      DOUBLE PRECISION;
+        end_seconds        DOUBLE PRECISION;
     BEGIN
-        FOR event_id IN SELECT id FROM tb_event
+        FOR project_id IN SELECT id FROM tb_project
             LOOP
                 SELECT begin_date, begin_time, end_date, end_time
-                INTO event_begin_date, event_begin_time, event_end_date, event_end_time
-                FROM tb_event
-                WHERE id = event_id;
+                INTO project_begin_date, project_begin_time, project_end_date, project_end_time
+                FROM tb_project
+                WHERE id = project_id;
 
                 FOR i IN 1..2
                     LOOP
@@ -59,34 +59,35 @@ $$
                         LIMIT 1;
 
                         begin_seconds := EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP AT TIME ZONE
-                                                             'UTC' - (event_begin_date + event_begin_time)));
+                                                             'UTC' - (project_begin_date + project_begin_time)));
                         end_seconds := EXTRACT(EPOCH FROM
-                                               ((event_end_date + event_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
+                                               ((project_end_date + project_end_time) - CURRENT_TIMESTAMP AT TIME ZONE
+                                                'UTC'));
 
-                        INSERT INTO tb_event_profile (id, user_id, event_id, role, status, start_access_date,
-                                                      start_access_time, end_access_date, end_access_time, created_by,
-                                                      last_modified_by)
+                        INSERT INTO tb_project_profile (id, user_id, project_id, role, status, start_access_date,
+                                                        start_access_time, end_access_date, end_access_time, created_by,
+                                                        last_modified_by)
                         VALUES (CASE
                                     WHEN user_id = '9cd10ea7-96c1-4f82-8366-d11d2e3ec300'
                                         THEN '28d92461-addb-42d5-9301-18ef6e966608'
                                     ELSE gen_random_uuid() END,
                                 user_id,
-                                event_id,
+                                project_id,
                                 CASE
-                                    WHEN i = 1 THEN 'EVENT_ADMINISTRATOR'
-                                    ELSE 'EVENT_COORDINATOR' END,
+                                    WHEN i = 1 THEN 'PROJECT_ADMINISTRATOR'
+                                    ELSE 'PROJECT_COORDINATOR' END,
                                 CASE WHEN i = 1 THEN 'ACCEPTED' ELSE 'INVITED' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_date +
-                                         (RANDOM() * (CURRENT_DATE - event_begin_date)) * INTERVAL '1 day' END,
+                                    ELSE project_begin_date +
+                                         (RANDOM() * (CURRENT_DATE - project_begin_date)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
+                                    ELSE project_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_DATE +
-                                         (RANDOM() * (event_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
+                                         (RANDOM() * (project_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_TIME + (RANDOM() * end_seconds) * INTERVAL '1 second' END,
@@ -101,32 +102,32 @@ $$;
 DO
 $$
     DECLARE
-        event_id         uuid;
-        event_begin_date DATE;
-        event_begin_time TIME WITH TIME ZONE;
-        event_end_date   DATE;
-        event_end_time   TIME WITH TIME ZONE;
-        begin_seconds    DOUBLE PRECISION;
-        end_seconds      DOUBLE PRECISION;
+        project_id         uuid;
+        project_begin_date DATE;
+        project_begin_time TIME WITH TIME ZONE;
+        project_end_date   DATE;
+        project_end_time   TIME WITH TIME ZONE;
+        begin_seconds      DOUBLE PRECISION;
+        end_seconds        DOUBLE PRECISION;
     BEGIN
-        FOR event_id IN SELECT id FROM tb_event
+        FOR project_id IN SELECT id FROM tb_project
             LOOP
                 SELECT begin_date, begin_time, end_date, end_time
-                INTO event_begin_date, event_begin_time, event_end_date, event_end_time
-                FROM tb_event
-                WHERE id = event_id;
+                INTO project_begin_date, project_begin_time, project_end_date, project_end_time
+                FROM tb_project
+                WHERE id = project_id;
 
                 begin_seconds := EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP AT TIME ZONE
-                                                     'UTC' - (event_begin_date + event_begin_time)));
+                                                     'UTC' - (project_begin_date + project_begin_time)));
                 end_seconds := EXTRACT(EPOCH FROM
-                                       ((event_end_date + event_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
+                                       ((project_end_date + project_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
 
                 FOR i IN 1..50
                     LOOP
                         INSERT INTO tb_participant (id, first_name, last_name, birthday, type, start_availability_date,
                                                     start_availability_time, end_availability_date,
                                                     end_availability_time,
-                                                    user_id, event_id, created_by, last_modified_by)
+                                                    user_id, project_id, created_by, last_modified_by)
                         VALUES (CASE WHEN i = 1 THEN '88f7194e-6633-4f84-b3e3-8546b51d07e0' ELSE gen_random_uuid() END,
                                 'First ' || i,
                                 'Last ' || i,
@@ -144,15 +145,15 @@ $$
                                 CASE WHEN i % 20 = 0 THEN 'GUEST' ELSE 'REGISTERED' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_date +
-                                         (RANDOM() * (CURRENT_DATE - event_begin_date)) * INTERVAL '1 day' END,
+                                    ELSE project_begin_date +
+                                         (RANDOM() * (CURRENT_DATE - project_begin_date)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
+                                    ELSE project_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_DATE +
-                                         (RANDOM() * (event_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
+                                         (RANDOM() * (project_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_TIME + (RANDOM() * end_seconds) * INTERVAL '1 second' END,
@@ -162,7 +163,7 @@ $$
                                     OR (i = 2 AND email = 'coordinator@sgdf.fr')
                                     OR (i = 3 AND email = 'participant@sgdf.fr')
                                  LIMIT 1),
-                                event_id,
+                                project_id,
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));
                     END LOOP;
@@ -174,48 +175,48 @@ $$;
 DO
 $$
     DECLARE
-        event_id         uuid;
-        event_begin_date DATE;
-        event_begin_time TIME WITH TIME ZONE;
-        event_end_date   DATE;
-        event_end_time   TIME WITH TIME ZONE;
-        begin_seconds    DOUBLE PRECISION;
-        end_seconds      DOUBLE PRECISION;
+        project_id         uuid;
+        project_begin_date DATE;
+        project_begin_time TIME WITH TIME ZONE;
+        project_end_date   DATE;
+        project_end_time   TIME WITH TIME ZONE;
+        begin_seconds      DOUBLE PRECISION;
+        end_seconds        DOUBLE PRECISION;
     BEGIN
-        FOR event_id IN SELECT id FROM tb_event
+        FOR project_id IN SELECT id FROM tb_project
             LOOP
                 SELECT begin_date, begin_time, end_date, end_time
-                INTO event_begin_date, event_begin_time, event_end_date, event_end_time
-                FROM tb_event
-                WHERE id = event_id;
+                INTO project_begin_date, project_begin_time, project_end_date, project_end_time
+                FROM tb_project
+                WHERE id = project_id;
 
                 begin_seconds := EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP AT TIME ZONE
-                                                     'UTC' - (event_begin_date + event_begin_time)));
+                                                     'UTC' - (project_begin_date + project_begin_time)));
                 end_seconds := EXTRACT(EPOCH FROM
-                                       ((event_end_date + event_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
+                                       ((project_end_date + project_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
 
                 FOR i IN 1..4
                     LOOP
                         INSERT INTO tb_group (id, name, start_availability_date, start_availability_time,
                                               end_availability_date,
-                                              end_availability_time, event_id, created_by, last_modified_by)
+                                              end_availability_time, project_id, created_by, last_modified_by)
                         VALUES (CASE WHEN i = 1 THEN 'acb4943c-a911-4f1d-b899-69f6cfcfef90' ELSE gen_random_uuid() END,
                                 'Group ' || i,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_date +
-                                         (RANDOM() * (CURRENT_DATE - event_begin_date)) * INTERVAL '1 day' END,
+                                    ELSE project_begin_date +
+                                         (RANDOM() * (CURRENT_DATE - project_begin_date)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
+                                    ELSE project_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_DATE +
-                                         (RANDOM() * (event_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
+                                         (RANDOM() * (project_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_TIME + (RANDOM() * end_seconds) * INTERVAL '1 second' END,
-                                event_id,
+                                project_id,
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));
                     END LOOP;
@@ -227,20 +228,20 @@ $$;
 DO
 $$
     DECLARE
-        current_event_id uuid;
-        current_group_id uuid;
-        member_id        uuid;
+        current_project_id uuid;
+        current_group_id   uuid;
+        member_id          uuid;
     BEGIN
         FOR current_group_id IN SELECT id FROM tb_group
             LOOP
-                SELECT event_id INTO current_event_id FROM tb_group WHERE id = current_group_id;
+                SELECT project_id INTO current_project_id FROM tb_group WHERE id = current_group_id;
 
                 FOR i IN 1..5
                     LOOP
                         SELECT id
                         INTO member_id
                         FROM tb_participant
-                        WHERE event_id = current_event_id
+                        WHERE project_id = current_project_id
                         ORDER BY RANDOM()
                         LIMIT 1;
 
@@ -259,50 +260,50 @@ $$;
 DO
 $$
     DECLARE
-        event_id         uuid;
-        event_begin_date DATE;
-        event_begin_time TIME WITH TIME ZONE;
-        event_end_date   DATE;
-        event_end_time   TIME WITH TIME ZONE;
-        begin_seconds    DOUBLE PRECISION;
-        end_seconds      DOUBLE PRECISION;
+        project_id         uuid;
+        project_begin_date DATE;
+        project_begin_time TIME WITH TIME ZONE;
+        project_end_date   DATE;
+        project_end_time   TIME WITH TIME ZONE;
+        begin_seconds      DOUBLE PRECISION;
+        end_seconds        DOUBLE PRECISION;
     BEGIN
-        FOR event_id IN SELECT id FROM tb_event
+        FOR project_id IN SELECT id FROM tb_project
             LOOP
                 SELECT begin_date, begin_time, end_date, end_time
-                INTO event_begin_date, event_begin_time, event_end_date, event_end_time
-                FROM tb_event
-                WHERE id = event_id;
+                INTO project_begin_date, project_begin_time, project_end_date, project_end_time
+                FROM tb_project
+                WHERE id = project_id;
 
                 begin_seconds := EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP AT TIME ZONE
-                                                     'UTC' - (event_begin_date + event_begin_time)));
+                                                     'UTC' - (project_begin_date + project_begin_time)));
                 end_seconds := EXTRACT(EPOCH FROM
-                                       ((event_end_date + event_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
+                                       ((project_end_date + project_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
 
                 FOR i IN 1..5
                     LOOP
                         INSERT INTO tb_vehicle (id, license_plate, brand, model, start_availability_date,
                                                 start_availability_time, end_availability_date, end_availability_time,
-                                                event_id, created_by, last_modified_by)
+                                                project_id, created_by, last_modified_by)
                         VALUES (CASE WHEN i = 1 THEN '7ae25102-8337-4836-93e5-dd2cd8c5d5ec' ELSE gen_random_uuid() END,
                                 'AB-' || LPAD((i * 2)::TEXT, 3, '0') || '-DC',
                                 'Brand ' || i,
                                 'Model ' || i,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_date +
-                                         (RANDOM() * (CURRENT_DATE - event_begin_date)) * INTERVAL '1 day' END,
+                                    ELSE project_begin_date +
+                                         (RANDOM() * (CURRENT_DATE - project_begin_date)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
+                                    ELSE project_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_DATE +
-                                         (RANDOM() * (event_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
+                                         (RANDOM() * (project_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_TIME + (RANDOM() * end_seconds) * INTERVAL '1 second' END,
-                                event_id,
+                                project_id,
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));
                     END LOOP;
@@ -314,32 +315,32 @@ $$;
 DO
 $$
     DECLARE
-        event_id         uuid;
-        event_begin_date DATE;
-        event_begin_time TIME WITH TIME ZONE;
-        event_end_date   DATE;
-        event_end_time   TIME WITH TIME ZONE;
-        begin_seconds    DOUBLE PRECISION;
-        end_seconds      DOUBLE PRECISION;
+        project_id         uuid;
+        project_begin_date DATE;
+        project_begin_time TIME WITH TIME ZONE;
+        project_end_date   DATE;
+        project_end_time   TIME WITH TIME ZONE;
+        begin_seconds      DOUBLE PRECISION;
+        end_seconds        DOUBLE PRECISION;
     BEGIN
-        FOR event_id IN SELECT id FROM tb_event
+        FOR project_id IN SELECT id FROM tb_project
             LOOP
                 SELECT begin_date, begin_time, end_date, end_time
-                INTO event_begin_date, event_begin_time, event_end_date, event_end_time
-                FROM tb_event
-                WHERE id = event_id;
+                INTO project_begin_date, project_begin_time, project_end_date, project_end_time
+                FROM tb_project
+                WHERE id = project_id;
 
                 begin_seconds := EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP AT TIME ZONE
-                                                     'UTC' - (event_begin_date + event_begin_time)));
+                                                     'UTC' - (project_begin_date + project_begin_time)));
                 end_seconds := EXTRACT(EPOCH FROM
-                                       ((event_end_date + event_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
+                                       ((project_end_date + project_end_time) - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'));
 
                 FOR i IN 1..5
                     LOOP
                         INSERT INTO tb_activity (id, name, description, duration, min_allowed_participants,
                                                  max_allowed_participants, start_availability_date,
                                                  start_availability_time, end_availability_date, end_availability_time,
-                                                 event_id, created_by, last_modified_by)
+                                                 project_id, created_by, last_modified_by)
                         VALUES (CASE WHEN i = 1 THEN '95806471-9c01-477a-84ea-8c37fd0cc8c5' ELSE gen_random_uuid() END,
                                 'Activity ' || i,
                                 'Description ' || i,
@@ -348,19 +349,19 @@ $$
                                 FLOOR(RANDOM() * (20 - 5 + 1) + 20),
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_date +
-                                         (RANDOM() * (CURRENT_DATE - event_begin_date)) * INTERVAL '1 day' END,
+                                    ELSE project_begin_date +
+                                         (RANDOM() * (CURRENT_DATE - project_begin_date)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
-                                    ELSE event_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
+                                    ELSE project_begin_time + (RANDOM() * begin_seconds) * INTERVAL '1 second' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_DATE +
-                                         (RANDOM() * (event_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
+                                         (RANDOM() * (project_end_date - CURRENT_DATE)) * INTERVAL '1 day' END,
                                 CASE
                                     WHEN i = 1 THEN NULL
                                     ELSE CURRENT_TIME + (RANDOM() * end_seconds) * INTERVAL '1 second' END,
-                                event_id,
+                                project_id,
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));
                     END LOOP;
@@ -372,32 +373,32 @@ $$;
 DO
 $$
     DECLARE
-        current_event_id         uuid;
-        current_event_begin_date DATE;
-        current_event_begin_time TIME WITH TIME ZONE;
-        current_event_end_date   DATE;
-        current_event_end_time   TIME WITH TIME ZONE;
-        random_interval          INTERVAL;
+        current_project_id         uuid;
+        current_project_begin_date DATE;
+        current_project_begin_time TIME WITH TIME ZONE;
+        current_project_end_date   DATE;
+        current_project_end_time   TIME WITH TIME ZONE;
+        random_interval            INTERVAL;
     BEGIN
-        FOR current_event_id IN SELECT id FROM tb_event
+        FOR current_project_id IN SELECT id FROM tb_project
             LOOP
                 SELECT begin_date, begin_time, end_date, end_time
-                INTO current_event_begin_date, current_event_begin_time, current_event_end_date, current_event_end_time
-                FROM tb_event
-                WHERE id = current_event_id;
+                INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
+                FROM tb_project
+                WHERE id = current_project_id;
 
                 FOR i IN 1..50
                     LOOP
                         random_interval :=
                                 (RANDOM() *
-                                 EXTRACT(EPOCH FROM ((current_event_begin_date + current_event_begin_time) -
-                                                     (current_event_end_date + current_event_end_time)))) *
+                                 EXTRACT(EPOCH FROM ((current_project_begin_date + current_project_begin_time) -
+                                                     (current_project_end_date + current_project_end_time)))) *
                                 INTERVAL '1 second';
 
-                        INSERT INTO tb_movement (id, date_time, type, reason, activity_id, event_id, created_by,
+                        INSERT INTO tb_movement (id, date_time, type, reason, activity_id, project_id, created_by,
                                                  last_modified_by)
                         VALUES (CASE WHEN i = 1 THEN '63f4c4e8-bd07-445b-8a6e-899ac490cf0c' ELSE gen_random_uuid() END,
-                                current_event_begin_date + random_interval,
+                                current_project_begin_date + random_interval,
                                 CASE WHEN i % 2 = 0 THEN 'OUT' ELSE 'IN' END,
                                 CASE
                                     WHEN i % 5 != 0 AND i % 15 != 0 THEN (SELECT UNNEST(
@@ -413,7 +414,7 @@ $$
                                                                          WHERE id = '95806471-9c01-477a-84ea-8c37fd0cc8c5'
                                                                          ORDER BY RANDOM()
                                                                          LIMIT 1) END,
-                                current_event_id,
+                                current_project_id,
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1),
                                 (SELECT id FROM tb_user ORDER BY RANDOM() LIMIT 1));
                     END LOOP;
@@ -425,7 +426,7 @@ $$;
 DO
 $$
     DECLARE
-        current_event_id      uuid;
+        current_project_id    uuid;
         current_movement_id   uuid;
         participant_number    INTEGER;
         new_pool_name         VARCHAR;
@@ -435,12 +436,12 @@ $$
     BEGIN
         FOR current_movement_id IN SELECT id FROM tb_movement
             LOOP
-                SELECT event_id INTO current_event_id FROM tb_movement WHERE id = current_movement_id;
+                SELECT project_id INTO current_project_id FROM tb_movement WHERE id = current_movement_id;
                 SELECT FLOOR(RANDOM() * (10 - 1 + 1) + 1) INTO participant_number;
                 SELECT name
                 INTO new_pool_name
                 FROM tb_group
-                WHERE event_id = current_event_id
+                WHERE project_id = current_project_id
                 ORDER BY RANDOM()
                 LIMIT 1;
 
@@ -449,14 +450,14 @@ $$
                         SELECT id, birthday <= (CURRENT_TIMESTAMP - INTERVAL '18 years')
                         INTO new_participant_id, new_participant_major
                         FROM tb_participant
-                        WHERE event_id = current_event_id
+                        WHERE project_id = current_project_id
                         ORDER BY RANDOM()
                         LIMIT 1;
                         new_vehicle_id = CASE
                                              WHEN i % 2 = 0 THEN CASE
                                                                      WHEN new_participant_major THEN (SELECT id
                                                                                                       FROM tb_vehicle tv
-                                                                                                      WHERE tv.event_id = current_event_id
+                                                                                                      WHERE tv.project_id = current_project_id
                                                                                                       ORDER BY RANDOM()
                                                                                                       LIMIT 1) END END;
 

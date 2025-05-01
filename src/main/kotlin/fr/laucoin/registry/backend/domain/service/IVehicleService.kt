@@ -12,23 +12,23 @@ import reactor.core.publisher.Mono
 
 interface IVehicleService {
     fun findVehiclesPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: VehicleSearchParamModel,
     ): Mono<PageModel<VehicleModel>>
 
-    fun findVehicleById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+    fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
 
     fun findVehicleMovementsPage(
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel,
     ): Mono<PageModel<MovementModel>>
 
     fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel>
-    fun updateVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID, vehicle: VehicleModel): Mono<VehicleModel>
-    fun disableVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<VehicleModel>
-    fun enableVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<VehicleModel>
-    fun deleteVehicleById(currentUser: CurrentUserModel, eventId: UUID, id: UUID): Mono<Void>
+    fun updateVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, vehicle: VehicleModel): Mono<VehicleModel>
+    fun disableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
+    fun enableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
+    fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
 }

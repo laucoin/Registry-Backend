@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.domain.annotation
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.EventProfileError.EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED
 import fr.laucoin.registry.backend.domain.validator.ProfileAcceptOrRejectValidator
 import jakarta.validation.Constraint
 import kotlin.annotation.AnnotationRetention.RUNTIME
@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
 @Retention(RUNTIME)
 @Constraint(validatedBy = [ProfileAcceptOrRejectValidator::class])
 annotation class ProfileAcceptOrReject(
-    val message: String = EVENT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED,
+    val message: String = PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED,
     val groups: Array<KClass<*>> = [],
     val payload: Array<KClass<out Any>> = []
 )

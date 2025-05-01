@@ -42,7 +42,7 @@ interface IMetadataController {
         ],
     )
     @GetMapping("/profiles/status")
-    fun getEventProfileStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+    fun getProjectProfileStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
 
     @Operation(
         summary = "Get Movement Type",

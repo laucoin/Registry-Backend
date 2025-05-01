@@ -7,11 +7,11 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_S
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_METADATA_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_GROUP_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_U
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -30,7 +30,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.Add
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.GroupWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.eventId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -80,7 +80,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
     private lateinit var writerMapper: GroupWriterDtoMapper
 
     companion object {
-        private const val BASE_URL = "/api/events/{eventId}/groups"
+        private const val BASE_URL = "/api/projects/{projectId}/groups"
 
         @JvmStatic
         fun `Should findGroups return 200`(): Stream<Arguments> = Stream.of(
@@ -187,12 +187,12 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -209,7 +209,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findGroupsPage(eventId, pageable, searchParams)
+        verify(service).findGroupsPage(projectId, pageable, searchParams)
         verify(readerMapper).toDtoPage(any(), any())
         verifyNoInteractions(participantReaderMapper)
         verifyNoInteractions(writerMapper)
@@ -224,12 +224,12 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
     ) {
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
             .get()
             .uri(
                 uriBuilder(
                     BASE_URL,
-                    listOf(eventId),
+                    listOf(projectId),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -256,15 +256,15 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
             .get()
-            .uri(uriBuilder("$BASE_URL/members", listOf(eventId), listOf(Pair("groupIds", uuid))))
+            .uri(uriBuilder("$BASE_URL/members", listOf(projectId), listOf(Pair("groupIds", uuid))))
             .exchange()
 
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).findGroupsMembers(eventId, listOf(uuid))
+        verify(service).findGroupsMembers(projectId, listOf(uuid))
         verifyNoInteractions(readerMapper)
         verify(participantReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
@@ -300,12 +300,12 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/{id}/members",
-                    listOf(eventId, uuid),
+                    listOf(projectId, uuid),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -322,7 +322,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findGroupMembersPageByGroupId(eventId, uuid, pageable, searchParams)
+        verify(service).findGroupMembersPageByGroupId(projectId, uuid, pageable, searchParams)
         verifyNoInteractions(readerMapper)
         verify(participantReaderMapper).toDtoPage(any(), any())
         verifyNoInteractions(writerMapper)
@@ -340,12 +340,12 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
             .get()
             .uri(
                 uriBuilder(
                     "$BASE_URL/{id}/members",
-                    listOf(eventId, uuid),
+                    listOf(projectId, uuid),
                     listOf(
                         Pair("pageNumber", pageNumber),
                         Pair("pageSize", pageSize),
@@ -372,15 +372,15 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
             .get()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
         result.body<GroupReaderDto>(OK)
 
-        verify(service).findGroupById(eventId, uuid, visibilitySearched = null)
+        verify(service).findGroupById(projectId, uuid, visibilitySearched = null)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
     }
@@ -395,17 +395,17 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_METADATA_R))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_METADATA_R))
             .get()
             .uri(
-                uriBuilder("${BASE_URL}/search/participants", listOf(eventId), listOf(Pair("textSearched", searched)))
+                uriBuilder("${BASE_URL}/search/participants", listOf(projectId), listOf(Pair("textSearched", searched)))
             )
             .exchange()
 
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchParticipants(eventId, searched)
+        verify(service).searchParticipants(projectId, searched)
         verifyNoInteractions(readerMapper)
         verify(participantReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
@@ -422,9 +422,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_C))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(group)
             .exchange()
 
@@ -434,7 +434,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         verify(service).createGroup(any(), any())
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(participantReaderMapper)
-        verify(writerMapper).toModel(any(), eq(eventId))
+        verify(writerMapper).toModel(any(), eq(projectId))
     }
 
     @ParameterizedTest
@@ -447,7 +447,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val result = webClient
             .authenticate()
             .post()
-            .uri(uriBuilder(BASE_URL, listOf(eventId), emptyList()))
+            .uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
             .bodyValue(group)
             .exchange()
 
@@ -472,9 +472,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(group)
             .exchange()
 
@@ -482,9 +482,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         result.body<GroupReaderDto>(OK)
 
         verify(readerMapper).toDto(any(), any())
-        verify(writerMapper).toModel(any(), eq(eventId))
+        verify(writerMapper).toModel(any(), eq(projectId))
         verifyNoInteractions(participantReaderMapper)
-        verify(service).updateGroupById(any(), eq(eventId), eq(uuid), any())
+        verify(service).updateGroupById(any(), eq(projectId), eq(uuid), any())
     }
 
     @ParameterizedTest
@@ -500,7 +500,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val result = webClient
             .authenticate()
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .bodyValue(group)
             .exchange()
 
@@ -525,9 +525,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/members", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/members", listOf(projectId, uuid), emptyList()))
             .bodyValue(memberIds)
             .exchange()
 
@@ -535,7 +535,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         result.body<AddedGroupMembersReaderDto>(OK)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).addMembersToGroupById(any(), eq(eventId), eq(uuid), eq(memberIds))
+        verify(service).addMembersToGroupById(any(), eq(projectId), eq(uuid), eq(memberIds))
     }
 
     @Test
@@ -556,9 +556,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/members", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/members", listOf(projectId, uuid), emptyList()))
             .bodyValue(memberIds)
             .exchange()
 
@@ -566,7 +566,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         result.body<AddedGroupMembersReaderDto>(MULTI_STATUS)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).addMembersToGroupById(any(), eq(eventId), eq(uuid), eq(memberIds))
+        verify(service).addMembersToGroupById(any(), eq(projectId), eq(uuid), eq(memberIds))
     }
 
     @Test
@@ -580,16 +580,16 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
             .delete()
-            .uri(uriBuilder("$BASE_URL/{id}/members/{memberId}", listOf(eventId, uuid, uuid1), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/members/{memberId}", listOf(projectId, uuid, uuid1), emptyList()))
             .exchange()
 
         // Assert
         result.body<GroupReaderDto>(OK)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service).removeMemberFromGroupById(any(), eq(eventId), eq(uuid), eq(uuid1))
+        verify(service).removeMemberFromGroupById(any(), eq(projectId), eq(uuid), eq(uuid1))
     }
 
     @Test
@@ -597,14 +597,14 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.disableGroupById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+        whenever(service.disableGroupById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -612,7 +612,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service).disableGroupById(any(), eq(eventId), eq(uuid))
+        verify(service).disableGroupById(any(), eq(projectId), eq(uuid))
     }
 
     @Test
@@ -620,14 +620,14 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val uuid = UUID.randomUUID()
 
-        whenever(service.enableGroupById(any(), eq(eventId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+        whenever(service.enableGroupById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_U))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
             .patch()
-            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -635,7 +635,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
-        verify(service).enableGroupById(any(), eq(eventId), eq(uuid))
+        verify(service).enableGroupById(any(), eq(projectId), eq(uuid))
     }
 
     @Test
@@ -647,9 +647,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Act
         val result = webClient
-            .authenticate(buildAuthority(REGISTRY_EVENT_GROUP_D))
+            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_D))
             .delete()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(eventId, uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
             .exchange()
 
         // Assert
@@ -658,6 +658,6 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(participantReaderMapper)
         verifyNoInteractions(writerMapper)
-        verify(service).deleteGroupById(eq(eventId), eq(uuid))
+        verify(service).deleteGroupById(eq(projectId), eq(uuid))
     }
 }

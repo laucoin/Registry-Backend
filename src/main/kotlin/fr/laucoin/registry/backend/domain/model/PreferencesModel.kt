@@ -4,5 +4,5 @@ import java.util.UUID
 
 data class PreferencesModel(
     var userId: UUID? = null,
-    var selectedProfile: EventProfileModel? = null
+    var selectedProfile: ProjectProfileModel? = null
 ): GenericModel()

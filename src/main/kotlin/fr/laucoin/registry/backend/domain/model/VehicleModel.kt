@@ -9,4 +9,4 @@ data class VehicleModel(
     var status: UsableElementStatusEnum? = null,
     var startAvailability: CustomDateTimeModel? = null,
     var endAvailability: CustomDateTimeModel? = null,
-): GenericEventModel()
+): GenericProjectModel()

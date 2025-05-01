@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle
 
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_EVENT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
@@ -22,12 +22,12 @@ object VehicleQueries {
             SELECT plm.$VEHICLE_LAST_MOVEMENT_DATE_TIME, plm.$VEHICLE_PREFIX$ID, t.$MOVEMENT_TYPE
             FROM $MOVEMENT_TABLE t
             LEFT JOIN (
-                SELECT MAX(t.$MOVEMENT_DATE_TIME) as $VEHICLE_LAST_MOVEMENT_DATE_TIME, t.$LINKED_EVENT_ID, $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID
+                SELECT MAX(t.$MOVEMENT_DATE_TIME) as $VEHICLE_LAST_MOVEMENT_DATE_TIME, t.$LINKED_PROJECT_ID, $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID
                 FROM $MOVEMENT_TABLE t
                 INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-                GROUP BY $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID, t.$LINKED_EVENT_ID
+                GROUP BY $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID, t.$LINKED_PROJECT_ID
             ) AS plm ON plm.$VEHICLE_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
-            WHERE t.$VISIBLE IS TRUE AND plm.$VEHICLE_PREFIX$ID IS NOT NULL AND t.$LINKED_EVENT_ID = :eventId
+            WHERE t.$VISIBLE IS TRUE AND plm.$VEHICLE_PREFIX$ID IS NOT NULL AND t.$LINKED_PROJECT_ID = :projectId
         )
     """
 

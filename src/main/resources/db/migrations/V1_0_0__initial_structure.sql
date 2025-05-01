@@ -26,28 +26,28 @@ CREATE TABLE tb_user_role_permission
     CONSTRAINT tb_user_role_permission_pkey PRIMARY KEY (id)
 );
 
--- tb_event_permission definition
-CREATE TABLE tb_event_permission
+-- tb_project_permission definition
+CREATE TABLE tb_project_permission
 (
     name VARCHAR NOT NULL,
-    CONSTRAINT tb_event_permission_pkey PRIMARY KEY (name)
+    CONSTRAINT tb_project_permission_pkey PRIMARY KEY (name)
 );
 
--- tb_event_role definition
-CREATE TABLE tb_event_role
+-- tb_project_role definition
+CREATE TABLE tb_project_role
 (
     name  VARCHAR NOT NULL,
     level INT     NOT NULL,
-    CONSTRAINT tb_event_role_pkey PRIMARY KEY (name)
+    CONSTRAINT tb_project_role_pkey PRIMARY KEY (name)
 );
 
--- tb_event_role_permission definition
-CREATE TABLE tb_event_role_permission
+-- tb_project_role_permission definition
+CREATE TABLE tb_project_role_permission
 (
     id         uuid    NOT NULL DEFAULT uuid_generate_v4(),
     role       VARCHAR NOT NULL,
     permission VARCHAR NOT NULL,
-    CONSTRAINT tb_event_role_permission_pkey PRIMARY KEY (id)
+    CONSTRAINT tb_project_role_permission_pkey PRIMARY KEY (id)
 );
 
 -- tb_user definition
@@ -85,8 +85,8 @@ CREATE TABLE tb_preferences
     CONSTRAINT tb_preferences_pkey PRIMARY KEY (id)
 );
 
--- tb_event definition
-CREATE TABLE tb_event
+-- tb_project definition
+CREATE TABLE tb_project
 (
     id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
     name               VARCHAR(150)             NOT NULL,
@@ -100,15 +100,15 @@ CREATE TABLE tb_event
     last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_modified_by   uuid,
     visible            BOOLEAN                  NOT NULL DEFAULT TRUE,
-    CONSTRAINT tb_event_pkey PRIMARY KEY (id)
+    CONSTRAINT tb_project_pkey PRIMARY KEY (id)
 );
 
--- tb_event_profile definition
-CREATE TABLE tb_event_profile
+-- tb_project_profile definition
+CREATE TABLE tb_project_profile
 (
     id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
     user_id            uuid                     NOT NULL,
-    event_id           uuid                     NOT NULL,
+    project_id         uuid                     NOT NULL,
     role               VARCHAR                  NOT NULL,
     status             VARCHAR                  NOT NULL,
     start_access_date  DATE,
@@ -120,7 +120,7 @@ CREATE TABLE tb_event_profile
     last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_modified_by   uuid,
     visible            BOOLEAN                  NOT NULL DEFAULT TRUE,
-    CONSTRAINT tb_event_profile_pkey PRIMARY KEY (id)
+    CONSTRAINT tb_project_profile_pkey PRIMARY KEY (id)
 );
 
 -- tb_participant definition
@@ -135,7 +135,7 @@ CREATE TABLE tb_participant
     end_availability_date   DATE,
     end_availability_time   TIME WITH TIME ZONE,
     user_id                 uuid,
-    event_id                uuid                     NOT NULL,
+    project_id              uuid                     NOT NULL,
     created_date            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by              uuid,
     last_modified_date      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -151,7 +151,7 @@ CREATE TABLE tb_movement
     id                 uuid                     NOT NULL DEFAULT uuid_generate_v4(),
     date_time          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     type               VARCHAR                  NOT NULL,
-    event_id           uuid                     NOT NULL,
+    project_id         uuid                     NOT NULL,
     created_date       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by         uuid,
     last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -173,9 +173,9 @@ CREATE TABLE tb_movement_content
 CREATE UNIQUE INDEX tb_user_role_level0 ON tb_user_role (level) WHERE level = 0;
 CREATE UNIQUE INDEX tb_user_role_index_role ON tb_user_role (name);
 
--- tb_event_role foreign keys and indexes
-CREATE UNIQUE INDEX tb_event_role_level0 ON tb_event_role (level) WHERE level = 0;
-CREATE UNIQUE INDEX tb_event_role_index_role ON tb_event_role (name);
+-- tb_project_role foreign keys and indexes
+CREATE UNIQUE INDEX tb_project_role_level0 ON tb_project_role (level) WHERE level = 0;
+CREATE UNIQUE INDEX tb_project_role_index_role ON tb_project_role (name);
 
 -- tb_user_role_permission foreign keys and indexes
 CREATE UNIQUE INDEX tb_user_role_permission_unique ON tb_user_role_permission (role, permission);
@@ -185,13 +185,13 @@ ALTER TABLE tb_user_role_permission
 ALTER TABLE tb_user_role_permission
     ADD CONSTRAINT tb_user_role_permission_permission_fkey FOREIGN KEY (permission) REFERENCES tb_user_permission (name) ON DELETE CASCADE;
 
--- tb_event_role_permission foreign keys and indexes
-CREATE UNIQUE INDEX tb_event_role_permission_unique ON tb_event_role_permission (role, permission);
+-- tb_project_role_permission foreign keys and indexes
+CREATE UNIQUE INDEX tb_project_role_permission_unique ON tb_project_role_permission (role, permission);
 
-ALTER TABLE tb_event_role_permission
-    ADD CONSTRAINT tb_event_role_permission_role_fkey FOREIGN KEY (role) REFERENCES tb_event_role (name) ON DELETE CASCADE;
-ALTER TABLE tb_event_role_permission
-    ADD CONSTRAINT tb_event_role_permission_permission_fkey FOREIGN KEY (permission) REFERENCES tb_event_permission (name) ON DELETE CASCADE;
+ALTER TABLE tb_project_role_permission
+    ADD CONSTRAINT tb_project_role_permission_role_fkey FOREIGN KEY (role) REFERENCES tb_project_role (name) ON DELETE CASCADE;
+ALTER TABLE tb_project_role_permission
+    ADD CONSTRAINT tb_project_role_permission_permission_fkey FOREIGN KEY (permission) REFERENCES tb_project_permission (name) ON DELETE CASCADE;
 
 -- tb_user foreign keys and indexes
 CREATE UNIQUE INDEX tb_user_index_oidc_id ON tb_user (oidc_id);
@@ -216,60 +216,60 @@ CREATE INDEX tb_preferences_index_last_modified_by ON tb_preferences (last_modif
 ALTER TABLE tb_preferences
     ADD CONSTRAINT tb_preferences_user_fkey FOREIGN KEY (user_id) REFERENCES tb_user (id) ON DELETE CASCADE;
 ALTER TABLE tb_preferences
-    ADD CONSTRAINT tb_preferences_default_profile_fkey FOREIGN KEY (selected_profile_id) REFERENCES tb_event_profile (id) ON DELETE SET NULL;
+    ADD CONSTRAINT tb_preferences_default_profile_fkey FOREIGN KEY (selected_profile_id) REFERENCES tb_project_profile (id) ON DELETE SET NULL;
 ALTER TABLE tb_preferences
     ADD CONSTRAINT tb_preferences_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 ALTER TABLE tb_preferences
     ADD CONSTRAINT tb_preferences_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 
--- tb_event foreign keys and indexes
-CREATE INDEX tb_event_index_created_by ON tb_event (created_by);
-CREATE INDEX tb_event_index_last_modified_by ON tb_event (last_modified_by);
+-- tb_project foreign keys and indexes
+CREATE INDEX tb_project_index_created_by ON tb_project (created_by);
+CREATE INDEX tb_project_index_last_modified_by ON tb_project (last_modified_by);
 
-ALTER TABLE tb_event
-    ADD CONSTRAINT tb_event_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
-ALTER TABLE tb_event
-    ADD CONSTRAINT tb_event_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
+ALTER TABLE tb_project
+    ADD CONSTRAINT tb_project_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
+ALTER TABLE tb_project
+    ADD CONSTRAINT tb_project_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 
--- tb_event_profile foreign keys and indexes
-CREATE INDEX tb_event_profile_index_user_id ON tb_event_profile (user_id);
-CREATE INDEX tb_event_profile_index_event_id ON tb_event_profile (event_id);
-CREATE INDEX tb_event_profile_index_created_by ON tb_event_profile (created_by);
-CREATE INDEX tb_event_profile_index_last_modified_by ON tb_event_profile (last_modified_by);
+-- tb_project_profile foreign keys and indexes
+CREATE INDEX tb_project_profile_index_user_id ON tb_project_profile (user_id);
+CREATE INDEX tb_project_profile_index_project_id ON tb_project_profile (project_id);
+CREATE INDEX tb_project_profile_index_created_by ON tb_project_profile (created_by);
+CREATE INDEX tb_project_profile_index_last_modified_by ON tb_project_profile (last_modified_by);
 
-ALTER TABLE tb_event_profile
-    ADD CONSTRAINT tb_event_profile_role_fkey FOREIGN KEY (role) REFERENCES tb_event_role (name) ON DELETE CASCADE;
-ALTER TABLE tb_event_profile
-    ADD CONSTRAINT tb_event_profile_user_fkey FOREIGN KEY (user_id) REFERENCES tb_user (id) ON DELETE CASCADE;
-ALTER TABLE tb_event_profile
-    ADD CONSTRAINT tb_event_profile_event_fkey FOREIGN KEY (event_id) REFERENCES tb_event (id) ON DELETE CASCADE;
-ALTER TABLE tb_event_profile
-    ADD CONSTRAINT tb_event_profile_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
-ALTER TABLE tb_event_profile
-    ADD CONSTRAINT tb_event_profile_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
+ALTER TABLE tb_project_profile
+    ADD CONSTRAINT tb_project_profile_role_fkey FOREIGN KEY (role) REFERENCES tb_project_role (name) ON DELETE CASCADE;
+ALTER TABLE tb_project_profile
+    ADD CONSTRAINT tb_project_profile_user_fkey FOREIGN KEY (user_id) REFERENCES tb_user (id) ON DELETE CASCADE;
+ALTER TABLE tb_project_profile
+    ADD CONSTRAINT tb_project_profile_project_fkey FOREIGN KEY (project_id) REFERENCES tb_project (id) ON DELETE CASCADE;
+ALTER TABLE tb_project_profile
+    ADD CONSTRAINT tb_project_profile_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
+ALTER TABLE tb_project_profile
+    ADD CONSTRAINT tb_project_profile_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 
 -- tb_participant foreign keys and indexes
 CREATE INDEX tb_participant_index_user_id ON tb_participant (user_id);
-CREATE INDEX tb_participant_index_event_id ON tb_participant (event_id);
+CREATE INDEX tb_participant_index_project_id ON tb_participant (project_id);
 CREATE INDEX tb_participant_index_created_by ON tb_participant (created_by);
 CREATE INDEX tb_participant_index_last_modified_by ON tb_participant (last_modified_by);
 
 ALTER TABLE tb_participant
     ADD CONSTRAINT tb_participant_user_fkey FOREIGN KEY (user_id) REFERENCES tb_user (id) ON DELETE SET NULL;
 ALTER TABLE tb_participant
-    ADD CONSTRAINT tb_participant_event_fkey FOREIGN KEY (event_id) REFERENCES tb_event (id) ON DELETE CASCADE;
+    ADD CONSTRAINT tb_participant_project_fkey FOREIGN KEY (project_id) REFERENCES tb_project (id) ON DELETE CASCADE;
 ALTER TABLE tb_participant
     ADD CONSTRAINT tb_participant_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 ALTER TABLE tb_participant
     ADD CONSTRAINT tb_participant_edit_user_fkey FOREIGN KEY (last_modified_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 
 -- tb_movement foreign keys and indexes
-CREATE INDEX tb_movement_index_event_id ON tb_movement (event_id);
+CREATE INDEX tb_movement_index_project_id ON tb_movement (project_id);
 CREATE INDEX tb_movement_index_created_by ON tb_movement (created_by);
 CREATE INDEX tb_movement_index_last_modified_by ON tb_movement (last_modified_by);
 
 ALTER TABLE tb_movement
-    ADD CONSTRAINT tb_movement_event_fkey FOREIGN KEY (event_id) REFERENCES tb_event (id) ON DELETE CASCADE;
+    ADD CONSTRAINT tb_movement_project_fkey FOREIGN KEY (project_id) REFERENCES tb_project (id) ON DELETE CASCADE;
 ALTER TABLE tb_movement
     ADD CONSTRAINT tb_movement_create_user_fkey FOREIGN KEY (created_by) REFERENCES tb_user (id) ON DELETE SET NULL;
 ALTER TABLE tb_movement

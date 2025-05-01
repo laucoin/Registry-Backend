@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 class MovementReaderDtoMapper(
     @Qualifier("messagesSource") private val translateService: MessageSource,
-    private val eventMapper: EventReaderDtoMapper,
+    private val projectMapper: ProjectReaderDtoMapper,
     private val activityReasonReaderDtoMapper: MovementActivityReasonReaderDtoMapper,
     private val reasonReaderDtoMapper: MovementReasonReaderDtoMapper,
     private val movementContentMapper: MovementContentReaderDtoMapper,
@@ -32,7 +32,7 @@ class MovementReaderDtoMapper(
             content = movementContentMapper.toDtoList(model.content, locale),
         ).apply {
             id = model.id
-            event = if (Objects.nonNull(model.event)) eventMapper.toDto(model.event !!, locale) else null
+            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
             visible = model.visible
             creation = model.creation
             lastEdition = model.lastEdition

@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono
 interface IPreferencesController {
     @Operation(
         summary = "Change Default Profile",
-        description = "Changes the Event on which default operations are performed by changing Profile.",
+        description = "Changes the Project on which default operations are performed by changing Profile.",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -29,14 +29,14 @@ interface IPreferencesController {
         ],
     )
     @PatchMapping("/profile/{profileId}/select")
-    fun updateSelectedEventProfile(
+    fun updateSelectedProjectProfile(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @PathVariable profileId: UUID,
     ): Mono<PreferencesModel>
 
     @Operation(
-        summary = "Change Default Profile by Event id",
-        description = "Changes the Event on which default operations are performed by changing Profile.",
+        summary = "Change Default Profile by Project id",
+        description = "Changes the Project on which default operations are performed by changing Profile.",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -45,9 +45,9 @@ interface IPreferencesController {
             ),
         ],
     )
-    @PatchMapping("/events/{eventId}/profile/select")
-    fun updateSelectedEventProfileWithEventId(
+    @PatchMapping("/projects/{projectId}/profile/select")
+    fun updateSelectedProjectProfileWithProjectId(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
     ): Mono<PreferencesModel>
 }

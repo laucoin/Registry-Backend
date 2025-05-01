@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_OPTION_PREFIX
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_U
-import fr.laucoin.registry.backend.domain.enumeration.EventOptionEnum
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_PREFIX
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.repository.IRoleModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import java.util.Objects
@@ -25,23 +25,23 @@ class RoleService(
     private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
     private val userRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
-    private val eventRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
+    private val projectRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
 
     override fun onApplicationEvent(event: ContextRefreshedEvent) {
         repository.findUserRoles()
             .doOnNext { userRoles[it.role] = Pair(it.level, it.permissions) }
             .subscribe()
 
-        repository.findEventRoles()
-            .doOnNext { eventRoles[it.role] = Pair(it.level, it.permissions) }
+        repository.findProjectRoles()
+            .doOnNext { projectRoles[it.role] = Pair(it.level, it.permissions) }
             .subscribe()
     }
 
     override fun getLevelByUserRole(role: String?): Int? = userRoles[role]?.first
 
-    override fun getLevelByEventRole(role: String): Int = eventRoles[role]?.first ?: 0
+    override fun getLevelByProjectRole(role: String): Int = projectRoles[role]?.first ?: 0
 
-    override fun getLevel0RoleFromEventRoles(): String = eventRoles.filter { it.value.first == 0 }.keys.first()
+    override fun getLevel0RoleFromProjectRoles(): String = projectRoles.filter { it.value.first == 0 }.keys.first()
 
     override fun getDefaultUserRole(): String? {
         val roles = userRoles.filter { it.key == defaultUserRole }.keys
@@ -58,28 +58,34 @@ class RoleService(
         } else userRoles[role] !!.second
     }
 
-    override fun getAuthoritiesByEventRole(role: String, eventId: UUID, visibility: Boolean?): List<String> {
-        if (! eventRoles.containsKey(role)) {
-            log.warn("Event role \"{}\" not found in \"{}\"", role, eventRoles.keys)
+    override fun getAuthoritiesByProjectRole(role: String, projectId: UUID, visibility: Boolean?): List<String> {
+        if (! projectRoles.containsKey(role)) {
+            log.warn("Project role \"{}\" not found in \"{}\"", role, projectRoles.keys)
             return emptyList()
         }
 
-        val roleAuthoritiesMapping = eventRoles[role]
+        val roleAuthoritiesMapping = projectRoles[role]
         return when {
             Objects.isNull(roleAuthoritiesMapping) || (visibility != true && roleAuthoritiesMapping !!.first != 0) -> emptyList()
             visibility != true && roleAuthoritiesMapping !!.first == 0 ->
-                roleAuthoritiesMapping.second.filter { listOf(REGISTRY_EVENT_R, REGISTRY_EVENT_U, REGISTRY_EVENT_D).contains(it) }
-                    .map { "${eventId}_$it" }
+                roleAuthoritiesMapping.second.filter {
+                    listOf(
+                        REGISTRY_PROJECT_R,
+                        REGISTRY_PROJECT_U,
+                        REGISTRY_PROJECT_D
+                    ).contains(it)
+                }
+                    .map { "${projectId}_$it" }
 
-            else -> roleAuthoritiesMapping !!.second.map { "${eventId}_$it" }
+            else -> roleAuthoritiesMapping !!.second.map { "${projectId}_$it" }
         }
     }
 
-    override fun getOptionAuthoritiesByEvent(eventId: UUID, eventOptions: List<EventOptionEnum>): List<String> {
-        return eventOptions.map { "${eventId}_${REGISTRY_EVENT_OPTION_PREFIX}$it" }
+    override fun getOptionAuthoritiesByProject(projectId: UUID, projectOptions: List<ProjectOptionEnum>): List<String> {
+        return projectOptions.map { "${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}$it" }
     }
 
-    override fun getEventIdsFromCurrentUserProfiles(currentUser: CurrentUserModel): List<UUID> {
+    override fun getProjectIdsFromCurrentUserProfiles(currentUser: CurrentUserModel): List<UUID> {
         return currentUser.authorities
             .mapNotNull { uuidRegex.find(it.authority)?.value }
             .map { UUID.fromString(it) }.distinct()
@@ -89,8 +95,8 @@ class RoleService(
         return findAssignableRoles(currentUser.role, userRoles)
     }
 
-    override fun getAssignableEventRoles(profile: EventProfileModel): List<String> {
-        return findAssignableRoles(profile.role, eventRoles)
+    override fun getAssignableProjectRoles(profile: ProjectProfileModel): List<String> {
+        return findAssignableRoles(profile.role, projectRoles)
     }
 
     private fun findAssignableRoles(role: String?, roles: HashMap<String, Pair<Int, List<String>>>): List<String> {

@@ -4,8 +4,8 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEventAndModel
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndModel
 import java.util.Objects
 import org.springframework.stereotype.Component
 
@@ -18,7 +18,7 @@ class GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
             else CustomDateTimeModel(entity.startAvailabilityDate !!, entity.startAvailabilityTime)
             endAvailability = if (Objects.isNull(entity.endAvailabilityDate)) null
             else CustomDateTimeModel(entity.endAvailabilityDate !!, entity.endAvailabilityTime)
-        }.fillWithEventAndEntity(entity)
+        }.fillWithProjectAndEntity(entity)
     }
 
     override fun toEntity(model: GroupModel): GroupEntity {
@@ -28,6 +28,6 @@ class GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
             startAvailabilityTime = model.startAvailability?.time
             endAvailabilityDate = model.endAvailability?.date
             endAvailabilityTime = model.endAvailability?.time
-        }.fillWithEventAndModel(model)
+        }.fillWithProjectAndModel(model)
     }
 }

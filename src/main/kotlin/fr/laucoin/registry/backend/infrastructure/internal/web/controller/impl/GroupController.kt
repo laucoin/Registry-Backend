@@ -37,7 +37,7 @@ class GroupController(
 ): IGroupController {
     override fun findGroups(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         pageNumber: Int,
         pageSize: Int,
         textSearched: String?,
@@ -46,7 +46,7 @@ class GroupController(
         dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<GroupReaderDto>> {
         return service.findGroupsPage(
-            eventId,
+            projectId,
             PageableModel(pageNumber * pageSize, pageSize),
             GroupSearchParamModel(textSearched, visibilitySearched, presenceSearched, dateTimeSearched),
         ).map { readerMapper.toDtoPage(it, locale) }
@@ -54,16 +54,16 @@ class GroupController(
 
     override fun findGroupMembers(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         groupIds: List<UUID>
     ): Flux<Pair<UUID, List<ParticipantReaderDto>>> {
-        return service.findGroupsMembers(eventId, groupIds)
+        return service.findGroupsMembers(projectId, groupIds)
             .map { Pair(it.first, it.second.map { members -> participantReaderMapper.toDto(members, locale) }) }
     }
 
     override fun findGroupMembersByGroupId(
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         pageNumber: Int,
         pageSize: Int,
@@ -74,52 +74,52 @@ class GroupController(
         dateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<ParticipantReaderDto>> {
         return service.findGroupMembersPageByGroupId(
-            eventId,
+            projectId,
             id,
             PageableModel(pageNumber * pageSize, pageSize),
             ParticipantSearchParamModel(textSearched, typeSearched, visibilitySearched, statusSearched, dateTimeSearched),
         ).map { participantReaderMapper.toDtoPage(it, locale) }
     }
 
-    override fun findGroupById(locale: Locale, eventId: UUID, id: UUID): Mono<GroupReaderDto> {
-        return service.findGroupById(eventId, id, visibilitySearched = null)
+    override fun findGroupById(locale: Locale, projectId: UUID, id: UUID): Mono<GroupReaderDto> {
+        return service.findGroupById(projectId, id, visibilitySearched = null)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun searchParticipants(locale: Locale, eventId: UUID, textSearched: String?): Flux<ParticipantReaderDto> {
-        return service.searchParticipants(eventId, textSearched)
+    override fun searchParticipants(locale: Locale, projectId: UUID, textSearched: String?): Flux<ParticipantReaderDto> {
+        return service.searchParticipants(projectId, textSearched)
             .map { participantReaderMapper.toDto(it, locale) }
     }
 
     override fun createGroup(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         group: GroupWriterDto,
     ): Mono<GroupReaderDto> {
-        return service.createGroup(currentUser, writerMapper.toModel(group, eventId))
+        return service.createGroup(currentUser, writerMapper.toModel(group, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun updateGroupById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         group: GroupWriterDto,
     ): Mono<GroupReaderDto> {
-        return service.updateGroupById(currentUser, eventId, id, writerMapper.toModel(group, eventId))
+        return service.updateGroupById(currentUser, projectId, id, writerMapper.toModel(group, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun addMembersToGroupById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         memberIds: List<UUID>,
     ): Mono<ResponseEntity<AddedGroupMembersReaderDto>> {
-        return service.addMembersToGroupById(currentUser, eventId, id, memberIds)
+        return service.addMembersToGroupById(currentUser, projectId, id, memberIds)
             .map { addedGroupMembersReaderMapper.toDto(it, locale) }
             .map { ResponseEntity.status(if (it.notAddedMemberIds.isEmpty()) OK else MULTI_STATUS).body(it) }
     }
@@ -127,35 +127,35 @@ class GroupController(
     override fun removeMemberFromGroupById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID,
         memberId: UUID
     ): Mono<GroupReaderDto> {
-        return service.removeMemberFromGroupById(currentUser, eventId, id, memberId)
+        return service.removeMemberFromGroupById(currentUser, projectId, id, memberId)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun disableGroupById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID
     ): Mono<GroupReaderDto> {
-        return service.disableGroupById(currentUser, eventId, id)
+        return service.disableGroupById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
     override fun enableGroupById(
         currentUser: CurrentUserModel,
         locale: Locale,
-        eventId: UUID,
+        projectId: UUID,
         id: UUID
     ): Mono<GroupReaderDto> {
-        return service.enableGroupById(currentUser, eventId, id)
+        return service.enableGroupById(currentUser, projectId, id)
             .map { readerMapper.toDto(it, locale) }
     }
 
-    override fun deleteGroupById(eventId: UUID, id: UUID): Mono<Void> {
-        return service.deleteGroupById(eventId, id)
+    override fun deleteGroupById(projectId: UUID, id: UUID): Mono<Void> {
+        return service.deleteGroupById(projectId, id)
     }
 }

@@ -32,16 +32,16 @@ class RoleModelPostgresRepositoryTest {
     }
 
     @Test
-    fun `Should findEventRoles call repository findEventRoles`() {
+    fun `Should findProjectRoles call repository findProjectRoles`() {
         // Arrange
-        val role = RoleEntity(role = "ROLE_EVENT", level = 0, permissions = emptyList())
-        whenever(repository.findEventRoles()).thenReturn(Flux.just(role))
+        val role = RoleEntity(role = "ROLE_PROJECT", level = 0, permissions = emptyList())
+        whenever(repository.findProjectRoles()).thenReturn(Flux.just(role))
 
         // Act
-        modelRepository.findEventRoles().blockFirst()
+        modelRepository.findProjectRoles().blockFirst()
 
         // Assert
-        verify(repository).findEventRoles()
+        verify(repository).findProjectRoles()
         verify(mapper).toModel(role)
     }
 }

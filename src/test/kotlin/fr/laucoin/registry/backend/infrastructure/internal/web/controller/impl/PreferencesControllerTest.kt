@@ -27,10 +27,10 @@ class PreferencesControllerTest(@Autowired private val webClient: WebTestClient)
     }
 
     @Test
-    fun `Should updateSelectedEventProfile return 200`() {
+    fun `Should updateSelectedProjectProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        whenever(service.updateUserPreferenceSelectedEventProfileById(any(), any())).thenReturn(Mono.empty())
+        whenever(service.updateUserPreferenceSelectedProjectProfileById(any(), any())).thenReturn(Mono.empty())
 
         // Act
         val result = webClient
@@ -41,6 +41,6 @@ class PreferencesControllerTest(@Autowired private val webClient: WebTestClient)
 
         // Assert
         result.body<PreferencesModel>(OK)
-        verify(service).updateUserPreferenceSelectedEventProfileById(any(), eq(uuid))
+        verify(service).updateUserPreferenceSelectedProjectProfileById(any(), eq(uuid))
     }
 }

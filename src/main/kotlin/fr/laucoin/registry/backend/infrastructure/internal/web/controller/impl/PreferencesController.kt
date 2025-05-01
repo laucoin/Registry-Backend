@@ -12,11 +12,11 @@ import reactor.core.publisher.Mono
 class PreferencesController(
     private val service: IPreferencesService,
 ): IPreferencesController {
-    override fun updateSelectedEventProfile(currentUser: CurrentUserModel, profileId: UUID): Mono<PreferencesModel> {
-        return service.updateUserPreferenceSelectedEventProfileById(currentUser, profileId)
+    override fun updateSelectedProjectProfile(currentUser: CurrentUserModel, profileId: UUID): Mono<PreferencesModel> {
+        return service.updateUserPreferenceSelectedProjectProfileById(currentUser, profileId)
     }
 
-    override fun updateSelectedEventProfileWithEventId(currentUser: CurrentUserModel, eventId: UUID): Mono<PreferencesModel> {
-        return service.updateUserPreferenceSelectedEventProfileByEventId(currentUser, eventId)
+    override fun updateSelectedProjectProfileWithProjectId(currentUser: CurrentUserModel, projectId: UUID): Mono<PreferencesModel> {
+        return service.updateUserPreferenceSelectedProjectProfileByProjectId(currentUser, projectId)
     }
 }

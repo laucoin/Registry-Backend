@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IMetadataController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.EventProfileStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UsableElementStatusReaderDtoMapper
@@ -17,7 +17,7 @@ import reactor.core.publisher.Flux
 @RestController
 class MetadataController(
     private val usableElementStatusMapper: UsableElementStatusReaderDtoMapper,
-    private val eventProfileStatusReaderMapper: EventProfileStatusReaderDtoMapper,
+    private val projectProfileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper,
     private val movementTypeReaderMapper: MovementTypeReaderDtoMapper,
     private val participantTypeReaderMapper: ParticipantTypeReaderDtoMapper,
 ): IMetadataController {
@@ -26,9 +26,9 @@ class MetadataController(
             .map { usableElementStatusMapper.toDto(it, locale) }
     }
 
-    override fun getEventProfileStatus(locale: Locale): Flux<LabelDto> {
+    override fun getProjectProfileStatus(locale: Locale): Flux<LabelDto> {
         return Flux.fromIterable(ProfileStatusEnum.entries)
-            .map { eventProfileStatusReaderMapper.toDto(it, locale) }
+            .map { projectProfileStatusReaderMapper.toDto(it, locale) }
     }
 
     override fun getMovementTypes(locale: Locale): Flux<LabelDto> {

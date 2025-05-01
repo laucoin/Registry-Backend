@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericEventEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericProjectEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_BRAND
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_TIME
@@ -41,4 +41,4 @@ data class VehicleEntity(
     var endAvailabilityDate: LocalDate? = null,
     @Column(VEHICLE_END_AVAILABILITY_TIME)
     var endAvailabilityTime: LocalTime? = null,
-): GenericEventEntity()
+): GenericProjectEntity()

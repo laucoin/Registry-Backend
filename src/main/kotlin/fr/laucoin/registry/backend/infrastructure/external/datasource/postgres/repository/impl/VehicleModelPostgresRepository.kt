@@ -18,13 +18,13 @@ class VehicleModelPostgresRepository(
     private val mapper: VehicleEntityMapper,
 ): IVehicleModelRepository {
     override fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: VehicleSearchParamModel,
     ): Mono<PageModel<VehicleModel>> {
         return Mono.zip(
             repository.countAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
@@ -32,7 +32,7 @@ class VehicleModelPostgresRepository(
                 searchParams.dateTimeSearched,
             ),
             repository.findAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
@@ -46,13 +46,13 @@ class VehicleModelPostgresRepository(
         }
     }
 
-    override fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleModel> {
-        return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(eventId, ids, visibilitySearched).map(mapper::toModel)
+    override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleModel> {
+        return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched).map(mapper::toModel)
     }
 
-    override fun findWithLimit(limit: Int, eventId: UUID, searchParams: VehicleSearchParamModel): Flux<VehicleModel> {
+    override fun findWithLimit(limit: Int, projectId: UUID, searchParams: VehicleSearchParamModel): Flux<VehicleModel> {
         return repository.findWithLimit(
-            eventId,
+            projectId,
             searchParams.textSearched,
             searchParams.visibilitySearched,
             searchParams.availabilitySearched,
@@ -62,8 +62,8 @@ class VehicleModelPostgresRepository(
         ).map(mapper::toModel)
     }
 
-    override fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {
-        return repository.findById(eventId, id, visibilitySearched).map(mapper::toModel)
+    override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {
+        return repository.findById(projectId, id, visibilitySearched).map(mapper::toModel)
     }
 
     override fun create(element: VehicleModel): Mono<VehicleModel> {

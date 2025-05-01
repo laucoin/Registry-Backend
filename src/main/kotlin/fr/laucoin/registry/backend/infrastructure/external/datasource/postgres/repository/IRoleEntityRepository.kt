@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.ENTITY_ROLE_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.EVENT_ROLE_PERMISSION_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.EVENT_ROLE_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.PROJECT_ROLE_PERMISSION_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.PROJECT_ROLE_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.ROLE_LEVEL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.ROLE_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.ROLE_PERMISSION
@@ -31,11 +31,11 @@ interface IRoleEntityRepository: ReactiveCrudRepository<RoleEntity, String> {
     @Query(
         """
         SELECT er.$ENTITY_ROLE_NAME AS $ROLE_NAME, er.$ROLE_LEVEL, ARRAY_AGG(t.$ROLE_PERMISSION) AS $ROLE_PERMISSIONS
-        FROM $EVENT_ROLE_PERMISSION_TABLE t
-        INNER JOIN $EVENT_ROLE_TABLE er ON er.$ENTITY_ROLE_NAME = t.$ROLE_NAME
+        FROM $PROJECT_ROLE_PERMISSION_TABLE t
+        INNER JOIN $PROJECT_ROLE_TABLE er ON er.$ENTITY_ROLE_NAME = t.$ROLE_NAME
         GROUP BY er.$ENTITY_ROLE_NAME, er.$ROLE_LEVEL
         ORDER BY er.$ENTITY_ROLE_NAME
         """
     )
-    fun findEventRoles(): Flux<RoleEntity>
+    fun findProjectRoles(): Flux<RoleEntity>
 }

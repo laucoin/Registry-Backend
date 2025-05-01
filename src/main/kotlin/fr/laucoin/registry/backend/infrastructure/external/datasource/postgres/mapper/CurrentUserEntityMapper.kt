@@ -2,12 +2,12 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.EventModel
-import fr.laucoin.registry.backend.domain.model.EventProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityReaderMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.CurrentUserEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.fillWithEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithEntity
 import java.util.Objects
 import org.springframework.stereotype.Component
 
@@ -33,7 +33,7 @@ class CurrentUserEntityMapper: IEntityReaderMapper<CurrentUserModel, CurrentUser
         else PreferencesModel().apply {
             id = entity.preferenceId
             selectedProfile = if (Objects.isNull(entity.preferenceSelectedProfileId)) null
-            else EventProfileModel().apply {
+            else ProjectProfileModel().apply {
                 id = entity.preferenceSelectedProfileId
                 role = entity.preferenceSelectedProfileRole
                 status = entity.preferenceSelectedProfileStatus
@@ -49,22 +49,22 @@ class CurrentUserEntityMapper: IEntityReaderMapper<CurrentUserModel, CurrentUser
                         entity.preferenceSelectedProfileEndAccessDate !!,
                         entity.preferenceSelectedProfileEndAccessTime
                     )
-                event = EventModel().apply {
-                    id = entity.preferenceSelectedProfileEventId
-                    name = entity.preferenceSelectedProfileEventName
+                project = ProjectModel().apply {
+                    id = entity.preferenceSelectedProfileProjectId
+                    name = entity.preferenceSelectedProfileProjectName
                     begin =
-                        if (Objects.isNull(entity.preferenceSelectedProfileEventStartDate)) null
+                        if (Objects.isNull(entity.preferenceSelectedProfileProjectStartDate)) null
                         else CustomDateTimeModel(
-                            entity.preferenceSelectedProfileEventStartDate !!,
-                            entity.preferenceSelectedProfileEventStartTime
+                            entity.preferenceSelectedProfileProjectStartDate !!,
+                            entity.preferenceSelectedProfileProjectStartTime
                         )
                     end =
-                        if (Objects.isNull(entity.preferenceSelectedProfileEventEndDate)) null
+                        if (Objects.isNull(entity.preferenceSelectedProfileProjectEndDate)) null
                         else CustomDateTimeModel(
-                            entity.preferenceSelectedProfileEventEndDate !!,
-                            entity.preferenceSelectedProfileEventEndTime
+                            entity.preferenceSelectedProfileProjectEndDate !!,
+                            entity.preferenceSelectedProfileProjectEndTime
                         )
-                    options = entity.preferenceSelectedProfileEventOptions
+                    options = entity.preferenceSelectedProfileProjectOptions
                 }
             }
         }

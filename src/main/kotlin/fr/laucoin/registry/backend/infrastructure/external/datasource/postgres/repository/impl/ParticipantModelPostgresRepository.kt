@@ -25,13 +25,13 @@ class ParticipantModelPostgresRepository(
     private val groupContentMapper: GroupContentEntityMapper,
 ): IParticipantModelRepository {
     override fun findPage(
-        eventId: UUID,
+        projectId: UUID,
         pageable: PageableModel,
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>> {
         return Mono.zip(
             repository.countAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.typeSearched,
                 searchParams.visibilitySearched,
@@ -40,7 +40,7 @@ class ParticipantModelPostgresRepository(
                 searchParams.dateTimeSearched,
             ),
             repository.findAll(
-                eventId,
+                projectId,
                 searchParams.textSearched,
                 searchParams.typeSearched,
                 searchParams.visibilitySearched,
@@ -56,14 +56,14 @@ class ParticipantModelPostgresRepository(
     }
 
     override fun findPageByGroupId(
-        eventId: UUID,
+        projectId: UUID,
         groupId: UUID,
         pageable: PageableModel,
         searchParams: ParticipantSearchParamModel
     ): Mono<PageModel<ParticipantModel>> {
         return Mono.zip(
             repository.countAllByGroupId(
-                eventId,
+                projectId,
                 groupId,
                 searchParams.textSearched,
                 searchParams.typeSearched,
@@ -73,7 +73,7 @@ class ParticipantModelPostgresRepository(
                 searchParams.dateTimeSearched,
             ),
             repository.findAllByGroupId(
-                eventId,
+                projectId,
                 groupId,
                 searchParams.textSearched,
                 searchParams.typeSearched,
@@ -89,18 +89,18 @@ class ParticipantModelPostgresRepository(
         }
     }
 
-    override fun findAllByIds(eventId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel> {
+    override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel> {
         return if (ids.isEmpty()) Flux.empty()
-        else repository.findAllByIds(eventId, ids, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
+        else repository.findAllByIds(projectId, ids, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
     }
 
-    override fun findByUserId(eventId: UUID, userId: UUID): Flux<ParticipantModel> {
-        return repository.findByUserId(eventId, userId, null).map(mapper::toModel)
+    override fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel> {
+        return repository.findByUserId(projectId, userId, null).map(mapper::toModel)
     }
 
-    override fun findWithLimit(limit: Int, eventId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel> {
+    override fun findWithLimit(limit: Int, projectId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel> {
         return repository.findWithLimit(
-            eventId,
+            projectId,
             searchParams.textSearched,
             searchParams.typeSearched,
             searchParams.visibilitySearched,
@@ -129,8 +129,8 @@ class ParticipantModelPostgresRepository(
         else repository.deleteAllById(ids)
     }
 
-    override fun findById(eventId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
-        return repository.findById(eventId, id, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
+    override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
+        return repository.findById(projectId, id, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
     }
 
     override fun create(element: ParticipantModel): Mono<ParticipantModel> {
@@ -141,7 +141,7 @@ class ParticipantModelPostgresRepository(
 
     override fun update(element: ParticipantModel): Mono<ParticipantModel> {
         return save(element)
-            .flatMap { findById(element.event !!.id !!, element.id !!, visibilitySearched = null) }
+            .flatMap { findById(element.project !!.id !!, element.id !!, visibilitySearched = null) }
             .saveNewGroups(element)
             .removeDeletedGroups(element)
             .`as`(transactionalOperator::transactional)

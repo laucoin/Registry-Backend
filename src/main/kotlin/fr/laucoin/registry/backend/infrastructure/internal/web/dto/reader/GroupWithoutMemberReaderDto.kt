@@ -6,4 +6,4 @@ open class GroupWithoutMemberReaderDto(
     var name: String? = null,
     var startAvailability: CustomDateTimeModel? = null,
     var endAvailability: CustomDateTimeModel? = null,
-): GenericEventReaderDto()
+): GenericProjectReaderDto()

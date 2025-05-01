@@ -3,12 +3,12 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_C
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_D
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_HISTORY_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_METADATA_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_R
-import fr.laucoin.registry.backend.domain.constant.EventPermissionConst.REGISTRY_EVENT_PARTICIPANT_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
@@ -47,7 +47,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Participants management", description = "API for Participants-related operations")
-@RequestMapping("/api/events/{eventId}/participants")
+@RequestMapping("/api/projects/{projectId}/participants")
 interface IParticipantController {
     @Operation(
         summary = "Find Participants",
@@ -60,11 +60,11 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
     @GetMapping
     fun findParticipants(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
             200,
@@ -89,11 +89,11 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
     @GetMapping("/{id}")
     fun findParticipantById(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<ParticipantReaderDto>
 
@@ -108,11 +108,11 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
     @GetMapping("/search/users")
     fun searchUsers(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam textSearched: String?,
     ): Flux<PartialUserReaderDto>
 
@@ -127,11 +127,11 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_METADATA_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
     @GetMapping("/search/groups")
     fun searchGroups(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestParam textSearched: String?
     ): Flux<GroupWithoutMemberReaderDto>
 
@@ -146,11 +146,11 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_HISTORY_R')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')")
     @GetMapping("/{id}/movements")
     fun findParticipantMovements(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
         @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -167,7 +167,7 @@ interface IParticipantController {
 
     @Operation(
         summary = "Create Participant",
-        description = "Create Participant linked to the Event",
+        description = "Create Participant linked to the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -176,12 +176,12 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_C')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_C')")
     @PostMapping
     fun createParticipant(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @RequestBody @Valid participant: ParticipantWriterDto,
     ): Mono<ParticipantReaderDto>
 
@@ -196,19 +196,19 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
     @PatchMapping("/{id}")
     fun updateParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid participant: ParticipantWriterDto,
     ): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Disable Participant",
-        description = "Disable Participant, it will not visible anymore in the Event",
+        description = "Disable Participant, it will not visible anymore in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -217,18 +217,18 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
     @PatchMapping("/{id}/disable")
     fun disableParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<ParticipantReaderDto>
 
     @Operation(
         summary = "Enable Participant",
-        description = "Enable Participant, obviously it will be visible again in the Event",
+        description = "Enable Participant, obviously it will be visible again in the Project",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -237,12 +237,12 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_U')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
     @PatchMapping("/{id}/enable")
     fun enableParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<ParticipantReaderDto>
 
@@ -257,11 +257,11 @@ interface IParticipantController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#eventId, '$REGISTRY_EVENT_PARTICIPANT_D')")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_D')")
     @DeleteMapping("/{id}")
     fun deleteParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
-        @PathVariable eventId: UUID,
+        @PathVariable projectId: UUID,
         @PathVariable id: UUID,
     ): Mono<Void>
 }
