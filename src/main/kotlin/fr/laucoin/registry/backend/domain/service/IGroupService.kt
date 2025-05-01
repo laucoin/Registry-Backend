@@ -31,7 +31,7 @@ interface IGroupService {
     ): Mono<PageModel<ParticipantModel>>
 
     fun findGroupById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel>
-    fun searchParticipants(projectId: UUID, textSearched: String?): Flux<ParticipantModel>
+    fun searchParticipantsByText(projectId: UUID, textSearched: String?): Flux<ParticipantModel>
     fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel>
     fun updateGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
     fun addMembersToGroupById(

@@ -41,6 +41,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
 
 object GroupQueries {
     const val SELECT_CONTENT_TO_CONTENT = """
@@ -88,7 +89,7 @@ object GroupQueries {
 
     const val GROUP_BY_GROUP = """
          t.$ID, t.$GROUP_NAME, t.$GROUP_START_AVAILABILITY_DATE, t.$GROUP_START_AVAILABILITY_TIME, t.$GROUP_END_AVAILABILITY_DATE, t.$GROUP_END_AVAILABILITY_TIME,
-         project_tb.$ID, $LINKED_PROJECT_NAME, $LINKED_PROJECT_START_DATE, $LINKED_PROJECT_START_TIME, $LINKED_PROJECT_END_DATE, $LINKED_PROJECT_END_TIME, $LINKED_PROJECT_OPTIONS,
+         $LINKED_PROJECT_TABLE.$ID, $LINKED_PROJECT_NAME, $LINKED_PROJECT_START_DATE, $LINKED_PROJECT_START_TIME, $LINKED_PROJECT_END_DATE, $LINKED_PROJECT_END_TIME, $LINKED_PROJECT_OPTIONS,
          $CREATOR_FIRST_NAME, $CREATOR_LAST_NAME, $CREATOR_EMAIL,
          $LAST_MODIFIER_FIRST_NAME, $LAST_MODIFIER_LAST_NAME, $LAST_MODIFIER_EMAIL,
         t.$VISIBLE, t.$CREATOR_ID, t.$CREATED_AT, t.$LAST_MODIFIER_ID, t.$LAST_MODIFIER_DATE

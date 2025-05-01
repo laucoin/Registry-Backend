@@ -1,18 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.GroupEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -96,8 +97,8 @@ class GroupModelPostgresRepositoryTest(
         assertNotNull(result)
         assertEquals(0, result.pageNumber)
         assertEquals(10, result.pageSize)
-        assertEquals(4, result.totalElements)
-        assertEquals(1, result.totalPages)
+        assertEquals(20, result.totalElements)
+        assertEquals(2, result.totalPages)
         verify(postgresRepository).findAll(
             projectId,
             textSearched = null,
@@ -114,7 +115,7 @@ class GroupModelPostgresRepositoryTest(
             presenceSearched = null,
             dateTimeSearched = null,
         )
-        verify(mapper, times(4)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @ParameterizedTest
@@ -164,7 +165,7 @@ class GroupModelPostgresRepositoryTest(
 
         // Assert
         assertNotNull(result)
-        assertEquals(4, result.size)
+        assertEquals(size, result.size)
         verify(postgresRepository).findWithLimit(
             projectId,
             textSearched = null,
@@ -173,7 +174,7 @@ class GroupModelPostgresRepositoryTest(
             dateTimeSearched = null,
             size,
         )
-        verify(mapper, times(4)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @Test

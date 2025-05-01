@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_U
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.AddedGroupMembersReaderDto
@@ -121,7 +121,7 @@ interface IGroupController {
         @RequestParam(required = false) textSearched: String?,
         @RequestParam(required = false) typeSearched: ParticipantTypeEnum?,
         @RequestParam(required = false) visibilitySearched: Boolean?,
-        @RequestParam(required = false) statusSearched: UsableElementStatusEnum?,
+        @RequestParam(required = false) statusSearched: PresenceStatusEnum?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<ParticipantReaderDto>>

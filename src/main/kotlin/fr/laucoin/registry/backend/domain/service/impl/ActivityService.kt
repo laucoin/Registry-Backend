@@ -111,6 +111,7 @@ class ActivityService(
         movementRepository.countAllByActivityId(
             activityToUpdate.project !!.id !!,
             activityToUpdate.id !!,
+            MovementSearchParamModel(),
         ).handle { it, handle ->
             if (it > 0) {
                 log.warn("The activity {} already linked to movement(s)", activityToUpdate.id)

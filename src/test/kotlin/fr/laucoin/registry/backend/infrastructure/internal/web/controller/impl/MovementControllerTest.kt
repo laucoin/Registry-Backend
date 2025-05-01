@@ -344,8 +344,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val searched = "text"
         val typeSearched = IN
         val contentTypeSearched = REGISTERED
-        whenever(service.searchActivities(any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
-        whenever(service.searchReasons(any(), any())).thenReturn(Flux.just(OTHER))
+        whenever(service.searchActivitiesByText(any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
+        whenever(service.searchReasonsByText(any(), any())).thenReturn(Flux.just(OTHER))
         whenever(activityReasonReaderMapper.toDto(any(), any())).thenReturn(
             MovementReasonsReaderDto(
                 value = "value",
@@ -383,8 +383,8 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchActivities(projectId, contentTypeSearched, searched)
-        verify(service).searchReasons(contentTypeSearched, typeSearched)
+        verify(service).searchActivitiesByText(projectId, contentTypeSearched, searched)
+        verify(service).searchReasonsByText(contentTypeSearched, typeSearched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -399,7 +399,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Arrange
         val searched = "text"
         val typeSearched = REGISTERED
-        whenever(service.searchParticipantsAndGroups(any(), any(), anyOrNull())).thenReturn(
+        whenever(service.searchParticipantsAndGroupsByText(any(), any(), anyOrNull())).thenReturn(
             Mono.just(
                 Tuples.of(
                     listOf(ParticipantModel()),
@@ -430,7 +430,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<MovementParticipantsAndGroupsReaderDto>(OK)
 
-        verify(service).searchParticipantsAndGroups(projectId, typeSearched, searched)
+        verify(service).searchParticipantsAndGroupsByText(projectId, typeSearched, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verify(movementParticipantsAndGroupsReaderMapper).toDto(any(), any())
@@ -444,7 +444,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
     fun `Should searchVehicles return 200`() {
         // Arrange
         val searched = "text"
-        whenever(service.searchVehicles(any(), anyOrNull())).thenReturn(Flux.just(VehicleModel()))
+        whenever(service.searchVehiclesByText(any(), anyOrNull())).thenReturn(Flux.just(VehicleModel()))
         whenever(vehicleReaderMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
 
         // Act
@@ -457,7 +457,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchVehicles(projectId, searched)
+        verify(service).searchVehiclesByText(projectId, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)

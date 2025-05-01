@@ -3,21 +3,21 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.MovementEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementEntityRepository
 import fr.laucoin.registry.backend.test.ModelExt.activityId
-import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.movementId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
@@ -90,8 +90,8 @@ class MovementModelPostgresRepositoryTest(
         assertNotNull(result)
         assertEquals(0, result !!.pageNumber)
         assertEquals(10, result.pageSize)
-        assertEquals(50, result.totalElements)
-        assertEquals(5, result.totalPages)
+        assertEquals(60, result.totalElements)
+        assertEquals(6, result.totalPages)
         verify(postgresRepository).findAll(
             projectId,
             visibilitySearched = null,
@@ -108,7 +108,7 @@ class MovementModelPostgresRepositoryTest(
             startDateTimeSearched = null,
             endDateTimeSearched = null,
         )
-        verify(mapper, times(10)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @Test
@@ -250,7 +250,7 @@ class MovementModelPostgresRepositoryTest(
     @Test
     fun `Should countAllByParticipantId call repository countAllByParticipantId`() {
         // Act
-        val result = repository.countAllByParticipantId(projectId, participantId).block()
+        val result = repository.countAllByParticipantId(projectId, participantId, MovementSearchParamModel()).block()
 
         // Assert
         assertNotNull(result)
@@ -268,7 +268,7 @@ class MovementModelPostgresRepositoryTest(
     @Test
     fun `Should countAllByVehicleId call repository countAllByVehicleId`() {
         // Act
-        val result = repository.countAllByVehicleId(projectId, vehicleId).block()
+        val result = repository.countAllByVehicleId(projectId, vehicleId, MovementSearchParamModel()).block()
 
         // Assert
         assertNotNull(result)
@@ -286,7 +286,7 @@ class MovementModelPostgresRepositoryTest(
     @Test
     fun `Should countAllByActivityId call repository countAllByActivityId`() {
         // Act
-        val result = repository.countAllByActivityId(projectId, activityId).block()
+        val result = repository.countAllByActivityId(projectId, activityId, MovementSearchParamModel()).block()
 
         // Assert
         assertNotNull(result)

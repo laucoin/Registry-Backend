@@ -9,6 +9,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
 import java.util.Objects
+import java.util.TimeZone
 
 data class CustomDateTimeModel(
     var date: LocalDate,
@@ -32,6 +33,11 @@ data class CustomDateTimeModel(
             Objects.isNull(time) -> LocalDateTime.of(date, defaultTime)
             else -> LocalDateTime.of(date, time)
         }
+    }
+
+    @JsonIgnore
+    fun toZonedDateTime(timeZone: TimeZone): ZonedDateTime? {
+        return ZonedDateTime.of(toLocalDateTime(LocalTime.now()), ZoneId.of(timeZone.id))
     }
 
     @JsonIgnore

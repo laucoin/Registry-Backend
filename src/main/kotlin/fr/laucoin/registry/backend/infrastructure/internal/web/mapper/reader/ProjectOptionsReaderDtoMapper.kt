@@ -13,13 +13,13 @@ import org.springframework.stereotype.Component
 @Component
 class ProjectOptionsReaderDtoMapper(
     @Qualifier("messagesSource") private val translateService: MessageSource,
-): IGenericReaderDtoMapper<Pair<ProjectOptionEnum, Collection<ProjectOptionEnum>>, ProjectOptionsReaderDto> {
-    override fun toDto(model: Pair<ProjectOptionEnum, Collection<ProjectOptionEnum>>, locale: Locale): ProjectOptionsReaderDto {
+): IGenericReaderDtoMapper<ProjectOptionEnum, ProjectOptionsReaderDto> {
+    override fun toDto(model: ProjectOptionEnum, locale: Locale): ProjectOptionsReaderDto {
         return ProjectOptionsReaderDto(
-            value = model.first,
-            label = translateService.getMessage("$PROJECT_OPTION_NAME_PREFIX${model.first}", null, locale),
-            ask = translateService.getMessage("$PROJECT_OPTION_FORM_ASK_PREFIX${model.first}", null, locale),
-            preRequired = model.second.map {
+            value = model,
+            label = translateService.getMessage("$PROJECT_OPTION_NAME_PREFIX${model.name}", null, locale),
+            ask = translateService.getMessage("$PROJECT_OPTION_FORM_ASK_PREFIX${model.name}", null, locale),
+            preRequired = model.requiredOptions.map {
                 LabelDto(
                     it.name,
                     translateService.getMessage("$PROJECT_OPTION_NAME_PREFIX$it", null, locale)

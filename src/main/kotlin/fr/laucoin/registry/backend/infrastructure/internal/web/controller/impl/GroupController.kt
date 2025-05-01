@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -70,7 +70,7 @@ class GroupController(
         textSearched: String?,
         typeSearched: ParticipantTypeEnum?,
         visibilitySearched: Boolean?,
-        statusSearched: UsableElementStatusEnum?,
+        statusSearched: PresenceStatusEnum?,
         dateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<ParticipantReaderDto>> {
         return service.findGroupMembersPageByGroupId(
@@ -87,7 +87,7 @@ class GroupController(
     }
 
     override fun searchParticipants(locale: Locale, projectId: UUID, textSearched: String?): Flux<ParticipantReaderDto> {
-        return service.searchParticipants(projectId, textSearched)
+        return service.searchParticipantsByText(projectId, textSearched)
             .map { participantReaderMapper.toDto(it, locale) }
     }
 

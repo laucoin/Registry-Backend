@@ -36,11 +36,29 @@ class PreferencesControllerTest(@Autowired private val webClient: WebTestClient)
         val result = webClient
             .authenticate()
             .patch()
-            .uri(uriBuilder("$BASE_URL/profile/{profileId}/select", listOf(uuid), emptyList()))
+            .uri(uriBuilder("$BASE_URL/profile/select", emptyList(), listOf(Pair("profileId", uuid))))
             .exchange()
 
         // Assert
         result.body<PreferencesModel>(OK)
         verify(service).updateUserPreferenceSelectedProjectProfileById(any(), eq(uuid))
+    }
+
+    @Test
+    fun `Should updateSelectedProjectProfileWithProjectId return 200`() {
+        // Arrange
+        val uuid = UUID.randomUUID()
+        whenever(service.updateUserPreferenceSelectedProjectProfileByProjectId(any(), any())).thenReturn(Mono.empty())
+
+        // Act
+        val result = webClient
+            .authenticate()
+            .patch()
+            .uri(uriBuilder("$BASE_URL/projects/{projectId}/profile/select", listOf(uuid), emptyList()))
+            .exchange()
+
+        // Assert
+        result.body<PreferencesModel>(OK)
+        verify(service).updateUserPreferenceSelectedProjectProfileByProjectId(any(), eq(uuid))
     }
 }

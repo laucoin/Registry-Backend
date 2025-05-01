@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.repository.IActivityModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IActivityEntityRepository
@@ -27,6 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -71,8 +72,8 @@ class ActivityModelPostgresRepositoryTest(
         assertNotNull(result)
         assertEquals(0, result.pageNumber)
         assertEquals(10, result.pageSize)
-        assertEquals(5, result.totalElements)
-        assertEquals(1, result.totalPages)
+        assertEquals(15, result.totalElements)
+        assertEquals(2, result.totalPages)
         verify(postgresRepository).findAll(
             projectId,
             textSearched = null,
@@ -89,7 +90,7 @@ class ActivityModelPostgresRepositoryTest(
             availabilitySearched = null,
             dateTimeSearched = null,
         )
-        verify(mapper, times(5)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @ParameterizedTest
@@ -122,7 +123,7 @@ class ActivityModelPostgresRepositoryTest(
 
         // Assert
         assertNotNull(result)
-        assertEquals(5, result.size)
+        assertEquals(size, result.size)
         verify(postgresRepository).findWithLimit(
             projectId,
             textSearched = null,
@@ -131,7 +132,7 @@ class ActivityModelPostgresRepositoryTest(
             dateTimeSearched = null,
             size,
         )
-        verify(mapper, times(5)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @Test

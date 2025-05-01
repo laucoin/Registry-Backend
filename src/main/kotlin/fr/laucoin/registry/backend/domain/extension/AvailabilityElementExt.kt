@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.extension
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.isBeforeOrEqual
 import fr.laucoin.registry.backend.domain.extension.DateExt.isEqualOrAfter
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.model.VehicleModel
 import java.util.Objects
 
 object AvailabilityElementExt {
-    fun ParticipantModel.buildStatus(lastMovementType: MovementTypeEnum?): UsableElementStatusEnum {
+    fun ParticipantModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
         val now = CustomDateTimeModel.now()
         val available = (
                 (
@@ -25,17 +25,17 @@ object AvailabilityElementExt {
         return status(available, lastMovementType)
     }
 
-    fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): UsableElementStatusEnum {
+    fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
         val now = CustomDateTimeModel.now()
         val available = startAvailability.isBeforeOrEqual(now) && endAvailability.isEqualOrAfter(now)
         return status(available, lastMovementType)
     }
 
-    private fun status(available: Boolean, lastMovementType: MovementTypeEnum?): UsableElementStatusEnum {
+    private fun status(available: Boolean, lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
         return when {
-            available && lastMovementType === MovementTypeEnum.IN -> UsableElementStatusEnum.IN
-            ! available -> UsableElementStatusEnum.UNAVAILABLE
-            else -> UsableElementStatusEnum.OUT
+            available && lastMovementType === MovementTypeEnum.IN -> PresenceStatusEnum.IN
+            ! available -> PresenceStatusEnum.UNAVAILABLE
+            else -> PresenceStatusEnum.OUT
         }
     }
 }

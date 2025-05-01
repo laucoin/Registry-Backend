@@ -7,15 +7,15 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
@@ -41,15 +41,6 @@ class UserProjectProfileService(
     ): Mono<PageModel<ProjectProfileModel>> {
         return repository
             .findProjectProfilesPageByUserId(userId, pageable, searchParams)
-    }
-
-    override fun findUserProjectProfileById(
-        currentUser: CurrentUserModel,
-        id: UUID,
-        visibilitySearched: Boolean?
-    ): Mono<ProjectProfileModel> {
-        return repository.findProjectProfileByUserIdAndId(currentUser.id !!, id, visibilitySearched)
-            .notFoundIfEmpty(id)
     }
 
     override fun <T: GenericModel> validateNotLastProjectRoleLevel0(

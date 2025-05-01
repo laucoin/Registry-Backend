@@ -6,7 +6,12 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
+import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
+import fr.laucoin.registry.backend.domain.extension.DateExt.isBeforeOrEqual
+import fr.laucoin.registry.backend.domain.extension.DateExt.isEqualOrAfter
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -25,9 +30,10 @@ import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
-import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.Objects
+import java.util.TimeZone
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
@@ -66,14 +72,14 @@ class ParticipantService(
             .notFoundIfEmpty(id)
     }
 
-    override fun searchUsers(projectId: UUID, textSearched: String?): Flux<UserModel> {
+    override fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel> {
         return userRepository.findWithLimit(
             maxUserResult,
             UserSearchParamModel(textSearched, visibilitySearched = true),
         )
     }
 
-    override fun searchGroups(projectId: UUID, textSearched: String?): Flux<GroupModel> {
+    override fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel> {
         return groupRepository.findWithLimit(
             maxGroupResult,
             projectId,
@@ -125,7 +131,7 @@ class ParticipantService(
                         PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER,
                         arrayListOf("${it.first().firstName} ${it.first().lastName}")
                     )
-                    log.error("Attempt to link an already link user to a participant", exception)
+                    log.warn("Attempt to link an already link user to a participant", exception)
                     handle.error(exception)
                 } else handle.next(it)
             }
@@ -157,6 +163,7 @@ class ParticipantService(
 
     override fun updateParticipantById(
         currentUser: CurrentUserModel,
+        timeZone: TimeZone,
         projectId: UUID,
         id: UUID,
         participant: ParticipantModel
@@ -168,6 +175,7 @@ class ParticipantService(
             PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
         )
             .flatMap { findParticipantById(projectId, id, visibilitySearched = null) }
+            .flatMap { validateNoMovementConflict(participant, it, timeZone) }
             .flatMap { toUpdate ->
                 if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
                     validateNoParticipantForUser(participant.project !!.id !!, participant.user !!.id !!)
@@ -222,10 +230,72 @@ class ParticipantService(
             .flatMap { repository.deleteById(it.id !!) }
     }
 
+    private fun validateNoMovementConflict(
+        participant: ParticipantModel, oldParticipant: ParticipantModel, timeZone: TimeZone
+    ): Mono<ParticipantModel> {
+        return if (
+            oldParticipant.startAvailability.isEqualOrAfter(participant.startAvailability)
+            && oldParticipant.endAvailability.isBeforeOrEqual(participant.endAvailability)
+        ) Mono.just(oldParticipant)
+        else Mono.zip(
+            validateNoMovementConflictBefore(participant, oldParticipant, timeZone),
+            validateNoMovementConflictAfter(participant, oldParticipant, timeZone)
+        ).map { oldParticipant }
+    }
+
+    private fun validateNoMovementConflictBefore(
+        participant: ParticipantModel, oldParticipant: ParticipantModel, timeZone: TimeZone
+    ): Mono<ParticipantModel> {
+        return if (
+            participant.startAvailability.isAfter(oldParticipant.startAvailability)
+            && Objects.nonNull(participant.startAvailability)
+        ) {
+            movementRepository.countAllByParticipantId(
+                oldParticipant.project !!.id !!,
+                oldParticipant.id !!,
+                MovementSearchParamModel(
+                    visibilitySearched = null,
+                    typeSearched = null,
+                    endDateTimeSearched = participant.startAvailability !!.toZonedDateTime(timeZone),
+                )
+            ).handle { it, handle ->
+                if (it > 0) {
+                    log.warn("The participant {} already has {} movement(s) before the new end date", oldParticipant.id, it)
+                    handle.error(RegistryException(CONFLICT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(it)))
+                } else handle.next(oldParticipant)
+            }
+        } else Mono.just(oldParticipant)
+    }
+
+    private fun validateNoMovementConflictAfter(
+        participant: ParticipantModel, oldParticipant: ParticipantModel, timeZone: TimeZone
+    ): Mono<ParticipantModel> {
+        return if (
+            participant.endAvailability.isBefore(oldParticipant.endAvailability)
+            && Objects.nonNull(participant.endAvailability)
+        ) {
+            movementRepository.countAllByParticipantId(
+                oldParticipant.project !!.id !!,
+                oldParticipant.id !!,
+                MovementSearchParamModel(
+                    visibilitySearched = null,
+                    typeSearched = null,
+                    startDateTimeSearched = participant.endAvailability !!.toZonedDateTime(timeZone),
+                )
+            ).handle { it, handle ->
+                if (it > 0) {
+                    log.warn("The participant {} already has {} movement(s) after the new start date", oldParticipant.id, it)
+                    handle.error(RegistryException(CONFLICT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME))
+                } else handle.next(oldParticipant)
+            }
+        } else Mono.just(oldParticipant)
+    }
+
     private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String) = flatMap { participantToUpdate ->
         movementRepository.countAllByParticipantId(
             participantToUpdate.project !!.id !!,
             participantToUpdate.id !!,
+            MovementSearchParamModel(),
         ).handle { it, handle ->
             if (it > 0) {
                 log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)

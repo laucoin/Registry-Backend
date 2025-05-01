@@ -6,10 +6,10 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIV
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IActivityModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
@@ -25,7 +25,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -187,7 +186,7 @@ class ActivityServiceTest {
         val uuid = UUID.randomUUID()
         val activity = ActivityModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
-        whenever(movementRepository.countAllByActivityId(any(), any())).thenReturn(Mono.just(0))
+        whenever(movementRepository.countAllByActivityId(any(), any(), any())).thenReturn(Mono.just(0))
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
@@ -195,7 +194,7 @@ class ActivityServiceTest {
 
         // Assert
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByActivityId(projectId, uuid)
+        verify(movementRepository).countAllByActivityId(projectId, uuid, MovementSearchParamModel())
         verify(repository).deleteById(uuid)
     }
 
@@ -205,7 +204,7 @@ class ActivityServiceTest {
         val uuid = UUID.randomUUID()
         val activity = ActivityModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
-        whenever(movementRepository.countAllByActivityId(any(), any())).thenReturn(Mono.just(1))
+        whenever(movementRepository.countAllByActivityId(any(), any(), any())).thenReturn(Mono.just(1))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -216,7 +215,7 @@ class ActivityServiceTest {
         assertEquals(FORBIDDEN, result.status)
         assertEquals(ACTIVITY_DELETE_HAS_MOVEMENT, result.message)
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByActivityId(projectId, uuid)
+        verify(movementRepository).countAllByActivityId(projectId, uuid, MovementSearchParamModel())
         verify(repository, never()).deleteById(any())
     }
 }

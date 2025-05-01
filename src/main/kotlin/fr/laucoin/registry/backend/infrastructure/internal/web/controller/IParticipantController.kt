@@ -11,7 +11,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_U
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
@@ -28,6 +28,7 @@ import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import java.time.ZonedDateTime
 import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
@@ -73,7 +74,7 @@ interface IParticipantController {
         @RequestParam(required = false) textSearched: String?,
         @RequestParam(required = false) typeSearched: ParticipantTypeEnum?,
         @RequestParam(required = false) visibilitySearched: Boolean?,
-        @RequestParam(required = false) statusSearched: UsableElementStatusEnum?,
+        @RequestParam(required = false) statusSearched: PresenceStatusEnum?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<ParticipantReaderDto>>
@@ -200,6 +201,7 @@ interface IParticipantController {
     @PatchMapping("/{id}")
     fun updateParticipantById(
         @AuthenticationPrincipal currentUser: CurrentUserModel,
+        timeZone: TimeZone,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,

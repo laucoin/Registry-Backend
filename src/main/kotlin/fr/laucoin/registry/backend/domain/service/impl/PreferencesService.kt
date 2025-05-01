@@ -3,13 +3,14 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import java.util.Objects
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
@@ -32,11 +33,12 @@ class PreferencesService(
 
     override fun updateUserPreferenceSelectedProjectProfileById(
         currentUser: CurrentUserModel,
-        profileId: UUID
+        profileId: UUID?
     ): Mono<PreferencesModel> {
-        return projectProfileRepository.findProjectProfileByUserIdAndId(currentUser.id !!, profileId, visibilitySearched = true)
+        return if (Objects.isNull(profileId)) return selectedProfile(currentUser)
+        else projectProfileRepository.findProjectProfileByUserIdAndId(currentUser.id !!, profileId !!, visibilitySearched = true)
             .notFoundIfEmpty(profileId)
-            .selectedProfile(currentUser)
+            .flatMap { selectedProfile(currentUser, it) }
     }
 
     override fun updateUserPreferenceSelectedProjectProfileByProjectId(
@@ -50,12 +52,12 @@ class PreferencesService(
         )
         return projectProfileRepository.findProjectProfileByProjectAndUserId(projectId, currentUser.id !!, search)
             .notFoundIfEmpty(projectId)
-            .selectedProfile(currentUser)
+            .flatMap { selectedProfile(currentUser, it) }
     }
 
-    private fun Mono<ProjectProfileModel>.selectedProfile(currentUser: CurrentUserModel): Mono<PreferencesModel> = flatMap { profile ->
-        findByUser(currentUser).flatMap {
-            if (it.selectedProfile?.id == profile.id) Mono.just(it)
+    private fun selectedProfile(currentUser: CurrentUserModel, profile: ProjectProfileModel? = null): Mono<PreferencesModel> {
+        return findByUser(currentUser).flatMap {
+            if (it.selectedProfile?.id == profile?.id) Mono.just(it)
             else {
                 it.selectedProfile = profile
                 repository.save(it.apply { update(currentUser) })

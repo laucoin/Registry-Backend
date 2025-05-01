@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import java.util.TimeZone
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -22,8 +23,8 @@ interface IParticipantService {
 
     fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
     fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
-    fun searchUsers(projectId: UUID, textSearched: String?): Flux<UserModel>
-    fun searchGroups(projectId: UUID, textSearched: String?): Flux<GroupModel>
+    fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel>
+    fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel>
 
     fun findParticipantMovementsPage(
         projectId: UUID,
@@ -35,6 +36,7 @@ interface IParticipantService {
     fun createParticipant(currentUser: CurrentUserModel, participant: ParticipantModel): Mono<ParticipantModel>
     fun updateParticipantById(
         currentUser: CurrentUserModel,
+        timeZone: TimeZone,
         projectId: UUID,
         id: UUID,
         participant: ParticipantModel

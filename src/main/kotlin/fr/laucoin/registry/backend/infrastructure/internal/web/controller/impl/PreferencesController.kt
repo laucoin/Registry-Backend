@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono
 class PreferencesController(
     private val service: IPreferencesService,
 ): IPreferencesController {
-    override fun updateSelectedProjectProfile(currentUser: CurrentUserModel, profileId: UUID): Mono<PreferencesModel> {
+    override fun updateSelectedProjectProfile(currentUser: CurrentUserModel, profileId: UUID?): Mono<PreferencesModel> {
         return service.updateUserPreferenceSelectedProjectProfileById(currentUser, profileId)
     }
 

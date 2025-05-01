@@ -18,8 +18,8 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
-import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IGroupService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
@@ -68,11 +68,13 @@ class GroupService(
             .notFoundIfEmpty(id)
     }
 
-    override fun searchParticipants(projectId: UUID, textSearched: String?): Flux<ParticipantModel> {
+    override fun searchParticipantsByText(projectId: UUID, textSearched: String?): Flux<ParticipantModel> {
         return participantRepository.findWithLimit(
             maxParticipantResult,
             projectId,
-            ParticipantSearchParamModel(textSearched, typeSearched = REGISTERED, visibilitySearched = true)
+            ParticipantSearchParamModel(typeSearched = REGISTERED, visibilitySearched = true).apply {
+                this.textSearched = textSearched
+            },
         )
     }
 

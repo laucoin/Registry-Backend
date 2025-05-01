@@ -40,6 +40,9 @@ registry:
         max-group-result: 5
         max-vehicle-result: 10
         max-activity-result: 10
+    communication:
+      searched:
+        max-activity-result: 10
   security:
     default-role: USER
     oauth2:

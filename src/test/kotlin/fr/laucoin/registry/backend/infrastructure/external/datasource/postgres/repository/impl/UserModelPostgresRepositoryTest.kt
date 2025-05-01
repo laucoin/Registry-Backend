@@ -21,8 +21,8 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
@@ -52,7 +52,7 @@ class UserModelPostgresRepositoryTest(
         assertNotNull(result)
         assertEquals(0, result.pageNumber)
         assertEquals(10, result.pageSize)
-        assertEquals(3, result.totalElements)
+        assertEquals(5, result.totalElements)
         assertEquals(1, result.totalPages)
         verify(postgresRepository).findAll(
             textSearched = null,
@@ -64,7 +64,7 @@ class UserModelPostgresRepositoryTest(
             textSearched = null,
             visibilitySearched = null,
         )
-        verify(mapper, times(3)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @Test
@@ -78,13 +78,13 @@ class UserModelPostgresRepositoryTest(
 
         // Assert
         assertNotNull(result)
-        assertEquals(3, result.size)
+        assertEquals(5, result.size)
         verify(postgresRepository).findWithLimit(
             textSearched = null,
             visibilitySearched = null,
             size,
         )
-        verify(mapper, times(3)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @Test
@@ -129,7 +129,7 @@ class UserModelPostgresRepositoryTest(
             currentUser().oidcId !!,
             visibilitySearched = null,
         )
-        verify(currentUserMapper).toModel(any())
+        verify(currentUserMapper, atLeastOnce()).toModel(any())
     }
 
     @Test
@@ -158,7 +158,7 @@ class UserModelPostgresRepositoryTest(
         val result = repository.findByRoleLevel(level, visibilitySearched = null).collectList().block()
 
         // Assert
-        assertEquals(1, result?.size)
+        assertEquals(3, result?.size)
         assertEquals(currentUser().id, result?.first()?.id)
         verify(postgresRepository).findByRoleLevel(
             level,

@@ -12,7 +12,7 @@ data class MovementModel(
     var type: MovementTypeEnum? = null,
     var reason: MovementReasonEnum? = null,
     var activity: ActivityModel? = null,
-    var contentType: ParticipantTypeEnum,
+    var contentType: ParticipantTypeEnum = ParticipantTypeEnum.REGISTERED,
     var content: List<MovementContentModel> = emptyList(),
 ): GenericProjectModel() {
     data class MovementContentModel(

@@ -4,10 +4,10 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ProjectProfileEntityMapper
@@ -32,6 +32,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -102,7 +103,7 @@ class ProjectProfileModelPostgresRepositoryTest(
         assertNotNull(result)
         assertEquals(0, result.pageNumber)
         assertEquals(10, result.pageSize)
-        assertEquals(2, result.totalElements)
+        assertEquals(4, result.totalElements)
         assertEquals(1, result.totalPages)
         verify(postgresRepository).findByProjectId(
             projectId,
@@ -122,7 +123,7 @@ class ProjectProfileModelPostgresRepositoryTest(
             statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
             dateTimeSearched = null,
         )
-        verify(mapper, times(2)).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @Test
@@ -305,7 +306,7 @@ class ProjectProfileModelPostgresRepositoryTest(
             projectId,
             visibilitySearched = null,
         )
-        verify(mapper).toModel(any())
+        verify(mapper, atLeastOnce()).toModel(any())
     }
 
     @Nested

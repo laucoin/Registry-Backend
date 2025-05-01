@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_O
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_NAME_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY_COMMUNICATION
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import java.util.Locale
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
@@ -22,7 +22,7 @@ class ProjectOptionReaderDtoMapperTest {
     @Test
     fun `Should toDto convert Project option rules map to ProjectOptionModel List`() {
         // Arrange
-        val option: Pair<ProjectOptionEnum, Collection<ProjectOptionEnum>> = Pair(ACTIVITY_COMMUNICATION, listOf(ACTIVITY))
+        val option: ProjectOptionEnum = COMMUNICATION
         val label = "translated"
         whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(label)
 
@@ -30,13 +30,13 @@ class ProjectOptionReaderDtoMapperTest {
         val result = mapper.toDto(option, Locale.getDefault())
 
         // Assert
-        verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$ACTIVITY_COMMUNICATION", null, Locale.getDefault())
-        verify(translateService).getMessage("${PROJECT_OPTION_FORM_ASK_PREFIX}$ACTIVITY_COMMUNICATION", null, Locale.getDefault())
+        verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$COMMUNICATION", null, Locale.getDefault())
+        verify(translateService).getMessage("${PROJECT_OPTION_FORM_ASK_PREFIX}$COMMUNICATION", null, Locale.getDefault())
         verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$ACTIVITY", null, Locale.getDefault())
 
-        assertEquals(option.first, result.value)
+        assertEquals(option, result.value)
         assertEquals(label, result.label)
         assertEquals(label, result.ask)
-        assertEquals(option.second.size, result.preRequired.size)
+        assertEquals(option.requiredOptions.size, result.preRequired.size)
     }
 }

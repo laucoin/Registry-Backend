@@ -63,24 +63,6 @@ interface IUserProjectProfileController {
     ): Mono<PageModel<ProjectProfileReaderDto>>
 
     @Operation(
-        summary = "Find User's Profile",
-        description = "Find User's Profile by ID",
-        parameters = [
-            Parameter(
-                name = ACCEPT_LANGUAGE,
-                description = "Locale, used for metadata and error translation.",
-                `in` = HEADER
-            ),
-        ],
-    )
-    @GetMapping("/{id}")
-    fun findUserProjectProfileById(
-        @AuthenticationPrincipal currentUser: CurrentUserModel,
-        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable id: UUID,
-    ): Mono<ProjectProfileReaderDto>
-
-    @Operation(
         summary = "Accept or Reject Project's invitation",
         description = "Allow User to access the concerned Project if accepted",
         parameters = [

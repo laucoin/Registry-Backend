@@ -21,4 +21,6 @@ data class MovementSearchParamModel(
         startDateTimeSearched,
         endDateTimeSearched,
     )
+
+    constructor(): this(null, MovementTypeEnum.entries.toList(), null, null)
 }
