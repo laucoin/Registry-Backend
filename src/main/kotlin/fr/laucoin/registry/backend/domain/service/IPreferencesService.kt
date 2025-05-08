@@ -8,6 +8,6 @@ import reactor.core.publisher.Mono
 interface IPreferencesService {
     fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel>
 
-    fun updateUserPreferenceSelectedProjectProfileById(currentUser: CurrentUserModel, profileId: UUID): Mono<PreferencesModel>
+    fun updateUserPreferenceSelectedProjectProfileById(currentUser: CurrentUserModel, profileId: UUID?): Mono<PreferencesModel>
     fun updateUserPreferenceSelectedProjectProfileByProjectId(currentUser: CurrentUserModel, projectId: UUID): Mono<PreferencesModel>
 }

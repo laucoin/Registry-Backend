@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.domain.enumeration
 
-enum class UsableElementStatusEnum {
+enum class PresenceStatusEnum {
     UNAVAILABLE,
     OUT,
     IN;
 
     companion object {
-        fun UsableElementStatusEnum?.isAvailable(): Boolean? {
+        fun PresenceStatusEnum?.isAvailable(): Boolean? {
             return when (this) {
                 IN -> true
                 OUT -> true
@@ -15,7 +15,7 @@ enum class UsableElementStatusEnum {
             }
         }
 
-        fun UsableElementStatusEnum?.isPresent(): Boolean? {
+        fun PresenceStatusEnum?.isPresent(): Boolean? {
             return when (this) {
                 IN -> true
                 OUT -> false

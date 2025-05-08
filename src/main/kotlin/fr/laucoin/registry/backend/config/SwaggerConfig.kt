@@ -139,4 +139,10 @@ class SwaggerConfig(
         return GroupedOpenApi.builder().group("project-activities")
             .pathsToMatch("/api/projects/{projectId}/activities/**").build()
     }
+
+    @Bean
+    fun projectCommunicationsApis(): GroupedOpenApi {
+        return GroupedOpenApi.builder().group("project-communications")
+            .pathsToMatch("/api/projects/{projectId}/communications/**").build()
+    }
 }

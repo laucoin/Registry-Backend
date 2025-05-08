@@ -4,6 +4,8 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
+import fr.laucoin.registry.backend.domain.model.CommunicationModel
+import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -31,23 +33,30 @@ interface IMovementService {
     ): Flux<Pair<UUID, List<MovementContentModel>>>
 
     fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
-    fun searchParticipantsAndGroups(
+    fun searchParticipantsAndGroupsByText(
         projectId: UUID,
         typeSearched: ParticipantTypeEnum,
         textSearched: String?
     ): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>>
 
-    fun searchVehicles(projectId: UUID, textSearched: String?): Flux<VehicleModel>
-    fun searchReasons(
+    fun searchVehiclesByText(projectId: UUID, textSearched: String?): Flux<VehicleModel>
+    fun searchReasonsByText(
         contentTypeSearched: ParticipantTypeEnum,
         typeSearched: MovementTypeEnum,
     ): Flux<MovementReasonEnum>
 
-    fun searchActivities(
+    fun searchActivitiesByText(
         projectId: UUID,
         contentTypeSearched: ParticipantTypeEnum,
         textSearched: String?
     ): Flux<ActivityModel>
+
+    fun findMovementCommunicationsPage(
+        projectId: UUID,
+        id: UUID,
+        pageable: PageableModel,
+        searchParams: CommunicationSearchParamModel,
+    ): Mono<PageModel<CommunicationModel>>
 
     fun createMovement(
         currentUser: CurrentUserModel,

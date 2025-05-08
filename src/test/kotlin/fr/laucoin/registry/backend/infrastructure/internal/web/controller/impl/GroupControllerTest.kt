@@ -12,8 +12,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_U
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -278,7 +278,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         pageSize: Int?,
         textSearched: String?,
         visibilitySearched: Boolean?,
-        statusSearched: UsableElementStatusEnum?,
+        statusSearched: PresenceStatusEnum?,
         dateTimeSearched: String?,
     ) {
         // Arrange
@@ -390,7 +390,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Arrange
         val searched = "John"
         val participant = ParticipantModel()
-        whenever(service.searchParticipants(any(), anyOrNull())).thenReturn(Flux.just(participant))
+        whenever(service.searchParticipantsByText(any(), anyOrNull())).thenReturn(Flux.just(participant))
         whenever(participantReaderMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
         // Act
@@ -405,7 +405,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchParticipants(projectId, searched)
+        verify(service).searchParticipantsByText(projectId, searched)
         verifyNoInteractions(readerMapper)
         verify(participantReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)

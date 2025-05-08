@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -35,7 +35,7 @@ class VehicleController(
         pageSize: Int,
         textSearched: String?,
         visibilitySearched: Boolean?,
-        statusSearched: UsableElementStatusEnum?,
+        statusSearched: PresenceStatusEnum?,
         dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<VehicleReaderDto>> {
         return service.findVehiclesPage(

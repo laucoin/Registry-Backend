@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGIST
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -22,16 +21,18 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IActivityModelRepository
+import fr.laucoin.registry.backend.domain.repository.ICommunicationModelRepository
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
-import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IMovementService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.ZonedDateTime
@@ -63,6 +64,7 @@ class MovementServiceTest {
     private val participantRepository: IParticipantModelRepository = mock()
     private val vehicleRepository: IVehicleModelRepository = mock()
     private val activityRepository: IActivityModelRepository = mock()
+    private val communicationRepository: ICommunicationModelRepository = mock()
     private val groupRepository: IGroupModelRepository = mock()
     private val transactionalOperator: TransactionalOperator = mock()
     private val maxParticipants: Int = 1
@@ -75,6 +77,7 @@ class MovementServiceTest {
         participantRepository,
         vehicleRepository,
         activityRepository,
+        communicationRepository,
         groupRepository,
         transactionalOperator,
         maxParticipants,
@@ -306,7 +309,7 @@ class MovementServiceTest {
         whenever(groupRepository.findContent(any(), any())).thenReturn(Flux.just(Pair(uuid, listOf(member))))
 
         // Act
-        val result = service.searchParticipantsAndGroups(projectId, typeSearched, textSearched).block()
+        val result = service.searchParticipantsAndGroupsByText(projectId, typeSearched, textSearched).block()
 
         // Assert
         assertEquals(0, result?.t1?.size)
@@ -315,7 +318,9 @@ class MovementServiceTest {
         verify(participantRepository).findWithLimit(
             maxParticipants,
             projectId,
-            ParticipantSearchParamModel(textSearched, typeSearched, visibilitySearched = true, presenceSearched = true)
+            ParticipantSearchParamModel(typeSearched, visibilitySearched = true, presenceSearched = true).apply {
+                this.textSearched = textSearched
+            }
         )
         verify(groupRepository).findWithLimit(
             maxGroups,
@@ -332,13 +337,13 @@ class MovementServiceTest {
         whenever(vehicleRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchVehicles(projectId, textSearched).blockFirst()
+        service.searchVehiclesByText(projectId, textSearched).blockFirst()
 
         // Assert
         verify(vehicleRepository).findWithLimit(
             maxVehicles,
             projectId,
-            VehicleSearchParamModel(textSearched, visibilitySearched = true, availabilitySearched = true),
+            VehicleSearchParamModel(visibilitySearched = true, availabilitySearched = true).apply { this.textSearched = textSearched },
         )
     }
 
@@ -350,7 +355,7 @@ class MovementServiceTest {
         whenever(activityRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchActivities(projectId, typeSearched, textSearched).blockFirst()
+        service.searchActivitiesByText(projectId, typeSearched, textSearched).blockFirst()
 
         // Assert
         verify(activityRepository).findWithLimit(

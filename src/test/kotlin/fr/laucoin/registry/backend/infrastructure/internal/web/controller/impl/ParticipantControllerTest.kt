@@ -18,7 +18,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -102,7 +102,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
             Arguments.of(null, null, null, null, null, null, null),
             Arguments.of(null, null, null, "text", null, null, null),
             Arguments.of(null, null, null, null, true, null, null),
-            Arguments.of(null, null, null, null, null, UsableElementStatusEnum.IN, null),
+            Arguments.of(null, null, null, null, null, PresenceStatusEnum.IN, null),
             Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
         )
 
@@ -197,7 +197,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         pageSize: Int?,
         textSearched: String?,
         visibilitySearched: Boolean?,
-        statusSearched: UsableElementStatusEnum?,
+        statusSearched: PresenceStatusEnum?,
         dateTimeSearched: String?,
     ) {
         // Arrange
@@ -404,7 +404,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val searched = "John"
         val user = UserModel()
-        whenever(service.searchUsers(any(), anyOrNull())).thenReturn(Flux.just(user))
+        whenever(service.searchUsersByText(any(), anyOrNull())).thenReturn(Flux.just(user))
         whenever(partialUserReaderMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
 
         // Act
@@ -419,7 +419,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchUsers(projectId, searched)
+        verify(service).searchUsersByText(projectId, searched)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(groupReaderMapper)
         verify(partialUserReaderMapper).toDto(any(), any())
@@ -431,7 +431,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Arrange
         val searched = "Group"
         val group = GroupModel()
-        whenever(service.searchGroups(any(), anyOrNull())).thenReturn(Flux.just(group))
+        whenever(service.searchGroupsByText(any(), anyOrNull())).thenReturn(Flux.just(group))
         whenever(groupReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
@@ -446,7 +446,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         // Assert
         result.body<List<*>>(OK)
 
-        verify(service).searchGroups(projectId, searched)
+        verify(service).searchGroupsByText(projectId, searched)
         verifyNoInteractions(readerMapper)
         verify(groupReaderMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
@@ -540,7 +540,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         val uuid = UUID.randomUUID()
         val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
 
-        whenever(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.updateParticipantById(any(), any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
         whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
         whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
@@ -558,7 +558,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
         verify(writerMapper).toModel(participant, projectId)
-        verify(service).updateParticipantById(any(), eq(projectId), eq(uuid), any())
+        verify(service).updateParticipantById(any(), any(), eq(projectId), eq(uuid), any())
     }
 
     @ParameterizedTest

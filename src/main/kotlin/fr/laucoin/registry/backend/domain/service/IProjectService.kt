@@ -3,10 +3,10 @@ package fr.laucoin.registry.backend.domain.service
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -20,7 +20,7 @@ interface IProjectService {
     ): Mono<PageModel<ProjectModel>>
 
     fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
-    fun availableProjectOptions(): Flux<Pair<ProjectOptionEnum, Collection<ProjectOptionEnum>>>
+    fun availableProjectOptions(): Flux<ProjectOptionEnum>
     fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID>
     fun validateDateTimes(id: UUID, start: CustomDateTimeModel?, end: CustomDateTimeModel?, errorCode: String): Mono<UUID>
     fun createProject(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel>

@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -22,6 +22,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.Par
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ParticipantWriterDtoMapper
 import java.time.ZonedDateTime
 import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
@@ -44,7 +45,7 @@ class ParticipantController(
         textSearched: String?,
         typeSearched: ParticipantTypeEnum?,
         visibilitySearched: Boolean?,
-        statusSearched: UsableElementStatusEnum?,
+        statusSearched: PresenceStatusEnum?,
         dateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<ParticipantReaderDto>> {
         return service.findParticipantsPage(
@@ -60,12 +61,12 @@ class ParticipantController(
     }
 
     override fun searchUsers(locale: Locale, projectId: UUID, textSearched: String?): Flux<PartialUserReaderDto> {
-        return service.searchUsers(projectId, textSearched)
+        return service.searchUsersByText(projectId, textSearched)
             .map { partialUserReaderMapper.toDto(it, locale) }
     }
 
     override fun searchGroups(locale: Locale, projectId: UUID, textSearched: String?): Flux<GroupWithoutMemberReaderDto> {
-        return service.searchGroups(projectId, textSearched)
+        return service.searchGroupsByText(projectId, textSearched)
             .map { groupReaderMapper.toDto(it, locale) }
     }
 
@@ -100,12 +101,13 @@ class ParticipantController(
 
     override fun updateParticipantById(
         currentUser: CurrentUserModel,
+        timeZone: TimeZone,
         locale: Locale,
         projectId: UUID,
         id: UUID,
         participant: ParticipantWriterDto,
     ): Mono<ParticipantReaderDto> {
-        return service.updateParticipantById(currentUser, projectId, id, writerMapper.toModel(participant, projectId))
+        return service.updateParticipantById(currentUser, timeZone, projectId, id, writerMapper.toModel(participant, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 

@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
-import fr.laucoin.registry.backend.domain.constant.ProjectOptionsConst.optionsRules
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
@@ -10,10 +9,10 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.notInRange
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IProjectModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -51,8 +50,8 @@ class ProjectService(
             .notFoundIfEmpty(id)
     }
 
-    override fun availableProjectOptions(): Flux<Pair<ProjectOptionEnum, Collection<ProjectOptionEnum>>> {
-        return Flux.fromIterable(optionsRules.map { Pair(it.key, it.value) })
+    override fun availableProjectOptions(): Flux<ProjectOptionEnum> {
+        return Flux.fromIterable(ProjectOptionEnum.entries)
     }
 
     override fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID> {

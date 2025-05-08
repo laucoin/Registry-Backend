@@ -30,13 +30,13 @@ object WebTestClientExt {
 
 
     private val user = UserModel(
-        oidcId = UUID.randomUUID(),
+        oidcId = UUID.fromString("08513d7b-cce1-4efe-bb27-8d936c4a12b4"),
         firstName = FIRST_NAME,
         lastName = LAST_NAME,
         email = "$FIRST_NAME.$LAST_NAME@test.com"
     ).apply {
         id = UUID.fromString("9cd10ea7-96c1-4f82-8366-d11d2e3ec300")
-        oidcId = UUID.fromString("07805018-b5db-435f-99db-ff8c3d79016e")
+        oidcId = UUID.fromString("08513d7b-cce1-4efe-bb27-8d936c4a12b4")
     }
 
     fun buildAuthority(authority: String): String = "${projectId}_$authority"

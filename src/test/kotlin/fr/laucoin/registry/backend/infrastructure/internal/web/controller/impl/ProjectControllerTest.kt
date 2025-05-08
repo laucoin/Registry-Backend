@@ -13,9 +13,7 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY_COMMUNICATION
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.MOVEMENT_REPORT
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.SMOKE_REPORT
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -133,25 +131,7 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
                     name = "project",
                     begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
                     end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    options = listOf(ACTIVITY_COMMUNICATION)
-                ),
-                PROJECT_OPTIONS_MISSING,
-            ),
-            Arguments.of(
-                ProjectWriterDto(
-                    name = "project",
-                    begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    options = listOf(MOVEMENT_REPORT)
-                ),
-                PROJECT_OPTIONS_MISSING,
-            ),
-            Arguments.of(
-                ProjectWriterDto(
-                    name = "project",
-                    begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    options = listOf(SMOKE_REPORT)
+                    options = listOf(COMMUNICATION)
                 ),
                 PROJECT_OPTIONS_MISSING,
             ),
@@ -274,7 +254,7 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
     @Test
     fun `Should getAvailableProjectOptions return 200`() {
         // Arrange
-        whenever(service.availableProjectOptions()).thenReturn(Flux.just(Pair(ACTIVITY_COMMUNICATION, listOf(ACTIVITY))))
+        whenever(service.availableProjectOptions()).thenReturn(Flux.just(COMMUNICATION))
         whenever(optionsReaderMapper.toDto(any(), any())).thenReturn(
             ProjectOptionsReaderDto(
                 ACTIVITY,

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -25,13 +26,6 @@ class MovementModelPostgresRepository(
     private val mapper: MovementEntityMapper,
     private val contentMapper: MovementContentEntityMapper,
 ): IMovementModelRepository {
-    private val emptySearch = MovementSearchParamModel(
-        visibilitySearched = null,
-        typeSearched = null,
-        startDateTimeSearched = null,
-        endDateTimeSearched = null,
-    )
-
     override fun findPage(
         projectId: UUID,
         pageable: PageableModel,
@@ -158,36 +152,63 @@ class MovementModelPostgresRepository(
         }
     }
 
-    override fun countAllByParticipantId(projectId: UUID, participantId: UUID): Mono<Long> {
+    override fun findOutByActivityWithLimit(
+        limit: Int,
+        projectId: UUID,
+        searchParams: ActivitySearchParamModel
+    ): Flux<MovementModel> {
+        return repository.findByActivityWithLimit(
+            projectId,
+            searchParams.textSearched,
+            searchParams.visibilitySearched,
+            searchParams.availabilitySearched,
+            searchParams.dateTimeSearched,
+            limit,
+        ).map { mapper.toModel(it) }
+    }
+
+    override fun countAllByParticipantId(
+        projectId: UUID,
+        participantId: UUID,
+        searchParams: MovementSearchParamModel,
+    ): Mono<Long> {
         return repository.countAllByParticipantId(
             projectId,
             participantId,
-            emptySearch.visibilitySearched,
-            emptySearch.typeSearched,
-            emptySearch.startDateTimeSearched,
-            emptySearch.endDateTimeSearched,
+            searchParams.visibilitySearched,
+            searchParams.typeSearched,
+            searchParams.startDateTimeSearched,
+            searchParams.endDateTimeSearched,
         )
     }
 
-    override fun countAllByVehicleId(projectId: UUID, vehicleId: UUID): Mono<Long> {
+    override fun countAllByVehicleId(
+        projectId: UUID,
+        vehicleId: UUID,
+        searchParams: MovementSearchParamModel,
+    ): Mono<Long> {
         return repository.countAllByVehicleId(
             projectId,
             vehicleId,
-            emptySearch.visibilitySearched,
-            emptySearch.typeSearched,
-            emptySearch.startDateTimeSearched,
-            emptySearch.endDateTimeSearched,
+            searchParams.visibilitySearched,
+            searchParams.typeSearched,
+            searchParams.startDateTimeSearched,
+            searchParams.endDateTimeSearched,
         )
     }
 
-    override fun countAllByActivityId(projectId: UUID, activityId: UUID): Mono<Long> {
+    override fun countAllByActivityId(
+        projectId: UUID,
+        activityId: UUID,
+        searchParams: MovementSearchParamModel,
+    ): Mono<Long> {
         return repository.countAllByActivityId(
             projectId,
             activityId,
-            emptySearch.visibilitySearched,
-            emptySearch.typeSearched,
-            emptySearch.startDateTimeSearched,
-            emptySearch.endDateTimeSearched,
+            searchParams.visibilitySearched,
+            searchParams.typeSearched,
+            searchParams.startDateTimeSearched,
+            searchParams.endDateTimeSearched,
         )
     }
 

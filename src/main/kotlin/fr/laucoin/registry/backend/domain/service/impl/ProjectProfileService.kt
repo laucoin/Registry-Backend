@@ -8,10 +8,10 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileErro
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
@@ -166,7 +166,11 @@ class ProjectProfileService(
                         "User \"{}\" cannot update project profile with a role higher up the breast.",
                         currentUser.id,
                     )
-                    handle.error(RegistryException(FORBIDDEN, PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER))
+                    handle.error(
+                        RegistryException(
+                            FORBIDDEN, PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER, arrayListOf(profileToUpdate.role)
+                        )
+                    )
                 } else if (! eligibleRoles.contains(profile.role)) {
                     log.warn(
                         "User \"{}\" tried to update project profile with a role higher up the breast.",

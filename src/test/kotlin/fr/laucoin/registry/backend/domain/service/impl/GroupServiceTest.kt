@@ -7,18 +7,18 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
-import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IGroupService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
@@ -161,13 +161,13 @@ class GroupServiceTest {
         whenever(participantRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchParticipants(projectId, textSearched).blockFirst()
+        service.searchParticipantsByText(projectId, textSearched).blockFirst()
 
         // Assert
         verify(participantRepository).findWithLimit(
             maxParticipants,
             projectId,
-            ParticipantSearchParamModel(textSearched, REGISTERED, visibilitySearched = true)
+            ParticipantSearchParamModel(REGISTERED, visibilitySearched = true).apply { this.textSearched = textSearched }
         )
     }
 

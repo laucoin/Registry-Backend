@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
@@ -10,8 +11,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -22,6 +21,8 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.CommunicationModel
+import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -37,19 +38,19 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IActivityModelRepository
+import fr.laucoin.registry.backend.domain.repository.ICommunicationModelRepository
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
-import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IMovementService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
@@ -65,6 +66,7 @@ class MovementService(
     private val participantRepository: IParticipantModelRepository,
     private val vehicleRepository: IVehicleModelRepository,
     private val activityRepository: IActivityModelRepository,
+    private val communicationRepository: ICommunicationModelRepository,
     private val groupRepository: IGroupModelRepository,
     private val transactionalOperator: TransactionalOperator,
     @Value("\${registry.feature.movement.searched.max-participant-result}")
@@ -96,7 +98,7 @@ class MovementService(
             .notFoundIfEmpty(id)
     }
 
-    override fun searchParticipantsAndGroups(
+    override fun searchParticipantsAndGroupsByText(
         projectId: UUID,
         typeSearched: ParticipantTypeEnum,
         textSearched: String?
@@ -106,11 +108,10 @@ class MovementService(
                 maxParticipantResult,
                 projectId,
                 ParticipantSearchParamModel(
-                    textSearched,
                     typeSearched,
                     visibilitySearched = true,
                     presenceSearched = true
-                ),
+                ).apply { this.textSearched = textSearched },
             ).collectList(),
             groupRepository.findWithLimit(
                 maxGroupResult,
@@ -125,15 +126,15 @@ class MovementService(
         )
     }
 
-    override fun searchVehicles(projectId: UUID, textSearched: String?): Flux<VehicleModel> {
+    override fun searchVehiclesByText(projectId: UUID, textSearched: String?): Flux<VehicleModel> {
         return vehicleRepository.findWithLimit(
             maxVehicleResult,
             projectId,
-            VehicleSearchParamModel(textSearched, visibilitySearched = true, availabilitySearched = true),
+            VehicleSearchParamModel(visibilitySearched = true, availabilitySearched = true).apply { this.textSearched = textSearched },
         )
     }
 
-    override fun searchReasons(
+    override fun searchReasonsByText(
         contentTypeSearched: ParticipantTypeEnum,
         typeSearched: MovementTypeEnum
     ): Flux<MovementReasonEnum> {
@@ -141,7 +142,7 @@ class MovementService(
             .filter { it.type == typeSearched && contentTypeSearched == it.participantType }
     }
 
-    override fun searchActivities(
+    override fun searchActivitiesByText(
         projectId: UUID,
         contentTypeSearched: ParticipantTypeEnum,
         textSearched: String?
@@ -152,6 +153,15 @@ class MovementService(
             projectId,
             ActivitySearchParamModel(textSearched, visibilitySearched = true, availabilitySearched = true),
         )
+    }
+
+    override fun findMovementCommunicationsPage(
+        projectId: UUID,
+        id: UUID,
+        pageable: PageableModel,
+        searchParams: CommunicationSearchParamModel
+    ): Mono<PageModel<CommunicationModel>> {
+        return communicationRepository.findPageByMovementId(projectId, id, pageable, searchParams)
     }
 
     private fun validateMovementDate(movement: MovementModel): Mono<UUID> {
@@ -205,6 +215,7 @@ class MovementService(
         return validateMovementDate(movement)
             .flatMap { findMovementById(projectId, id, visibilitySearched = null) }
             .validateUpdatableMovementFields(movement)
+            .flatMap { validateNoCommunicationConflict(movement, it) }
             .flatMap { validateActivity(movement, it) }
             .flatMap { saveGuestsIfNecessary(currentUser, movement, it, newGuests) }
             .flatMap {
@@ -238,7 +249,6 @@ class MovementService(
         repository.update(it.apply { update(currentUser) })
     }
 
-    @PreAuthorize("hasPermission(#movement.project.id, '$REGISTRY_PROJECT_OPTION_ACTIVITY')")
     private fun validateActivity(movement: MovementModel, oldMovement: MovementModel? = null): Mono<MovementModel> {
         return if (Objects.isNull(movement.activity) || movement.activity?.id == oldMovement?.activity?.id) Mono.just(
             oldMovement ?: movement
@@ -254,6 +264,27 @@ class MovementService(
                 )
                 else handle.next(oldMovement ?: movement)
             }
+    }
+
+    private fun validateNoCommunicationConflict(movement: MovementModel, oldMovement: MovementModel): Mono<MovementModel> {
+        return if (movement.dateTime.isAfter(oldMovement.dateTime)) {
+            val params = CommunicationSearchParamModel(
+                visibilitySearched = null,
+                startDateTimeSearched = null,
+                endDateTimeSearched = movement.dateTime,
+            )
+            communicationRepository.countAllByMovementId(movement.project !!.id !!, oldMovement.id !!, params)
+                .handle { it, handle ->
+                    if (it > 0L) handle.error(
+                        RegistryException(
+                            CONFLICT,
+                            MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME,
+                            arrayListOf(it)
+                        )
+                    )
+                    else handle.next(oldMovement)
+                }
+        } else Mono.just(oldMovement)
     }
 
     private fun saveGuestsIfNecessary(
@@ -343,7 +374,6 @@ class MovementService(
             .map { movement }
     }
 
-    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE')")
     private fun validateVehicles(projectId: UUID, movement: MovementModel, newVehicleIds: List<UUID>): Mono<MovementModel> {
         return vehicleRepository.findAllByIds(projectId, newVehicleIds, visibilitySearched = null)
             .collectList()

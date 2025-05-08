@@ -110,6 +110,7 @@ class VehicleService(
         movementRepository.countAllByVehicleId(
             vehicleToUpdate.project !!.id !!,
             vehicleToUpdate.id !!,
+            MovementSearchParamModel(),
         ).handle { it, handle ->
             if (it > 0) {
                 log.warn("The vehicle {} already linked to movement(s)", vehicleToUpdate.id)

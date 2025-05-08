@@ -1,20 +1,20 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -100,43 +100,6 @@ class UserProjectProfileServiceTest {
 
         // Assert
         verify(repository).findProjectProfilesPageByUserId(projectId, pageable, params)
-    }
-
-    @Test
-    fun `Should findUserProjectProfileById call repository findProjectProfileByUserIdAndId`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val profile = ProjectProfileModel().apply {
-            id = uuid
-            project = ProjectModel().apply { id = projectId }
-        }
-        val onlyVisible = true
-        whenever(repository.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
-
-        // Act
-        service.findUserProjectProfileById(currentUser(), uuid, onlyVisible).block()
-
-        // Assert
-        verify(repository).findProjectProfileByUserIdAndId(currentUser().id !!, uuid, onlyVisible)
-    }
-
-    @Test
-    fun `Should findUserProjectProfileById call repository findProjectProfileByUserIdAndId throw on empty result`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val onlyVisible = true
-        whenever(repository.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
-
-        // Act
-        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.findUserProjectProfileById(currentUser(), uuid, onlyVisible).block()
-        }) as RegistryException
-
-        // Assert
-        assertEquals(NOT_FOUND, result.status)
-        assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
-        assertEquals(1, result.args?.size)
-        verify(repository).findProjectProfileByUserIdAndId(currentUser().id !!, uuid, onlyVisible)
     }
 
     @ParameterizedTest

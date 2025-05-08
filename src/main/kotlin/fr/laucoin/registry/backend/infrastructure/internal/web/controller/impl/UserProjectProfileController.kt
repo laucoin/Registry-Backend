@@ -2,9 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IUserProjectProfileController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectProfileReaderDto
@@ -35,11 +35,6 @@ class UserProjectProfileController(
             PageableModel(pageNumber * pageSize, pageSize),
             ProjectProfileSearchParamModel(textSearched, availabilitySearched, statusSearched, dateTimeSearched),
         ).map { readerMapper.toDtoPage(it, locale) }
-    }
-
-    override fun findUserProjectProfileById(currentUser: CurrentUserModel, locale: Locale, id: UUID): Mono<ProjectProfileReaderDto> {
-        return service.findUserProjectProfileById(currentUser, id, visibilitySearched = null)
-            .map { readerMapper.toDto(it, locale) }
     }
 
     override fun manageUserProjectProfileAcceptance(

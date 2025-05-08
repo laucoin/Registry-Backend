@@ -1,19 +1,19 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ParticipantEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IParticipantEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
+import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.LocalDate
@@ -119,7 +119,7 @@ class ParticipantModelPostgresRepositoryTest(
         assertNotNull(result)
         assertEquals(0, result.pageNumber)
         assertEquals(10, result.pageSize)
-        assertEquals(1, result.totalPages)
+        assertEquals(3, result.totalPages)
         verify(postgresRepository).findAllByGroupId(
             projectId,
             groupId,

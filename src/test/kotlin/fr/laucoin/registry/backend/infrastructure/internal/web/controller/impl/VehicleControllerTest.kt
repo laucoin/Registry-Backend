@@ -19,7 +19,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.enumeration.UsableElementStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -92,7 +92,7 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                 Arguments.of(null, null, null, null, null, null, null),
                 Arguments.of(null, null, null, "text", null, null, null),
                 Arguments.of(null, null, null, null, true, null, null),
-                Arguments.of(null, null, null, null, null, UsableElementStatusEnum.IN, null),
+                Arguments.of(null, null, null, null, null, PresenceStatusEnum.IN, null),
                 Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
             )
         }
@@ -242,7 +242,7 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         pageSize: Int?,
         textSearched: String?,
         visibilitySearched: Boolean?,
-        statusSearched: UsableElementStatusEnum?,
+        statusSearched: PresenceStatusEnum?,
         dateTimeSearched: String?,
     ) {
         // Arrange

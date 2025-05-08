@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -15,6 +14,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
@@ -22,10 +22,12 @@ import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
-import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.ZoneId
+import java.util.TimeZone
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -189,7 +191,7 @@ class ParticipantServiceTest {
         whenever(userRepository.findWithLimit(any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchUsers(projectId, textSearched).blockFirst()
+        service.searchUsersByText(projectId, textSearched).blockFirst()
 
         // Assert
         verify(userRepository).findWithLimit(maxUsers, UserSearchParamModel(textSearched, visibilitySearched = true))
@@ -202,7 +204,7 @@ class ParticipantServiceTest {
         whenever(groupRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
         // Act
-        service.searchGroups(projectId, textSearched).blockFirst()
+        service.searchGroupsByText(projectId, textSearched).blockFirst()
 
         // Assert
         verify(groupRepository).findWithLimit(
@@ -390,7 +392,8 @@ class ParticipantServiceTest {
         whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newGroups.toTypedArray()))
 
         // Act
-        service.updateParticipantById(currentUser(), projectId, uuid, participantUpdated).block()
+        service.updateParticipantById(currentUser(), TimeZone.getTimeZone(ZoneId.of("UTC")), projectId, uuid, participantUpdated)
+            .block()
 
         // Assert
         verify(projectService).validateDateTimes(
@@ -496,7 +499,7 @@ class ParticipantServiceTest {
         val uuid = UUID.randomUUID()
         val participant = ParticipantModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-        whenever(movementRepository.countAllByParticipantId(any(), any())).thenReturn(Mono.just(0))
+        whenever(movementRepository.countAllByParticipantId(any(), any(), any())).thenReturn(Mono.just(0))
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
@@ -504,7 +507,7 @@ class ParticipantServiceTest {
 
         // Assert
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByParticipantId(projectId, uuid)
+        verify(movementRepository).countAllByParticipantId(projectId, uuid, MovementSearchParamModel())
         verify(repository).deleteById(uuid)
     }
 
@@ -514,7 +517,7 @@ class ParticipantServiceTest {
         val uuid = UUID.randomUUID()
         val participant = ParticipantModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-        whenever(movementRepository.countAllByParticipantId(any(), any())).thenReturn(Mono.just(1))
+        whenever(movementRepository.countAllByParticipantId(any(), any(), any())).thenReturn(Mono.just(1))
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -525,7 +528,7 @@ class ParticipantServiceTest {
         assertEquals(FORBIDDEN, result.status)
         assertEquals(PARTICIPANT_DELETE_HAS_MOVEMENT, result.message)
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByParticipantId(projectId, uuid)
+        verify(movementRepository).countAllByParticipantId(projectId, uuid, MovementSearchParamModel())
         verify(repository, never()).deleteById(any())
     }
 }

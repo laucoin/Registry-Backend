@@ -4,14 +4,17 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOW
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto.MovementContentReaderDto
@@ -175,6 +178,36 @@ interface IMovementController {
         @PathVariable projectId: UUID,
         @RequestParam textSearched: String?
     ): Flux<VehicleReaderDto>
+
+    @Operation(
+        summary = "Find Movements Communications",
+        description = "Find or get paginated movement communications",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R')")
+    @GetMapping("/{id}/communications")
+    fun findParticipantMovements(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable projectId: UUID,
+        @PathVariable id: UUID,
+        @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
+        @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+            200,
+            message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+        ) pageSize: Int,
+        @RequestParam(required = false) textSearched: String?,
+        @RequestParam(required = false) visibilitySearched: Boolean?,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DATE_TIME) endDateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<CommunicationReaderDto>>
 
     @Operation(
         summary = "Create Movement",

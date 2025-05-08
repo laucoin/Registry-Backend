@@ -6,10 +6,10 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ProjectProfileReaderDtoMapper
@@ -29,7 +29,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -125,27 +124,6 @@ class UserProjectProfileControllerTest(@Autowired private val webClient: WebTest
 
         verify(service).findProjectProfilesPage(currentUser().id !!, pageable, searchParams)
         verify(readerMapper).toDtoPage(page, Locale.ENGLISH)
-    }
-
-    @Test
-    fun `Should findUserProjectProfileById return 200`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        whenever(service.findUserProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
-
-        // Act
-        val result = webClient
-            .authenticate()
-            .get()
-            .uri(uriBuilder("$BASE_URL/{id}", listOf(uuid), emptyList()))
-            .exchange()
-
-        // Assert
-        result.body<ProjectProfileReaderDto>(OK)
-
-        verify(readerMapper).toDto(any(), any())
-        verify(service).findUserProjectProfileById(currentUser(), uuid, visibilitySearched = null)
     }
 
     @Test
