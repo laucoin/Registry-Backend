@@ -17,6 +17,10 @@ interface IParticipantModelRepository: IGenericReadProjectModelRepository<Partic
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>>
 
+    fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantModel>
+
+    fun countAll(projectId: UUID, searchParams: ParticipantSearchParamModel): Mono<Long>
+
     fun findPageByGroupId(
         projectId: UUID,
         groupId: UUID,

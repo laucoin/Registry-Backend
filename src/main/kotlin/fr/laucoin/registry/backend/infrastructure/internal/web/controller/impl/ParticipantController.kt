@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
@@ -8,6 +10,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IParticipantController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
@@ -24,6 +27,7 @@ import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -43,6 +47,7 @@ class ParticipantController(
         pageNumber: Int,
         pageSize: Int,
         textSearched: String?,
+        isMajor: Boolean?,
         typeSearched: ParticipantTypeEnum?,
         visibilitySearched: Boolean?,
         statusSearched: PresenceStatusEnum?,
@@ -51,8 +56,16 @@ class ParticipantController(
         return service.findParticipantsPage(
             projectId,
             PageableModel(pageNumber * pageSize, pageSize),
-            ParticipantSearchParamModel(textSearched, typeSearched, visibilitySearched, statusSearched, dateTimeSearched),
+            ParticipantSearchParamModel(textSearched, isMajor, typeSearched, visibilitySearched, statusSearched, dateTimeSearched),
         ).map { readerMapper.toDtoPage(it, locale) }
+    }
+
+    override fun findBirthdays(
+        locale: Locale,
+        projectId: UUID
+    ): Flux<ParticipantReaderDto> {
+        return service.findBirthdays(projectId)
+            .map { readerMapper.toDto(it, locale) }
     }
 
     override fun findParticipantById(locale: Locale, projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
@@ -71,21 +84,30 @@ class ParticipantController(
     }
 
     override fun findParticipantMovements(
+        currentUser: CurrentUserModel,
         locale: Locale,
         projectId: UUID,
         id: UUID,
         pageNumber: Int,
         pageSize: Int,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: MovementTypeEnum?,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<MovementReaderDto>> {
+        if (! currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
+            throw RegistryException(
+                status = FORBIDDEN,
+                code = NOT_ENOUGH_PERMISSION,
+            )
+        }
+
         return service.findParticipantMovementsPage(
             projectId,
             id,
             PageableModel(pageNumber * pageSize, pageSize),
-            MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
+            MovementSearchParamModel(visibilitySearched, linkedToActivity, typeSearched, startDateTimeSearched, endDateTimeSearched),
         ).map { movementReaderMapper.toDtoPage(it, locale) }
     }
 
@@ -107,7 +129,7 @@ class ParticipantController(
         id: UUID,
         participant: ParticipantWriterDto,
     ): Mono<ParticipantReaderDto> {
-        return service.updateParticipantById(currentUser, timeZone, projectId, id, writerMapper.toModel(participant, projectId))
+        return service.updateParticipantById(currentUser, projectId, id, writerMapper.toModel(participant, projectId))
             .map { readerMapper.toDto(it, locale) }
     }
 

@@ -3,12 +3,16 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericProjectEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_INSIDE_MEMBERS_COUNT
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_MEMBERS_COUNT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_OUTSIDE_MEMBERS_COUNT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_TABLE
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
+import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 
@@ -19,9 +23,18 @@ data class GroupEntity(
     @Column(GROUP_START_AVAILABILITY_DATE)
     var startAvailabilityDate: LocalDate? = null,
     @Column(GROUP_START_AVAILABILITY_TIME)
-    var startAvailabilityTime: LocalTime? = null,
+    var startAvailabilityTime: OffsetTime? = null,
     @Column(GROUP_END_AVAILABILITY_DATE)
     var endAvailabilityDate: LocalDate? = null,
     @Column(GROUP_END_AVAILABILITY_TIME)
-    var endAvailabilityTime: LocalTime? = null,
+    var endAvailabilityTime: OffsetTime? = null,
+    @ReadOnlyProperty
+    @Column(GROUP_MEMBERS_COUNT)
+    var members: Long? = null,
+    @ReadOnlyProperty
+    @Column(GROUP_INSIDE_MEMBERS_COUNT)
+    var insideMembers: Long? = null,
+    @ReadOnlyProperty
+    @Column(GROUP_OUTSIDE_MEMBERS_COUNT)
+    var outsideMembers: Long? = null,
 ): GenericProjectEntity()

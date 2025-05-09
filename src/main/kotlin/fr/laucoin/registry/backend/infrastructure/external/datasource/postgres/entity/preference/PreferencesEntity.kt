@@ -20,7 +20,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_USER_ID
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
@@ -43,13 +43,13 @@ data class PreferencesEntity(
     var selectedProfileProjectStartDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_START_TIME)
-    var selectedProfileProjectStartTime: LocalTime? = null,
+    var selectedProfileProjectStartTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_END_DATE)
     var selectedProfileProjectEndDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_END_TIME)
-    var selectedProfileProjectEndTime: LocalTime? = null,
+    var selectedProfileProjectEndTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_OPTIONS)
     var selectedProfileProjectOptions: List<ProjectOptionEnum>? = null,
@@ -64,12 +64,12 @@ data class PreferencesEntity(
     var selectedProfileStartAccessDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_START_ACCESS_TIME)
-    var selectedProfileStartAccessTime: LocalTime? = null,
+    var selectedProfileStartAccessTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_END_ACCESS_DATE)
     var selectedProfileEndAccessDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_END_ACCESS_TIME)
-    var selectedProfileEndAccessTime: LocalTime? = null,
+    var selectedProfileEndAccessTime: OffsetTime? = null,
 ): GenericEntity()
 

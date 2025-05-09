@@ -35,6 +35,7 @@ class MovementModelPostgresRepository(
             repository.countAll(
                 projectId,
                 searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
@@ -42,6 +43,36 @@ class MovementModelPostgresRepository(
             repository.findAll(
                 projectId,
                 searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
+                searchParams.typeSearched,
+                searchParams.startDateTimeSearched,
+                searchParams.endDateTimeSearched,
+                pageable.limit,
+                pageable.offset,
+            ).map(mapper::toModel).collectList()
+        ).map {
+            PageModel(pageable, it.t1, it.t2)
+        }
+    }
+
+    override fun findCurrentPage(
+        projectId: UUID,
+        pageable: PageableModel,
+        searchParams: MovementSearchParamModel
+    ): Mono<PageModel<MovementModel>> {
+        return Mono.zip(
+            repository.countCurrent(
+                projectId,
+                searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
+                searchParams.typeSearched,
+                searchParams.startDateTimeSearched,
+                searchParams.endDateTimeSearched,
+            ),
+            repository.findCurrent(
+                projectId,
+                searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
@@ -73,6 +104,7 @@ class MovementModelPostgresRepository(
                 projectId,
                 participantId,
                 searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
@@ -81,6 +113,7 @@ class MovementModelPostgresRepository(
                 projectId,
                 participantId,
                 searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
@@ -103,6 +136,7 @@ class MovementModelPostgresRepository(
                 projectId,
                 vehicleId,
                 searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
@@ -111,6 +145,7 @@ class MovementModelPostgresRepository(
                 projectId,
                 vehicleId,
                 searchParams.visibilitySearched,
+                searchParams.linkedToActivity,
                 searchParams.typeSearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
@@ -152,7 +187,7 @@ class MovementModelPostgresRepository(
         }
     }
 
-    override fun findOutByActivityWithLimit(
+    override fun findActivityWithLimit(
         limit: Int,
         projectId: UUID,
         searchParams: ActivitySearchParamModel
@@ -176,6 +211,7 @@ class MovementModelPostgresRepository(
             projectId,
             participantId,
             searchParams.visibilitySearched,
+            searchParams.linkedToActivity,
             searchParams.typeSearched,
             searchParams.startDateTimeSearched,
             searchParams.endDateTimeSearched,
@@ -191,6 +227,7 @@ class MovementModelPostgresRepository(
             projectId,
             vehicleId,
             searchParams.visibilitySearched,
+            searchParams.linkedToActivity,
             searchParams.typeSearched,
             searchParams.startDateTimeSearched,
             searchParams.endDateTimeSearched,

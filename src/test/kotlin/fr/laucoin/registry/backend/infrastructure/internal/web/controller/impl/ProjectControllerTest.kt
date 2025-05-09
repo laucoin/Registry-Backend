@@ -35,7 +35,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -102,8 +102,8 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
             Arguments.of(
                 ProjectWriterDto(
                     name = "",
-                    begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                     options = emptyList()
                 ),
                 PROJECT_NAME_NULL_OR_BLANK,
@@ -111,8 +111,8 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
             Arguments.of(
                 ProjectWriterDto(
                     name = "azertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiopazertyuiop",
-                    begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                     options = emptyList()
                 ),
                 PROJECT_NAME_TOO_LONG,
@@ -120,8 +120,8 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
             Arguments.of(
                 ProjectWriterDto(
                     name = "project",
-                    begin = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    end = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    begin = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+                    end = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
                     options = emptyList()
                 ),
                 PROJECT_BEGIN_LATER_THAN_END_TIME,
@@ -129,8 +129,8 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
             Arguments.of(
                 ProjectWriterDto(
                     name = "project",
-                    begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                     options = listOf(COMMUNICATION)
                 ),
                 PROJECT_OPTIONS_MISSING,
@@ -285,8 +285,8 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Arrange
         val project = ProjectWriterDto(
             name = "project",
-            begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-            end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+            begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+            end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
             options = listOf(ACTIVITY)
         )
         whenever(service.createProject(any(), any())).thenReturn(Mono.just(ProjectModel()))
@@ -337,8 +337,8 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Arrange
         val project = ProjectWriterDto(
             name = "project",
-            begin = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-            end = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+            begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+            end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
             options = listOf(ACTIVITY)
         )
 

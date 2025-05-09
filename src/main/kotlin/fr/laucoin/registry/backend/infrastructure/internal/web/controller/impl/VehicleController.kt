@@ -51,12 +51,14 @@ class VehicleController(
     }
 
     override fun findVehicleMovements(
+        currentUser: CurrentUserModel,
         locale: Locale,
         projectId: UUID,
         id: UUID,
         pageNumber: Int,
         pageSize: Int,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: MovementTypeEnum?,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?
@@ -65,7 +67,7 @@ class VehicleController(
             projectId,
             id,
             PageableModel(pageNumber * pageSize, pageSize),
-            MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
+            MovementSearchParamModel(visibilitySearched, linkedToActivity, typeSearched, startDateTimeSearched, endDateTimeSearched),
         ).map { movementReaderMapper.toDtoPage(it, locale) }
     }
 

@@ -16,7 +16,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_PURGED
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
@@ -50,9 +50,9 @@ data class ProjectProfileEntity(
     @Column(PROJECT_PROFILE_START_ACCESS_DATE)
     var startAccessDate: LocalDate? = null,
     @Column(PROJECT_PROFILE_START_ACCESS_TIME)
-    var startAccessTime: LocalTime? = null,
+    var startAccessTime: OffsetTime? = null,
     @Column(PROJECT_PROFILE_END_ACCESS_DATE)
     var endAccessDate: LocalDate? = null,
     @Column(PROJECT_PROFILE_END_ACCESS_TIME)
-    var endAccessTime: LocalTime? = null,
+    var endAccessTime: OffsetTime? = null,
 ): GenericProjectEntity()

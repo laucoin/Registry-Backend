@@ -86,6 +86,7 @@ class ParticipantModelPostgresRepositoryTest(
         verify(postgresRepository).findAll(
             projectId,
             textSearched = null,
+            isMajor = null,
             typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
@@ -97,6 +98,7 @@ class ParticipantModelPostgresRepositoryTest(
         verify(postgresRepository).countAll(
             projectId,
             textSearched = null,
+            isMajor = null,
             typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
@@ -124,6 +126,7 @@ class ParticipantModelPostgresRepositoryTest(
             projectId,
             groupId,
             textSearched = null,
+            isMajor = null,
             typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
@@ -136,6 +139,7 @@ class ParticipantModelPostgresRepositoryTest(
             projectId,
             groupId,
             textSearched = null,
+            isMajor = null,
             typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,
@@ -190,6 +194,7 @@ class ParticipantModelPostgresRepositoryTest(
         verify(postgresRepository).findWithLimit(
             projectId,
             textSearched = null,
+            isMajor = null,
             typeSearched = null,
             visibilitySearched = null,
             availabilitySearched = null,

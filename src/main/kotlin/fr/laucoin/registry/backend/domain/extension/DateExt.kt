@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.extension
 
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.util.Objects
 
 object DateExt {
@@ -10,8 +10,8 @@ object DateExt {
             Objects.isNull(other) -> false
             Objects.isNull(this) || this !!.date.isBefore(other !!.date) -> true
             date.isEqual(other.date) -> {
-                val objectTime = time ?: LocalTime.MIN
-                val otherTime = other.time ?: LocalTime.MIN
+                val objectTime = time ?: OffsetTime.MIN
+                val otherTime = other.time ?: OffsetTime.MIN
                 objectTime !!.isBefore(otherTime)
             }
 
@@ -24,8 +24,8 @@ object DateExt {
             Objects.isNull(other) -> false
             Objects.isNull(this) || this !!.date.isAfter(other !!.date) -> true
             date.isEqual(other.date) -> {
-                val objectTime = time ?: LocalTime.MIN
-                val otherTime = other.time ?: LocalTime.MIN
+                val objectTime = time ?: OffsetTime.MIN
+                val otherTime = other.time ?: OffsetTime.MIN
                 objectTime !!.isBefore(otherTime)
             }
 
@@ -37,8 +37,8 @@ object DateExt {
         return when {
             Objects.isNull(this) || Objects.isNull(other) || this !!.date.isBefore(other !!.date) -> true
             date.isEqual(other.date) -> {
-                val objectTime = time ?: LocalTime.MIN
-                val otherTime = other.time ?: LocalTime.MIN
+                val objectTime = time ?: OffsetTime.MIN
+                val otherTime = other.time ?: OffsetTime.MIN
                 objectTime !!.isBefore(otherTime) || objectTime === otherTime
             }
 
@@ -50,8 +50,8 @@ object DateExt {
         return when {
             Objects.isNull(this) || Objects.isNull(other) || this !!.date.isAfter(other !!.date) -> true
             date.isEqual(other.date) -> {
-                val objectTime = time ?: LocalTime.MAX
-                val otherTime = other.time ?: LocalTime.MAX
+                val objectTime = time ?: OffsetTime.MAX
+                val otherTime = other.time ?: OffsetTime.MAX
                 objectTime !!.isAfter(otherTime) || objectTime === otherTime
             }
 

@@ -10,6 +10,8 @@ object TranslationKeyConst {
     const val PROJECT_PROFILE_STATUS_PREFIX = "project-profile.status."
     const val MOVEMENT_TYPE_PREFIX = "movement.type."
     const val MOVEMENT_REASON_PREFIX = "movement.reason."
-    const val USABLE_ELEMENT_STATUS_PREFIX = "usable.element.status."
+    const val DURATION_PREFIX = "duration."
+    const val PRESENCE_STATUS_PREFIX = "presence.status."
+    const val PRESENCE_STATUS_DURATION_PREFIX = "$PRESENCE_STATUS_PREFIX$DURATION_PREFIX"
     const val PARTICIPANT_TYPE_PREFIX = "participant.type."
 }

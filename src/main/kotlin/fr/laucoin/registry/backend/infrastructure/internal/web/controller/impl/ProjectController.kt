@@ -1,9 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IProjectController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectOptionsReaderDto
@@ -15,6 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.Pro
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -36,6 +40,13 @@ class ProjectController(
         withProfile: Boolean,
         dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<ProjectReaderDto>> {
+        if (! currentUser.hasAuthority(REGISTRY_PROJECT_R) && ! withProfile) {
+            throw RegistryException(
+                status = FORBIDDEN,
+                code = NOT_ENOUGH_PERMISSION,
+            )
+        }
+
         return service.findProjectsPage(
             currentUser,
             PageableModel(pageNumber * pageSize, pageSize),

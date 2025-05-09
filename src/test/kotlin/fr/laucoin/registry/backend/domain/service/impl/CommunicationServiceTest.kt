@@ -118,7 +118,7 @@ class CommunicationServiceTest {
         // Assert
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(now.toLocalDate(), now.toLocalTime()),
+            CustomDateTimeModel(now),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(movementRepository).findById(projectId, movementId, visibilitySearched = null)
@@ -147,7 +147,7 @@ class CommunicationServiceTest {
         assertEquals(COMMUNICATION_MOVEMENT_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(now.toLocalDate(), now.toLocalTime()),
+            CustomDateTimeModel(now),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(movementRepository).findById(projectId, movementUuid, visibilitySearched = null)
@@ -178,7 +178,7 @@ class CommunicationServiceTest {
         assertEquals(COMMUNICATION_MOVEMENT_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(now.toLocalDate(), now.toLocalTime()),
+            CustomDateTimeModel(now),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(movementRepository).findById(projectId, movementId, visibilitySearched = null)
@@ -208,7 +208,7 @@ class CommunicationServiceTest {
         // Assert
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(now.toLocalDate(), now.toLocalTime()),
+            CustomDateTimeModel(now),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(repository).findById(projectId, uuid, visibilitySearched = null)

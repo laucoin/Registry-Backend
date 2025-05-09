@@ -46,6 +46,20 @@ class VehicleModelPostgresRepository(
         }
     }
 
+    override fun countAll(
+        projectId: UUID,
+        searchParams: VehicleSearchParamModel
+    ): Mono<Long> {
+        return repository.countAll(
+            projectId,
+            searchParams.textSearched,
+            searchParams.visibilitySearched,
+            searchParams.availabilitySearched,
+            searchParams.presenceSearched,
+            searchParams.dateTimeSearched,
+        )
+    }
+
     override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleModel> {
         return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched).map(mapper::toModel)
     }

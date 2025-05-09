@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericEntity
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 
@@ -21,11 +21,11 @@ data class ProjectEntity(
     @Column(PROJECT_BEGIN_DATE)
     var beginDate: LocalDate? = null,
     @Column(PROJECT_BEGIN_TIME)
-    var beginTime: LocalTime? = null,
+    var beginTime: OffsetTime? = null,
     @Column(PROJECT_END_DATE)
     var endDate: LocalDate? = null,
     @Column(PROJECT_END_TIME)
-    var endTime: LocalTime? = null,
+    var endTime: OffsetTime? = null,
     @Column(PROJECT_OPTIONS)
     var options: List<ProjectOptionEnum>? = null,
 ): GenericEntity()

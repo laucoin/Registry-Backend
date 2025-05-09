@@ -9,7 +9,8 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -44,11 +45,11 @@ class ProjectModelPostgresRepositoryTest(
         @JvmStatic
         fun `Should validDateTime call repository validDateTime`(): Stream<Arguments> {
             return Stream.of(
-                Arguments.of(LocalDateTime.now(), LocalDateTime.now(), false),
-                Arguments.of(LocalDateTime.MIN, LocalDateTime.MIN, false),
-                Arguments.of(LocalDateTime.MAX, LocalDateTime.MAX, false),
+                Arguments.of(ZonedDateTime.now(), ZonedDateTime.now(), false),
+                Arguments.of(OffsetDateTime.MIN.toZonedDateTime(), OffsetDateTime.MIN.toZonedDateTime(), false),
+                Arguments.of(OffsetDateTime.MAX.toZonedDateTime(), OffsetDateTime.MAX.toZonedDateTime(), false),
                 Arguments.of(null, null, true),
-                Arguments.of(LocalDateTime.MIN, LocalDateTime.MAX, true),
+                Arguments.of(OffsetDateTime.MIN.toZonedDateTime(), OffsetDateTime.MAX.toZonedDateTime(), true),
             )
         }
     }
@@ -119,8 +120,8 @@ class ProjectModelPostgresRepositoryTest(
     @ParameterizedTest
     @MethodSource
     fun `Should validDateTime call repository validDateTime`(
-        begin: LocalDateTime?,
-        end: LocalDateTime?,
+        begin: ZonedDateTime?,
+        end: ZonedDateTime?,
         expected: Boolean,
     ) {
         // Act

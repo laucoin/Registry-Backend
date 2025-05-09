@@ -15,7 +15,9 @@ object GroupFields {
     const val GROUP_START_AVAILABILITY_TIME = "start_availability_time"
     const val GROUP_END_AVAILABILITY_DATE = "end_availability_date"
     const val GROUP_END_AVAILABILITY_TIME = "end_availability_time"
-    const val GROUP_MEMBERS = "members"
+    const val GROUP_MEMBERS_COUNT = "members_count"
+    const val GROUP_INSIDE_MEMBERS_COUNT = "inside_members_count"
+    const val GROUP_OUTSIDE_MEMBERS_COUNT = "outside_members_count"
 
     private const val PARTICIPANT_PREFIX = "participant_"
     const val GROUP_CONTENT_PARTICIPANT_ID = "$PARTICIPANT_PREFIX$ID"

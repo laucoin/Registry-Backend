@@ -22,6 +22,7 @@ class VehicleEntityMapper: IEntityMapper<VehicleModel, VehicleEntity> {
             endAvailability = if (Objects.isNull(entity.endAvailabilityDate)) null
             else CustomDateTimeModel(entity.endAvailabilityDate !!, entity.endAvailabilityTime)
             status = buildStatus(entity.lastMovementType)
+            lastMovement = entity.lastMovementDateTime
         }.fillWithProjectAndEntity(entity)
     }
 

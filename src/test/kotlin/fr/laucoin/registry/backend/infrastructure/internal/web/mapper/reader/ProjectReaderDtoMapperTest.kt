@@ -3,9 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_NAME_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
-import java.time.LocalDateTime
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
@@ -33,8 +32,8 @@ class ProjectReaderDtoMapperTest {
                     ProjectModel().apply {
                         id = UUID.randomUUID()
                         name = "Name"
-                        begin = CustomDateTimeModel(LocalDateTime.MIN)
-                        end = CustomDateTimeModel(LocalDateTime.MAX)
+                        begin = CustomDateTimeModel.MIN
+                        end = CustomDateTimeModel.MAX
                         options = listOf(VEHICLE)
                         visible = true
                         creation = HistoryModel()
@@ -46,8 +45,8 @@ class ProjectReaderDtoMapperTest {
                     ProjectModel().apply {
                         id = UUID.randomUUID()
                         name = "Name"
-                        begin = CustomDateTimeModel(LocalDateTime.MIN)
-                        end = CustomDateTimeModel(LocalDateTime.MAX)
+                        begin = CustomDateTimeModel.MIN
+                        end = CustomDateTimeModel.MAX
                         options = null
                         visible = true
                         creation = HistoryModel()

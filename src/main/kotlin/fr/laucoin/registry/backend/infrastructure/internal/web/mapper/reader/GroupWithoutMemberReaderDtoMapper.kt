@@ -15,6 +15,9 @@ class GroupWithoutMemberReaderDtoMapper(
             name = model.name,
             startAvailability = model.startAvailability,
             endAvailability = model.endAvailability,
+            membersCount = model.membersCount,
+            insideMembersCount = model.insideMembersCount,
+            outsideMembersCount = model.outsideMembersCount,
         ).apply {
             id = model.id
             project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null

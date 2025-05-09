@@ -1,11 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
-import java.time.LocalDateTime
 import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
@@ -33,8 +32,8 @@ class GroupWithoutMemberReaderDtoMapperTest {
                     ).apply {
                         id = UUID.randomUUID()
                         name = "Project"
-                        startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
-                        startAvailability = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAvailability = CustomDateTimeModel.MIN
+                        startAvailability = CustomDateTimeModel.MAX
                         visible = true
                         creation = HistoryModel()
                         lastEdition = HistoryModel()
@@ -48,8 +47,8 @@ class GroupWithoutMemberReaderDtoMapperTest {
                         id = UUID.randomUUID()
                         project = ProjectModel()
                         name = "Project"
-                        startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
-                        startAvailability = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAvailability = CustomDateTimeModel.MIN
+                        startAvailability = CustomDateTimeModel.MAX
                         visible = true
                         creation = HistoryModel()
                         lastEdition = HistoryModel()

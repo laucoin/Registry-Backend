@@ -5,12 +5,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectEntity
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectQueries.DATE_IN_PROJECT_DATES_RANGE_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectQueries.PROJECT_TEXT_SEARCH_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectRelationEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
@@ -30,6 +24,12 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_START_ACCESS_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_START_ACCESS_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectQueries.DATE_IN_PROJECT_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectQueries.PROJECT_TEXT_SEARCH_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectRelationEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_START_AVAILABILITY_DATE
@@ -40,7 +40,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -159,5 +158,5 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
         ) AS t
         """
     )
-    fun validDateTime(id: UUID, begin: LocalDateTime?, end: LocalDateTime?): Mono<ProjectRelationEntity>
+    fun validDateTime(id: UUID, begin: ZonedDateTime?, end: ZonedDateTime?): Mono<ProjectRelationEntity>
 }

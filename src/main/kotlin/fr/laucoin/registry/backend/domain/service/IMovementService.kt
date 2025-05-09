@@ -14,7 +14,9 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
+import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -22,6 +24,12 @@ import reactor.util.function.Tuple2
 
 interface IMovementService {
     fun findMovementsPage(
+        projectId: UUID,
+        pageable: PageableModel,
+        searchParams: MovementSearchParamModel,
+    ): Mono<PageModel<MovementModel>>
+
+    fun findCurrentMovementsPage(
         projectId: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel,
@@ -57,6 +65,10 @@ interface IMovementService {
         pageable: PageableModel,
         searchParams: CommunicationSearchParamModel,
     ): Mono<PageModel<CommunicationModel>>
+
+    fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel>
+
+    fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusModel>
 
     fun createMovement(
         currentUser: CurrentUserModel,

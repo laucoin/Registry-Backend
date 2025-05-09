@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
@@ -10,10 +11,14 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
+import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
@@ -66,6 +71,38 @@ interface IMovementController {
     @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
     @GetMapping
     fun findMovements(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable projectId: UUID,
+        @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
+        @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+            200,
+            message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+        ) pageSize: Int,
+        @Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
+        @RequestParam(required = false) linkedToActivity: Boolean?,
+        @RequestParam(required = false) visibilitySearched: Boolean?,
+        @RequestParam(required = false) typeSearched: MovementTypeEnum?,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DATE_TIME) endDateTimeSearched: ZonedDateTime?,
+    ): Mono<PageModel<MovementReaderDto>>
+
+    @Operation(
+        summary = "Find Projects",
+        description = "Find or get paginated Projects",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @GetMapping("/current")
+    fun findCurrentMovementsPage(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
@@ -74,6 +111,8 @@ interface IMovementController {
             message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
         ) pageSize: Int,
         @RequestParam(required = false) visibilitySearched: Boolean?,
+        @Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
+        @RequestParam(required = false) linkedToActivity: Boolean?,
         @RequestParam(required = false) typeSearched: MovementTypeEnum?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,
@@ -208,6 +247,36 @@ interface IMovementController {
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) endDateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<CommunicationReaderDto>>
+
+    @Operation(
+        summary = "Find participants status",
+        description = "Return current major and minor status presence status",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
+    @GetMapping("/participants/status")
+    fun findParticipantsStatus(@PathVariable projectId: UUID): Mono<ProjectStatusModel>
+
+    @Operation(
+        summary = "Find vehicles status",
+        description = "Return current vehicles presence status",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && (hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}'))")
+    @GetMapping("/vehicles/status")
+    fun findVehiclesStatus(@PathVariable projectId: UUID): Mono<VehicleStatusModel>
 
     @Operation(
         summary = "Create Movement",

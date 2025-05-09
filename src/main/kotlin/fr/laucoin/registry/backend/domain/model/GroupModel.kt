@@ -6,6 +6,9 @@ data class GroupModel(
     var name: String? = null,
     var startAvailability: CustomDateTimeModel? = null,
     var endAvailability: CustomDateTimeModel? = null,
+    var membersCount: Long? = null,
+    var insideMembersCount: Long? = null,
+    var outsideMembersCount: Long? = null,
     var members: List<ParticipantModel> = emptyList(),
 ): GenericProjectModel() {
     fun getNewMembers(group: GroupModel): List<ParticipantModel> {

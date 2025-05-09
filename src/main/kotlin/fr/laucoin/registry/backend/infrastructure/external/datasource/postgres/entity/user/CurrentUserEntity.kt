@@ -18,7 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_STATUS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.PREFERENCE_ID
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
@@ -41,13 +41,13 @@ data class CurrentUserEntity(
     var preferenceSelectedProfileStartAccessDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_START_ACCESS_TIME)
-    var preferenceSelectedProfileStartAccessTime: LocalTime? = null,
+    var preferenceSelectedProfileStartAccessTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_END_ACCESS_DATE)
     var preferenceSelectedProfileEndAccessDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_END_ACCESS_TIME)
-    var preferenceSelectedProfileEndAccessTime: LocalTime? = null,
+    var preferenceSelectedProfileEndAccessTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_ID)
     var preferenceSelectedProfileProjectId: UUID? = null,
@@ -59,13 +59,13 @@ data class CurrentUserEntity(
     var preferenceSelectedProfileProjectStartDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_START_TIME)
-    var preferenceSelectedProfileProjectStartTime: LocalTime? = null,
+    var preferenceSelectedProfileProjectStartTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_END_DATE)
     var preferenceSelectedProfileProjectEndDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_END_TIME)
-    var preferenceSelectedProfileProjectEndTime: LocalTime? = null,
+    var preferenceSelectedProfileProjectEndTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_PROJECT_OPTIONS)
     var preferenceSelectedProfileProjectOptions: List<ProjectOptionEnum>? = null,

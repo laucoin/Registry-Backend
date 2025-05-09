@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.Compani
 import java.time.ZonedDateTime
 
 data class ParticipantSearchParamModel(
+    var isMajor: Boolean? = null,
     var typeSearched: ParticipantTypeEnum? = null,
     var visibilitySearched: Boolean? = null,
     var availabilitySearched: Boolean? = null,
@@ -17,11 +18,13 @@ data class ParticipantSearchParamModel(
 
     constructor(
         textSearched: String? = null,
+        isMajor: Boolean? = null,
         typeSearched: ParticipantTypeEnum? = null,
         visibilitySearched: Boolean? = null,
         statusSearched: PresenceStatusEnum? = null,
         dateTimeSearched: ZonedDateTime?,
     ): this(
+        isMajor = isMajor,
         visibilitySearched = visibilitySearched,
         availabilitySearched = statusSearched.isAvailable(),
         presenceSearched = statusSearched.isPresent(),

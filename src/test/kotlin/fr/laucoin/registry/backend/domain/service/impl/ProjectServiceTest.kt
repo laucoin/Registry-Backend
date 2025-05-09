@@ -17,7 +17,8 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
+import java.time.ZoneOffset
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -75,22 +76,22 @@ class ProjectServiceTest {
                 Arguments.of(
                     CustomDateTimeModel(LocalDate.MIN),
                     CustomDateTimeModel(LocalDate.MAX),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
                 ),
                 Arguments.of(
                     CustomDateTimeModel(LocalDate.MIN),
                     CustomDateTimeModel(LocalDate.MAX),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
                 ),
                 Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
                 ),
             )
         }
@@ -109,13 +110,13 @@ class ProjectServiceTest {
                     CustomDateTimeModel(LocalDate.MAX),
                 ),
                 Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.of(0, 0, 1)),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.of(0, 0, 0, 1, ZoneOffset.of("Z"))),
                     CustomDateTimeModel(LocalDate.MAX),
                     CustomDateTimeModel(LocalDate.MIN),
                 ),
                 Arguments.of(
                     CustomDateTimeModel(LocalDate.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.of(23, 59, 59)),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.of(23, 59, 59, 0, ZoneOffset.of("Z"))),
                     CustomDateTimeModel(LocalDate.MAX),
                 ),
             )
@@ -139,14 +140,14 @@ class ProjectServiceTest {
                 Arguments.of(
                     CustomDateTimeModel(LocalDate.MIN),
                     CustomDateTimeModel(LocalDate.MAX),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MAX),
                 ),
                 Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
                 ),
             )
         }
@@ -167,14 +168,14 @@ class ProjectServiceTest {
                     CustomDateTimeModel(LocalDate.MAX),
                 ),
                 Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.of(0, 0, 1)),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.of(0, 0, 0, 1, ZoneOffset.of("Z"))),
                     CustomDateTimeModel(LocalDate.MAX),
                     CustomDateTimeModel(LocalDate.MIN),
                     CustomDateTimeModel(LocalDate.MAX),
                 ),
                 Arguments.of(
                     CustomDateTimeModel(LocalDate.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.of(23, 59, 59)),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.of(23, 59, 59, 0, ZoneOffset.of("Z"))),
                     CustomDateTimeModel(LocalDate.MIN),
                     CustomDateTimeModel(LocalDate.MAX),
                 ),
@@ -215,15 +216,15 @@ class ProjectServiceTest {
                 Arguments.of(
                     CustomDateTimeModel(LocalDate.MIN),
                     CustomDateTimeModel(LocalDate.MAX),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MAX),
                     1,
                 ),
                 Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.MIN),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.MIN),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.MAX),
                     0,
                 ),
                 Arguments.of(
@@ -234,8 +235,8 @@ class ProjectServiceTest {
                     0,
                 ),
                 Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, LocalTime.of(0, 0, 1)),
-                    CustomDateTimeModel(LocalDate.MAX, LocalTime.of(23, 59, 59)),
+                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.of(0, 0, 0, 1, ZoneOffset.of("Z"))),
+                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.of(23, 59, 59, 0, ZoneOffset.of("Z"))),
                     CustomDateTimeModel(LocalDate.MIN),
                     CustomDateTimeModel(LocalDate.MAX),
                     0,
@@ -459,8 +460,8 @@ class ProjectServiceTest {
         verify(repository).findById(projectId, visibilitySearched = null)
         verify(repository, times(expectedVerificationCall)).validDateTime(
             projectId,
-            newProjectBeginDateTime?.toLocalDateTime(LocalTime.MIN),
-            newProjectEndDateTime?.toLocalDateTime(LocalTime.MAX),
+            newProjectBeginDateTime?.toZonedDateTime(OffsetTime.MIN),
+            newProjectEndDateTime?.toZonedDateTime(OffsetTime.MAX),
         )
         verify(repository).update(any())
     }
@@ -487,8 +488,8 @@ class ProjectServiceTest {
         verify(repository).findById(projectId, visibilitySearched = null)
         verify(repository).validDateTime(
             projectId,
-            dateTime.toLocalDateTime(LocalTime.MIN),
-            dateTime.toLocalDateTime(LocalTime.MAX),
+            dateTime.toZonedDateTime(OffsetTime.MIN),
+            dateTime.toZonedDateTime(OffsetTime.MAX),
         )
         verify(repository, never()).update(any())
     }

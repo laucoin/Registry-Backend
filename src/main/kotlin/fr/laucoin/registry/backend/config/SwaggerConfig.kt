@@ -115,7 +115,7 @@ class SwaggerConfig(
 
     @Bean
     fun projectParticipantsApis(): GroupedOpenApi {
-        return GroupedOpenApi.builder().group("project-participant")
+        return GroupedOpenApi.builder().group("project-participants")
             .pathsToMatch(
                 "/api/projects/{projectId}/participants/**",
                 "/api/projects/{projectId}/groups/**",

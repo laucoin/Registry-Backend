@@ -2,18 +2,18 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ProjectProfileRoleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IProjectProfileEntityRepository
-import java.time.LocalDateTime
+import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -89,8 +89,8 @@ class ProjectProfileModelPostgresRepository(
         userIds: List<UUID>,
         profileIdToExclude: UUID?,
         statusSearched: List<ProfileStatusEnum>,
-        startDateTimeSearched: LocalDateTime?,
-        endDateTimeSearched: LocalDateTime?,
+        startDateTimeSearched: ZonedDateTime?,
+        endDateTimeSearched: ZonedDateTime?,
     ): Flux<UUID> {
         if (userIds.isEmpty()) return Flux.empty()
         return repository.findUserIdsWithProjectProfileForProjectWithProfileExclusion(

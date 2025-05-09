@@ -18,11 +18,6 @@ interface IGroupService {
         searchParams: GroupSearchParamModel,
     ): Mono<PageModel<GroupModel>>
 
-    fun findGroupsMembers(
-        projectId: UUID,
-        groupIds: List<UUID>,
-    ): Flux<Pair<UUID, List<ParticipantModel>>>
-
     fun findGroupMembersPageByGroupId(
         projectId: UUID,
         id: UUID,

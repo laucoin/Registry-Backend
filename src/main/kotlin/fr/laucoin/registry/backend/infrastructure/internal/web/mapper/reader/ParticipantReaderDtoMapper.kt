@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 class ParticipantReaderDtoMapper(
     private val partialUserMapper: PartialUserReaderDtoMapper,
     private val typeMapper: ParticipantTypeReaderDtoMapper,
-    private val statusMapper: UsableElementStatusReaderDtoMapper,
+    private val statusMapper: PresenceStatusReaderDtoMapper,
     private val projectMapper: ProjectReaderDtoMapper,
     private val groupMapper: GroupWithoutMemberReaderDtoMapper,
 ): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
@@ -24,7 +24,13 @@ class ParticipantReaderDtoMapper(
             major = isMajor(model.birthday),
             groups = groupMapper.toDtoList(model.groups, locale),
             availableGroups = groupMapper.toDtoList(model.availableGroups, locale),
-            status = if (Objects.nonNull(model.status)) statusMapper.toDto(model.status !!, locale) else null,
+            status = if (Objects.nonNull(model.status)) statusMapper.toDto(
+                model.status !!,
+                locale,
+                model.lastMovement,
+                model.startAvailability,
+                model.endAvailability,
+            ) else null,
             startAvailability = model.startAvailability,
             endAvailability = model.endAvailability,
             user = if (Objects.nonNull(model.user)) partialUserMapper.toDto(model.user !!, locale) else null,

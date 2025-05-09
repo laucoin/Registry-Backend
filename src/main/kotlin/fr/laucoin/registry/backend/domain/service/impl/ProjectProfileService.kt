@@ -21,7 +21,7 @@ import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -81,8 +81,8 @@ class ProjectProfileService(
             projectId,
             userIds,
             profileId = null,
-            profiles.first().startAccess?.toLocalDateTime(LocalTime.MIN),
-            profiles.first().endAccess?.toLocalDateTime(LocalTime.MAX)
+            profiles.first().startAccess?.toZonedDateTime(OffsetTime.MIN),
+            profiles.first().endAccess?.toZonedDateTime(OffsetTime.MAX)
         )
             .map { allowedUsers ->
                 profiles.filter { allowedUsers.contains(it.user !!.id) }
@@ -108,8 +108,8 @@ class ProjectProfileService(
                     projectId,
                     listOf(it.user !!.id !!),
                     it.id,
-                    profile.endAccess?.toLocalDateTime(LocalTime.MIN),
-                    profile.endAccess?.toLocalDateTime(LocalTime.MAX),
+                    profile.endAccess?.toZonedDateTime(OffsetTime.MIN),
+                    profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
                 ).map { _ -> it }
             }
             .validateRole(currentUser, projectId, profile)

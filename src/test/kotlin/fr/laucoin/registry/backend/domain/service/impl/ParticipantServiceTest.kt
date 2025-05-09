@@ -26,8 +26,6 @@ import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.ZoneId
-import java.util.TimeZone
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -392,7 +390,7 @@ class ParticipantServiceTest {
         whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newGroups.toTypedArray()))
 
         // Act
-        service.updateParticipantById(currentUser(), TimeZone.getTimeZone(ZoneId.of("UTC")), projectId, uuid, participantUpdated)
+        service.updateParticipantById(currentUser(), projectId, uuid, participantUpdated)
             .block()
 
         // Assert

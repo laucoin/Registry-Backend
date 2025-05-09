@@ -7,10 +7,10 @@ import com.nimbusds.jose.shaded.gson.stream.JsonReader
 import com.nimbusds.jose.shaded.gson.stream.JsonToken.NULL
 import com.nimbusds.jose.shaded.gson.stream.JsonWriter
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-import java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
+import java.time.format.DateTimeFormatter.ISO_OFFSET_TIME
 import java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME
 import java.util.Objects
 import org.springframework.context.annotation.Bean
@@ -23,7 +23,7 @@ class GsonConfig {
         return GsonBuilder()
             .registerTypeAdapter(ZonedDateTime::class.java, ZonedDateTimeTypeAdapter())
             .registerTypeAdapter(LocalDate::class.java, LocalDateTypeAdapter())
-            .registerTypeAdapter(LocalTime::class.java, LocalTimeTypeAdapter())
+            .registerTypeAdapter(OffsetTime::class.java, OffsetTimeTypeAdapter())
             .create()
     }
 
@@ -63,19 +63,19 @@ class GsonConfig {
         }
     }
 
-    class LocalTimeTypeAdapter: TypeAdapter<LocalTime>() {
-        private val formatter = ISO_LOCAL_TIME
+    class OffsetTimeTypeAdapter: TypeAdapter<OffsetTime>() {
+        private val formatter = ISO_OFFSET_TIME
 
-        override fun read(`in`: JsonReader): LocalTime? {
+        override fun read(`in`: JsonReader): OffsetTime? {
             if (`in`.peek() == NULL) {
                 `in`.nextNull()
                 return null
             }
 
-            return LocalTime.parse(`in`.nextString(), formatter)
+            return OffsetTime.parse(`in`.nextString(), formatter)
         }
 
-        override fun write(out: JsonWriter, value: LocalTime?) {
+        override fun write(out: JsonWriter, value: OffsetTime?) {
             if (Objects.isNull(value)) out.nullValue()
             else out.value(formatter.format(value))
         }

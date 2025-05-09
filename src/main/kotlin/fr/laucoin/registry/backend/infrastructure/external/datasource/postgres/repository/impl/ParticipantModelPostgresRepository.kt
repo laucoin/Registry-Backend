@@ -33,6 +33,7 @@ class ParticipantModelPostgresRepository(
             repository.countAll(
                 projectId,
                 searchParams.textSearched,
+                searchParams.isMajor,
                 searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
@@ -42,6 +43,7 @@ class ParticipantModelPostgresRepository(
             repository.findAll(
                 projectId,
                 searchParams.textSearched,
+                searchParams.isMajor,
                 searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
@@ -55,6 +57,27 @@ class ParticipantModelPostgresRepository(
         }
     }
 
+    override fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantModel> {
+        return repository.findAllWithBirthday(projectId, visibilitySearched)
+            .map(mapper::toModel)
+    }
+
+    override fun countAll(
+        projectId: UUID,
+        searchParams: ParticipantSearchParamModel
+    ): Mono<Long> {
+        return repository.countAll(
+            projectId,
+            searchParams.textSearched,
+            searchParams.isMajor,
+            searchParams.typeSearched,
+            searchParams.visibilitySearched,
+            searchParams.availabilitySearched,
+            searchParams.presenceSearched,
+            searchParams.dateTimeSearched,
+        )
+    }
+
     override fun findPageByGroupId(
         projectId: UUID,
         groupId: UUID,
@@ -66,6 +89,7 @@ class ParticipantModelPostgresRepository(
                 projectId,
                 groupId,
                 searchParams.textSearched,
+                searchParams.isMajor,
                 searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
@@ -76,6 +100,7 @@ class ParticipantModelPostgresRepository(
                 projectId,
                 groupId,
                 searchParams.textSearched,
+                searchParams.isMajor,
                 searchParams.typeSearched,
                 searchParams.visibilitySearched,
                 searchParams.availabilitySearched,
@@ -102,6 +127,7 @@ class ParticipantModelPostgresRepository(
         return repository.findWithLimit(
             projectId,
             searchParams.textSearched,
+            searchParams.isMajor,
             searchParams.typeSearched,
             searchParams.visibilitySearched,
             searchParams.availabilitySearched,

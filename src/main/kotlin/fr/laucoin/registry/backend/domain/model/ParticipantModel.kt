@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.domain.model
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.UUID
 
 data class ParticipantModel(
@@ -13,6 +14,7 @@ data class ParticipantModel(
     var groups: List<GroupModel> = emptyList(),
     var availableGroups: List<GroupModel> = emptyList(),
     var status: PresenceStatusEnum? = null,
+    var lastMovement: ZonedDateTime? = null,
     var startAvailability: CustomDateTimeModel? = null,
     var endAvailability: CustomDateTimeModel? = null,
     var user: UserModel? = null,
