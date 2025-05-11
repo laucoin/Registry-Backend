@@ -1,15 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UsableElementStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PresenceStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -27,7 +28,7 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
     private lateinit var profileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper
 
     @MockitoBean
-    private lateinit var elementStatusMapper: UsableElementStatusReaderDtoMapper
+    private lateinit var elementStatusMapper: PresenceStatusReaderDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/metadata"
@@ -55,7 +56,7 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
     @Test
     fun `Should getPresenceStatus return 200`() {
         // Arrange
-        whenever(elementStatusMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+        whenever(elementStatusMapper.toDto(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(LabelDto("value", "label"))
 
         // Act
         val result = webClient
@@ -68,7 +69,7 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
         result.body<List<*>>(OK)
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(profileStatusReaderMapper)
-        verify(elementStatusMapper, atLeastOnce()).toDto(any(), any())
+        verify(elementStatusMapper, atLeastOnce()).toDto(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
     }
 
     @Test

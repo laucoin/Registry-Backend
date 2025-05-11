@@ -33,7 +33,6 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.Objects
-import java.util.TimeZone
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
@@ -61,6 +60,10 @@ class ParticipantService(
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>> {
         return repository.findPage(projectId, pageable, searchParams)
+    }
+
+    override fun findBirthdays(projectId: UUID): Flux<ParticipantModel> {
+        return repository.findBirthdays(projectId, visibilitySearched = true)
     }
 
     override fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel> {
@@ -163,7 +166,6 @@ class ParticipantService(
 
     override fun updateParticipantById(
         currentUser: CurrentUserModel,
-        timeZone: TimeZone,
         projectId: UUID,
         id: UUID,
         participant: ParticipantModel
@@ -175,7 +177,7 @@ class ParticipantService(
             PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
         )
             .flatMap { findParticipantById(projectId, id, visibilitySearched = null) }
-            .flatMap { validateNoMovementConflict(participant, it, timeZone) }
+            .flatMap { validateNoMovementConflict(participant, it) }
             .flatMap { toUpdate ->
                 if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
                     validateNoParticipantForUser(participant.project !!.id !!, participant.user !!.id !!)
@@ -231,20 +233,20 @@ class ParticipantService(
     }
 
     private fun validateNoMovementConflict(
-        participant: ParticipantModel, oldParticipant: ParticipantModel, timeZone: TimeZone
+        participant: ParticipantModel, oldParticipant: ParticipantModel
     ): Mono<ParticipantModel> {
         return if (
             oldParticipant.startAvailability.isEqualOrAfter(participant.startAvailability)
             && oldParticipant.endAvailability.isBeforeOrEqual(participant.endAvailability)
         ) Mono.just(oldParticipant)
         else Mono.zip(
-            validateNoMovementConflictBefore(participant, oldParticipant, timeZone),
-            validateNoMovementConflictAfter(participant, oldParticipant, timeZone)
+            validateNoMovementConflictBefore(participant, oldParticipant),
+            validateNoMovementConflictAfter(participant, oldParticipant)
         ).map { oldParticipant }
     }
 
     private fun validateNoMovementConflictBefore(
-        participant: ParticipantModel, oldParticipant: ParticipantModel, timeZone: TimeZone
+        participant: ParticipantModel, oldParticipant: ParticipantModel
     ): Mono<ParticipantModel> {
         return if (
             participant.startAvailability.isAfter(oldParticipant.startAvailability)
@@ -256,7 +258,7 @@ class ParticipantService(
                 MovementSearchParamModel(
                     visibilitySearched = null,
                     typeSearched = null,
-                    endDateTimeSearched = participant.startAvailability !!.toZonedDateTime(timeZone),
+                    endDateTimeSearched = participant.startAvailability !!.toZonedDateTime(),
                 )
             ).handle { it, handle ->
                 if (it > 0) {
@@ -268,7 +270,7 @@ class ParticipantService(
     }
 
     private fun validateNoMovementConflictAfter(
-        participant: ParticipantModel, oldParticipant: ParticipantModel, timeZone: TimeZone
+        participant: ParticipantModel, oldParticipant: ParticipantModel
     ): Mono<ParticipantModel> {
         return if (
             participant.endAvailability.isBefore(oldParticipant.endAvailability)
@@ -280,7 +282,7 @@ class ParticipantService(
                 MovementSearchParamModel(
                     visibilitySearched = null,
                     typeSearched = null,
-                    startDateTimeSearched = participant.endAvailability !!.toZonedDateTime(timeZone),
+                    startDateTimeSearched = participant.endAvailability !!.toZonedDateTime(),
                 )
             ).handle { it, handle ->
                 if (it > 0) {

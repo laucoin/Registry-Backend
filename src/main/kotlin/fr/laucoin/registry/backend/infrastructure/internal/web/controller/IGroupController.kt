@@ -15,6 +15,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.AddedGroupMembersReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.GroupWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -75,26 +76,7 @@ interface IGroupController {
         @RequestParam(required = false) presenceSearched: Boolean?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) dateTimeSearched: ZonedDateTime?,
-    ): Mono<PageModel<GroupReaderDto>>
-
-    @Operation(
-        summary = "Find Groups members",
-        description = "Find or get members of given Groups IDs",
-        parameters = [
-            Parameter(
-                name = ACCEPT_LANGUAGE,
-                description = "Locale, used for metadata and error translation.",
-                `in` = HEADER
-            ),
-        ],
-    )
-    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
-    @GetMapping("/members")
-    fun findGroupMembers(
-        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable projectId: UUID,
-        @RequestParam(required = true) @Valid @NotEmpty groupIds: List<UUID>,
-    ): Flux<Pair<UUID, List<ParticipantReaderDto>>>
+    ): Mono<PageModel<GroupWithoutMemberReaderDto>>
 
     @Operation(
         summary = "Find Group Members",
@@ -119,6 +101,7 @@ interface IGroupController {
             message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
         ) pageSize: Int,
         @RequestParam(required = false) textSearched: String?,
+        @RequestParam(required = false) isMajor: Boolean?,
         @RequestParam(required = false) typeSearched: ParticipantTypeEnum?,
         @RequestParam(required = false) visibilitySearched: Boolean?,
         @RequestParam(required = false) statusSearched: PresenceStatusEnum?,
@@ -182,7 +165,7 @@ interface IGroupController {
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @RequestBody @Valid group: GroupWriterDto,
-    ): Mono<GroupReaderDto>
+    ): Mono<GroupWithoutMemberReaderDto>
 
     @Operation(
         summary = "Update Group",
@@ -203,7 +186,7 @@ interface IGroupController {
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @RequestBody @Valid group: GroupWriterDto,
-    ): Mono<GroupReaderDto>
+    ): Mono<GroupWithoutMemberReaderDto>
 
     @Operation(
         summary = "Add members in Group",
@@ -245,7 +228,7 @@ interface IGroupController {
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,
         @PathVariable memberId: UUID,
-    ): Mono<GroupReaderDto>
+    ): Mono<GroupWithoutMemberReaderDto>
 
     @Operation(
         summary = "Disable Group",
@@ -265,7 +248,7 @@ interface IGroupController {
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,
-    ): Mono<GroupReaderDto>
+    ): Mono<GroupWithoutMemberReaderDto>
 
     @Operation(
         summary = "Enable Group",
@@ -285,7 +268,7 @@ interface IGroupController {
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,
-    ): Mono<GroupReaderDto>
+    ): Mono<GroupWithoutMemberReaderDto>
 
     @Operation(
         summary = "Delete Group",

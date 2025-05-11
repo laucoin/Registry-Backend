@@ -72,12 +72,31 @@ interface IParticipantController {
             message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
         ) pageSize: Int,
         @RequestParam(required = false) textSearched: String?,
+        @RequestParam(required = false) isMajor: Boolean?,
         @RequestParam(required = false) typeSearched: ParticipantTypeEnum?,
         @RequestParam(required = false) visibilitySearched: Boolean?,
         @RequestParam(required = false) statusSearched: PresenceStatusEnum?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) dateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<ParticipantReaderDto>>
+
+    @Operation(
+        summary = "Find Participants",
+        description = "Find or get paginated Participants",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
+    @GetMapping("/birthday")
+    fun findBirthdays(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable projectId: UUID,
+    ): Flux<ParticipantReaderDto>
 
     @Operation(
         summary = "Find Participant",
@@ -150,6 +169,7 @@ interface IParticipantController {
     @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')")
     @GetMapping("/{id}/movements")
     fun findParticipantMovements(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,
@@ -159,6 +179,8 @@ interface IParticipantController {
             message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
         ) pageSize: Int,
         @RequestParam(required = false) visibilitySearched: Boolean?,
+        @Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
+        @RequestParam(required = false) linkedToActivity: Boolean?,
         @RequestParam(required = false) typeSearched: MovementTypeEnum?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,

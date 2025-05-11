@@ -18,6 +18,8 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -34,9 +36,11 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
+import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.domain.repository.IActivityModelRepository
 import fr.laucoin.registry.backend.domain.repository.ICommunicationModelRepository
 import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
@@ -57,6 +61,11 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.zip
 import reactor.kotlin.core.publisher.switchIfEmpty
+import reactor.kotlin.core.util.function.component1
+import reactor.kotlin.core.util.function.component2
+import reactor.kotlin.core.util.function.component3
+import reactor.kotlin.core.util.function.component4
+import reactor.kotlin.core.util.function.component5
 import reactor.util.function.Tuple2
 
 @Service
@@ -86,6 +95,14 @@ class MovementService(
         return repository.findPage(projectId, pageable, searchParams)
     }
 
+    override fun findCurrentMovementsPage(
+        projectId: UUID,
+        pageable: PageableModel,
+        searchParams: MovementSearchParamModel
+    ): Mono<PageModel<MovementModel>> {
+        return repository.findCurrentPage(projectId, pageable, searchParams)
+    }
+
     override fun findMovementsContent(
         projectId: UUID,
         movementIds: List<UUID>
@@ -107,7 +124,8 @@ class MovementService(
             participantRepository.findWithLimit(
                 maxParticipantResult,
                 projectId,
-                ParticipantSearchParamModel(
+                searchParams = ParticipantSearchParamModel(
+                    isMajor = null,
                     typeSearched,
                     visibilitySearched = true,
                     presenceSearched = true
@@ -164,10 +182,110 @@ class MovementService(
         return communicationRepository.findPageByMovementId(projectId, id, pageable, searchParams)
     }
 
+    override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel> {
+        return zip(
+            participantRepository.countAll(
+                projectId,
+                searchParams = ParticipantSearchParamModel(
+                    textSearched = null,
+                    isMajor = true,
+                    typeSearched = REGISTERED,
+                    statusSearched = PresenceStatusEnum.IN,
+                    visibilitySearched = true,
+                    dateTimeSearched = null
+                )
+            ),
+            participantRepository.countAll(
+                projectId,
+                searchParams = ParticipantSearchParamModel(
+                    textSearched = null,
+                    isMajor = true,
+                    typeSearched = REGISTERED,
+                    statusSearched = PresenceStatusEnum.OUT,
+                    visibilitySearched = true,
+                    dateTimeSearched = null
+                )
+            ),
+            participantRepository.countAll(
+                projectId,
+                ParticipantSearchParamModel(
+                    textSearched = null,
+                    isMajor = false,
+                    typeSearched = REGISTERED,
+                    statusSearched = PresenceStatusEnum.IN,
+                    visibilitySearched = true,
+                    dateTimeSearched = null
+                )
+            ),
+            participantRepository.countAll(
+                projectId,
+                searchParams = ParticipantSearchParamModel(
+                    textSearched = null,
+                    isMajor = false,
+                    typeSearched = REGISTERED,
+                    statusSearched = PresenceStatusEnum.OUT,
+                    visibilitySearched = true,
+                    dateTimeSearched = null
+                )
+            ),
+            participantRepository.countAll(
+                projectId,
+                searchParams = ParticipantSearchParamModel(
+                    textSearched = null,
+                    isMajor = null,
+                    typeSearched = GUEST,
+                    statusSearched = PresenceStatusEnum.IN,
+                    visibilitySearched = true,
+                    dateTimeSearched = null
+                )
+            )
+        )
+            .map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentChild, registeredAbsentChild, guestPresent) ->
+                ProjectStatusModel(
+                    registered = ProjectStatusModel.ParticipantStatusModel(
+                        registeredPresentAdult,
+                        registeredAbsentAdult,
+                        registeredPresentChild,
+                        registeredAbsentChild
+                    ),
+                    guests = guestPresent,
+                )
+            }
+    }
+
+    override fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusModel> {
+        return zip(
+            vehicleRepository.countAll(
+                projectId,
+                searchParams = VehicleSearchParamModel(
+                    textSearched = null,
+                    visibilitySearched = true,
+                    statusSearched = PresenceStatusEnum.IN,
+                    dateTimeSearched = null
+                )
+            ),
+            vehicleRepository.countAll(
+                projectId,
+                searchParams = VehicleSearchParamModel(
+                    textSearched = null,
+                    visibilitySearched = true,
+                    statusSearched = PresenceStatusEnum.OUT,
+                    dateTimeSearched = null
+                )
+            )
+        )
+            .map { (vehiclePresent, vehicleAbsent) ->
+                VehicleStatusModel(
+                    present = vehiclePresent,
+                    absent = vehicleAbsent
+                )
+            }
+    }
+
     private fun validateMovementDate(movement: MovementModel): Mono<UUID> {
         return projectService.validateDateTime(
             movement.project !!.id !!,
-            CustomDateTimeModel(movement.dateTime.toLocalDate(), movement.dateTime.toLocalTime()),
+            CustomDateTimeModel(movement.dateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
         )
     }

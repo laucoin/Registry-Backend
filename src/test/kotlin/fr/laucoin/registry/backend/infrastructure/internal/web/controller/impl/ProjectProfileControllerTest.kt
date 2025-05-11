@@ -44,7 +44,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -149,8 +149,8 @@ class ProjectProfileControllerTest(@Autowired private val webClient: WebTestClie
                 ProjectProfilesWriterDto(
                     userIds = listOf(UUID.randomUUID()),
                     role = "ROLE",
-                    startAccess = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    endAccess = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    startAccess = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+                    endAccess = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
                 ),
                 PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
             ),
@@ -169,8 +169,8 @@ class ProjectProfileControllerTest(@Autowired private val webClient: WebTestClie
             Arguments.of(
                 ProjectProfileWriterDto(
                     role = "ROLE",
-                    startAccess = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    endAccess = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    startAccess = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+                    endAccess = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
                 ),
                 PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS,
             ),

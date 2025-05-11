@@ -18,7 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
@@ -57,11 +57,11 @@ data class MovementEntity(
     var activityStartAvailabilityDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME)
-    var activityStartAvailabilityTime: LocalTime? = null,
+    var activityStartAvailabilityTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(MOVEMENT_ACTIVITY_END_AVAILABILITY_DATE)
     var activityEndAvailabilityDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(MOVEMENT_ACTIVITY_END_AVAILABILITY_TIME)
-    var activityEndAvailabilityTime: LocalTime? = null,
+    var activityEndAvailabilityTime: OffsetTime? = null,
 ): GenericProjectEntity()

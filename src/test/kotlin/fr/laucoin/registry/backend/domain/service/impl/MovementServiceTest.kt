@@ -318,7 +318,7 @@ class MovementServiceTest {
         verify(participantRepository).findWithLimit(
             maxParticipants,
             projectId,
-            ParticipantSearchParamModel(typeSearched, visibilitySearched = true, presenceSearched = true).apply {
+            ParticipantSearchParamModel(isMajor = null, typeSearched, visibilitySearched = true, presenceSearched = true).apply {
                 this.textSearched = textSearched
             }
         )
@@ -403,7 +403,7 @@ class MovementServiceTest {
         // Assert
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, times(expectedCallToActivity)).findById(
@@ -454,7 +454,7 @@ class MovementServiceTest {
         assertEquals(MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository).findById(
@@ -497,7 +497,7 @@ class MovementServiceTest {
         assertEquals(MOVEMENT_ACTIVITY_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository).findById(
@@ -545,7 +545,7 @@ class MovementServiceTest {
         assertEquals(MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
@@ -589,7 +589,7 @@ class MovementServiceTest {
         assertEquals(MOVEMENT_PARTICIPANTS_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
@@ -642,7 +642,7 @@ class MovementServiceTest {
         assertEquals(MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
@@ -701,7 +701,7 @@ class MovementServiceTest {
         assertEquals(MOVEMENT_VEHICLES_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, never()).findById(any(), any(), anyOrNull())
@@ -771,7 +771,7 @@ class MovementServiceTest {
         // Assert
         verify(projectService).validateDateTime(
             projectId,
-            CustomDateTimeModel(movementDateTime.toLocalDate(), movementDateTime.toLocalTime()),
+            CustomDateTimeModel(movementDateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
         )
         verify(activityRepository, times(expectedCallToActivity)).findById(

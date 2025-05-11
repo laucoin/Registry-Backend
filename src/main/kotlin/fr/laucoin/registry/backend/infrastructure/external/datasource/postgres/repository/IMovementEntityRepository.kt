@@ -14,9 +14,11 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.ACTIVITY_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.ACTIVITY_MOVEMENT_AVAILABILITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.ACTIVITY_MOVEMENT_TEXT_SEARCH_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.CURRENT_MOVEMENT_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.DATE_IN_ACTIVITY_MOVEMENT_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.GROUP_BY_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.LAST_PARTICIPANT_MOVEMENT_JOIN
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.MOVEMENT_ACTIVITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.MOVEMENT_TYPE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.SELECT_ACTIVITY_MOVEMENT_SEARCH
@@ -43,7 +45,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         """
         SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $MOVEMENT_TABLE t $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY t.$MOVEMENT_DATE_TIME DESC
         LIMIT :limit OFFSET :offset
         """
@@ -51,6 +53,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
     fun findAll(
         projectId: UUID,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: List<MovementTypeEnum>,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?,
@@ -62,12 +65,51 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         """
         SELECT COUNT(t.$ID)
         FROM $MOVEMENT_TABLE t
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         """
     )
     fun countAll(
         projectId: UUID,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
+        typeSearched: List<MovementTypeEnum>,
+        startDateTimeSearched: ZonedDateTime?,
+        endDateTimeSearched: ZonedDateTime?
+    ): Mono<Long>
+
+    @Query(
+        """
+        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $MOVEMENT_TABLE t $LAST_PARTICIPANT_MOVEMENT_JOIN $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $CURRENT_MOVEMENT_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        GROUP BY $GROUP_BY_MOVEMENT
+        ORDER BY t.$MOVEMENT_DATE_TIME DESC
+        LIMIT :limit OFFSET :offset
+        """
+    )
+    fun findCurrent(
+        projectId: UUID,
+        visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
+        typeSearched: List<MovementTypeEnum>,
+        startDateTimeSearched: ZonedDateTime?,
+        endDateTimeSearched: ZonedDateTime?,
+        limit: Int,
+        offset: Int,
+    ): Flux<MovementEntity>
+
+    @Query(
+        """
+        SELECT COUNT(t.$ID)
+        FROM $MOVEMENT_TABLE t $LAST_PARTICIPANT_MOVEMENT_JOIN 
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $CURRENT_MOVEMENT_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        GROUP BY $GROUP_BY_MOVEMENT
+        """
+    )
+    fun countCurrent(
+        projectId: UUID,
+        visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: List<MovementTypeEnum>,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?
@@ -78,7 +120,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $MOVEMENT_CONTENT_TABLE mct
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID = :participantId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID = :participantId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY t.$MOVEMENT_DATE_TIME DESC
         LIMIT :limit OFFSET :offset
         """
@@ -87,6 +129,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         projectId: UUID,
         participantId: UUID,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: List<MovementTypeEnum>,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?,
@@ -99,13 +142,14 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         SELECT COUNT(t.$ID)
         FROM $MOVEMENT_CONTENT_TABLE mct
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID = :participantId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID = :participantId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         """
     )
     fun countAllByParticipantId(
         projectId: UUID,
         participantId: UUID,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: List<MovementTypeEnum>,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?
@@ -116,7 +160,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $MOVEMENT_CONTENT_TABLE mct
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_VEHICLE_ID = :vehicleId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_VEHICLE_ID = :vehicleId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY t.$MOVEMENT_DATE_TIME DESC
         LIMIT :limit OFFSET :offset
         """
@@ -125,6 +169,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         projectId: UUID,
         vehicleId: UUID,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: List<MovementTypeEnum>,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?,
@@ -137,13 +182,14 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         SELECT COUNT(t.$ID)
         FROM $MOVEMENT_CONTENT_TABLE mct
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_VEHICLE_ID = :vehicleId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_VEHICLE_ID = :vehicleId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         """
     )
     fun countAllByVehicleId(
         projectId: UUID,
         vehicleId: UUID,
         visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
         typeSearched: List<MovementTypeEnum>,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?

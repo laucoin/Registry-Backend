@@ -45,10 +45,6 @@ class GroupService(
         return repository.findPage(projectId, pageable, searchParams)
     }
 
-    override fun findGroupsMembers(projectId: UUID, groupIds: List<UUID>): Flux<Pair<UUID, List<ParticipantModel>>> {
-        return repository.findContent(projectId, groupIds)
-    }
-
     override fun findGroupMembersPageByGroupId(
         projectId: UUID,
         id: UUID,

@@ -13,7 +13,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_TABLE
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
@@ -36,9 +36,9 @@ data class VehicleEntity(
     @Column(VEHICLE_START_AVAILABILITY_DATE)
     var startAvailabilityDate: LocalDate? = null,
     @Column(VEHICLE_START_AVAILABILITY_TIME)
-    var startAvailabilityTime: LocalTime? = null,
+    var startAvailabilityTime: OffsetTime? = null,
     @Column(VEHICLE_END_AVAILABILITY_DATE)
     var endAvailabilityDate: LocalDate? = null,
     @Column(VEHICLE_END_AVAILABILITY_TIME)
-    var endAvailabilityTime: LocalTime? = null,
+    var endAvailabilityTime: OffsetTime? = null,
 ): GenericProjectEntity()

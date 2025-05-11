@@ -23,7 +23,7 @@ import org.mockito.kotlin.whenever
 class ParticipantReaderDtoMapperTest {
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
     private val typeMapper: ParticipantTypeReaderDtoMapper = mock()
-    private val statusMapper: UsableElementStatusReaderDtoMapper = mock()
+    private val statusMapper: PresenceStatusReaderDtoMapper = mock()
     private val projectMapper: ProjectReaderDtoMapper = mock()
     private val groupMapper: GroupWithoutMemberReaderDtoMapper = mock()
     private val mapper: ParticipantReaderDtoMapper =

@@ -62,7 +62,7 @@ class CommunicationService(
         projectId: UUID,
         textSearched: String?
     ): Flux<MovementModel> {
-        return movementRepository.findOutByActivityWithLimit(
+        return movementRepository.findActivityWithLimit(
             maxActivityResult,
             projectId,
             ActivitySearchParamModel(
@@ -80,7 +80,7 @@ class CommunicationService(
     ): Mono<CommunicationModel> {
         return projectService.validateDateTime(
             communication.project !!.id !!,
-            CustomDateTimeModel(communication.dateTime.toLocalDate(), communication.dateTime.toLocalTime()),
+            CustomDateTimeModel(communication.dateTime),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
         )
             .flatMap { validateNoMovementConflict(communication) }
@@ -95,7 +95,7 @@ class CommunicationService(
     ): Mono<CommunicationModel> {
         return projectService.validateDateTime(
             communication.project !!.id !!,
-            CustomDateTimeModel(communication.dateTime.toLocalDate(), communication.dateTime.toLocalTime()),
+            CustomDateTimeModel(communication.dateTime),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
         )
             .flatMap { findCommunicationById(projectId, id, visibilitySearched = null) }

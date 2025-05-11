@@ -42,7 +42,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -142,8 +142,8 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
                     description = "This is an activity very interesting",
                     duration = "PT15M",
                     allowedParticipants = NumericRangeWriterDto(lower = 1, upper = 10),
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 ACTIVITY_NAME_NULL_OR_BLANK
             ),
@@ -153,8 +153,8 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
                     description = "This is an activity very interesting",
                     duration = "PT15M",
                     allowedParticipants = NumericRangeWriterDto(lower = 1, upper = 10),
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 ACTIVITY_NAME_NULL_OR_BLANK
             ),
@@ -164,8 +164,8 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
                     description = "This is an activity very interesting",
                     duration = "PT15M",
                     allowedParticipants = NumericRangeWriterDto(lower = 1, upper = 10),
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 ACTIVITY_NAME_TOO_LONG
             ),
@@ -175,8 +175,8 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
                     description = "This is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interestingThis is an activity very interesting",
                     duration = "PT15M",
                     allowedParticipants = NumericRangeWriterDto(lower = 1, upper = 10),
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 ACTIVITY_DESCRIPTION_TOO_LONG
             ),
@@ -186,8 +186,8 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
                     description = "This is an activity very interesting",
                     duration = "PT15M",
                     allowedParticipants = NumericRangeWriterDto(lower = 0, upper = 10),
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 ACTIVITY_ALLOWED_PARTICIPANTS_TOO_LOW
             ),
@@ -197,8 +197,8 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
                     description = "This is an activity very interesting",
                     duration = "PT15M",
                     allowedParticipants = NumericRangeWriterDto(lower = 10, upper = 1),
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 ACTIVITY_ALLOWED_PARTICIPANTS_MAX_IS_HIGHER_THAN_MIN
             ),
@@ -208,8 +208,8 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
                     description = "This is an activity very interesting",
                     duration = "PT15M",
                     allowedParticipants = NumericRangeWriterDto(lower = 1, upper = 10),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 ACTIVITY_START_LATER_THAN_END
             ),

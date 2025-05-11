@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.Activi
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ActivityWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ActivityReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.ActivityWriterDtoMapper
 import java.time.ZonedDateTime
@@ -26,7 +25,6 @@ class ActivityController(
     private val service: IActivityService,
     private val readerMapper: ActivityReaderDtoMapper,
     private val movementReaderMapper: MovementReaderDtoMapper,
-    private val communicationReaderMapper: CommunicationReaderDtoMapper,
     private val writerMapper: ActivityWriterDtoMapper,
 ): IActivityController {
     override fun findActivities(
@@ -66,7 +64,13 @@ class ActivityController(
             projectId,
             id,
             PageableModel(pageNumber * pageSize, pageSize),
-            MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched),
+            MovementSearchParamModel(
+                visibilitySearched,
+                linkedToActivity = null,
+                typeSearched,
+                startDateTimeSearched,
+                endDateTimeSearched
+            ),
         ).map { movementReaderMapper.toDtoPage(it, locale) }
     }
 

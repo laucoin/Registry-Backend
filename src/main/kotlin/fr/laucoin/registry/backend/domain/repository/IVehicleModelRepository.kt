@@ -16,6 +16,8 @@ interface IVehicleModelRepository: IGenericReadProjectModelRepository<VehicleMod
         searchParams: VehicleSearchParamModel,
     ): Mono<PageModel<VehicleModel>>
 
+    fun countAll(projectId: UUID, searchParams: VehicleSearchParamModel): Mono<Long>
+
     fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleModel>
 
     fun findWithLimit(limit: Int, projectId: UUID, searchParams: VehicleSearchParamModel): Flux<VehicleModel>

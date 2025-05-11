@@ -16,6 +16,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_AVAILABLE_GROUPS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_GROUPS
@@ -127,6 +128,9 @@ object ParticipantQueries {
     """
 
     const val PARTICIPANT_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
+
+    const val PARTICIPANT_MAJOR_CLAUSE =
+        "(:isMajor IS NULL OR :isMajor = (t.$PARTICIPANT_BIRTHDAY >= CURRENT_DATE - INTERVAL '18 years'))"
 
     const val PARTICIPANT_TYPE_SEARCH_CLAUSE = "(:typeSearched IS NULL OR t.type = :typeSearched)"
 

@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import java.util.UUID
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
@@ -26,6 +27,10 @@ data class CurrentUserModel(
     }
 
     fun promote(newAuthorities: List<String>) = newAuthorities.forEach { authorities.add(SimpleGrantedAuthority(it)) }
+
+    fun hasAuthority(authority: String): Boolean = authorities.any { it.authority == authority }
+
+    fun hasAuthority(projectId: UUID, authority: String): Boolean = authorities.any { it.authority == "${projectId}_$authority" }
 
     override fun getAuthorities(): MutableCollection<GrantedAuthority> = authorities
 

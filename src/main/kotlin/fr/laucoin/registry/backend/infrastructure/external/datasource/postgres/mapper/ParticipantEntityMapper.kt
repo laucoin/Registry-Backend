@@ -45,6 +45,7 @@ class ParticipantEntityMapper(private val gson: Gson): IEntityMapper<Participant
             endAvailability = if (Objects.isNull(entity.endAvailabilityDate)) null
             else CustomDateTimeModel(entity.endAvailabilityDate !!, entity.endAvailabilityTime)
             status = buildStatus(entity.lastMovementType)
+            lastMovement = entity.lastMovementDateTime
             user = formattedUser
             purged = entity.purged
         }.fillWithProjectAndEntity(entity)

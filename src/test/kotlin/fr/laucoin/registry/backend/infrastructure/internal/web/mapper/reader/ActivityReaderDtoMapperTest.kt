@@ -2,10 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.NumericRangeModel
-import java.time.LocalDateTime
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
@@ -34,8 +33,8 @@ class ActivityReaderDtoMapperTest {
                         description = "This is an activity very interesting"
                         duration = Duration.ZERO
                         allowedParticipants = NumericRangeModel(lower = 1, upper = 10)
-                        startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
-                        endAvailability = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAvailability = CustomDateTimeModel.MIN
+                        endAvailability = CustomDateTimeModel.MAX
                         visible = true
                         creation = HistoryModel()
                         lastEdition = HistoryModel()
@@ -48,8 +47,8 @@ class ActivityReaderDtoMapperTest {
                         name = "Activity 1"
                         description = "This is an activity very interesting"
                         allowedParticipants = NumericRangeModel(lower = 1, upper = 10)
-                        startAvailability = CustomDateTimeModel(LocalDateTime.MIN)
-                        endAvailability = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAvailability = CustomDateTimeModel.MIN
+                        endAvailability = CustomDateTimeModel.MAX
                         visible = true
                         creation = HistoryModel()
                         lastEdition = HistoryModel()

@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
 import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
@@ -19,7 +18,7 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
@@ -40,7 +39,7 @@ class ProjectService(
         withProfile: Boolean,
         searchParams: ProjectSearchParamModel,
     ): Mono<PageModel<ProjectModel>> {
-        return if (roleService.getAuthoritiesByUserRole(currentUser.role).contains(REGISTRY_PROJECT_R) && ! withProfile) {
+        return if (! withProfile) {
             repository.findPage(pageable, searchParams)
         } else repository.findPage(roleService.getProjectIdsFromCurrentUserProfiles(currentUser), pageable, searchParams)
     }
@@ -123,8 +122,8 @@ class ProjectService(
         if (it.begin.isBefore(project.begin) || it.end.isAfter(project.end)) {
             repository.validDateTime(
                 it.id !!,
-                project.begin?.toLocalDateTime(LocalTime.MIN),
-                project.end?.toLocalDateTime(LocalTime.MAX)
+                project.begin?.toZonedDateTime(OffsetTime.MIN),
+                project.end?.toZonedDateTime(OffsetTime.MAX)
             )
                 .handle { valid, handle ->
                     if (! valid) {

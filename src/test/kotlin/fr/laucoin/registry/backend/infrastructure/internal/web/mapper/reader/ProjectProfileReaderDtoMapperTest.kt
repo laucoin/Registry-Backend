@@ -3,13 +3,12 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
-import java.time.LocalDateTime
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
@@ -39,8 +38,8 @@ class ProjectProfileReaderDtoMapperTest {
                 Arguments.of(
                     ProjectProfileModel().apply {
                         id = UUID.randomUUID()
-                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
-                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAccess = CustomDateTimeModel.MIN
+                        endAccess = CustomDateTimeModel.MAX
                         visible = false
                         status = null
                         creation = HistoryModel()
@@ -54,8 +53,8 @@ class ProjectProfileReaderDtoMapperTest {
                 Arguments.of(
                     ProjectProfileModel().apply {
                         id = UUID.randomUUID()
-                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
-                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAccess = CustomDateTimeModel.MIN
+                        endAccess = CustomDateTimeModel.MAX
                         status = ACCEPTED
                         visible = false
                         creation = HistoryModel()
@@ -73,8 +72,8 @@ class ProjectProfileReaderDtoMapperTest {
                         user = UserModel()
                         role = "ROLE"
                         status = ACCEPTED
-                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
-                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAccess = CustomDateTimeModel.MIN
+                        endAccess = CustomDateTimeModel.MAX
                         visible = true
                         creation = HistoryModel()
                         lastEdition = HistoryModel()
@@ -90,8 +89,8 @@ class ProjectProfileReaderDtoMapperTest {
                         project = ProjectModel()
                         user = UserModel()
                         role = "ROLE"
-                        startAccess = CustomDateTimeModel(LocalDateTime.MIN)
-                        endAccess = CustomDateTimeModel(LocalDateTime.MAX)
+                        startAccess = CustomDateTimeModel.MIN
+                        endAccess = CustomDateTimeModel.MAX
                         status = null
                         visible = true
                         creation = HistoryModel()

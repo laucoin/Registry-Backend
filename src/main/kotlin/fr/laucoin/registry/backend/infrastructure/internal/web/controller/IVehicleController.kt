@@ -106,6 +106,7 @@ interface IVehicleController {
     @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_HISTORY_R')")
     @GetMapping("/{id}/movements")
     fun findVehicleMovements(
+        @AuthenticationPrincipal currentUser: CurrentUserModel,
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,
@@ -115,6 +116,8 @@ interface IVehicleController {
             message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
         ) pageSize: Int,
         @RequestParam(required = false) visibilitySearched: Boolean?,
+        @Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
+        @RequestParam(required = false) linkedToActivity: Boolean?,
         @RequestParam(required = false) typeSearched: MovementTypeEnum?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,

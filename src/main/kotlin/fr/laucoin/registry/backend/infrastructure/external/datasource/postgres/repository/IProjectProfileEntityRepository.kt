@@ -1,8 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_NAME
@@ -18,29 +16,30 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.DATES_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.JOIN_USER
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.LINKED_USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_STATUS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_USABLE_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.JOIN_USER
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.LINKED_USER_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.SELECT_PROJECT_PROFILE_USER_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.SELECT_LINKED_USER
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.SELECT_PROJECT_PROFILE_USER_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileRoleCountEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileRoleEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.ENTITY_ROLE_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.PROJECT_ROLE_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.ROLE_LEVEL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -135,8 +134,8 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
         userIds: List<UUID>,
         profileIdToExclude: UUID?,
         statusSearched: List<ProfileStatusEnum>,
-        startDateTimeSearched: LocalDateTime?,
-        endDateTimeSearched: LocalDateTime?,
+        startDateTimeSearched: ZonedDateTime?,
+        endDateTimeSearched: ZonedDateTime?,
     ): Flux<UUID>
 
     @Query(

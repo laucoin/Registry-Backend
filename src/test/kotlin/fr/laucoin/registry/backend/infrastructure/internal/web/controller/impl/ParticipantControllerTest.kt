@@ -47,7 +47,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -181,8 +181,8 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
                     firstName = "John",
                     lastName = "DOE",
                     birthday = LocalDate.EPOCH,
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
                 ),
                 PARTICIPANT_START_LATER_THAN_END,
             ),
@@ -540,7 +540,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         val uuid = UUID.randomUUID()
         val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
 
-        whenever(service.updateParticipantById(any(), any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
+        whenever(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
         whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
         whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
 
@@ -558,7 +558,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(partialUserReaderMapper)
         verify(writerMapper).toModel(participant, projectId)
-        verify(service).updateParticipantById(any(), any(), eq(projectId), eq(uuid), any())
+        verify(service).updateParticipantById(any(), eq(projectId), eq(uuid), any())
     }
 
     @ParameterizedTest

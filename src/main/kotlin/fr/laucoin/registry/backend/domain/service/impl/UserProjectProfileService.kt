@@ -19,7 +19,7 @@ import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelReposit
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.util.Objects
 import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -113,8 +113,8 @@ class UserProjectProfileService(
             projectId,
             listOf(currentUser.id !!),
             profileId = null,
-            profile.startAccess !!.toLocalDateTime(LocalTime.MIN),
-            profile.endAccess !!.toLocalDateTime(LocalTime.MAX),
+            profile.startAccess !!.toZonedDateTime(OffsetTime.MIN),
+            profile.endAccess !!.toZonedDateTime(OffsetTime.MAX),
         ).flatMap { repository.create(profile) }
     }
 

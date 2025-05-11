@@ -11,15 +11,13 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IMovementModelRepository: IGenericReadProjectModelRepository<MovementModel>, IGenericWriteModelRepository<MovementModel> {
-    val emptySearch: MovementSearchParamModel
-        get() = MovementSearchParamModel(
-            visibilitySearched = null,
-            typeSearched = null,
-            startDateTimeSearched = null,
-            endDateTimeSearched = null,
-        )
-
     fun findPage(
+        projectId: UUID,
+        pageable: PageableModel,
+        searchParams: MovementSearchParamModel,
+    ): Mono<PageModel<MovementModel>>
+
+    fun findCurrentPage(
         projectId: UUID,
         pageable: PageableModel,
         searchParams: MovementSearchParamModel,
@@ -51,7 +49,7 @@ interface IMovementModelRepository: IGenericReadProjectModelRepository<MovementM
         searchParams: MovementSearchParamModel,
     ): Mono<PageModel<MovementModel>>
 
-    fun findOutByActivityWithLimit(
+    fun findActivityWithLimit(
         limit: Int,
         projectId: UUID,
         searchParams: ActivitySearchParamModel,

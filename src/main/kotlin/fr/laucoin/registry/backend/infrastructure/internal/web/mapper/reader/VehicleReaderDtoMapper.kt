@@ -1,28 +1,27 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USABLE_ELEMENT_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.model.VehicleModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import java.util.Locale
 import java.util.Objects
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
 
 @Component
 class VehicleReaderDtoMapper(
-    @Qualifier("messagesSource") private val translateService: MessageSource,
     private val projectMapper: ProjectReaderDtoMapper,
+    private val statusMapper: PresenceStatusReaderDtoMapper,
 ): IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
     override fun toDto(model: VehicleModel, locale: Locale): VehicleReaderDto {
         return VehicleReaderDto(
             licensePlate = model.licensePlate,
             brand = model.brand,
             model = model.model,
-            status = if (Objects.nonNull(model.status)) LabelDto(
-                model.status !!.name,
-                translateService.getMessage("$USABLE_ELEMENT_STATUS_PREFIX${model.status}", null, locale),
+            status = if (Objects.nonNull(model.status)) statusMapper.toDto(
+                model.status !!,
+                locale,
+                model.lastMovement,
+                model.startAvailability,
+                model.endAvailability,
             ) else null,
             startAvailability = model.startAvailability,
             endAvailability = model.endAvailability,

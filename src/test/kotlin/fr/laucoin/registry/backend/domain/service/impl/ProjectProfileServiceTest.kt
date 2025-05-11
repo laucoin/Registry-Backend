@@ -1,20 +1,20 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
@@ -25,8 +25,6 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -274,12 +272,12 @@ class ProjectProfileServiceTest {
         assertEquals(CONFLICT, result.status)
         assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
         verify(repository).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-            projectId,
-            users,
-            profileIdToExclude = null,
-            statusSearched = listOf(ACCEPTED, INVITED),
-            startDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MIN),
-            endDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MAX),
+            projectId = eq(projectId),
+            userIds = eq(users),
+            profileIdToExclude = eq(null),
+            statusSearched = eq(listOf(ACCEPTED, INVITED)),
+            startDateTimeSearched = any(),
+            endDateTimeSearched = any(),
         )
         verify(repository, never()).saveAll(any())
     }
@@ -298,8 +296,8 @@ class ProjectProfileServiceTest {
             role = profileRole
             user = UserModel().apply { id = uuid }
             project = ProjectModel().apply { id = projectId }
-            startAccess = CustomDateTimeModel(LocalDate.EPOCH)
-            endAccess = CustomDateTimeModel(LocalDate.EPOCH)
+            startAccess = CustomDateTimeModel.MIN
+            endAccess = CustomDateTimeModel.MAX
         }
         whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
         whenever(
@@ -324,12 +322,12 @@ class ProjectProfileServiceTest {
         assertEquals(profile, result)
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(repository).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-            projectId,
-            listOf(uuid),
-            profileIdToExclude = null,
-            statusSearched = listOf(ACCEPTED, INVITED),
-            startDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MIN),
-            endDateTimeSearched = LocalDateTime.of(LocalDate.EPOCH, LocalTime.MAX),
+            projectId = eq(projectId),
+            userIds = eq(listOf(uuid)),
+            profileIdToExclude = eq(null),
+            statusSearched = eq(listOf(ACCEPTED, INVITED)),
+            startDateTimeSearched = any(),
+            endDateTimeSearched = any(),
         )
         verify(profileService).validateNotLastProjectRoleLevel0(
             uuid,

@@ -91,19 +91,6 @@ class GroupServiceTest {
     }
 
     @Test
-    fun `Should findGroupsMembers call repository findContent`() {
-        // Arrange
-        val uuids = listOf(UUID.randomUUID())
-        whenever(repository.findContent(any(), any())).thenReturn(Flux.empty())
-
-        // Act
-        service.findGroupsMembers(projectId, uuids).blockFirst()
-
-        // Assert
-        verify(repository).findContent(projectId, uuids)
-    }
-
-    @Test
     fun `Should findGroupMembersPageByGroupId call repository findPageByGroupId`() {
         // Arrange
         val uuid = UUID.randomUUID()
@@ -167,7 +154,7 @@ class GroupServiceTest {
         verify(participantRepository).findWithLimit(
             maxParticipants,
             projectId,
-            ParticipantSearchParamModel(REGISTERED, visibilitySearched = true).apply { this.textSearched = textSearched }
+            ParticipantSearchParamModel(null, REGISTERED, visibilitySearched = true).apply { this.textSearched = textSearched }
         )
     }
 

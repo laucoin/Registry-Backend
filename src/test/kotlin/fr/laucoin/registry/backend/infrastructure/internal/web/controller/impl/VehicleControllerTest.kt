@@ -42,7 +42,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -136,8 +136,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = null,
                     brand = "Toyota",
                     model = "Hilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_LICENSE_PLATE_NULL_OR_BLANK
             ),
@@ -146,8 +146,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "",
                     brand = "Toyota",
                     model = "Hilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_LICENSE_PLATE_NULL_OR_BLANK
             ),
@@ -156,8 +156,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CDAB-123-CDAB-123-CD",
                     brand = "Toyota",
                     model = "Hilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_LICENSE_PLATE_TOO_LONG
             ),
@@ -166,8 +166,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CD",
                     brand = null,
                     model = "Hilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_BRAND_NULL_OR_BLANK
             ),
@@ -176,8 +176,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CD",
                     brand = "",
                     model = "Hilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_BRAND_NULL_OR_BLANK
             ),
@@ -186,8 +186,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CD",
                     brand = "ToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyotaToyota",
                     model = "Hilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_BRAND_TOO_LONG
             ),
@@ -196,8 +196,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = null,
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_MODEL_NULL_OR_BLANK
             ),
@@ -206,8 +206,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = "",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_MODEL_NULL_OR_BLANK
             ),
@@ -216,8 +216,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = "HiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHiluxHilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
                 ),
                 VEHICLE_MODEL_TOO_LONG
             ),
@@ -226,8 +226,8 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
                     licensePlate = "AB-123-CD",
                     brand = "Toyota",
                     model = "Hilux",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
                 ),
                 VEHICLE_START_LATER_THAN_END
             ),

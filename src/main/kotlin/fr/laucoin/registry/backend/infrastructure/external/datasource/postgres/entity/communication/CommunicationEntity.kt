@@ -21,7 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericProjectEntity
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
@@ -70,11 +70,11 @@ data class CommunicationEntity(
     var activityStartAvailabilityDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(COMMUNICATION_ACTIVITY_START_AVAILABILITY_TIME)
-    var activityStartAvailabilityTime: LocalTime? = null,
+    var activityStartAvailabilityTime: OffsetTime? = null,
     @ReadOnlyProperty
     @Column(COMMUNICATION_ACTIVITY_END_AVAILABILITY_DATE)
     var activityEndAvailabilityDate: LocalDate? = null,
     @ReadOnlyProperty
     @Column(COMMUNICATION_ACTIVITY_END_AVAILABILITY_TIME)
-    var activityEndAvailabilityTime: LocalTime? = null,
+    var activityEndAvailabilityTime: OffsetTime? = null,
 ): GenericProjectEntity()

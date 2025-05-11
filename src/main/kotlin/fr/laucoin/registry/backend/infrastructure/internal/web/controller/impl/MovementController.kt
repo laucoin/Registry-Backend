@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
@@ -7,6 +9,9 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IMovementController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CommunicationReaderDto
@@ -31,6 +36,7 @@ import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.UUID
 import org.apache.commons.text.similarity.JaroWinklerSimilarity
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -52,19 +58,54 @@ class MovementController(
     private val similarity: JaroWinklerSimilarity = JaroWinklerSimilarity()
 
     override fun findMovements(
+        currentUser: CurrentUserModel,
         locale: Locale,
         projectId: UUID,
         pageNumber: Int,
         pageSize: Int,
+        linkedToActivity: Boolean?,
         visibilitySearched: Boolean?,
         typeSearched: MovementTypeEnum?,
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<MovementReaderDto>> {
+        if (! currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
+            throw RegistryException(
+                status = FORBIDDEN,
+                code = NOT_ENOUGH_PERMISSION,
+            )
+        }
+
         return service.findMovementsPage(
             projectId,
             PageableModel(pageNumber * pageSize, pageSize),
-            MovementSearchParamModel(visibilitySearched, typeSearched, startDateTimeSearched, endDateTimeSearched)
+            MovementSearchParamModel(visibilitySearched, linkedToActivity, typeSearched, startDateTimeSearched, endDateTimeSearched)
+        ).map { readerMapper.toDtoPage(it, locale) }
+    }
+
+    override fun findCurrentMovementsPage(
+        currentUser: CurrentUserModel,
+        locale: Locale,
+        projectId: UUID,
+        pageNumber: Int,
+        pageSize: Int,
+        visibilitySearched: Boolean?,
+        linkedToActivity: Boolean?,
+        typeSearched: MovementTypeEnum?,
+        startDateTimeSearched: ZonedDateTime?,
+        endDateTimeSearched: ZonedDateTime?
+    ): Mono<PageModel<MovementReaderDto>> {
+        if (! currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
+            throw RegistryException(
+                status = FORBIDDEN,
+                code = NOT_ENOUGH_PERMISSION,
+            )
+        }
+
+        return service.findCurrentMovementsPage(
+            projectId,
+            PageableModel(pageNumber * pageSize, pageSize),
+            MovementSearchParamModel(visibilitySearched, linkedToActivity, typeSearched, startDateTimeSearched, endDateTimeSearched)
         ).map { readerMapper.toDtoPage(it, locale) }
     }
 
@@ -149,6 +190,14 @@ class MovementController(
                 endDateTimeSearched
             )
         ).map { communicationReaderMapper.toDtoPage(it, locale) }
+    }
+
+    override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel> {
+        return service.findParticipantsStatus(projectId)
+    }
+
+    override fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusModel> {
+        return service.findVehiclesStatus(projectId)
     }
 
     override fun createMovement(

@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USABLE_ELEMENT_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import java.util.Locale
 import java.util.stream.Stream
@@ -17,12 +17,11 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 
 class VehicleReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
+    private val presenceStatusMapper: PresenceStatusReaderDtoMapper = mock()
     private val projectMapper: ProjectReaderDtoMapper = mock()
-    private val mapper: VehicleReaderDtoMapper = VehicleReaderDtoMapper(translateService, projectMapper)
+    private val mapper: VehicleReaderDtoMapper = VehicleReaderDtoMapper(projectMapper, presenceStatusMapper)
 
     companion object {
         @JvmStatic
@@ -53,17 +52,20 @@ class VehicleReaderDtoMapperTest {
         expectedProjectCast: Int,
     ) {
         // Arrange
-        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
+        whenever(presenceStatusMapper.toDto(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+            LabelDto(
+                "translated",
+                "translated"
+            )
+        )
         whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
 
         // Act
         val result = mapper.toDto(vehicle, Locale.getDefault())
 
         // Assert
-        verify(translateService, times(expectedTranslation)).getMessage(
-            "$USABLE_ELEMENT_STATUS_PREFIX${vehicle.status}",
-            null,
-            Locale.getDefault(),
+        verify(presenceStatusMapper, times(expectedTranslation)).toDto(
+            any(), any(), anyOrNull(), anyOrNull(), anyOrNull()
         )
         verify(projectMapper, times(expectedProjectCast)).toDto(vehicle.project ?: ProjectModel(), Locale.getDefault())
 

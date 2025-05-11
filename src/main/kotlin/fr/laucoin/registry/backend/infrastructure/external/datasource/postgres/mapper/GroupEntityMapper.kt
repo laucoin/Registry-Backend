@@ -18,6 +18,9 @@ class GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
             else CustomDateTimeModel(entity.startAvailabilityDate !!, entity.startAvailabilityTime)
             endAvailability = if (Objects.isNull(entity.endAvailabilityDate)) null
             else CustomDateTimeModel(entity.endAvailabilityDate !!, entity.endAvailabilityTime)
+            membersCount = entity.members
+            insideMembersCount = entity.insideMembers
+            outsideMembersCount = entity.outsideMembers
         }.fillWithProjectAndEntity(entity)
     }
 

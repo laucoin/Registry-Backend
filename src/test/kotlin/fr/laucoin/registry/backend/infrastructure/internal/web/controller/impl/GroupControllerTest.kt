@@ -28,6 +28,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.Custom
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.GroupWriterDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.AddedGroupMembersReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.GroupWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -38,7 +39,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -69,6 +70,9 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
     @MockitoBean
     private lateinit var readerMapper: GroupReaderDtoMapper
+
+    @MockitoBean
+    private lateinit var lightReaderMapper: GroupWithoutMemberReaderDtoMapper
 
     @MockitoBean
     private lateinit var participantReaderMapper: ParticipantReaderDtoMapper
@@ -141,8 +145,8 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
             Arguments.of(
                 GroupWriterDto(
                     name = "name",
-                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, LocalTime.MAX),
-                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, LocalTime.MIN),
+                    startAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+                    endAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
                     members = listOf(UUID.randomUUID())
                 ),
                 GROUP_START_LATER_THAN_END,
@@ -181,7 +185,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         )
         val page = PageModel(pageable, totalElements = 1, listOf(GroupModel()))
         whenever(service.findGroupsPage(any(), any(), any())).thenReturn(Mono.just(page))
-        whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+        whenever(lightReaderMapper.toDtoPage(any(), any())).thenReturn(
             PageModel(pageable, totalElements = 1, listOf(GroupReaderDto())),
         )
 
@@ -210,7 +214,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         result.body<PageModel<*>>(OK)
 
         verify(service).findGroupsPage(projectId, pageable, searchParams)
-        verify(readerMapper).toDtoPage(any(), any())
+        verify(lightReaderMapper).toDtoPage(any(), any())
         verifyNoInteractions(participantReaderMapper)
         verifyNoInteractions(writerMapper)
     }
@@ -244,29 +248,6 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         verifyNoInteractions(service)
         verifyNoInteractions(readerMapper)
         verifyNoInteractions(participantReaderMapper)
-        verifyNoInteractions(writerMapper)
-    }
-
-    @Test
-    fun `Should findGroupMembers return 200`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        whenever(service.findGroupsMembers(any(), any())).thenReturn(Flux.just(Pair(uuid, listOf(ParticipantModel()))))
-        whenever(participantReaderMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
-
-        // Act
-        val result = webClient
-            .authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
-            .get()
-            .uri(uriBuilder("$BASE_URL/members", listOf(projectId), listOf(Pair("groupIds", uuid))))
-            .exchange()
-
-        // Assert
-        result.body<List<*>>(OK)
-
-        verify(service).findGroupsMembers(projectId, listOf(uuid))
-        verifyNoInteractions(readerMapper)
-        verify(participantReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
     }
 
@@ -418,7 +399,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val group = GroupWriterDto(name = "name", members = listOf(uuid))
         whenever(service.createGroup(any(), any())).thenReturn(Mono.just(GroupModel()))
         whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
-        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
+        whenever(lightReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -432,7 +413,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         result.body<GroupReaderDto>(OK)
 
         verify(service).createGroup(any(), any())
-        verify(readerMapper).toDto(any(), any())
+        verify(lightReaderMapper).toDto(any(), any())
         verifyNoInteractions(participantReaderMapper)
         verify(writerMapper).toModel(any(), eq(projectId))
     }
@@ -468,7 +449,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         whenever(service.updateGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
         whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
-        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
+        whenever(lightReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -481,7 +462,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Assert
         result.body<GroupReaderDto>(OK)
 
-        verify(readerMapper).toDto(any(), any())
+        verify(lightReaderMapper).toDto(any(), any())
         verify(writerMapper).toModel(any(), eq(projectId))
         verifyNoInteractions(participantReaderMapper)
         verify(service).updateGroupById(any(), eq(projectId), eq(uuid), any())
@@ -576,7 +557,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val uuid1 = UUID.randomUUID()
 
         whenever(service.removeMemberFromGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
+        whenever(lightReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -587,7 +568,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
 
         // Assert
         result.body<GroupReaderDto>(OK)
-        verify(readerMapper).toDto(any(), any())
+        verify(lightReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
         verify(service).removeMemberFromGroupById(any(), eq(projectId), eq(uuid), eq(uuid1))
     }
@@ -598,7 +579,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val uuid = UUID.randomUUID()
 
         whenever(service.disableGroupById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
+        whenever(lightReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -610,7 +591,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Assert
         result.body<GroupReaderDto>(OK)
 
-        verify(readerMapper).toDto(any(), any())
+        verify(lightReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
         verify(service).disableGroupById(any(), eq(projectId), eq(uuid))
     }
@@ -621,7 +602,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         val uuid = UUID.randomUUID()
 
         whenever(service.enableGroupById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
+        whenever(lightReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
         val result = webClient
@@ -633,7 +614,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Assert
         result.body<GroupReaderDto>(OK)
 
-        verify(readerMapper).toDto(any(), any())
+        verify(lightReaderMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
         verify(service).enableGroupById(any(), eq(projectId), eq(uuid))
     }

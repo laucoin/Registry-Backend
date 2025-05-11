@@ -8,15 +8,15 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IMetad
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ParticipantTypeReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PresenceStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ProjectProfileStatusReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.UsableElementStatusReaderDtoMapper
 import java.util.Locale
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 
 @RestController
 class MetadataController(
-    private val usableElementStatusMapper: UsableElementStatusReaderDtoMapper,
+    private val usableElementStatusMapper: PresenceStatusReaderDtoMapper,
     private val projectProfileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper,
     private val movementTypeReaderMapper: MovementTypeReaderDtoMapper,
     private val participantTypeReaderMapper: ParticipantTypeReaderDtoMapper,

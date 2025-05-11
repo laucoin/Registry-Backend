@@ -112,6 +112,10 @@ object MovementQueries {
         (t.$MOVEMENT_TYPE IN (:typeSearched))
     """
 
+    const val MOVEMENT_ACTIVITY_CLAUSE = """
+        (:linkedToActivity IS NULL OR :linkedToActivity = (t.$MOVEMENT_ACTIVITY_ID IS NOT NULL))
+    """
+
     private const val PARTICIPANT_PREFIX = "participant_"
     const val LAST_PARTICIPANT_MOVEMENT_JOIN = """
         INNER JOIN (
@@ -121,6 +125,8 @@ object MovementQueries {
             GROUP BY $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
         ) AS plm ON plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
     """
+    const val CURRENT_MOVEMENT_CLAUSE =
+        "(plm.participant_type = (CASE WHEN t.$PARTICIPANT_TYPE = 'OUT' THEN 'REGISTERED' ELSE 'GUEST' END))"
 
     const val SELECT_ACTIVITY_MOVEMENT_SEARCH = """
         CASE

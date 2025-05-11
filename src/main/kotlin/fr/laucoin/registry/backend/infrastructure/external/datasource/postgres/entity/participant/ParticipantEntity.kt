@@ -22,7 +22,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_LAST_NAME
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
@@ -54,11 +54,11 @@ data class ParticipantEntity(
     @Column(PARTICIPANT_START_AVAILABILITY_DATE)
     var startAvailabilityDate: LocalDate? = null,
     @Column(PARTICIPANT_START_AVAILABILITY_TIME)
-    var startAvailabilityTime: LocalTime? = null,
+    var startAvailabilityTime: OffsetTime? = null,
     @Column(PARTICIPANT_END_AVAILABILITY_DATE)
     var endAvailabilityDate: LocalDate? = null,
     @Column(PARTICIPANT_END_AVAILABILITY_TIME)
-    var endAvailabilityTime: LocalTime? = null,
+    var endAvailabilityTime: OffsetTime? = null,
     @Column(PARTICIPANT_USER_ID)
     var userId: UUID? = null,
     @ReadOnlyProperty
