@@ -110,6 +110,13 @@ class MovementService(
         return repository.findContent(projectId, movementIds)
     }
 
+    override fun findCurrentMovementsContent(
+        projectId: UUID,
+        movementIds: List<UUID>
+    ): Flux<Pair<UUID, List<MovementContentModel>>> {
+        return repository.findCurrentContent(projectId, movementIds)
+    }
+
     override fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {
         return repository.findById(projectId, id, visibilitySearched)
             .notFoundIfEmpty(id)
@@ -243,10 +250,10 @@ class MovementService(
             .map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentChild, registeredAbsentChild, guestPresent) ->
                 ProjectStatusModel(
                     registered = ProjectStatusModel.ParticipantStatusModel(
-                        registeredPresentAdult,
-                        registeredAbsentAdult,
                         registeredPresentChild,
-                        registeredAbsentChild
+                        registeredPresentAdult,
+                        registeredAbsentChild,
+                        registeredAbsentAdult,
                     ),
                     guests = guestPresent,
                 )

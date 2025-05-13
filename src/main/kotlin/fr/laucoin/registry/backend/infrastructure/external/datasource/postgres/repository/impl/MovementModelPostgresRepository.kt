@@ -93,6 +93,18 @@ class MovementModelPostgresRepository(
             }
     }
 
+    override fun findCurrentContent(
+        projectId: UUID,
+        movementIds: List<UUID>
+    ): Flux<Pair<UUID, List<MovementContentModel>>> {
+        return if (movementIds.isEmpty()) Flux.empty()
+        else contentRepository.findCurrentByMovementIds(projectId, movementIds)
+            .groupBy(MovementContentEntity::movementId)
+            .flatMap {
+                it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
+            }
+    }
+
     override fun findPageByParticipantId(
         projectId: UUID,
         participantId: UUID,

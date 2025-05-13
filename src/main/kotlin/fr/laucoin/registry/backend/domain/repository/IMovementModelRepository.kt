@@ -28,6 +28,11 @@ interface IMovementModelRepository: IGenericReadProjectModelRepository<MovementM
         movementIds: List<UUID>,
     ): Flux<Pair<UUID, List<MovementContentModel>>>
 
+    fun findCurrentContent(
+        projectId: UUID,
+        movementIds: List<UUID>,
+    ): Flux<Pair<UUID, List<MovementContentModel>>>
+
     fun findPageByParticipantId(
         projectId: UUID,
         participantId: UUID,

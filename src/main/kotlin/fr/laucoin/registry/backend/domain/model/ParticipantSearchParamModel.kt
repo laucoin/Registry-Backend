@@ -25,6 +25,7 @@ data class ParticipantSearchParamModel(
         dateTimeSearched: ZonedDateTime?,
     ): this(
         isMajor = isMajor,
+        typeSearched = typeSearched,
         visibilitySearched = visibilitySearched,
         availabilitySearched = statusSearched.isAvailable(),
         presenceSearched = statusSearched.isPresent(),

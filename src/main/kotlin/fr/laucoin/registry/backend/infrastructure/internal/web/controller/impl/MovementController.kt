@@ -63,6 +63,7 @@ class MovementController(
         projectId: UUID,
         pageNumber: Int,
         pageSize: Int,
+        currentMovements: Boolean,
         linkedToActivity: Boolean?,
         visibilitySearched: Boolean?,
         typeSearched: MovementTypeEnum?,
@@ -76,46 +77,44 @@ class MovementController(
             )
         }
 
-        return service.findMovementsPage(
-            projectId,
-            PageableModel(pageNumber * pageSize, pageSize),
-            MovementSearchParamModel(visibilitySearched, linkedToActivity, typeSearched, startDateTimeSearched, endDateTimeSearched)
-        ).map { readerMapper.toDtoPage(it, locale) }
-    }
-
-    override fun findCurrentMovementsPage(
-        currentUser: CurrentUserModel,
-        locale: Locale,
-        projectId: UUID,
-        pageNumber: Int,
-        pageSize: Int,
-        visibilitySearched: Boolean?,
-        linkedToActivity: Boolean?,
-        typeSearched: MovementTypeEnum?,
-        startDateTimeSearched: ZonedDateTime?,
-        endDateTimeSearched: ZonedDateTime?
-    ): Mono<PageModel<MovementReaderDto>> {
-        if (! currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
-            throw RegistryException(
-                status = FORBIDDEN,
-                code = NOT_ENOUGH_PERMISSION,
+        return (if (currentMovements) {
+            service.findCurrentMovementsPage(
+                projectId,
+                PageableModel(pageNumber * pageSize, pageSize),
+                MovementSearchParamModel(
+                    visibilitySearched,
+                    linkedToActivity,
+                    typeSearched,
+                    startDateTimeSearched,
+                    endDateTimeSearched
+                )
             )
-        }
-
-        return service.findCurrentMovementsPage(
-            projectId,
-            PageableModel(pageNumber * pageSize, pageSize),
-            MovementSearchParamModel(visibilitySearched, linkedToActivity, typeSearched, startDateTimeSearched, endDateTimeSearched)
-        ).map { readerMapper.toDtoPage(it, locale) }
+        } else {
+            service.findMovementsPage(
+                projectId,
+                PageableModel(pageNumber * pageSize, pageSize),
+                MovementSearchParamModel(
+                    visibilitySearched,
+                    linkedToActivity,
+                    typeSearched,
+                    startDateTimeSearched,
+                    endDateTimeSearched
+                )
+            )
+        }).map { readerMapper.toDtoPage(it, locale) }
     }
 
     override fun findMovementsContents(
         locale: Locale,
         projectId: UUID,
-        movementIds: List<UUID>
+        movementIds: List<UUID>,
+        currentMovements: Boolean,
     ): Flux<Pair<UUID, List<MovementContentReaderDto>>> {
-        return service.findMovementsContent(projectId, movementIds)
-            .map { Pair(it.first, it.second.map { content -> readerContentMapper.toDto(content, locale) }) }
+        return (if (currentMovements) {
+            service.findCurrentMovementsContent(projectId, movementIds)
+        } else {
+            service.findMovementsContent(projectId, movementIds)
+        }).map { Pair(it.first, it.second.map { content -> readerContentMapper.toDto(content, locale) }) }
     }
 
     override fun findMovementById(locale: Locale, projectId: UUID, id: UUID): Mono<MovementReaderDto> {
@@ -168,7 +167,7 @@ class MovementController(
             .map { vehiclesMapper.toDto(it, locale) }
     }
 
-    override fun findParticipantMovements(
+    override fun findMovementCommunications(
         locale: Locale,
         projectId: UUID,
         id: UUID,

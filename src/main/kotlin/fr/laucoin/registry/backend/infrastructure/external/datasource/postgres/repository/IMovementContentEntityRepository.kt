@@ -7,7 +7,9 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.CONTENT_JOIN
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.CURRENT_MOVEMENT_CONTENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.SELECT_CONTENT
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementQueries.WITH_CURRENT_MOVEMENT
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -25,4 +27,15 @@ interface IMovementContentEntityRepository: ReactiveCrudRepository<MovementConte
     """
     )
     fun findAllByMovementIds(projectId: UUID, movementIds: List<UUID>): Flux<MovementContentEntity>
+
+    @Query(
+        """
+        WITH $WITH_CURRENT_MOVEMENT
+        SELECT t.*, $SELECT_CONTENT
+        FROM $MOVEMENT_CONTENT_TABLE t $CURRENT_MOVEMENT_CONTENT_JOIN
+        INNER JOIN $MOVEMENT_TABLE mt ON t.$MOVEMENT_CONTENT_MOVEMENT_ID = mt.$ID $CONTENT_JOIN
+        WHERE mt.$LINKED_PROJECT_ID = :projectId AND t.$MOVEMENT_CONTENT_MOVEMENT_ID IN (:movementIds)
+    """
+    )
+    fun findCurrentByMovementIds(projectId: UUID, movementIds: List<UUID>): Flux<MovementContentEntity>
 }

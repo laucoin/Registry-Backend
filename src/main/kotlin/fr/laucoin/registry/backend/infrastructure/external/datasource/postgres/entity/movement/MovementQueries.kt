@@ -23,11 +23,20 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_OPTIONS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.VISIBLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_DESCRIPTION
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_DURATION
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_END_AVAILABILITY_DATE
@@ -54,10 +63,14 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleFields.VEHICLE_BRAND
@@ -122,11 +135,10 @@ object MovementQueries {
             SELECT MAX(t.$MOVEMENT_DATE_TIME) as $PARTICIPANT_LAST_MOVEMENT_DATE_TIME, $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
             FROM $MOVEMENT_TABLE t
             INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+            WHERE t.$VISIBLE IS TRUE
             GROUP BY $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
         ) AS plm ON plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
     """
-    const val CURRENT_MOVEMENT_CLAUSE =
-        "(plm.participant_type = (CASE WHEN t.$PARTICIPANT_TYPE = 'OUT' THEN 'REGISTERED' ELSE 'GUEST' END))"
 
     const val SELECT_ACTIVITY_MOVEMENT_SEARCH = """
         CASE
@@ -178,4 +190,76 @@ object MovementQueries {
             )
         )
     """
+
+    const val WITH_CURRENT_MOVEMENT = """
+        last_participant_movement AS (
+            SELECT t.$ID, t.$MOVEMENT_TYPE, plm.$MOVEMENT_CONTENT_PARTICIPANT_ID
+            FROM $MOVEMENT_TABLE t
+            INNER JOIN (
+                SELECT MAX(t.$MOVEMENT_DATE_TIME) as last_participant_movement_date_time, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
+                FROM $MOVEMENT_TABLE t
+                INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+                WHERE t.$VISIBLE IS TRUE
+                GROUP BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
+            ) AS plm ON plm.last_participant_movement_date_time = t.date_time
+        ),
+        filtered_groups AS (
+            SELECT t.$ID as $GROUP_CONTENT_PARTICIPANT_ID,
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'id', $GROUP_TABLE.$ID,
+                    'name', $GROUP_TABLE.$GROUP_NAME
+                )
+            ) FILTER (WHERE $GROUP_TABLE.$ID IS NOT NULL) as groups,
+            JSON_AGG(group_presence.$ID) FILTER (WHERE group_presence.$ID IS NOT NULL) as available_groups
+            FROM $PARTICIPANT_TABLE t
+            LEFT JOIN $GROUP_CONTENT_TABLE ON $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID = t.$ID
+            LEFT JOIN $GROUP_TABLE ON $GROUP_TABLE.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID AND $GROUP_TABLE.$VISIBLE IS TRUE
+            LEFT JOIN $GROUP_TABLE group_presence ON group_presence.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID AND group_presence.$VISIBLE IS TRUE
+                AND (
+                    (
+                        COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
+                        OR (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.start_availability_time, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    ) AND (
+                        COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
+                        OR (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    )
+                )
+            WHERE t.$LINKED_PROJECT_ID = :projectId
+            GROUP BY t.$ID
+        ),
+        current_movement AS (
+            SELECT last_participant_movement.$ID, last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID
+            FROM $PARTICIPANT_TABLE t
+            LEFT JOIN last_participant_movement ON last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID = t.$ID
+            LEFT JOIN filtered_groups fg ON t.$ID = fg.$GROUP_CONTENT_PARTICIPANT_ID
+            WHERE t.$VISIBLE IS TRUE AND t.$PARTICIPANT_PURGED IS FALSE AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
+                (
+                    (
+                        t.$PARTICIPANT_START_AVAILABILITY_DATE IS NULL AND (
+                            fg.groups IS NULL OR json_array_length(fg.groups) = 0
+                            OR (fg.available_groups IS NOT NULL AND json_array_length(fg.available_groups) > 0)
+                        )
+                    ) OR
+                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) < CURRENT_DATE
+                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                ) AND
+                (
+                    (
+                        t.$PARTICIPANT_END_AVAILABILITY_DATE IS NULL AND (
+                            fg.groups IS NULL OR json_array_length(fg.groups) = 0
+                            OR (fg.available_groups IS NOT NULL AND json_array_length(fg.available_groups) > 0)
+                        )
+                    ) OR
+                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) > CURRENT_DATE
+                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                )
+            )
+        )
+    """
+
+    const val CURRENT_MOVEMENT_JOIN = "INNER JOIN current_movement ON current_movement.$ID = t.$ID"
+
+    const val CURRENT_MOVEMENT_CONTENT_JOIN =
+        "INNER JOIN current_movement ON current_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID = t.$MOVEMENT_CONTENT_PARTICIPANT_ID"
 }
