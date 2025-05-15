@@ -79,40 +79,11 @@ interface IMovementController {
             200,
             message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
         ) pageSize: Int,
+        @Parameter(description = "\"currentMovements\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
+        @RequestParam(required = false, defaultValue = "false") currentMovements: Boolean,
         @Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
         @RequestParam(required = false) linkedToActivity: Boolean?,
         @RequestParam(required = false) visibilitySearched: Boolean?,
-        @RequestParam(required = false) typeSearched: MovementTypeEnum?,
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DATE_TIME) endDateTimeSearched: ZonedDateTime?,
-    ): Mono<PageModel<MovementReaderDto>>
-
-    @Operation(
-        summary = "Find Projects",
-        description = "Find or get paginated Projects",
-        parameters = [
-            Parameter(
-                name = ACCEPT_LANGUAGE,
-                description = "Locale, used for metadata and error translation.",
-                `in` = HEADER
-            ),
-        ],
-    )
-    @GetMapping("/current")
-    fun findCurrentMovementsPage(
-        @AuthenticationPrincipal currentUser: CurrentUserModel,
-        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
-        @PathVariable projectId: UUID,
-        @RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
-        @RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-            200,
-            message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-        ) pageSize: Int,
-        @RequestParam(required = false) visibilitySearched: Boolean?,
-        @Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
-        @RequestParam(required = false) linkedToActivity: Boolean?,
         @RequestParam(required = false) typeSearched: MovementTypeEnum?,
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) startDateTimeSearched: ZonedDateTime?,
@@ -137,6 +108,8 @@ interface IMovementController {
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @RequestParam(required = true) movementIds: List<UUID>,
+        @Parameter(description = "\"currentMovements\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
+        @RequestParam(required = false, defaultValue = "false") currentMovements: Boolean,
     ): Flux<Pair<UUID, List<MovementContentReaderDto>>>
 
     @Operation(
@@ -231,7 +204,7 @@ interface IMovementController {
     )
     @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R')")
     @GetMapping("/{id}/communications")
-    fun findParticipantMovements(
+    fun findMovementCommunications(
         @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
         @PathVariable projectId: UUID,
         @PathVariable id: UUID,

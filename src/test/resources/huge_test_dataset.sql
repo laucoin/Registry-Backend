@@ -347,7 +347,7 @@ BEGIN
              current_movement_id,
              current_project_begin_date + (RANDOM() * EXTRACT(EPOCH FROM ((current_project_begin_date + current_project_begin_time) - (current_project_end_date + current_project_end_time)))) * INTERVAL '1 second',
                 current_movement_type,
-                CASE WHEN NOT current_movement_type = 'IN' THEN (SELECT UNNEST(ARRAY ['EMERGENCY', 'LOGISTICS', 'PARTNER_ANIMATION', 'VISIT']) ORDER BY RANDOM() LIMIT 1) END,
+                CASE WHEN current_movement_type = 'IN' THEN (SELECT UNNEST(ARRAY ['EMERGENCY', 'LOGISTICS', 'PARTNER_ANIMATION', 'VISIT']) ORDER BY RANDOM() LIMIT 1) END,
                 current_project_id,
                 (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),
                 (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),

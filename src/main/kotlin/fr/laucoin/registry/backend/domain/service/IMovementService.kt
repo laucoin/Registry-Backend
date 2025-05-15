@@ -40,6 +40,11 @@ interface IMovementService {
         movementIds: List<UUID>,
     ): Flux<Pair<UUID, List<MovementContentModel>>>
 
+    fun findCurrentMovementsContent(
+        projectId: UUID,
+        movementIds: List<UUID>,
+    ): Flux<Pair<UUID, List<MovementContentModel>>>
+
     fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
     fun searchParticipantsAndGroupsByText(
         projectId: UUID,
