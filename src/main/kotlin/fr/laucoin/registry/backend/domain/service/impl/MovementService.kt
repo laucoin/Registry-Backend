@@ -135,7 +135,7 @@ class MovementService(
                     isMajor = null,
                     typeSearched,
                     visibilitySearched = true,
-                    presenceSearched = true
+                    availabilitySearched = true,
                 ).apply { this.textSearched = textSearched },
             ).collectList(),
             groupRepository.findWithLimit(

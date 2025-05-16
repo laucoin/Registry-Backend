@@ -84,6 +84,14 @@ class PresenceStatusReaderDtoMapper(
                 )
             }
 
+            Objects.nonNull(lastMovement) && OUT == model -> {
+                return translateService.getMessage(
+                    "${PRESENCE_STATUS_DURATION_PREFIX}NOT_ARRIVED_YET",
+                    null,
+                    locale
+                )
+            }
+
             else -> translateService.getMessage("$PRESENCE_STATUS_PREFIX$model", null, locale)
         }
     }

@@ -318,7 +318,7 @@ class MovementServiceTest {
         verify(participantRepository).findWithLimit(
             maxParticipants,
             projectId,
-            ParticipantSearchParamModel(isMajor = null, typeSearched, visibilitySearched = true, presenceSearched = true).apply {
+            ParticipantSearchParamModel(isMajor = null, typeSearched, visibilitySearched = true, availabilitySearched = true).apply {
                 this.textSearched = textSearched
             }
         )
