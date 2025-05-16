@@ -52,9 +52,14 @@ class GroupModelPostgresRepository(
         }
     }
 
-    override fun findContent(projectId: UUID, groupIds: List<UUID>): Flux<Pair<UUID, List<ParticipantModel>>> {
+    override fun findContent(
+        projectId: UUID,
+        groupIds: List<UUID>,
+        visibilitySearched: Boolean?,
+        availabilitySearched: Boolean?,
+    ): Flux<Pair<UUID, List<ParticipantModel>>> {
         return if (groupIds.isEmpty()) Flux.empty()
-        else contentRepository.findAllByGroupIds(projectId, groupIds)
+        else contentRepository.findAllByGroupIds(projectId, groupIds, visibilitySearched, availabilitySearched)
             .groupBy(GroupContentEntity::groupId)
             .flatMap {
                 it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
@@ -76,10 +81,15 @@ class GroupModelPostgresRepository(
         ).map(mapper::toModel)
     }
 
-    override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel> {
+    override fun findByIdWithContent(
+        projectId: UUID,
+        id: UUID,
+        visibilitySearched: Boolean?,
+        memberAvailabilitySearched: Boolean?,
+    ): Mono<GroupModel> {
         return Mono.zip(
             repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
-            findContent(projectId, listOf(id)).collectList()
+            findContent(projectId, listOf(id), visibilitySearched, memberAvailabilitySearched).collectList()
                 .handle { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
         ).map {
             it.t1.members = it.t2
@@ -95,7 +105,14 @@ class GroupModelPostgresRepository(
 
     override fun update(element: GroupModel): Mono<GroupModel> {
         return save(element)
-            .flatMap { findById(element.project !!.id !!, element.id !!, visibilitySearched = null) }
+            .flatMap {
+                findByIdWithContent(
+                    element.project !!.id !!,
+                    element.id !!,
+                    visibilitySearched = null,
+                    memberAvailabilitySearched = null,
+                )
+            }
             .removeDeletedMembers(element)
             .saveNewMembers(element)
             .`as`(transactionalOperator::transactional)

@@ -143,7 +143,12 @@ class MovementService(
                 projectId,
                 GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true),
             ).collectList().flatMap { groups ->
-                groupRepository.findContent(projectId, groups.mapNotNull(GroupModel::id))
+                groupRepository.findContent(
+                    projectId,
+                    groups.mapNotNull(GroupModel::id),
+                    visibilitySearched = true,
+                    availabilitySearched = true,
+                )
                     .map {
                         groups.first { g -> g.id == it.first }.apply { members = it.second }
                     }.collectList()

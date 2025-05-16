@@ -306,7 +306,7 @@ class MovementServiceTest {
         val member = ParticipantModel()
         whenever(participantRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
         whenever(groupRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.just(group))
-        whenever(groupRepository.findContent(any(), any())).thenReturn(Flux.just(Pair(uuid, listOf(member))))
+        whenever(groupRepository.findContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.just(Pair(uuid, listOf(member))))
 
         // Act
         val result = service.searchParticipantsAndGroupsByText(projectId, typeSearched, textSearched).block()
@@ -327,7 +327,7 @@ class MovementServiceTest {
             projectId,
             GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true)
         )
-        verify(groupRepository).findContent(projectId, listOf(uuid))
+        verify(groupRepository).findContent(projectId, listOf(uuid), visibilitySearched = true, availabilitySearched = true)
     }
 
     @Test
