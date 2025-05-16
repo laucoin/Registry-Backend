@@ -29,8 +29,9 @@ class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
             startValue is ZonedDateTime && endValue is ZonedDateTime -> startValue.isBefore(endValue)
             startValue is LocalDate && endValue is LocalDate -> startValue.isBefore(endValue)
             startValue is CustomDateTimeWriterDto && endValue is CustomDateTimeWriterDto -> {
-                val startDateTime = CustomDateTimeModel(startValue.date !!, startValue.time)
-                val endDateTime = CustomDateTimeModel(endValue.date !!, endValue.time)
+                val startDateTime =
+                    if (Objects.nonNull(startValue.date !!)) CustomDateTimeModel(startValue.date !!, startValue.time) else null
+                val endDateTime = if (Objects.nonNull(endValue.date !!)) CustomDateTimeModel(endValue.date !!, endValue.time) else null
                 startDateTime.isBeforeOrEqual(endDateTime)
             }
 
@@ -38,7 +39,7 @@ class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
             else -> {
                 val exception = RegistryException(INTERNAL_SERVER_ERROR, COMPARING_WRONG_PARAMETER_TYPE)
                 log.error(
-                    "The two fields ({}, {}) are not of the same type or the type is not supported (we support only nullable ZonedDateTime and ZonedDateTime).",
+                    "The two fields ({}, {}) are not of the same type or the type is not supported.",
                     startValue,
                     endValue,
                     exception
