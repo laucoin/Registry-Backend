@@ -59,8 +59,13 @@ class GroupService(
         )
     }
 
-    override fun findGroupById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel> {
-        return repository.findById(projectId, id, visibilitySearched)
+    override fun findGroupById(
+        projectId: UUID,
+        id: UUID,
+        visibilitySearched: Boolean?,
+        memberAvailabilitySearched: Boolean?
+    ): Mono<GroupModel> {
+        return repository.findByIdWithContent(projectId, id, visibilitySearched, memberAvailabilitySearched)
             .notFoundIfEmpty(id)
     }
 
@@ -92,7 +97,7 @@ class GroupService(
             group.endAvailability,
             GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
         )
-            .flatMap { findGroupById(projectId, id, visibilitySearched = null) }
+            .flatMap { findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null) }
             .flatMap {
                 val newMemberIds: List<UUID> = it.getNewMemberIds(group)
                 if (newMemberIds.isEmpty()) Mono.just(it)
@@ -115,7 +120,7 @@ class GroupService(
         id: UUID,
         memberIds: List<UUID>
     ): Mono<Pair<List<UUID>, List<UUID>>> {
-        return findGroupById(projectId, id, visibilitySearched = null)
+        return findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null)
             .map { Pair(it, it.getNewMemberIds(memberIds)) }
             .handle { it, handle ->
                 if (it.second.isEmpty()) {
@@ -144,7 +149,7 @@ class GroupService(
         id: UUID,
         memberId: UUID
     ): Mono<GroupModel> {
-        return findGroupById(projectId, id, visibilitySearched = null)
+        return findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null)
             .map { it.apply { members = members.filter { m -> m.id != memberId } } }
             .handle { it, handle ->
                 if (it.members.isEmpty()) {
@@ -191,19 +196,19 @@ class GroupService(
     }
 
     override fun disableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(projectId, id, visibilitySearched = true)
+        return findGroupById(projectId, id, visibilitySearched = true, memberAvailabilitySearched = null)
             .updateVisibility(visibility = false)
             .updateGroup(currentUser)
     }
 
     override fun enableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(projectId, id, visibilitySearched = false)
+        return findGroupById(projectId, id, visibilitySearched = false, memberAvailabilitySearched = null)
             .updateVisibility(visibility = true)
             .updateGroup(currentUser)
     }
 
     override fun deleteGroupById(projectId: UUID, id: UUID): Mono<Void> {
-        return findGroupById(projectId, id, visibilitySearched = null)
+        return findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null)
             .flatMap { repository.deleteById(id) }
     }
 }

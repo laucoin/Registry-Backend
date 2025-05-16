@@ -25,7 +25,7 @@ interface IGroupService {
         searchParams: ParticipantSearchParamModel,
     ): Mono<PageModel<ParticipantModel>>
 
-    fun findGroupById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupModel>
+    fun findGroupById(projectId: UUID, id: UUID, visibilitySearched: Boolean?, memberAvailabilitySearched: Boolean?): Mono<GroupModel>
     fun searchParticipantsByText(projectId: UUID, textSearched: String?): Flux<ParticipantModel>
     fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel>
     fun updateGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>

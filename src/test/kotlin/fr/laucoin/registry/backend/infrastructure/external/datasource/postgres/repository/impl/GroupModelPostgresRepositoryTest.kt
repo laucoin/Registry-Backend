@@ -125,12 +125,16 @@ class GroupModelPostgresRepositoryTest(
         expectedContentRepositoryCall: Int,
     ) {
         // Act
-        repository.findContent(projectId, ids).collectList().block()
+        val visibilitySearched = null
+        val availabilitySearched = null
+        repository.findContent(projectId, ids, visibilitySearched, availabilitySearched).collectList().block()
 
         // Assert
         verify(contentPostgresRepository, times(expectedContentRepositoryCall)).findAllByGroupIds(
             projectId,
             ids,
+            visibilitySearched,
+            availabilitySearched,
         )
         verify(contentMapper, atLeast(expectedContentRepositoryCall)).toModel(any())
     }
@@ -180,7 +184,8 @@ class GroupModelPostgresRepositoryTest(
     @Test
     fun `Should findById call repository findById`() {
         // Act
-        val result = repository.findById(projectId, groupId, visibilitySearched = null).block()
+        val result =
+            repository.findByIdWithContent(projectId, groupId, visibilitySearched = null, memberAvailabilitySearched = null).block()
 
         // Assert
         assertNotNull(result)
@@ -192,6 +197,8 @@ class GroupModelPostgresRepositoryTest(
         verify(contentPostgresRepository).findAllByGroupIds(
             projectId,
             listOf(groupId),
+            visibilitySearched = null,
+            availabilitySearched = null,
         )
         verify(mapper).toModel(any())
     }
@@ -202,7 +209,8 @@ class GroupModelPostgresRepositoryTest(
         val uuid = UUID.randomUUID()
 
         // Act
-        val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+        val result =
+            repository.findByIdWithContent(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null).block()
 
         // Assert
         assertNull(result)
@@ -214,6 +222,8 @@ class GroupModelPostgresRepositoryTest(
         verify(contentPostgresRepository).findAllByGroupIds(
             projectId,
             listOf(uuid),
+            visibilitySearched = null,
+            availabilitySearched = null,
         )
         verify(mapper, never()).toModel(any())
     }
@@ -263,7 +273,12 @@ class GroupModelPostgresRepositoryTest(
             // Assert
             verify(postgresRepository).save(any())
             verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
-            verify(contentPostgresRepository).findAllByGroupIds(projectId, listOf(uuid))
+            verify(contentPostgresRepository).findAllByGroupIds(
+                projectId,
+                listOf(uuid),
+                visibilitySearched = null,
+                availabilitySearched = null
+            )
             verify(mapper).toEntity(any())
             verify(mapper, atLeastOnce()).toModel(any())
         }
@@ -281,12 +296,17 @@ class GroupModelPostgresRepositoryTest(
             }
 
             // Act
-            val result = repository.update(group).block()
+            repository.update(group).block()
 
             // Assert
             verify(postgresRepository).save(any())
             verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
-            verify(contentPostgresRepository).findAllByGroupIds(projectId, listOf(uuid))
+            verify(contentPostgresRepository).findAllByGroupIds(
+                projectId,
+                listOf(uuid),
+                visibilitySearched = null,
+                availabilitySearched = null
+            )
             verify(mapper).toEntity(any())
             verify(mapper, atLeastOnce()).toModel(any())
         }
