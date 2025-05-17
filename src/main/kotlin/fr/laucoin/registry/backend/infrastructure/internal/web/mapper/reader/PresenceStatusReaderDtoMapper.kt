@@ -48,7 +48,7 @@ class PresenceStatusReaderDtoMapper(
             Objects.nonNull(lastMovement) && listOf(IN, OUT).contains(model) -> {
                 val interval = Duration.between(lastMovement, now.toZonedDateTime())
 
-                return translateService.getMessage(
+                translateService.getMessage(
                     "$PRESENCE_STATUS_DURATION_PREFIX$model",
                     arrayOf(formatDuration(interval, locale)),
                     locale
@@ -63,7 +63,7 @@ class PresenceStatusReaderDtoMapper(
                     )
                 )
 
-                return translateService.getMessage(
+                translateService.getMessage(
                     "${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE",
                     arrayOf(formatDuration(interval, locale)),
                     locale
@@ -77,16 +77,16 @@ class PresenceStatusReaderDtoMapper(
                     ), now.toZonedDateTime()
                 )
 
-                return translateService.getMessage(
+                translateService.getMessage(
                     "${PRESENCE_STATUS_DURATION_PREFIX}LEFT",
                     arrayOf(formatDuration(interval, locale)),
                     locale
                 )
             }
 
-            Objects.nonNull(lastMovement) && OUT == model -> {
-                return translateService.getMessage(
-                    "${PRESENCE_STATUS_DURATION_PREFIX}NOT_ARRIVED_YET",
+            Objects.isNull(lastMovement) -> {
+                translateService.getMessage(
+                    "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET",
                     null,
                     locale
                 )
