@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -72,6 +73,25 @@ interface ICommunicationController {
         @RequestParam(required = false)
         @DateTimeFormat(iso = DATE_TIME) endDateTimeSearched: ZonedDateTime?,
     ): Mono<PageModel<CommunicationReaderDto>>
+
+    @Operation(
+        summary = "Find last communication of movements",
+        description = "Find or get communications of given Movements IDs",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
+    @GetMapping("/movements")
+    fun findMovementsContents(
+        @RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
+        @PathVariable projectId: UUID,
+        @RequestParam(required = true) movementIds: List<UUID>,
+    ): Flux<Pair<UUID, List<CommunicationReaderDto>>>
 
     @Operation(
         summary = "Find Communication",

@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.repository.ICommunicationModelRepository
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.ICommunicationEntityRepository
 import java.util.UUID
@@ -42,6 +43,20 @@ class CommunicationPostgresRepository(
         ).map {
             PageModel(pageable, it.t1, it.t2)
         }
+    }
+
+    override fun findByMovementIdsWithLimit(
+        limit: Int,
+        projectId: UUID,
+        movementIds: List<UUID>,
+        visibilitySearched: Boolean?,
+    ): Flux<Pair<UUID, List<CommunicationModel>>> {
+        return if (movementIds.isEmpty()) Flux.empty()
+        else repository.findAllByMovementIdsWithLimit(projectId, movementIds, visibilitySearched, limit)
+            .groupBy(CommunicationEntity::movementId)
+            .flatMap {
+                it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
+            }
     }
 
     override fun findPageByMovementId(

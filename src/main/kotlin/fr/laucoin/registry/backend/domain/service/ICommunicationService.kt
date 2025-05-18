@@ -17,6 +17,12 @@ interface ICommunicationService {
         searchParams: CommunicationSearchParamModel,
     ): Mono<PageModel<CommunicationModel>>
 
+    fun findCommunicationsByMovements(
+        projectId: UUID,
+        movementIds: List<UUID>,
+        visibilitySearched: Boolean?,
+    ): Flux<Pair<UUID, List<CommunicationModel>>>
+
     fun findCommunicationById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
 
     fun searchOutMovementWithActivityByText(projectId: UUID, textSearched: String?): Flux<MovementModel>

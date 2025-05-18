@@ -40,6 +40,8 @@ class CommunicationService(
     private val movementRepository: IMovementModelRepository,
     @Value("\${registry.feature.communication.searched.max-activity-result}")
     private val maxActivityResult: Int,
+    @Value("\${registry.feature.movement.max-communication-result}")
+    private val maxCommunicationResult: Int,
 ): ICommunicationService, GenericService() {
     override fun findCommunicationPage(
         projectId: UUID,
@@ -47,6 +49,19 @@ class CommunicationService(
         searchParams: CommunicationSearchParamModel
     ): Mono<PageModel<CommunicationModel>> {
         return repository.findPage(projectId, pageable, searchParams)
+    }
+
+    override fun findCommunicationsByMovements(
+        projectId: UUID,
+        movementIds: List<UUID>,
+        visibilitySearched: Boolean?,
+    ): Flux<Pair<UUID, List<CommunicationModel>>> {
+        return repository.findByMovementIdsWithLimit(
+            maxCommunicationResult,
+            projectId,
+            movementIds,
+            visibilitySearched,
+        )
     }
 
     override fun findCommunicationById(

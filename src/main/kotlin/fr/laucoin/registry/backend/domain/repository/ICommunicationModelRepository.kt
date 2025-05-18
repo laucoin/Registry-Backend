@@ -16,6 +16,13 @@ interface ICommunicationModelRepository: IGenericReadProjectModelRepository<Comm
         searchParams: CommunicationSearchParamModel,
     ): Mono<PageModel<CommunicationModel>>
 
+    fun findByMovementIdsWithLimit(
+        limit: Int,
+        projectId: UUID,
+        movementIds: List<UUID>,
+        visibilitySearched: Boolean?,
+    ): Flux<Pair<UUID, List<CommunicationModel>>>
+
     fun findPageByMovementId(
         projectId: UUID,
         movementId: UUID,
