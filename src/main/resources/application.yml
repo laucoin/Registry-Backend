@@ -35,6 +35,7 @@ registry:
       searched:
         max-participant-result: 10
     movement:
+      max-communication-result: 10
       searched:
         max-participant-result: 10
         max-group-result: 5

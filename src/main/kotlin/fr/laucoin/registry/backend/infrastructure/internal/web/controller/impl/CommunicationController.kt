@@ -43,6 +43,15 @@ class CommunicationController(
         ).map { readerMapper.toDtoPage(it, locale) }
     }
 
+    override fun findMovementsContents(
+        locale: Locale,
+        projectId: UUID,
+        movementIds: List<UUID>
+    ): Flux<Pair<UUID, List<CommunicationReaderDto>>> {
+        return service.findCommunicationsByMovements(projectId, movementIds, null)
+            .map { Pair(it.first, it.second.map { content -> readerMapper.toDto(content, locale) }) }
+    }
+
     override fun findCommunicationById(
         locale: Locale,
         projectId: UUID,

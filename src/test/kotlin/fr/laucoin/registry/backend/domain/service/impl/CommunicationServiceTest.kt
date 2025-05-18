@@ -42,7 +42,7 @@ class CommunicationServiceTest {
     private val repository: ICommunicationModelRepository = mock()
     private val projectService: IProjectService = mock()
     private val movementRepository: IMovementModelRepository = mock()
-    private val service: ICommunicationService = CommunicationService(projectService, repository, movementRepository, 1)
+    private val service: ICommunicationService = CommunicationService(projectService, repository, movementRepository, 1, 1)
 
     @Test
     fun `Should findCommunicationsPage call repository findPage`() {
