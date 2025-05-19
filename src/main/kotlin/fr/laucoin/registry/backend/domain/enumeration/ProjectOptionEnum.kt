@@ -9,5 +9,8 @@ enum class ProjectOptionEnum: IProjectOptionEnum {
     },
     COMMUNICATION {
         override val requiredOptions = listOf(ACTIVITY)
+    },
+    ALERT {
+        override val requiredOptions = listOf(ACTIVITY, COMMUNICATION)
     };
 }

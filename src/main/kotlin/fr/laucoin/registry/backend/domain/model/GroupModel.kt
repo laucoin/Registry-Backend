@@ -1,9 +1,11 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
 import java.util.UUID
 
 data class GroupModel(
     var name: String? = null,
+    var status: AvailabilityStatusEnum? = null,
     var startAvailability: CustomDateTimeModel? = null,
     var endAvailability: CustomDateTimeModel? = null,
     var membersCount: Long? = null,

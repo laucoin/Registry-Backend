@@ -22,7 +22,8 @@ import org.springframework.context.MessageSource
 
 class ProjectReaderDtoMapperTest {
     private val translateService: MessageSource = mock()
-    private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapper(translateService)
+    private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
+    private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapper(translateService, availabilityMapper)
 
     companion object {
         @JvmStatic

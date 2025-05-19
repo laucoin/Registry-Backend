@@ -217,7 +217,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
         whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(page))
         whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
-            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
+            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))),
         )
 
         // Act
@@ -319,7 +319,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         // Arrange
         val uuid = UUID.randomUUID()
         whenever(service.findMovementById(any(), any(), anyOrNull())).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))
 
         // Act
         val result = webClient
@@ -480,7 +480,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
         )
         whenever(service.createMovement(any(), any(), any())).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
         whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))
 
         // Act
         val result = webClient
@@ -547,7 +547,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
             )
         ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
         whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))
 
         // Act
         val result = webClient
@@ -606,7 +606,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
                 eq(uuid)
             )
         ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))
 
         // Act
         val result = webClient
@@ -637,7 +637,7 @@ class MovementControllerTest(@Autowired private val webClient: WebTestClient): T
                 eq(uuid)
             )
         ).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
-        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+        whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))
 
 
         // Act

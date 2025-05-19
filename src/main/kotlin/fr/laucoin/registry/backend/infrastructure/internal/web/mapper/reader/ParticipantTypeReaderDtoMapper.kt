@@ -15,7 +15,7 @@ class ParticipantTypeReaderDtoMapper(
     override fun toDto(model: ParticipantTypeEnum, locale: Locale): LabelDto {
         return LabelDto(
             model.name,
-            translateService.getMessage("$PARTICIPANT_TYPE_PREFIX${model}", null, locale),
+            translateService.getMessage("$PARTICIPANT_TYPE_PREFIX$model", null, locale),
         )
     }
 }

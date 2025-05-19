@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CurrentUserReaderDto
 import java.util.Locale
-import java.util.Objects
+import java.util.Optional
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
@@ -18,14 +18,17 @@ class CurrentUserReaderDtoMapper(
     override fun toDto(model: CurrentUserModel, locale: Locale): CurrentUserReaderDto {
         return CurrentUserReaderDto(
             authorities = model.authorities.map { it.authority },
-            preferences = if (Objects.nonNull(model.preferences)) preferenceMapper.toDto(model.preferences !!, locale) else null,
+            preferences = Optional.ofNullable(model.preferences).map { preferenceMapper.toDto(it, locale) }
+                .orElse(null),
             firstName = model.firstName,
             lastName = model.lastName,
             email = model.email,
-            role = if (Objects.nonNull(model.role)) LabelDto(
-                model.role !!,
-                translateService.getMessage("$USER_ROLE_PREFIX${model.role}", null, locale),
-            ) else null,
+            role = Optional.ofNullable(model.role).map {
+                LabelDto(
+                    it,
+                    translateService.getMessage("$USER_ROLE_PREFIX$it", null, locale),
+                )
+            }.orElse(null),
             birthday = model.birthday,
             lastLogin = model.lastLogin,
             purged = model.purged,

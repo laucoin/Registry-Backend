@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import java.time.LocalDate
 import java.util.Locale
-import java.util.Objects
+import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
@@ -20,24 +20,20 @@ class ParticipantReaderDtoMapper(
             firstName = model.firstName,
             lastName = model.lastName,
             birthday = model.birthday,
-            type = if (Objects.nonNull(model.type)) typeMapper.toDto(model.type !!, locale) else null,
+            type = Optional.ofNullable(model.type).map { typeMapper.toDto(it, locale) }.orElse(null),
             major = isMajor(model.birthday),
             groups = groupMapper.toDtoList(model.groups, locale),
             availableGroups = groupMapper.toDtoList(model.availableGroups, locale),
-            status = if (Objects.nonNull(model.status)) statusMapper.toDto(
-                model.status !!,
-                locale,
-                model.lastMovement,
-                model.startAvailability,
-                model.endAvailability,
-            ) else null,
+            status = Optional.ofNullable(model.status)
+                .map { statusMapper.toDto(it, locale, model.lastMovement, model.startAvailability, model.endAvailability) }
+                .orElse(null),
             startAvailability = model.startAvailability,
             endAvailability = model.endAvailability,
-            user = if (Objects.nonNull(model.user)) partialUserMapper.toDto(model.user !!, locale) else null,
+            user = Optional.ofNullable(model.user).map { partialUserMapper.toDto(it, locale) }.orElse(null),
             purged = model.purged,
         ).apply {
             id = model.id
-            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
+            project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
             visible = model.visible
             creation = model.creation
             lastEdition = model.lastEdition

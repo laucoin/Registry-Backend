@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.UserReaderDto
 import java.util.Locale
-import java.util.Objects
+import java.util.Optional
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
@@ -19,10 +19,12 @@ class UserReaderDtoMapper(
             firstName = model.firstName,
             lastName = model.lastName,
             email = model.email,
-            role = if (Objects.nonNull(model.role)) LabelDto(
-                model.role !!,
-                translateService.getMessage("$USER_ROLE_PREFIX${model.role}", null, locale),
-            ) else null,
+            role = Optional.ofNullable(model.role).map {
+                LabelDto(
+                    it,
+                    translateService.getMessage("$USER_ROLE_PREFIX$it", null, locale),
+                )
+            }.orElse(null),
             birthday = model.birthday,
             lastLogin = model.lastLogin,
             purged = model.purged,

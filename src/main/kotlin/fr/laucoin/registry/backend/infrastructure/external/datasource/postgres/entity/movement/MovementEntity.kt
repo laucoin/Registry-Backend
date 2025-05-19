@@ -13,7 +13,9 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_COMMUNICATIONS_COUNT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_LAST_COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
@@ -64,4 +66,11 @@ data class MovementEntity(
     @ReadOnlyProperty
     @Column(MOVEMENT_ACTIVITY_END_AVAILABILITY_TIME)
     var activityEndAvailabilityTime: OffsetTime? = null,
+
+    @ReadOnlyProperty
+    @Column(MOVEMENT_LAST_COMMUNICATION_DATE_TIME)
+    var lastCommunicationDateTime: ZonedDateTime? = null,
+    @ReadOnlyProperty
+    @Column(MOVEMENT_COMMUNICATIONS_COUNT)
+    var communicationsCount: Long? = null,
 ): GenericProjectEntity()

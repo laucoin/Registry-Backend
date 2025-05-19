@@ -19,7 +19,8 @@ import org.mockito.kotlin.verify
 
 class ActivityReaderDtoMapperTest {
     private val projectMapper: ProjectReaderDtoMapper = mock()
-    private val mapper: ActivityReaderDtoMapper = ActivityReaderDtoMapper(projectMapper)
+    private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
+    private val mapper: ActivityReaderDtoMapper = ActivityReaderDtoMapper(projectMapper, availabilityMapper)
 
     companion object {
         @JvmStatic

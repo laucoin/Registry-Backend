@@ -373,13 +373,13 @@ BEGIN
         INSERT INTO tb_communication (date_time, message, movement_id, project_id, created_by, last_modified_by, visible)
         SELECT
             current_project_begin_date + (RANDOM() * EXTRACT(EPOCH FROM ((current_project_begin_date + current_project_begin_time) - (current_project_end_date + current_project_end_time)))) * INTERVAL '1 second',
-            'Message ' || i,
+            'Message ' || j,
             current_movement_id,
             current_project_id,
             (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),
             (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),
-            i != 50
-        FROM GENERATE_SERIES(1, 10) AS i;
+            j != 50
+        FROM GENERATE_SERIES(1, 10) AS j;
     END LOOP;
 END $$;
 
@@ -393,4 +393,55 @@ BEGIN
         SET id = global_communication_id
         WHERE id = (SELECT id FROM tb_communication ORDER BY id LIMIT 1);
     END IF;
+END $$;
+
+-- Insert alerts
+DO $$
+DECLARE
+    global_project_id UUID = 'b7432b97-cfc6-4109-aaaa-38d348523f1e';
+    global_alert_id UUID = 'da5ae275-d828-4738-ac47-367fdad1bff4';
+
+    current_project_id UUID;
+    current_project_begin_date DATE;
+    current_project_begin_time TIME WITH TIME ZONE;
+    current_project_end_date   DATE;
+    current_project_end_time   TIME WITH TIME ZONE;
+
+    current_alert_id UUID;
+BEGIN
+    FOR current_project_id IN SELECT id FROM tb_project LOOP
+        SELECT begin_date, begin_time, end_date, end_time
+        INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
+        FROM tb_project WHERE id = current_project_id;
+
+        FOR i IN 1..50 LOOP
+            current_alert_id = CASE WHEN i = 1 AND current_project_id = global_project_id THEN global_alert_id ELSE gen_random_uuid() END;
+
+            INSERT INTO tb_alert (
+                id, title, status, project_id, created_by, last_modified_by, visible
+            ) VALUES (
+             current_alert_id,
+                'Alert ' || i,
+                CASE WHEN i % 10 = 0 THEN 'IN_PROGRESS' WHEN i % 20 = 0 THEN 'CANCELED' ELSE 'RESOLVED' END,
+                current_project_id,
+                (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),
+                (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),
+                i != 50
+            );
+
+            UPDATE tb_communication SET alert_id = current_alert_id
+            WHERE id IN (SELECT id FROM tb_communication WHERE project_id = current_project_id AND alert_id IS NULL ORDER BY RANDOM() LIMIT 2);
+
+            INSERT INTO tb_communication (date_time, message, alert_id, project_id, created_by, last_modified_by, visible)
+            SELECT
+                current_project_begin_date + (RANDOM() * EXTRACT(EPOCH FROM ((current_project_begin_date + current_project_begin_time) - (current_project_end_date + current_project_end_time)))) * INTERVAL '1 second',
+                'Message ' || j,
+                current_alert_id,
+                current_project_id,
+                (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),
+                (SELECT tpp.user_id FROM tb_project_profile tpp WHERE tpp.project_id = current_project_id AND tpp.status = 'ACCEPTED' ORDER BY RANDOM() LIMIT 1),
+                i != 50
+            FROM GENERATE_SERIES(1, 10) AS j;
+        END LOOP;
+    END LOOP;
 END $$;

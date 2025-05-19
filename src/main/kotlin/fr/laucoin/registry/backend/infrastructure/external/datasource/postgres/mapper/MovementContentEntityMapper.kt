@@ -5,12 +5,17 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityReaderMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementContentEntity
-import java.util.Objects
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.vehicle.VehicleEntity
+import java.util.Optional
 import java.util.UUID
 import org.springframework.stereotype.Component
 
 @Component
-class MovementContentEntityMapper: IEntityReaderMapper<MovementContentModel, MovementContentEntity> {
+class MovementContentEntityMapper(
+    private val participantEntityMapper: ParticipantEntityMapper,
+    private val vehicleEntityMapper: VehicleEntityMapper
+): IEntityReaderMapper<MovementContentModel, MovementContentEntity> {
     override fun toModel(entity: MovementContentEntity): MovementContentModel {
         return MovementContentModel(
             id = entity.id,
@@ -21,24 +26,30 @@ class MovementContentEntityMapper: IEntityReaderMapper<MovementContentModel, Mov
     }
 
     private fun mapParticipantEntity(entity: MovementContentEntity): ParticipantModel? {
-        return if (Objects.isNull(entity.participantId)) null
-        else ParticipantModel().apply {
-            id = entity.participantId
-            firstName = entity.participantFirstName
-            lastName = entity.participantLastName
-            birthday = entity.participantBirthday
-            type = entity.participantType
-        }
+        return Optional.ofNullable(entity.participantId).map {
+            participantEntityMapper.toModel(
+                ParticipantEntity().apply {
+                    id = it
+                    firstName = entity.participantFirstName
+                    lastName = entity.participantLastName
+                    birthday = entity.participantBirthday
+                    type = entity.participantType
+                }
+            )
+        }.orElse(null)
     }
 
     private fun mapVehicleEntity(entity: MovementContentEntity): VehicleModel? {
-        return if (Objects.isNull(entity.vehicleId)) null
-        else VehicleModel().apply {
-            id = entity.vehicleId
-            licensePlate = entity.vehicleLicensePlate
-            brand = entity.vehicleBrand
-            model = entity.vehicleModel
-        }
+        return Optional.ofNullable(entity.vehicleId).map {
+            vehicleEntityMapper.toModel(
+                VehicleEntity().apply {
+                    id = it
+                    licensePlate = entity.vehicleLicensePlate
+                    brand = entity.vehicleBrand
+                    model = entity.vehicleModel
+                }
+            )
+        }.orElse(null)
     }
 
     fun toEntity(movementId: UUID, model: MovementContentModel): MovementContentEntity {

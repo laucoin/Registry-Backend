@@ -22,8 +22,9 @@ import org.mockito.kotlin.whenever
 
 class GroupReaderDtoMapperTest {
     private val projectMapper: ProjectReaderDtoMapper = mock()
+    private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
     private val memberMapper: ParticipantReaderDtoMapper = mock()
-    private val mapper: GroupReaderDtoMapper = GroupReaderDtoMapper(projectMapper, memberMapper)
+    private val mapper: GroupReaderDtoMapper = GroupReaderDtoMapper(projectMapper, availabilityMapper, memberMapper)
 
     companion object {
         @JvmStatic

@@ -361,7 +361,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
         val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
         whenever(service.findActivityMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
         whenever(movementReaderMapper.toDtoPage(any(), any())).thenReturn(
-            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
+            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))),
         )
 
         // Act

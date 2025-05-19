@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_FOUND_IN_MOVEMENT_PROJECT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.repository.IAlertModelRepository
 import fr.laucoin.registry.backend.domain.repository.ICommunicationModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
@@ -42,7 +43,9 @@ class CommunicationServiceTest {
     private val repository: ICommunicationModelRepository = mock()
     private val projectService: IProjectService = mock()
     private val movementRepository: IMovementModelRepository = mock()
-    private val service: ICommunicationService = CommunicationService(projectService, repository, movementRepository, 1, 1)
+    private val alertRepository: IAlertModelRepository = mock()
+    private val service: ICommunicationService =
+        CommunicationService(projectService, repository, movementRepository, alertRepository, 1, 1)
 
     @Test
     fun `Should findCommunicationsPage call repository findPage`() {
@@ -144,7 +147,7 @@ class CommunicationServiceTest {
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
-        assertEquals(COMMUNICATION_MOVEMENT_NOT_FOUND_IN_MOVEMENT_PROJECT, result.message)
+        assertEquals(COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT, result.message)
         verify(projectService).validateDateTime(
             projectId,
             CustomDateTimeModel(now),

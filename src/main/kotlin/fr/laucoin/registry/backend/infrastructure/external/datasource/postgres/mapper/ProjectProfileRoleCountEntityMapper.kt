@@ -4,24 +4,30 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileRoleCountEntity
-import java.util.Objects
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectEntity
+import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
-class ProjectProfileRoleCountEntityMapper: IEntityMapper<ProjectProfileRoleCountModel, ProjectProfileRoleCountEntity> {
+class ProjectProfileRoleCountEntityMapper(
+    private val projectMapper: ProjectEntityMapper,
+): IEntityMapper<ProjectProfileRoleCountModel, ProjectProfileRoleCountEntity> {
     override fun toModel(entity: ProjectProfileRoleCountEntity): ProjectProfileRoleCountModel {
         return ProjectProfileRoleCountModel().apply {
-            project = mapProjectEntity(entity)
+            project = mapProject(entity)
             level0 = entity.level0
         }
     }
 
-    fun mapProjectEntity(entity: ProjectProfileRoleCountEntity): ProjectModel? {
-        return if (Objects.isNull(entity.projectId)) null
-        else ProjectModel().apply {
-            id = entity.projectId
-            name = entity.projectName
-        }
+    fun mapProject(entity: ProjectProfileRoleCountEntity): ProjectModel? {
+        return Optional.ofNullable(entity.projectId).map {
+            projectMapper.toModel(
+                ProjectEntity().apply {
+                    id = it
+                    name = entity.projectName
+                }
+            )
+        }.orElse(null)
     }
 
     override fun toEntity(model: ProjectProfileRoleCountModel): ProjectProfileRoleCountEntity {

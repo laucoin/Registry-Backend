@@ -30,7 +30,23 @@ interface ICommunicationModelRepository: IGenericReadProjectModelRepository<Comm
         searchParams: CommunicationSearchParamModel
     ): Mono<PageModel<CommunicationModel>>
 
+    fun findByAlertIdsWithLimit(
+        limit: Int,
+        projectId: UUID,
+        alertIds: List<UUID>,
+        visibilitySearched: Boolean?,
+    ): Flux<Pair<UUID, List<CommunicationModel>>>
+
+    fun findPageByAlertId(
+        projectId: UUID,
+        alertId: UUID,
+        pageable: PageableModel,
+        searchParams: CommunicationSearchParamModel
+    ): Mono<PageModel<CommunicationModel>>
+
     fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<CommunicationModel>
 
     fun countAllByMovementId(projectId: UUID, movementId: UUID, searchParams: CommunicationSearchParamModel): Mono<Long>
+
+    fun countAllByAlertId(projectId: UUID, alertId: UUID, searchParams: CommunicationSearchParamModel): Mono<Long>
 }

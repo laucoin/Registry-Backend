@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.VehicleWriterDto
-import java.util.Objects
+import java.util.Optional
 import java.util.UUID
 import org.springframework.stereotype.Component
 
@@ -17,8 +17,8 @@ class VehicleWriterDtoMapper(
             brand = dto.brand
             model = dto.model
             startAvailability =
-                if (Objects.nonNull(dto.startAvailability)) customDateTimeMapper.toModel(dto.startAvailability !!) else null
-            endAvailability = if (Objects.nonNull(dto.endAvailability)) customDateTimeMapper.toModel(dto.endAvailability !!) else null
+                Optional.ofNullable(dto.startAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+            endAvailability = Optional.ofNullable(dto.endAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
             project = ProjectModel().apply { id = projectId }
         }
     }

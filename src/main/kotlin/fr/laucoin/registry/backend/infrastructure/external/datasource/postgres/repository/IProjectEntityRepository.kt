@@ -5,6 +5,10 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertFields.ALERT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
@@ -134,27 +138,35 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
                 COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) > CAST(:end AS DATE) OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) > CAST(:end AS TIME))
                 OR COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) < CAST(:begin AS DATE) OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) < CAST(:end AS TIME))
             )
-        
+
             UNION
-        
+
             SELECT t.$ID FROM $GROUP_TABLE t WHERE t.$LINKED_PROJECT_ID = :id AND (
                 COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) > CAST(:end AS DATE) OR (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) > CAST(:end AS TIME))
                 OR COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) < CAST(:begin AS DATE) OR (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) < CAST(:end AS TIME))
             )
-        
+
             UNION
-        
+
             SELECT t.$ID FROM $VEHICLE_TABLE t WHERE t.$LINKED_PROJECT_ID = :id AND (
                 COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) > CAST(:end AS DATE) OR (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) > CAST(:end AS TIME))
                 OR COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) < CAST(:begin AS DATE) OR (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) < CAST(:end AS TIME))
             )
-        
+
             UNION
-        
+
             SELECT t.$ID FROM $ACTIVITY_TABLE t WHERE t.$LINKED_PROJECT_ID = :id AND (
                 COALESCE(t.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) > CAST(:end AS DATE) OR (COALESCE(t.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) > CAST(:end AS TIME))
                 OR COALESCE(t.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) < CAST(:begin AS DATE) OR (COALESCE(t.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:end AS DATE) AND COALESCE(t.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) < CAST(:end AS TIME))
             )
+
+            UNION
+
+            SELECT t.$ID FROM $COMMUNICATION_TABLE t WHERE t.$LINKED_PROJECT_ID = :id AND (t.$COMMUNICATION_DATE_TIME < :begin OR t.$COMMUNICATION_DATE_TIME > :end)
+
+            UNION
+
+            SELECT t.$ID FROM $ALERT_TABLE t WHERE t.$LINKED_PROJECT_ID = :id AND (t.$ALERT_DATE_TIME < :begin OR t.$ALERT_DATE_TIME > :end)
         ) AS t
         """
     )

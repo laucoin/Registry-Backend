@@ -4,26 +4,32 @@ import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ActivityReaderDto
 import java.util.Locale
-import java.util.Objects
+import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
-class ActivityReaderDtoMapper(private val projectMapper: ProjectReaderDtoMapper):
-    IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
+class ActivityReaderDtoMapper(
+    private val projectMapper: ProjectReaderDtoMapper,
+    private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
+): IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
     override fun toDto(model: ActivityModel, locale: Locale): ActivityReaderDto {
         return ActivityReaderDto(
             name = model.name,
+            status = Optional.ofNullable(model.status)
+                .map { availabilityStatusMapper.toDto(it, locale, model.startAvailability, model.endAvailability) }.orElse(null),
             description = model.description,
-            duration = if (Objects.nonNull(model.duration)) LabelDto(
-                label = model.duration !!.toString(),
-                value = model.duration !!.toIsoString()
-            ) else null,
+            duration = Optional.ofNullable(model.duration).map {
+                LabelDto(
+                    label = it.toString(),
+                    value = it.toIsoString()
+                )
+            }.orElse(null),
             allowedParticipants = model.allowedParticipants,
             startAvailability = model.startAvailability,
             endAvailability = model.endAvailability,
         ).apply {
             id = model.id
-            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
+            project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
             visible = model.visible
             creation = model.creation
             lastEdition = model.lastEdition

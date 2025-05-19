@@ -14,6 +14,8 @@ data class MovementModel(
     var activity: ActivityModel? = null,
     var contentType: ParticipantTypeEnum = ParticipantTypeEnum.REGISTERED,
     var content: List<MovementContentModel> = emptyList(),
+    var lastCommunicationDateTime: ZonedDateTime? = null,
+    var communicationsCount: Long? = null,
 ): GenericProjectModel() {
     data class MovementContentModel(
         var id: UUID? = null,

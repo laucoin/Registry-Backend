@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_OR_ALERT_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -99,6 +99,7 @@ class CommunicationControllerTest(@Autowired private val webClient: WebTestClien
             Arguments.of(
                 CommunicationWriterDto(
                     dateTime = null,
+                    alertId = null,
                     movementId = movementId,
                 ),
                 COMMUNICATION_DATETIME_NULL
@@ -106,14 +107,16 @@ class CommunicationControllerTest(@Autowired private val webClient: WebTestClien
             Arguments.of(
                 CommunicationWriterDto(
                     dateTime = ZonedDateTime.now(),
+                    alertId = null,
                     movementId = null,
                 ),
-                COMMUNICATION_MOVEMENT_NULL
+                COMMUNICATION_MOVEMENT_OR_ALERT_NULL
             ),
             Arguments.of(
                 CommunicationWriterDto(
                     dateTime = ZonedDateTime.now(),
                     message = "Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message.",
+                    alertId = null,
                     movementId = movementId,
                 ),
                 COMMUNICATION_MESSAGE_TOO_LONG
@@ -242,7 +245,7 @@ class CommunicationControllerTest(@Autowired private val webClient: WebTestClien
     @Test
     fun `Should createCommunication return 200`() {
         // Arrange
-        val communication = CommunicationWriterDto(dateTime = ZonedDateTime.now(), movementId = movementId)
+        val communication = CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
 
         whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(CommunicationReaderDto())
@@ -291,7 +294,7 @@ class CommunicationControllerTest(@Autowired private val webClient: WebTestClien
     fun `Should updateProjectProfile return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        val communication = CommunicationWriterDto(dateTime = ZonedDateTime.now(), movementId = movementId)
+        val communication = CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
 
         whenever(service.updateCommunicationById(any(), any(), any(), any())).thenReturn(Mono.just(CommunicationModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(CommunicationReaderDto())
