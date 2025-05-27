@@ -1,12 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithModel
-import java.util.Objects
 import org.springframework.stereotype.Component
 
 @Component
@@ -14,10 +13,9 @@ class ProjectEntityMapper: IEntityMapper<ProjectModel, ProjectEntity> {
     override fun toModel(entity: ProjectEntity): ProjectModel {
         return ProjectModel().apply {
             name = entity.name
-            begin = if (Objects.isNull(entity.beginDate)) null
-            else CustomDateTimeModel(entity.beginDate !!, entity.beginTime)
-            end = if (Objects.isNull(entity.endDate)) null
-            else CustomDateTimeModel(entity.endDate !!, entity.endTime)
+            status = buildStatus()
+            begin = mapCustomDateTime(entity.beginDate, entity.beginTime)
+            end = mapCustomDateTime(entity.endDate, entity.endTime)
             options = entity.options
         }.fillWithEntity(entity)
     }

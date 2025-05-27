@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 
 data class ProjectReaderDto(
     var name: String? = null,
+    var status: LabelDto? = null,
     var begin: CustomDateTimeModel? = null,
     var end: CustomDateTimeModel? = null,
     var options: List<LabelDto>? = emptyList(),

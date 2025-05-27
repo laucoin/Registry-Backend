@@ -17,8 +17,8 @@ class ProjectOptionsReaderDtoMapper(
     override fun toDto(model: ProjectOptionEnum, locale: Locale): ProjectOptionsReaderDto {
         return ProjectOptionsReaderDto(
             value = model,
-            label = translateService.getMessage("$PROJECT_OPTION_NAME_PREFIX${model.name}", null, locale),
-            ask = translateService.getMessage("$PROJECT_OPTION_FORM_ASK_PREFIX${model.name}", null, locale),
+            label = translateService.getMessage("$PROJECT_OPTION_NAME_PREFIX$model", null, locale),
+            ask = translateService.getMessage("$PROJECT_OPTION_FORM_ASK_PREFIX$model", null, locale),
             preRequired = model.requiredOptions.map {
                 LabelDto(
                     it.name,

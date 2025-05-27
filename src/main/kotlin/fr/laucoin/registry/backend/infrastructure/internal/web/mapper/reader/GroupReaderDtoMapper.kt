@@ -3,12 +3,13 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.GroupReaderDto
 import java.util.Locale
-import java.util.Objects
+import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
 class GroupReaderDtoMapper(
     private val projectMapper: ProjectReaderDtoMapper,
+    private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
     private val participantMapper: ParticipantReaderDtoMapper,
 ): IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
     override fun toDto(model: GroupModel, locale: Locale): GroupReaderDto {
@@ -16,7 +17,9 @@ class GroupReaderDtoMapper(
             members = participantMapper.toDtoList(model.members, locale),
         ).apply {
             id = model.id
-            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
+            status = Optional.ofNullable(model.status)
+                .map { availabilityStatusMapper.toDto(it, locale, model.startAvailability, model.endAvailability) }.orElse(null)
+            project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
             name = model.name
             startAvailability = model.startAvailability
             endAvailability = model.endAvailability

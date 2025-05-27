@@ -35,7 +35,6 @@ registry:
       searched:
         max-participant-result: 10
     movement:
-      max-communication-result: 10
       searched:
         max-participant-result: 10
         max-group-result: 5
@@ -44,6 +43,7 @@ registry:
     communication:
       searched:
         max-activity-result: 10
+        max-alert-result: 10
   security:
     default-role: USER
     oauth2:

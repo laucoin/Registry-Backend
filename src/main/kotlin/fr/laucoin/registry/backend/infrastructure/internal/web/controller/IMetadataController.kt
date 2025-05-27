@@ -17,8 +17,8 @@ import reactor.core.publisher.Flux
 interface IMetadataController {
 
     @Operation(
-        summary = "Get usable element's status",
-        description = "Get all usable element's status",
+        summary = "Get presence element's status",
+        description = "Get all presence element's status",
         parameters = [
             Parameter(
                 name = ACCEPT_LANGUAGE,
@@ -28,7 +28,21 @@ interface IMetadataController {
         ],
     )
     @GetMapping("/presences/status")
-    fun getUsableElementStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+    fun getPresencesStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+
+    @Operation(
+        summary = "Get availabilities status",
+        description = "Get all availabilities status",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @GetMapping("/availabilities/status")
+    fun getAvailabilitiesStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
 
     @Operation(
         summary = "Get profile's status",
@@ -71,4 +85,18 @@ interface IMetadataController {
     )
     @GetMapping("/participants/types")
     fun getParticipantTypes(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
+
+    @Operation(
+        summary = "Get Alert Status",
+        description = "Get all alert status",
+        parameters = [
+            Parameter(
+                name = ACCEPT_LANGUAGE,
+                description = "Locale, used for metadata and error translation.",
+                `in` = HEADER
+            ),
+        ],
+    )
+    @GetMapping("/alerts/status")
+    fun getAlertStatus(@RequestHeader(ACCEPT_LANGUAGE) locale: Locale): Flux<LabelDto>
 }

@@ -66,17 +66,47 @@ class CommunicationPostgresRepository(
         searchParams: CommunicationSearchParamModel
     ): Mono<PageModel<CommunicationModel>> {
         return Mono.zip(
-            repository.countAllByMovementId(
+            countAllByMovementId(projectId, movementId, searchParams),
+            repository.findAllByMovementId(
                 projectId,
                 movementId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.startDateTimeSearched,
                 searchParams.endDateTimeSearched,
-            ),
-            repository.findAllByMovementId(
+                pageable.limit,
+                pageable.offset,
+            ).map(mapper::toModel).collectList()
+        ).map {
+            PageModel(pageable, it.t1, it.t2)
+        }
+    }
+
+    override fun findByAlertIdsWithLimit(
+        limit: Int,
+        projectId: UUID,
+        alertIds: List<UUID>,
+        visibilitySearched: Boolean?
+    ): Flux<Pair<UUID, List<CommunicationModel>>> {
+        return if (alertIds.isEmpty()) Flux.empty()
+        else repository.findAllByAlertIdsWithLimit(projectId, alertIds, visibilitySearched, limit)
+            .groupBy(CommunicationEntity::movementId)
+            .flatMap {
+                it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
+            }
+    }
+
+    override fun findPageByAlertId(
+        projectId: UUID,
+        alertId: UUID,
+        pageable: PageableModel,
+        searchParams: CommunicationSearchParamModel
+    ): Mono<PageModel<CommunicationModel>> {
+        return Mono.zip(
+            countAllByAlertId(projectId, alertId, searchParams),
+            repository.findAllByAlertId(
                 projectId,
-                movementId,
+                alertId,
                 searchParams.textSearched,
                 searchParams.visibilitySearched,
                 searchParams.startDateTimeSearched,
@@ -105,6 +135,21 @@ class CommunicationPostgresRepository(
         return repository.countAllByMovementId(
             projectId,
             movementId,
+            searchParams.textSearched,
+            searchParams.visibilitySearched,
+            searchParams.startDateTimeSearched,
+            searchParams.endDateTimeSearched,
+        )
+    }
+
+    override fun countAllByAlertId(
+        projectId: UUID,
+        alertId: UUID,
+        searchParams: CommunicationSearchParamModel
+    ): Mono<Long> {
+        return repository.countAllByAlertId(
+            projectId,
+            alertId,
             searchParams.textSearched,
             searchParams.visibilitySearched,
             searchParams.startDateTimeSearched,

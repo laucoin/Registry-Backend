@@ -3,52 +3,59 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 import com.nimbusds.jose.shaded.gson.Gson
 import com.nimbusds.jose.shaded.gson.reflect.TypeToken
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndModel
 import java.util.Objects
+import java.util.Optional
 import java.util.UUID
 import org.springframework.stereotype.Component
 
 @Component
-class ParticipantEntityMapper(private val gson: Gson): IEntityMapper<ParticipantModel, ParticipantEntity> {
+class ParticipantEntityMapper(
+    private val gson: Gson,
+    private val userMapper: UserEntityMapper,
+): IEntityMapper<ParticipantModel, ParticipantEntity> {
     private val groupListType = object: TypeToken<List<GroupModel>>() {}.type
     private val uuidListType = object: TypeToken<List<UUID>>() {}.type
 
     override fun toModel(entity: ParticipantEntity): ParticipantModel {
-        val formattedUser: UserModel? = if (Objects.nonNull(entity.userId)) {
-            UserModel().apply {
-                id = entity.userId
-                firstName = entity.userFirstName
-                lastName = entity.userLastName
-                email = entity.userEmail
-            }
-        } else null
-
-        val presentGroupIds = if (Objects.isNull(entity.availableGroups)) emptyList()
-        else gson.fromJson<List<UUID>?>(entity.availableGroups, uuidListType).filter { Objects.nonNull(it) }
-
         return ParticipantModel().apply {
             firstName = entity.firstName
             lastName = entity.lastName
             birthday = entity.birthday
             type = entity.type
             groups = gson.fromJson<List<GroupModel>?>(entity.groups, groupListType).filter { Objects.nonNull(it.id) }
-            availableGroups = groups.filter { presentGroupIds.contains(it.id) }
-            startAvailability = if (Objects.isNull(entity.startAvailabilityDate)) null
-            else CustomDateTimeModel(entity.startAvailabilityDate !!, entity.startAvailabilityTime)
-            endAvailability = if (Objects.isNull(entity.endAvailabilityDate)) null
-            else CustomDateTimeModel(entity.endAvailabilityDate !!, entity.endAvailabilityTime)
+            availableGroups = groups.filter { buildPresentGroupIds(entity.availableGroups).contains(it.id) }
+            startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
+            endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
             status = buildStatus(entity.lastMovementType)
             lastMovement = entity.lastMovementDateTime
-            user = formattedUser
+            user = mapUser(entity)
             purged = entity.purged
         }.fillWithProjectAndEntity(entity)
+    }
+
+    private fun buildPresentGroupIds(availableGroups: String?): List<UUID> {
+        return Optional.ofNullable(availableGroups).map { g ->
+            gson.fromJson<List<UUID>?>(g, uuidListType).filter { Objects.nonNull(it) }
+        }.orElse(emptyList())
+    }
+
+    private fun mapUser(entity: ParticipantEntity): UserModel? {
+        return Optional.ofNullable(entity.userId).map {
+            userMapper.toModel(UserEntity().apply {
+                id = it
+                firstName = entity.userFirstName
+                lastName = entity.userLastName
+                email = entity.userEmail
+            })
+        }.orElse(null)
     }
 
     override fun toEntity(model: ParticipantModel): ParticipantEntity {

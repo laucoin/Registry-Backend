@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.VehicleReaderDto
 import java.util.Locale
-import java.util.Objects
+import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
@@ -16,18 +16,20 @@ class VehicleReaderDtoMapper(
             licensePlate = model.licensePlate,
             brand = model.brand,
             model = model.model,
-            status = if (Objects.nonNull(model.status)) statusMapper.toDto(
-                model.status !!,
-                locale,
-                model.lastMovement,
-                model.startAvailability,
-                model.endAvailability,
-            ) else null,
+            status = Optional.ofNullable(model.status).map {
+                statusMapper.toDto(
+                    it,
+                    locale,
+                    model.lastMovement,
+                    model.startAvailability,
+                    model.endAvailability,
+                )
+            }.orElse(null),
             startAvailability = model.startAvailability,
             endAvailability = model.endAvailability,
         ).apply {
             id = model.id
-            project = if (Objects.nonNull(model.project)) projectMapper.toDto(model.project !!, locale) else null
+            project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
             visible = model.visible
             creation = model.creation
             lastEdition = model.lastEdition

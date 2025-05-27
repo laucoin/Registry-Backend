@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
@@ -37,6 +38,10 @@ object MovementFields {
     const val MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME = "$MOVEMENT_ACTIVITY_PREFIX$ACTIVITY_START_AVAILABILITY_TIME"
     const val MOVEMENT_ACTIVITY_END_AVAILABILITY_DATE = "$MOVEMENT_ACTIVITY_PREFIX$ACTIVITY_END_AVAILABILITY_DATE"
     const val MOVEMENT_ACTIVITY_END_AVAILABILITY_TIME = "$MOVEMENT_ACTIVITY_PREFIX$ACTIVITY_END_AVAILABILITY_TIME"
+
+    private const val MOVEMENT_LAST_COMMUNICATION_PREFIX = "communication_"
+    const val MOVEMENT_LAST_COMMUNICATION_DATE_TIME = "$MOVEMENT_LAST_COMMUNICATION_PREFIX$COMMUNICATION_DATE_TIME"
+    const val MOVEMENT_COMMUNICATIONS_COUNT = "communications_count"
 
     const val MOVEMENT_CONTENT_POOL_NAME = "pool_name"
 

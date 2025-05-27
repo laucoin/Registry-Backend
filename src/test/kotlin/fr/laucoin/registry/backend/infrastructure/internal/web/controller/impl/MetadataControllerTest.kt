@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.AvailabilityStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.PresenceStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.ProjectProfileStatusReaderDtoMapper
@@ -10,7 +11,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -25,10 +25,13 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
     private lateinit var movementTypeReaderMapper: MovementTypeReaderDtoMapper
 
     @MockitoBean
-    private lateinit var profileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper
+    private lateinit var presenceStatusMapper: PresenceStatusReaderDtoMapper
 
     @MockitoBean
-    private lateinit var elementStatusMapper: PresenceStatusReaderDtoMapper
+    private lateinit var availabilityStatusMapper: AvailabilityStatusReaderDtoMapper
+
+    @MockitoBean
+    private lateinit var profileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper
 
     companion object {
         private const val BASE_URL = "/api/metadata"
@@ -50,13 +53,13 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
         result.body<List<*>>(OK)
         verifyNoInteractions(movementTypeReaderMapper)
         verify(profileStatusReaderMapper, atLeastOnce()).toDto(any(), any())
-        verifyNoInteractions(elementStatusMapper)
+        verifyNoInteractions(presenceStatusMapper)
     }
 
     @Test
     fun `Should getPresenceStatus return 200`() {
         // Arrange
-        whenever(elementStatusMapper.toDto(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(LabelDto("value", "label"))
+        whenever(presenceStatusMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
 
         // Act
         val result = webClient
@@ -69,7 +72,26 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
         result.body<List<*>>(OK)
         verifyNoInteractions(movementTypeReaderMapper)
         verifyNoInteractions(profileStatusReaderMapper)
-        verify(elementStatusMapper, atLeastOnce()).toDto(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
+        verify(presenceStatusMapper, atLeastOnce()).toDto(any(), any())
+    }
+
+    @Test
+    fun `Should getAvailabilitiesStatus return 200`() {
+        // Arrange
+        whenever(availabilityStatusMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+
+        // Act
+        val result = webClient
+            .authenticate()
+            .get()
+            .uri(uriBuilder("$BASE_URL/availabilities/status", emptyList(), emptyList()))
+            .exchange()
+
+        // Assert
+        result.body<List<*>>(OK)
+        verifyNoInteractions(movementTypeReaderMapper)
+        verifyNoInteractions(profileStatusReaderMapper)
+        verify(availabilityStatusMapper, atLeastOnce()).toDto(any(), any())
     }
 
     @Test
@@ -88,6 +110,6 @@ class MetadataControllerTest(@Autowired private val webClient: WebTestClient): T
         result.body<List<*>>(OK)
         verify(movementTypeReaderMapper, atLeastOnce()).toDto(any(), any())
         verifyNoInteractions(profileStatusReaderMapper)
-        verifyNoInteractions(elementStatusMapper)
+        verifyNoInteractions(presenceStatusMapper)
     }
 }

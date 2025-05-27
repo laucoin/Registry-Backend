@@ -6,9 +6,11 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.ICommunicationController
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.CommunicationWriterDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer.CommunicationWriterDtoMapper
@@ -23,6 +25,7 @@ import reactor.core.publisher.Mono
 class CommunicationController(
     private val service: ICommunicationService,
     private val readerMapper: CommunicationReaderDtoMapper,
+    private val readerAlertMapper: AlertReaderDtoMapper,
     private val readerMovementMapper: MovementReaderDtoMapper,
     private val writerMapper: CommunicationWriterDtoMapper,
 ): ICommunicationController {
@@ -43,15 +46,6 @@ class CommunicationController(
         ).map { readerMapper.toDtoPage(it, locale) }
     }
 
-    override fun findMovementsContents(
-        locale: Locale,
-        projectId: UUID,
-        movementIds: List<UUID>
-    ): Flux<Pair<UUID, List<CommunicationReaderDto>>> {
-        return service.findCommunicationsByMovements(projectId, movementIds, null)
-            .map { Pair(it.first, it.second.map { content -> readerMapper.toDto(content, locale) }) }
-    }
-
     override fun findCommunicationById(
         locale: Locale,
         projectId: UUID,
@@ -68,6 +62,15 @@ class CommunicationController(
     ): Flux<MovementReaderDto> {
         return service.searchOutMovementWithActivityByText(projectId, textSearched)
             .map { readerMovementMapper.toDto(it, locale) }
+    }
+
+    override fun searchAlerts(
+        locale: Locale,
+        projectId: UUID,
+        textSearched: String?
+    ): Flux<AlertReaderDto> {
+        return service.searchAlertByText(projectId, textSearched)
+            .map { readerAlertMapper.toDto(it, locale) }
     }
 
     override fun createCommunication(

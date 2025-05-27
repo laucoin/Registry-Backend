@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityEntity
@@ -12,6 +13,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.extension.GenericExt.fillWithProjectAndModel
 import java.time.ZonedDateTime
 import java.util.Objects
+import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
@@ -23,8 +25,16 @@ class MovementEntityMapper(
             dateTime = entity.dateTime ?: ZonedDateTime.now()
             type = entity.type
             reason = entity.reason
-            activity = if (Objects.nonNull(entity.activityId)) activityMapper.toModel(ActivityEntity().apply {
-                id = entity.activityId
+            activity = mapActivity(entity)
+            lastCommunicationDateTime = entity.lastCommunicationDateTime
+            communicationsCount = entity.communicationsCount
+        }.fillWithProjectAndEntity(entity)
+    }
+
+    private fun mapActivity(entity: MovementEntity): ActivityModel? {
+        return Optional.ofNullable(entity.activityId).map {
+            activityMapper.toModel(ActivityEntity().apply {
+                id = it
                 name = entity.activityName
                 description = entity.activityDescription
                 duration = entity.activityDuration
@@ -34,8 +44,8 @@ class MovementEntityMapper(
                 startAvailabilityTime = entity.activityStartAvailabilityTime
                 endAvailabilityDate = entity.activityEndAvailabilityDate
                 endAvailabilityTime = entity.activityEndAvailabilityTime
-            }) else null
-        }.fillWithProjectAndEntity(entity)
+            })
+        }.orElse(null)
     }
 
     private fun determineContentType(entity: MovementEntity): ParticipantTypeEnum {

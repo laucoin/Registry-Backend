@@ -6,4 +6,5 @@ data class CommunicationModel(
     var dateTime: ZonedDateTime = ZonedDateTime.now(),
     var message: String? = null,
     var movement: MovementModel? = null,
+    var alert: AlertModel? = null,
 ): GenericProjectModel()

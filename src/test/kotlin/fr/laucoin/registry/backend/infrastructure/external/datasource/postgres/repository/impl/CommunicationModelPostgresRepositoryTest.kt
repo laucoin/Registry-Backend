@@ -75,8 +75,8 @@ class CommunicationModelPostgresRepositoryTest(
         assertNotNull(result)
         assertEquals(0, result.pageNumber)
         assertEquals(10, result.pageSize)
-        assertEquals(50, result.totalElements)
-        assertEquals(5, result.totalPages)
+        assertEquals(550, result.totalElements)
+        assertEquals(55, result.totalPages)
         verify(postgresRepository).findAll(
             projectId,
             textSearched = null,

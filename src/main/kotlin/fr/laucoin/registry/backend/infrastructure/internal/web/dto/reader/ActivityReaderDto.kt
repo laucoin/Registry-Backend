@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 
 data class ActivityReaderDto(
     var name: String? = null,
+    var status: LabelDto? = null,
     var description: String? = null,
     var duration: LabelDto? = null,
     var allowedParticipants: NumericRangeModel? = null,

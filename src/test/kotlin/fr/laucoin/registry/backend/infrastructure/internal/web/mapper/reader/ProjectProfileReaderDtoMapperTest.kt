@@ -28,8 +28,9 @@ class ProjectProfileReaderDtoMapperTest {
     private val translateService: MessageSource = mock()
     private val projectMapper: ProjectReaderDtoMapper = mock()
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
+    private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
     private val mapper: ProjectProfileReaderDtoMapper =
-        ProjectProfileReaderDtoMapper(translateService, projectMapper, partialUserMapper)
+        ProjectProfileReaderDtoMapper(translateService, projectMapper, availabilityMapper, partialUserMapper)
 
     companion object {
         @JvmStatic

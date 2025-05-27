@@ -19,7 +19,8 @@ import org.mockito.kotlin.verify
 class CommunicationReaderDtoMapperTest {
     private val projectMapper: ProjectReaderDtoMapper = mock()
     private val movementMapper: MovementReaderDtoMapper = mock()
-    private val mapper: CommunicationReaderDtoMapper = CommunicationReaderDtoMapper(projectMapper, movementMapper)
+    private val alertMapper: AlertReaderDtoMapper = mock()
+    private val mapper: CommunicationReaderDtoMapper = CommunicationReaderDtoMapper(projectMapper, movementMapper, alertMapper)
 
     companion object {
         @JvmStatic

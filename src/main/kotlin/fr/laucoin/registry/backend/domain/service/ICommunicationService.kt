@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -17,15 +18,11 @@ interface ICommunicationService {
         searchParams: CommunicationSearchParamModel,
     ): Mono<PageModel<CommunicationModel>>
 
-    fun findCommunicationsByMovements(
-        projectId: UUID,
-        movementIds: List<UUID>,
-        visibilitySearched: Boolean?,
-    ): Flux<Pair<UUID, List<CommunicationModel>>>
-
     fun findCommunicationById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
 
     fun searchOutMovementWithActivityByText(projectId: UUID, textSearched: String?): Flux<MovementModel>
+
+    fun searchAlertByText(projectId: UUID, textSearched: String?): Flux<AlertModel>
 
     fun createCommunication(
         currentUser: CurrentUserModel,

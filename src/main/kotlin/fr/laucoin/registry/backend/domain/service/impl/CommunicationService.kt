@@ -1,15 +1,23 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_FOUND_IN_MOVEMENT_PROJECT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_TYPE_NOT_OUT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
+import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertModel
+import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -18,6 +26,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.repository.IAlertModelRepository
 import fr.laucoin.registry.backend.domain.repository.ICommunicationModelRepository
 import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -27,6 +36,7 @@ import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -38,10 +48,11 @@ class CommunicationService(
     private val projectService: IProjectService,
     private val repository: ICommunicationModelRepository,
     private val movementRepository: IMovementModelRepository,
+    private val alertRepository: IAlertModelRepository,
     @Value("\${registry.feature.communication.searched.max-activity-result}")
     private val maxActivityResult: Int,
-    @Value("\${registry.feature.movement.max-communication-result}")
-    private val maxCommunicationResult: Int,
+    @Value("\${registry.feature.communication.searched.max-alert-result}")
+    private val maxAlertResult: Int,
 ): ICommunicationService, GenericService() {
     override fun findCommunicationPage(
         projectId: UUID,
@@ -49,19 +60,6 @@ class CommunicationService(
         searchParams: CommunicationSearchParamModel
     ): Mono<PageModel<CommunicationModel>> {
         return repository.findPage(projectId, pageable, searchParams)
-    }
-
-    override fun findCommunicationsByMovements(
-        projectId: UUID,
-        movementIds: List<UUID>,
-        visibilitySearched: Boolean?,
-    ): Flux<Pair<UUID, List<CommunicationModel>>> {
-        return repository.findByMovementIdsWithLimit(
-            maxCommunicationResult,
-            projectId,
-            movementIds,
-            visibilitySearched,
-        )
     }
 
     override fun findCommunicationById(
@@ -89,6 +87,21 @@ class CommunicationService(
         )
     }
 
+    override fun searchAlertByText(
+        projectId: UUID,
+        textSearched: String?
+    ): Flux<AlertModel> {
+        return alertRepository.findWithLimit(
+            maxAlertResult,
+            projectId,
+            AlertSearchParamModel(
+                textSearched,
+                visibilitySearched = true,
+                statusSearched = AlertStatusEnum.IN_PROGRESS,
+            )
+        )
+    }
+
     override fun createCommunication(
         currentUser: CurrentUserModel,
         communication: CommunicationModel
@@ -99,6 +112,7 @@ class CommunicationService(
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
         )
             .flatMap { validateNoMovementConflict(communication) }
+            .flatMap { validateNoAlertConflict(currentUser, communication) }
             .flatMap { repository.create(communication.apply { create(currentUser) }) }
     }
 
@@ -115,6 +129,7 @@ class CommunicationService(
         )
             .flatMap { findCommunicationById(projectId, id, visibilitySearched = null) }
             .flatMap { validateNoMovementConflict(communication, it) }
+            .flatMap { validateNoAlertConflict(currentUser, communication, it) }
             .map {
                 it.apply {
                     dateTime = communication.dateTime
@@ -166,7 +181,7 @@ class CommunicationService(
             oldCommunication ?: communication
         )
         else movementRepository.findById(communication.project !!.id !!, communication.movement !!.id !!, visibilitySearched = null)
-            .switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_FOUND_IN_MOVEMENT_PROJECT)) }
+            .switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT)) }
             .handle { it, handle ->
                 when {
                     it.isNotVisible() -> handle.error(
@@ -200,5 +215,45 @@ class CommunicationService(
                     else -> handle.next(oldCommunication ?: communication)
                 }
             }
+    }
+
+    private fun validateNoAlertConflict(
+        currentUser: CurrentUserModel,
+        communication: CommunicationModel,
+        oldCommunication: CommunicationModel? = null
+    ): Mono<CommunicationModel> {
+        return if (Objects.isNull(communication.alert) || communication.alert?.id == oldCommunication?.alert?.id) Mono.just(
+            oldCommunication ?: communication
+        )
+        else {
+            if (! currentUser.hasAuthority(communication.project !!.id !!, REGISTRY_PROJECT_OPTION_ALERT)) {
+                throw RegistryException(
+                    status = FORBIDDEN,
+                    code = NOT_ENOUGH_PERMISSION,
+                )
+            }
+
+            alertRepository.findById(communication.project !!.id !!, communication.alert !!.id !!, visibilitySearched = null)
+                .switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT)) }
+                .handle { it, handle ->
+                    when {
+                        it.isNotVisible() -> handle.error(
+                            RegistryException(
+                                CONFLICT,
+                                COMMUNICATION_ALERT_NOT_VISIBLE,
+                            )
+                        )
+
+                        it.dateTime.isAfter(communication.dateTime) -> handle.error(
+                            RegistryException(
+                                CONFLICT,
+                                COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION,
+                            )
+                        )
+
+                        else -> handle.next(oldCommunication ?: communication)
+                    }
+                }
+        }
     }
 }

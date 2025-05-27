@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity
+package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication
 
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_DESCRIPTION
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_DURATION
@@ -37,4 +37,10 @@ object CommunicationFields {
     const val COMMUNICATION_ACTIVITY_START_AVAILABILITY_TIME = "$COMMUNICATION_ACTIVITY_PREFIX$ACTIVITY_START_AVAILABILITY_TIME"
     const val COMMUNICATION_ACTIVITY_END_AVAILABILITY_DATE = "$COMMUNICATION_ACTIVITY_PREFIX$ACTIVITY_END_AVAILABILITY_DATE"
     const val COMMUNICATION_ACTIVITY_END_AVAILABILITY_TIME = "$COMMUNICATION_ACTIVITY_PREFIX$ACTIVITY_END_AVAILABILITY_TIME"
+
+    private const val COMMUNICATION_ALERT_PREFIX = "alert_"
+    const val COMMUNICATION_ALERT_ID = "$COMMUNICATION_ALERT_PREFIX$ID"
+    const val COMMUNICATION_ALERT_DATE_TIME = "$COMMUNICATION_ALERT_PREFIX$MOVEMENT_DATE_TIME"
+    const val COMMUNICATION_ALERT_TITLE = "$COMMUNICATION_ALERT_PREFIX$MOVEMENT_TYPE"
+    const val COMMUNICATION_ALERT_STATUS = "$COMMUNICATION_ALERT_PREFIX$MOVEMENT_REASON"
 }

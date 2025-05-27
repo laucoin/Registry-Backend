@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity
+package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication
 
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_DESCRIPTION
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_DURATION
@@ -10,18 +10,26 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_DESCRIPTION
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_DURATION
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_END_AVAILABILITY_DATE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_END_AVAILABILITY_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_MAX_ALLOWED_PARTICIPANTS
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_MIN_ALLOWED_PARTICIPANTS
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_NAME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_START_AVAILABILITY_DATE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_ACTIVITY_START_AVAILABILITY_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_DATE_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.CommunicationFields.COMMUNICATION_MOVEMENT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertFields.ALERT_STATUS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertFields.ALERT_TABLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertFields.ALERT_TITLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_DESCRIPTION
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_DURATION
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_END_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_END_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_MAX_ALLOWED_PARTICIPANTS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_MIN_ALLOWED_PARTICIPANTS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ACTIVITY_START_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_STATUS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_TITLE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 
@@ -50,8 +58,19 @@ object CommunicationQueries {
         $LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_TIME AS $COMMUNICATION_ACTIVITY_END_AVAILABILITY_TIME
     """
     const val MOVEMENT_JOIN = """
-        INNER JOIN $MOVEMENT_TABLE $LINKED_MOVEMENT_TABLE ON t.$COMMUNICATION_MOVEMENT_ID = $LINKED_MOVEMENT_TABLE.$ID
-        INNER JOIN $ACTIVITY_TABLE $LINKED_ACTIVITY_TABLE ON $LINKED_MOVEMENT_TABLE.$COMMUNICATION_ACTIVITY_ID = $LINKED_ACTIVITY_TABLE.$ID
+        LEFT JOIN $MOVEMENT_TABLE $LINKED_MOVEMENT_TABLE ON t.$COMMUNICATION_MOVEMENT_ID = $LINKED_MOVEMENT_TABLE.$ID
+        LEFT JOIN $ACTIVITY_TABLE $LINKED_ACTIVITY_TABLE ON $LINKED_MOVEMENT_TABLE.$COMMUNICATION_ACTIVITY_ID = $LINKED_ACTIVITY_TABLE.$ID
+    """
+
+    private const val LINKED_ALERT_TABLE = "alert_tb"
+    const val SELECT_LINKED_ALERT = """
+        $LINKED_ALERT_TABLE.$ID AS $COMMUNICATION_ALERT_ID,
+        $LINKED_ALERT_TABLE.$ALERT_TITLE AS $COMMUNICATION_ALERT_TITLE,
+        $LINKED_ALERT_TABLE.$ALERT_DATE_TIME AS $COMMUNICATION_ALERT_DATE_TIME,
+        $LINKED_ALERT_TABLE.$ALERT_STATUS AS $COMMUNICATION_ALERT_STATUS
+    """
+    const val ALERT_JOIN = """
+        LEFT JOIN $ALERT_TABLE $LINKED_ALERT_TABLE ON t.$COMMUNICATION_ALERT_ID = $LINKED_ALERT_TABLE.$ID
     """
 
     const val COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE = """

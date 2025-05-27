@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.writer
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.writer.ParticipantWriterDto
-import java.util.Objects
+import java.util.Optional
 import java.util.UUID
 import org.springframework.stereotype.Component
 
@@ -21,10 +21,11 @@ class ParticipantWriterDtoMapper(
             birthday = dto.birthday
             type = REGISTERED
             startAvailability =
-                if (Objects.nonNull(dto.startAvailability)) customDateTimeMapper.toModel(dto.startAvailability !!) else null
-            endAvailability = if (Objects.nonNull(dto.endAvailability)) customDateTimeMapper.toModel(dto.endAvailability !!) else null
-            user = if (Objects.nonNull(dto.userId)) UserModel().apply { id = dto.userId } else null
-            groups = if (Objects.nonNull(dto.groupIds)) dto.groupIds !!.map { GroupModel().apply { id = it } } else emptyList()
+                Optional.ofNullable(dto.startAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+            endAvailability = Optional.ofNullable(dto.endAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+            user = Optional.ofNullable(dto.userId).map { UserModel().apply { id = it } }.orElse(null)
+            groups =
+                Optional.ofNullable(dto.groupIds).map { groups -> groups.map { GroupModel().apply { id = it } } }.orElse(emptyList())
             project = ProjectModel().apply { id = projectId }
         }
     }
