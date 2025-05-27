@@ -50,12 +50,13 @@ class UserProjectProfileService(
         error: String
     ): Mono<T> {
         return repository.findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
-            .filter { Objects.isNull(projectId) || it.project?.id !== projectId }
+            .filter { Objects.isNull(projectId) || it.project?.id == projectId }
             .collectList()
             .handle { it, handle ->
-                if (it.isNotEmpty()) {
+                val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
+                if (projects.isNotEmpty()) {
                     log.warn("The user {} is the last administrator of {} project(s)", userId, it.size)
-                    handle.error(RegistryException(FORBIDDEN, error, arrayListOf(it.first().project?.name)))
+                    handle.error(RegistryException(FORBIDDEN, error, arrayListOf(projects.first().project?.name)))
                 } else handle.next(result)
             }
     }
@@ -70,15 +71,7 @@ class UserProjectProfileService(
         profile.create(currentUser)
 
         return repository.create(profile)
-            .flatMap { newProfile ->
-                preferencesRepository.findByUserId(currentUser.id !!, visibilitySearched = null)
-                    .flatMap {
-                        if (Objects.isNull(it.selectedProfile)) {
-                            it.selectedProfile = newProfile
-                            preferencesRepository.save(it).thenReturn(newProfile)
-                        } else Mono.just(newProfile)
-                    }
-            }
+            .updateSelectedProfile(currentUser)
             .`as`(transactionalOperator::transactional)
     }
 
@@ -97,15 +90,27 @@ class UserProjectProfileService(
             }
     }
 
+    private fun Mono<ProjectProfileModel>.updateSelectedProfile(currentUser: CurrentUserModel): Mono<ProjectProfileModel> =
+        flatMap { newProfile ->
+            preferencesRepository.findByUserId(currentUser.id !!, visibilitySearched = null)
+                .flatMap {
+                    if (Objects.isNull(it.selectedProfile)) {
+                        it.selectedProfile = newProfile
+                        preferencesRepository.save(it).thenReturn(newProfile)
+                    } else Mono.just(newProfile)
+                }
+        }
+
     override fun createSupportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel> {
         val now = CustomDateTimeModel.now()
+        val nowPlusOneHour = CustomDateTimeModel.now().plusHours(1)
         val profile = ProjectProfileModel().apply {
             user = currentUser
             project = ProjectModel().apply { id = projectId }
             role = roleService.getLevel0RoleFromProjectRoles()
             status = ACCEPTED
             startAccess = now
-            endAccess = now.apply { time !!.plusHours(1) }
+            endAccess = nowPlusOneHour
             create(currentUser)
         }
 
@@ -115,7 +120,10 @@ class UserProjectProfileService(
             profileId = null,
             profile.startAccess !!.toZonedDateTime(OffsetTime.MIN),
             profile.endAccess !!.toZonedDateTime(OffsetTime.MAX),
-        ).flatMap { repository.create(profile) }
+        )
+            .flatMap { repository.create(profile) }
+            .updateSelectedProfile(currentUser)
+            .`as`(transactionalOperator::transactional)
     }
 
     override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {

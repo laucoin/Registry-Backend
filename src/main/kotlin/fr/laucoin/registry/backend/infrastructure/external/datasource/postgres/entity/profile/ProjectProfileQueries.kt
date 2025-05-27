@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile
 
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_END_ACCESS_DATE
@@ -14,6 +13,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_PURGED
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.project.ProjectFields.PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_EMAIL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_LAST_LOGIN
@@ -87,13 +87,13 @@ object ProjectProfileQueries {
         (
             (
                 :startDateTimeSearched IS NULL OR (
-                    COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CAST(:startDateTimeSearched AS DATE)
-                    OR (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CAST(:startDateTimeSearched AS DATE) AND COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CAST(:startDateTimeSearched AS TIME))
+                    COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) > CAST(:startDateTimeSearched AS DATE)
+                    OR (COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) = CAST(:startDateTimeSearched AS DATE) AND COALESCE(t.$PROJECT_PROFILE_END_ACCESS_TIME, '23:59:59.999999'::TIME) > CAST(:startDateTimeSearched AS TIME))
                 )
             ) AND (
                 :endDateTimeSearched IS NULL OR (
-                    COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) > CAST(:endDateTimeSearched AS DATE)
-                    OR (COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) = CAST(:endDateTimeSearched AS DATE) AND COALESCE(t.$PROJECT_PROFILE_END_ACCESS_TIME, '23:59:59.999999'::TIME) >= CAST(:endDateTimeSearched AS TIME))
+                    COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CAST(:endDateTimeSearched AS DATE)
+                    OR (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CAST(:endDateTimeSearched AS DATE) AND COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CAST(:endDateTimeSearched AS TIME))
                 )
             )
         )

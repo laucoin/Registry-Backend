@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_REMOVE_GUEST_CONTENT
@@ -20,6 +21,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
+import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -55,6 +57,7 @@ import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
@@ -314,7 +317,8 @@ class MovementService(
                 validateParticipants(
                     movement.project !!.id !!,
                     movement,
-                    movement.content.mapNotNull { c -> c.participant !!.id }
+                    movement.content.mapNotNull { c -> c.participant !!.id },
+                    movement.content.filter { c -> Objects.nonNull(c.vehicle) }.mapNotNull { c -> c.participant !!.id }
                 )
             }
             .flatMap {
@@ -351,7 +355,7 @@ class MovementService(
             .flatMap {
                 val newParticipantIds: List<UUID> = it.getNewContentParticipantIds(movement)
                 if (newParticipantIds.isEmpty()) Mono.just(it)
-                else validateParticipants(projectId, it, newParticipantIds)
+                else validateParticipants(projectId, it, newParticipantIds, it.getNewContentDriverIds(movement))
             }
             .flatMap {
                 val newVehicleIds: List<UUID> = it.getNewContentVehicleIds(movement)
@@ -471,7 +475,12 @@ class MovementService(
             }
     }
 
-    private fun validateParticipants(projectId: UUID, oldMovement: MovementModel, newParticipantIds: List<UUID>): Mono<MovementModel> {
+    private fun validateParticipants(
+        projectId: UUID,
+        oldMovement: MovementModel,
+        newParticipantIds: List<UUID>,
+        driverIds: List<UUID>
+    ): Mono<MovementModel> {
         return participantRepository.findAllByIds(projectId, newParticipantIds, visibilitySearched = null)
             .collectList()
             .handle { it, handle ->
@@ -487,6 +496,13 @@ class MovementService(
                         RegistryException(
                             CONFLICT,
                             MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
+                        )
+                    )
+
+                    it.any { p -> ! p.birthday.isMajor() && driverIds.contains(p.id) } -> handle.error(
+                        RegistryException(
+                            UNPROCESSABLE_ENTITY,
+                            MOVEMENT_DRIVERS_NOT_MAJOR,
                         )
                     )
 

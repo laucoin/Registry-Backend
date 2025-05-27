@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.extension
 
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.Objects
 
@@ -26,7 +27,7 @@ object DateExt {
             date.isEqual(other.date) -> {
                 val objectTime = time ?: OffsetTime.MIN
                 val otherTime = other.time ?: OffsetTime.MIN
-                objectTime !!.isBefore(otherTime)
+                objectTime !!.isAfter(otherTime)
             }
 
             else -> false
@@ -57,6 +58,14 @@ object DateExt {
 
             else -> false
         }
+    }
+
+    fun LocalDate?.isMajor(): Boolean {
+        val today = LocalDate.now()
+        val minBirthday = today.minusYears(18)
+        return this?.let {
+            minBirthday.isAfter(it) || minBirthday.isEqual(it)
+        } ?: false
     }
 
     private fun CustomDateTimeModel?.inRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {

@@ -85,11 +85,12 @@ class GroupModelPostgresRepository(
         projectId: UUID,
         id: UUID,
         visibilitySearched: Boolean?,
+        memberVisibilitySearched: Boolean?,
         memberAvailabilitySearched: Boolean?,
     ): Mono<GroupModel> {
         return Mono.zip(
             repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
-            findContent(projectId, listOf(id), visibilitySearched, memberAvailabilitySearched).collectList()
+            findContent(projectId, listOf(id), memberVisibilitySearched, memberAvailabilitySearched).collectList()
                 .handle { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
         ).map {
             it.t1.members = it.t2
@@ -110,6 +111,7 @@ class GroupModelPostgresRepository(
                     element.project !!.id !!,
                     element.id !!,
                     visibilitySearched = null,
+                    memberVisibilitySearched = null,
                     memberAvailabilitySearched = null,
                 )
             }

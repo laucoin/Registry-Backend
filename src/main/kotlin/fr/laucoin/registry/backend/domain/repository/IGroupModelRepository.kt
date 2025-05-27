@@ -20,6 +20,7 @@ interface IGroupModelRepository: IGenericWriteModelRepository<GroupModel> {
         projectId: UUID,
         id: UUID,
         visibilitySearched: Boolean?,
+        memberVisibilitySearched: Boolean?,
         memberAvailabilitySearched: Boolean?
     ): Mono<GroupModel>
 

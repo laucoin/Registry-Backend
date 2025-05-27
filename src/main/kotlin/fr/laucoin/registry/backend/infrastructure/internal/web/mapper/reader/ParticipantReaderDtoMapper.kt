@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
+import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ParticipantReaderDto
 import java.time.LocalDate
@@ -40,12 +41,5 @@ class ParticipantReaderDtoMapper(
         }
     }
 
-    private fun isMajor(birthday: LocalDate?): Boolean {
-        val today = LocalDate.now()
-        val minBirthday = today.minusYears(18)
-        return birthday?.let {
-            minBirthday.isAfter(it)
-            || minBirthday.isEqual(it)
-        } ?: false
-    }
+    private fun isMajor(birthday: LocalDate?): Boolean = birthday.isMajor()
 }

@@ -17,12 +17,12 @@ class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
     override fun toModel(entity: ActivityEntity): ActivityModel {
         return ActivityModel().apply {
             name = entity.name
-            status = buildStatus()
             description = entity.description
             duration = mapDuration(entity.duration)
             allowedParticipants = mapAllowedParticipants(entity)
             startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
             endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
+            status = buildStatus()
         }.fillWithProjectAndEntity(entity)
     }
 

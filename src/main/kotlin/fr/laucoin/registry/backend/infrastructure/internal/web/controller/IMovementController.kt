@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
-import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -232,7 +231,7 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
+    @PreAuthorize("hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
     @GetMapping("/participants/status")
     fun findParticipantsStatus(@PathVariable projectId: UUID): Mono<ProjectStatusModel>
 
@@ -247,7 +246,7 @@ interface IMovementController {
             ),
         ],
     )
-    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && (hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}'))")
+    @PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
     @GetMapping("/vehicles/status")
     fun findVehiclesStatus(@PathVariable projectId: UUID): Mono<VehicleStatusModel>
 

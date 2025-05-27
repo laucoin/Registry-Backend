@@ -14,8 +14,6 @@ data class MovementModel(
     var activity: ActivityModel? = null,
     var contentType: ParticipantTypeEnum = ParticipantTypeEnum.REGISTERED,
     var content: List<MovementContentModel> = emptyList(),
-    var lastCommunicationDateTime: ZonedDateTime? = null,
-    var communicationsCount: Long? = null,
 ): GenericProjectModel() {
     data class MovementContentModel(
         var id: UUID? = null,
@@ -35,6 +33,10 @@ data class MovementModel(
 
     fun getNewContentVehicleIds(movement: MovementModel): List<UUID> {
         return getNewContent(movement).mapNotNull { it.vehicle?.id }
+    }
+
+    fun getNewContentDriverIds(movement: MovementModel): List<UUID> {
+        return getNewContent(movement).filter { Objects.nonNull(it.vehicle) }.mapNotNull { it.participant?.id }
     }
 
     fun isGuestsMovement(): Boolean {

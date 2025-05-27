@@ -161,7 +161,8 @@ object ParticipantQueries {
         )
     """
 
-    const val PARTICIPANT_PRESENCE_CLAUSE = "(:presenceSearched IS NULL OR :presenceSearched = (last_movement.type = 'IN'))"
+    const val PARTICIPANT_PRESENCE_CLAUSE =
+        "(:presenceSearched IS NULL OR :presenceSearched != (last_movement.type IS NULL OR last_movement.type = 'OUT'))"
 
     const val DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE = """
         (

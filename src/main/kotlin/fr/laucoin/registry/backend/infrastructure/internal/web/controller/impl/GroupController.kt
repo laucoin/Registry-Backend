@@ -77,7 +77,13 @@ class GroupController(
     }
 
     override fun findGroupById(locale: Locale, projectId: UUID, id: UUID): Mono<GroupReaderDto> {
-        return service.findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null)
+        return service.findGroupById(
+            projectId,
+            id,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null,
+        )
             .map { readerMapper.toDto(it, locale) }
     }
 

@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_STATUS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileFields.ROLE_COUNT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.DATES_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.profile.ProjectProfileQueries.JOIN_USER
@@ -171,20 +172,24 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 
     @Query(
         """
-        SELECT t.$LINKED_PROJECT_ID, $PROJECT_TABLE.$PROJECT_NAME AS $LINKED_PROJECT_NAME, COUNT(t.$PROJECT_PROFILE_ROLE)
-        FROM $PROJECT_PROFILE_TABLE t
-        INNER JOIN $PROJECT_TABLE ON t.$LINKED_PROJECT_ID = $PROJECT_TABLE.$ID AND $PROJECT_TABLE.$VISIBLE IS TRUE
-        INNER JOIN $PROJECT_ROLE_TABLE ON t.$PROJECT_PROFILE_ROLE = $PROJECT_ROLE_TABLE.$ENTITY_ROLE_NAME
-        INNER JOIN (
-            SELECT ep.$LINKED_PROJECT_ID AS user_project_id FROM $PROJECT_PROFILE_TABLE ep
-            WHERE ep.$VISIBLE IS TRUE AND ep.$PROJECT_PROFILE_STATUS = 'ACCEPTED' AND ep.$PROJECT_PROFILE_USER_ID = :userId
-        ) AS euei ON t.$LINKED_PROJECT_ID = euei.user_project_id
-        WHERE $VISIBLE_CLAUSE
-        AND t.$PROJECT_PROFILE_STATUS = 'ACCEPTED'
-        AND (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CURRENT_DATE OR (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME))
-        AND (COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) > CURRENT_DATE OR (COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PROJECT_PROFILE_END_ACCESS_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME))
-        AND $PROJECT_ROLE_TABLE.$ROLE_LEVEL = 0
-        GROUP BY t.$LINKED_PROJECT_ID, $PROJECT_TABLE.$PROJECT_NAME
+        WITH user_profile_project AS (
+            SELECT t.$LINKED_PROJECT_ID
+            FROM $PROJECT_PROFILE_TABLE t
+            INNER JOIN $PROJECT_ROLE_TABLE tpr ON t.$PROJECT_PROFILE_ROLE = tpr.$ENTITY_ROLE_NAME AND tpr.$ROLE_LEVEL = 0
+            WHERE t.$PROJECT_PROFILE_STATUS = 'ACCEPTED'
+            AND (:visibilitySearched IS NULL OR t.$VISIBLE = :visibilitySearched)
+            AND (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CURRENT_DATE OR (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME))
+            AND t.$PROJECT_PROFILE_END_ACCESS_DATE IS NULL AND t.$PROJECT_PROFILE_END_ACCESS_TIME IS NULL
+            AND t.$PROJECT_PROFILE_USER_ID = :userId
+        )
+        SELECT tpp.$LINKED_PROJECT_ID, tp.$PROJECT_NAME AS $LINKED_PROJECT_NAME, COUNT(tpp.$PROJECT_PROFILE_ROLE) AS $ROLE_COUNT
+        FROM $PROJECT_PROFILE_TABLE tpp
+        INNER JOIN $PROJECT_ROLE_TABLE tpr ON tpp.$PROJECT_PROFILE_ROLE = tpr.$ENTITY_ROLE_NAME AND tpr.$ROLE_LEVEL = 0
+        INNER JOIN $PROJECT_TABLE tp ON tpp.$LINKED_PROJECT_ID = tp.$ID
+        INNER JOIN user_profile_project up ON up.$LINKED_PROJECT_ID = tp.$ID
+        AND (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CURRENT_DATE OR (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME))
+        AND tpp.$PROJECT_PROFILE_END_ACCESS_DATE IS NULL AND tpp.$PROJECT_PROFILE_END_ACCESS_TIME IS NULL
+        GROUP BY tpp.$LINKED_PROJECT_ID, tp.$PROJECT_NAME
         """
     )
     fun findLevel0ProjectProfileRoleByUserId(userId: UUID, visibilitySearched: Boolean?): Flux<ProjectProfileRoleCountEntity>

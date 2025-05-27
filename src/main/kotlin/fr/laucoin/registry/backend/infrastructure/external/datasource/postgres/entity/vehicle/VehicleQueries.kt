@@ -65,7 +65,8 @@ object VehicleQueries {
         )
     """
 
-    const val VEHICLE_PRESENCE_CLAUSE = "(:presenceSearched IS NULL OR :presenceSearched = (last_movement.type = 'IN'))"
+    const val VEHICLE_PRESENCE_CLAUSE =
+        "(:presenceSearched IS NULL OR :presenceSearched != (last_movement.type IS NULL OR last_movement.type = 'OUT'))"
 
     const val DATE_IN_VEHICLE_DATES_RANGE_CLAUSE = """
         (
