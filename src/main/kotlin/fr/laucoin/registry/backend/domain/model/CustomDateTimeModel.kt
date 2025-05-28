@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.OffsetTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
 import java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME
@@ -32,9 +33,28 @@ data class CustomDateTimeModel(
         return when {
             Objects.isNull(date) -> null
             Objects.nonNull(time) -> time !!.atDate(date).toZonedDateTime()
-            Objects.nonNull(defaultTime) -> date.atTime(defaultTime).toZonedDateTime()
+            Objects.nonNull(defaultTime) -> date.atTime(clampOffsetTimeToPostgresRange(defaultTime !!)).toZonedDateTime()
             else -> date.atStartOfDay(ZoneId.of("UTC"))
         }
+    }
+
+    @JsonIgnore
+    private fun clampOffsetTimeToPostgresRange(time: OffsetTime): OffsetTime {
+        val offsetSeconds = time.offset.totalSeconds
+
+        // Postgres only supports a range of -14 to +14 hours for offsets
+        // (OffsetTime.MIN/MAX are outside this range (e.g., -18 hours))
+        val minOffsetSeconds = ZoneOffset.ofHours(- 14).totalSeconds
+        val maxOffsetSeconds = ZoneOffset.ofHours(14).totalSeconds
+
+        val clampedOffsetSeconds = when {
+            offsetSeconds < minOffsetSeconds -> minOffsetSeconds
+            offsetSeconds > maxOffsetSeconds -> maxOffsetSeconds
+            else -> offsetSeconds
+        }
+
+        val clampedOffset = ZoneOffset.ofTotalSeconds(clampedOffsetSeconds)
+        return time.withOffsetSameLocal(clampedOffset)
     }
 
     @JsonIgnore
@@ -44,5 +64,12 @@ data class CustomDateTimeModel(
             Objects.isNull(time) -> date.format(ISO_LOCAL_DATE)
             else -> toZonedDateTime() !!.format(ISO_ZONED_DATE_TIME)
         }
+    }
+
+    fun plusHours(hours: Long): CustomDateTimeModel {
+        if (Objects.nonNull(time)) {
+            time = time !!.plusHours(hours)
+        }
+        return this
     }
 }

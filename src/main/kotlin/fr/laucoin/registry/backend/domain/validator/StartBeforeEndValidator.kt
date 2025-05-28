@@ -30,8 +30,8 @@ class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
             startValue is LocalDate && endValue is LocalDate -> startValue.isBefore(endValue)
             startValue is CustomDateTimeWriterDto && endValue is CustomDateTimeWriterDto -> {
                 val startDateTime =
-                    if (Objects.nonNull(startValue.date !!)) CustomDateTimeModel(startValue.date !!, startValue.time) else null
-                val endDateTime = if (Objects.nonNull(endValue.date !!)) CustomDateTimeModel(endValue.date !!, endValue.time) else null
+                    if (Objects.nonNull(startValue.date)) CustomDateTimeModel(startValue.date !!, startValue.time) else null
+                val endDateTime = if (Objects.nonNull(endValue.date)) CustomDateTimeModel(endValue.date !!, endValue.time) else null
                 startDateTime.isBeforeOrEqual(endDateTime)
             }
 

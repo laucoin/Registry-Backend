@@ -10,8 +10,6 @@ data class MovementReaderDto(
     var reason: MovementReasonsReaderDto? = null,
     var contentType: ParticipantTypeEnum,
     var content: List<MovementContentReaderDto> = emptyList(),
-    var lastCommunicationDateTime: ZonedDateTime? = null,
-    var communicationsCount: Long,
 ): GenericProjectReaderDto() {
     data class MovementContentReaderDto(
         var poolName: String? = null,

@@ -19,10 +19,10 @@ class ProjectProfileEntityMapper(
         return ProjectProfileModel().apply {
             user = mapUserEntity(entity)
             role = entity.role
-            availabilityStatus = buildStatus()
-            status = entity.status
             startAccess = mapCustomDateTime(entity.startAccessDate, entity.startAccessTime)
             endAccess = mapCustomDateTime(entity.endAccessDate, entity.endAccessTime)
+            status = entity.status
+            availabilityStatus = buildStatus()
         }.fillWithProjectAndEntity(entity)
     }
 

@@ -11,7 +11,6 @@ import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IRegis
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ErrorDto
 import java.util.Locale
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.web.reactive.error.DefaultErrorAttributes
 import org.springframework.context.MessageSource
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
@@ -30,7 +29,6 @@ import reactor.core.publisher.Mono
 @RestControllerAdvice
 class RegistryControllerAdvice(
     @Qualifier("errorsSource") private val translateService: MessageSource,
-    private val errorAttributes: DefaultErrorAttributes
 ): IRegistryControllerAdvice, LoggerService() {
     override fun handleRegistryException(exception: RegistryException): Mono<ResponseEntity<ErrorDto>> {
         return buildError(exception.status, exception.code, exception.args?.toArray())

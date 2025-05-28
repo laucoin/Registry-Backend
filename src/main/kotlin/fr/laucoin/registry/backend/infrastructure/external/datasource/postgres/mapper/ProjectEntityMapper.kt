@@ -13,9 +13,9 @@ class ProjectEntityMapper: IEntityMapper<ProjectModel, ProjectEntity> {
     override fun toModel(entity: ProjectEntity): ProjectModel {
         return ProjectModel().apply {
             name = entity.name
-            status = buildStatus()
             begin = mapCustomDateTime(entity.beginDate, entity.beginTime)
             end = mapCustomDateTime(entity.endDate, entity.endTime)
+            status = buildStatus()
             options = entity.options
         }.fillWithEntity(entity)
     }

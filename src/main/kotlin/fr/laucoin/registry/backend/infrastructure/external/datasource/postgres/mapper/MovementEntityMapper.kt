@@ -26,8 +26,6 @@ class MovementEntityMapper(
             type = entity.type
             reason = entity.reason
             activity = mapActivity(entity)
-            lastCommunicationDateTime = entity.lastCommunicationDateTime
-            communicationsCount = entity.communicationsCount
         }.fillWithProjectAndEntity(entity)
     }
 

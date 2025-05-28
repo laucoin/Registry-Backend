@@ -63,9 +63,10 @@ class GroupService(
         projectId: UUID,
         id: UUID,
         visibilitySearched: Boolean?,
-        memberAvailabilitySearched: Boolean?
+        memberVisibilitySearched: Boolean?,
+        memberAvailabilitySearched: Boolean?,
     ): Mono<GroupModel> {
-        return repository.findByIdWithContent(projectId, id, visibilitySearched, memberAvailabilitySearched)
+        return repository.findByIdWithContent(projectId, id, visibilitySearched, memberVisibilitySearched, memberAvailabilitySearched)
             .notFoundIfEmpty(id)
     }
 
@@ -97,7 +98,15 @@ class GroupService(
             group.endAvailability,
             GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
         )
-            .flatMap { findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null) }
+            .flatMap {
+                findGroupById(
+                    projectId,
+                    id,
+                    visibilitySearched = null,
+                    memberVisibilitySearched = null,
+                    memberAvailabilitySearched = null
+                )
+            }
             .flatMap {
                 val newMemberIds: List<UUID> = it.getNewMemberIds(group)
                 if (newMemberIds.isEmpty()) Mono.just(it)
@@ -120,7 +129,13 @@ class GroupService(
         id: UUID,
         memberIds: List<UUID>
     ): Mono<Pair<List<UUID>, List<UUID>>> {
-        return findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null)
+        return findGroupById(
+            projectId,
+            id,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
             .map { Pair(it, it.getNewMemberIds(memberIds)) }
             .handle { it, handle ->
                 if (it.second.isEmpty()) {
@@ -149,7 +164,13 @@ class GroupService(
         id: UUID,
         memberId: UUID
     ): Mono<GroupModel> {
-        return findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null)
+        return findGroupById(
+            projectId,
+            id,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
             .map { it.apply { members = members.filter { m -> m.id != memberId } } }
             .handle { it, handle ->
                 if (it.members.isEmpty()) {
@@ -196,19 +217,37 @@ class GroupService(
     }
 
     override fun disableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(projectId, id, visibilitySearched = true, memberAvailabilitySearched = null)
+        return findGroupById(
+            projectId,
+            id,
+            visibilitySearched = true,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
             .updateVisibility(visibility = false)
             .updateGroup(currentUser)
     }
 
     override fun enableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel> {
-        return findGroupById(projectId, id, visibilitySearched = false, memberAvailabilitySearched = null)
+        return findGroupById(
+            projectId,
+            id,
+            visibilitySearched = false,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
             .updateVisibility(visibility = true)
             .updateGroup(currentUser)
     }
 
     override fun deleteGroupById(projectId: UUID, id: UUID): Mono<Void> {
-        return findGroupById(projectId, id, visibilitySearched = null, memberAvailabilitySearched = null)
+        return findGroupById(
+            projectId,
+            id,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
             .flatMap { repository.deleteById(id) }
     }
 }

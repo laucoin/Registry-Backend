@@ -13,9 +13,9 @@ class GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
     override fun toModel(entity: GroupEntity): GroupModel {
         return GroupModel().apply {
             name = entity.name
-            status = buildStatus()
             startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
             endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
+            status = buildStatus()
             membersCount = entity.members
             insideMembersCount = entity.insideMembers
             outsideMembersCount = entity.outsideMembers

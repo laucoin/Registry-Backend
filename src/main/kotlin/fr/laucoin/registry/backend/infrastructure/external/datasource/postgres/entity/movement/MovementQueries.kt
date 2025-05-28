@@ -10,9 +10,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATOR_EMAIL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.CREATOR_FIRST_NAME
@@ -50,7 +47,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_COMMUNICATIONS_COUNT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME
@@ -63,7 +59,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_MODEL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_LAST_COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
@@ -85,23 +80,6 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
 
 object MovementQueries {
-    const val WITH_MOVEMENT_COMMUNICATIONS = """
-        last_communication AS (
-            SELECT t.$COMMUNICATION_MOVEMENT_ID, COUNT(t.$ID) AS $MOVEMENT_COMMUNICATIONS_COUNT, MAX(t.$COMMUNICATION_DATE_TIME) as $MOVEMENT_LAST_COMMUNICATION_DATE_TIME
-            FROM $COMMUNICATION_TABLE t
-            WHERE t.$VISIBLE IS TRUE AND t.$LINKED_PROJECT_ID = :projectId AND t.$COMMUNICATION_MOVEMENT_ID IS NOT NULL
-            GROUP BY t.$COMMUNICATION_MOVEMENT_ID
-        )
-    """
-
-    const val SELECT_COMMUNICATION = """
-        last_communication.$MOVEMENT_COMMUNICATIONS_COUNT, last_communication.$MOVEMENT_LAST_COMMUNICATION_DATE_TIME
-    """
-
-    const val COMMUNICATION_JOIN = """
-        LEFT JOIN last_communication ON t.$ID = last_communication.$COMMUNICATION_MOVEMENT_ID
-    """
-
     const val SELECT_CONTENT = """
         $PARTICIPANT_TABLE.$PARTICIPANT_FIRST_NAME as $MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME,
         $PARTICIPANT_TABLE.$PARTICIPANT_LAST_NAME as $MOVEMENT_CONTENT_PARTICIPANT_LAST_NAME,
@@ -177,8 +155,7 @@ object MovementQueries {
          $MOVEMENT_ACTIVITY_MAX_ALLOWED_PARTICIPANTS, $MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE,
          $MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME, $MOVEMENT_ACTIVITY_END_AVAILABILITY_DATE, $MOVEMENT_ACTIVITY_END_AVAILABILITY_TIME,
          $CREATOR_FIRST_NAME, $CREATOR_LAST_NAME, $CREATOR_EMAIL, $LAST_MODIFIER_FIRST_NAME, $LAST_MODIFIER_LAST_NAME,
-         $LAST_MODIFIER_EMAIL, t.$VISIBLE, t.$CREATOR_ID, t.$CREATED_AT, t.$LAST_MODIFIER_ID, t.$LAST_MODIFIER_DATE,
-         last_communication.$MOVEMENT_COMMUNICATIONS_COUNT, last_communication.$MOVEMENT_LAST_COMMUNICATION_DATE_TIME
+         $LAST_MODIFIER_EMAIL, t.$VISIBLE, t.$CREATOR_ID, t.$CREATED_AT, t.$LAST_MODIFIER_ID, t.$LAST_MODIFIER_DATE
     """
 
     const val ACTIVITY_MOVEMENT_TEXT_SEARCH_CLAUSE =

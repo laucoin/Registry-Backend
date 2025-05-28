@@ -33,8 +33,6 @@ class MovementReaderDtoMapper(
             else null,
             contentType = model.contentType,
             content = movementContentMapper.toDtoList(model.content, locale),
-            lastCommunicationDateTime = model.lastCommunicationDateTime,
-            communicationsCount = model.communicationsCount ?: 0L,
         ).apply {
             id = model.id
             project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
