@@ -23,8 +23,8 @@ import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -141,7 +141,7 @@ class GroupService(
                 if (it.second.isEmpty()) {
                     handle.error(
                         RegistryException(
-                            CONFLICT,
+                            UNPROCESSABLE_ENTITY,
                             GROUP_MEMBERS_ALREADY_ADDED,
                         )
                     )
@@ -176,7 +176,7 @@ class GroupService(
                 if (it.members.isEmpty()) {
                     handle.error(
                         RegistryException(
-                            FORBIDDEN,
+                            CONFLICT,
                             GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED,
                         )
                     )
@@ -206,7 +206,7 @@ class GroupService(
 
                     it.any(ParticipantModel::isNotUsable) -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            NOT_FOUND,
                             GROUP_MEMBERS_NOT_VISIBLE,
                         )
                     )

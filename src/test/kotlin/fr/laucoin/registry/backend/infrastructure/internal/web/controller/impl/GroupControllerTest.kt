@@ -348,7 +348,7 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
     fun `Should findGroupById return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
-        whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(GroupModel()))
+        whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(GroupModel()))
         whenever(readerMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
 
         // Act
@@ -361,7 +361,13 @@ class GroupControllerTest(@Autowired private val webClient: WebTestClient): Test
         // Assert
         result.body<GroupReaderDto>(OK)
 
-        verify(service).findGroupById(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null)
+        verify(service).findGroupById(
+            projectId,
+            uuid,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(readerMapper).toDto(any(), any())
         verifyNoInteractions(writerMapper)
     }

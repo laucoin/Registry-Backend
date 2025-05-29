@@ -22,7 +22,7 @@ import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
@@ -95,7 +95,7 @@ class AlertService(
             .handle { it, handle ->
                 if (it.status !== IN_PROGRESS) {
                     log.warn("Only {} alert can be update", IN_PROGRESS)
-                    handle.error(RegistryException(FORBIDDEN, ALERT_STATUS_IS_NOT_UPDATABLE))
+                    handle.error(RegistryException(UNPROCESSABLE_ENTITY, ALERT_STATUS_IS_NOT_UPDATABLE))
                 } else handle.next(it)
             }
             .validateAlertDateWithLinkedCommunications(alert)
@@ -137,7 +137,7 @@ class AlertService(
             ).handle { it, handle ->
                 if (it >= 0) {
                     val exception = RegistryException(
-                        CONFLICT,
+                        UNPROCESSABLE_ENTITY,
                         ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME,
                         arrayListOf(it)
                     )
@@ -189,7 +189,7 @@ class AlertService(
         ).handle { it, handle ->
             if (it > 0) {
                 log.warn("The alert {} already linked to communication(s)", oldAlert.id)
-                handle.error(RegistryException(FORBIDDEN, error))
+                handle.error(RegistryException(CONFLICT, error))
             } else handle.next(oldAlert)
         }
     }

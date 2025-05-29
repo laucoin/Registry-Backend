@@ -35,6 +35,7 @@ import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
@@ -51,7 +52,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
@@ -92,7 +92,9 @@ class MovementServiceTest {
             val activityId = UUID.randomUUID()
             val movementActivity = ActivityModel().apply { id = activityId; visible = true }
             val participantId1 = UUID.randomUUID()
-            val movementParticipant1 = ParticipantModel().apply { id = participantId1; visible = true; purged = false }
+            val movementParticipant1 = ParticipantModel().apply {
+                id = participantId1; birthday = LocalDate.now().minusYears(18); visible = true; purged = false
+            }
             val participantId2 = UUID.randomUUID()
             val movementParticipant2 = ParticipantModel().apply { id = participantId2; visible = true; purged = false }
             val vehicleId = UUID.randomUUID()
@@ -156,7 +158,9 @@ class MovementServiceTest {
             val activityId = UUID.randomUUID()
             val movementActivity = ActivityModel().apply { id = activityId; visible = true }
             val participantId1 = UUID.randomUUID()
-            val movementParticipant1 = ParticipantModel().apply { id = participantId1; visible = true; purged = false }
+            val movementParticipant1 = ParticipantModel().apply {
+                id = participantId1; birthday = LocalDate.now().minusYears(18); visible = true; purged = false
+            }
             val participantId2 = UUID.randomUUID()
             val movementParticipant2 = ParticipantModel().apply { id = participantId2; visible = true; purged = false }
             val vehicleId = UUID.randomUUID()
@@ -493,7 +497,7 @@ class MovementServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(NOT_FOUND, result.status)
         assertEquals(MOVEMENT_ACTIVITY_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,
@@ -585,7 +589,7 @@ class MovementServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(NOT_FOUND, result.status)
         assertEquals(MOVEMENT_PARTICIPANTS_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,
@@ -608,9 +612,11 @@ class MovementServiceTest {
         // Arrange
         val movementDateTime = ZonedDateTime.now()
         val participantId1 = UUID.randomUUID()
-        val movementParticipant1 = ParticipantModel().apply { id = participantId1; visible = true; purged = false }
+        val movementParticipant1 =
+            ParticipantModel().apply { id = participantId1; birthday = LocalDate.now().minusYears(18); visible = true; purged = false }
         val participantId2 = UUID.randomUUID()
-        val movementParticipant2 = ParticipantModel().apply { id = participantId2; visible = true; purged = false }
+        val movementParticipant2 =
+            ParticipantModel().apply { id = participantId2; birthday = LocalDate.now().minusYears(18); visible = true; purged = false }
         val vehicleId = UUID.randomUUID()
         val movementVehicle = VehicleModel().apply { id = vehicleId; visible = true }
         val movementContent = listOf(
@@ -665,9 +671,11 @@ class MovementServiceTest {
         // Arrange
         val movementDateTime = ZonedDateTime.now()
         val participantId1 = UUID.randomUUID()
-        val movementParticipant1 = ParticipantModel().apply { id = participantId1; visible = true; purged = false }
+        val movementParticipant1 =
+            ParticipantModel().apply { id = participantId1; birthday = LocalDate.now().minusYears(18); visible = true; purged = false }
         val participantId2 = UUID.randomUUID()
-        val movementParticipant2 = ParticipantModel().apply { id = participantId2; visible = true; purged = false }
+        val movementParticipant2 =
+            ParticipantModel().apply { id = participantId2; birthday = LocalDate.now().minusYears(18); visible = true; purged = false }
         val vehicleId = UUID.randomUUID()
         val movementVehicle = VehicleModel().apply { id = vehicleId; visible = false }
         val movementContent = listOf(
@@ -697,7 +705,7 @@ class MovementServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(NOT_FOUND, result.status)
         assertEquals(MOVEMENT_VEHICLES_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,

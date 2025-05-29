@@ -42,8 +42,8 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -281,7 +281,7 @@ class ParticipantServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(UNPROCESSABLE_ENTITY, result.status)
         assertEquals(PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER, result.message)
         verify(projectService).validateDateTimes(
             projectId,
@@ -345,7 +345,7 @@ class ParticipantServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(NOT_FOUND, result.status)
         assertEquals(PARTICIPANT_GROUPS_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTimes(
             projectId,
@@ -468,7 +468,7 @@ class ParticipantServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(FORBIDDEN, result.status)
+        assertEquals(CONFLICT, result.status)
         assertEquals(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER, result.message)
         verify(repository).findById(projectId, uuid, visibilitySearched = true)
         verify(groupRepository).findAllByIds(projectId, listOf(groupId), visibilitySearched = null)
@@ -523,7 +523,7 @@ class ParticipantServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(FORBIDDEN, result.status)
+        assertEquals(CONFLICT, result.status)
         assertEquals(PARTICIPANT_DELETE_HAS_MOVEMENT, result.message)
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(movementRepository).countAllByParticipantId(projectId, uuid, MovementSearchParamModel())

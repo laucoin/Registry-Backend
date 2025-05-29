@@ -27,8 +27,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
 
@@ -212,7 +212,7 @@ class ActivityServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(FORBIDDEN, result.status)
+        assertEquals(UNPROCESSABLE_ENTITY, result.status)
         assertEquals(ACTIVITY_DELETE_HAS_MOVEMENT, result.message)
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(movementRepository).countAllByActivityId(projectId, uuid, MovementSearchParamModel())

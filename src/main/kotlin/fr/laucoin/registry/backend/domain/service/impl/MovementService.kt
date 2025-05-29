@@ -55,7 +55,6 @@ import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
@@ -392,7 +391,7 @@ class MovementService(
             .handle { it, handle ->
                 if (it.isNotVisible()) handle.error(
                     RegistryException(
-                        CONFLICT,
+                        NOT_FOUND,
                         MOVEMENT_ACTIVITY_NOT_VISIBLE,
                     )
                 )
@@ -411,7 +410,7 @@ class MovementService(
                 .handle { it, handle ->
                     if (it > 0L) handle.error(
                         RegistryException(
-                            CONFLICT,
+                            UNPROCESSABLE_ENTITY,
                             MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME,
                             arrayListOf(it)
                         )
@@ -494,7 +493,7 @@ class MovementService(
 
                     it.any(ParticipantModel::isNotUsable) -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            NOT_FOUND,
                             MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
                         )
                     )
@@ -534,7 +533,7 @@ class MovementService(
 
                     it.any { m -> m.isNotVisible() } -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            NOT_FOUND,
                             MOVEMENT_VEHICLES_NOT_VISIBLE,
                         )
                     )
@@ -549,21 +548,21 @@ class MovementService(
             when {
                 it.type !== newMovement.type -> handle.error(
                     RegistryException(
-                        CONFLICT,
+                        UNPROCESSABLE_ENTITY,
                         MOVEMENT_UPDATE_CHANGE_TYPE,
                     )
                 )
 
                 it.contentType !== newMovement.contentType -> handle.error(
                     RegistryException(
-                        CONFLICT,
+                        UNPROCESSABLE_ENTITY,
                         MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE,
                     )
                 )
 
                 it.atLeastOldGuestIfGuestsEntrance(newMovement) -> handle.error(
                     RegistryException(
-                        CONFLICT,
+                        UNPROCESSABLE_ENTITY,
                         MOVEMENT_REMOVE_GUEST_CONTENT,
                     )
                 )

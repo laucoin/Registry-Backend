@@ -37,7 +37,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
@@ -57,22 +56,29 @@ class UserProjectProfileServiceTest {
         fun `Should validateNotLastProjectRoleLevel0 return the given Object`(): Stream<Arguments> {
             return Stream.of(
                 Arguments.of(null, null),
-                Arguments.of(projectId, ProjectProfileRoleCountModel(level0 = 0, project = ProjectModel().apply { id = projectId })),
+                Arguments.of(
+                    projectId,
+                    ProjectProfileRoleCountModel(level0 = 0, project = ProjectModel().apply { id = UUID.randomUUID() })
+                ),
             )
         }
 
         @JvmStatic
         fun `Should validateNotLastProjectRoleLevel0 throw RegistryException`(): Stream<Arguments> {
             return Stream.of(
-                Arguments.of(projectId, ProjectProfileRoleCountModel(level0 = 0)),
                 Arguments.of(
                     projectId,
-                    ProjectProfileRoleCountModel(level0 = 0, project = ProjectModel().apply { id = UUID.randomUUID() })
+                    ProjectProfileRoleCountModel(
+                        level0 = 1,
+                        project = ProjectModel().apply { id = projectId; name = "Test Project" }
+                    )
                 ),
-                Arguments.of(null, ProjectProfileRoleCountModel(level0 = 0)),
                 Arguments.of(
-                    null,
-                    ProjectProfileRoleCountModel(level0 = 0, project = ProjectModel().apply { id = UUID.randomUUID() })
+                    projectId,
+                    ProjectProfileRoleCountModel(
+                        level0 = 0,
+                        project = ProjectModel().apply { id = projectId; name = "Test Project" }
+                    )
                 ),
             )
         }
@@ -148,7 +154,7 @@ class UserProjectProfileServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(FORBIDDEN, result.status)
+        assertEquals(CONFLICT, result.status)
         assertEquals(errorMessage, result.message)
 
         verify(repository).findLevel0ProjectProfileRoleByUserId(uuid, visibilitySearched = true)
@@ -175,6 +181,13 @@ class UserProjectProfileServiceTest {
             )
         ).thenReturn(Flux.empty())
         whenever(repository.create(any())).thenReturn(Mono.just(profile))
+        whenever(
+            preferencesRepository.findByUserId(
+                any(),
+                anyOrNull()
+            )
+        ).thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = service.createSupportProjectProfile(currentUser(), projectId).block()
@@ -190,6 +203,8 @@ class UserProjectProfileServiceTest {
             any(),
         )
         verify(repository).create(any())
+        verify(preferencesRepository).findByUserId(currentUser().id !!, visibilitySearched = null)
+        verify(transactionalOperator).transactional(any<Mono<*>>())
     }
 
     @Test
@@ -213,6 +228,13 @@ class UserProjectProfileServiceTest {
             )
         ).thenReturn(Flux.just(currentUser().id !!))
         whenever(repository.create(any())).thenReturn(Mono.just(profile))
+        whenever(
+            preferencesRepository.findByUserId(
+                any(),
+                anyOrNull()
+            )
+        ).thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
+        whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -231,6 +253,7 @@ class UserProjectProfileServiceTest {
             any(),
         )
         verify(repository, never()).create(any())
+        verify(preferencesRepository, never()).findByUserId(any(), anyOrNull())
     }
 
     @ParameterizedTest

@@ -34,7 +34,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
@@ -177,7 +176,7 @@ class CommunicationServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(NOT_FOUND, result.status)
         assertEquals(COMMUNICATION_MOVEMENT_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTime(
             projectId,

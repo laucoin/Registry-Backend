@@ -27,7 +27,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
@@ -212,7 +212,7 @@ class VehicleServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(FORBIDDEN, result.status)
+        assertEquals(CONFLICT, result.status)
         assertEquals(VEHICLE_DELETE_HAS_MOVEMENT, result.message)
         verify(repository).findById(projectId, uuid, visibilitySearched = null)
         verify(movementRepository).countAllByVehicleId(projectId, uuid, MovementSearchParamModel())
