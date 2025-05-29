@@ -36,8 +36,8 @@ import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -130,7 +130,7 @@ class ParticipantService(
             .handle { it, handle ->
                 if (it.isNotEmpty()) {
                     val exception = RegistryException(
-                        CONFLICT,
+                        UNPROCESSABLE_ENTITY,
                         PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER,
                         arrayListOf("${it.first().firstName} ${it.first().lastName}")
                     )
@@ -154,7 +154,7 @@ class ParticipantService(
 
                     it.any { m -> m.isNotVisible() } -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            NOT_FOUND,
                             PARTICIPANT_GROUPS_NOT_VISIBLE,
                         )
                     )
@@ -263,7 +263,7 @@ class ParticipantService(
             ).handle { it, handle ->
                 if (it > 0) {
                     log.warn("The participant {} already has {} movement(s) before the new end date", oldParticipant.id, it)
-                    handle.error(RegistryException(CONFLICT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(it)))
+                    handle.error(RegistryException(UNPROCESSABLE_ENTITY, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(it)))
                 } else handle.next(oldParticipant)
             }
         } else Mono.just(oldParticipant)
@@ -287,7 +287,7 @@ class ParticipantService(
             ).handle { it, handle ->
                 if (it > 0) {
                     log.warn("The participant {} already has {} movement(s) after the new start date", oldParticipant.id, it)
-                    handle.error(RegistryException(CONFLICT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME))
+                    handle.error(RegistryException(UNPROCESSABLE_ENTITY, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME))
                 } else handle.next(oldParticipant)
             }
         } else Mono.just(oldParticipant)
@@ -301,7 +301,7 @@ class ParticipantService(
         ).handle { it, handle ->
             if (it > 0) {
                 log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)
-                handle.error(RegistryException(FORBIDDEN, error))
+                handle.error(RegistryException(CONFLICT, error))
             } else handle.next(participantToUpdate)
         }
     }
@@ -321,7 +321,7 @@ class ParticipantService(
             .handle { it, handle ->
                 if (it.isNotEmpty()) {
                     log.warn("The participant {} is the last member of the group(s)", participantToUpdate.id)
-                    handle.error(RegistryException(FORBIDDEN, error))
+                    handle.error(RegistryException(CONFLICT, error))
                 } else handle.next(participantToUpdate)
             }
     }

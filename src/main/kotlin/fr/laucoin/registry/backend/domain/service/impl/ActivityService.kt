@@ -17,7 +17,7 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.UUID
-import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
@@ -115,7 +115,7 @@ class ActivityService(
         ).handle { it, handle ->
             if (it > 0) {
                 log.warn("The activity {} already linked to movement(s)", activityToUpdate.id)
-                handle.error(RegistryException(FORBIDDEN, error))
+                handle.error(RegistryException(UNPROCESSABLE_ENTITY, error))
             } else handle.next(activityToUpdate)
         }
     }

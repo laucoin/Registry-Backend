@@ -22,7 +22,7 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import java.time.OffsetTime
 import java.util.Objects
 import java.util.UUID
-import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
@@ -56,7 +56,7 @@ class UserProjectProfileService(
                 val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
                 if (projects.isNotEmpty()) {
                     log.warn("The user {} is the last administrator of {} project(s)", userId, it.size)
-                    handle.error(RegistryException(FORBIDDEN, error, arrayListOf(projects.first().project?.name)))
+                    handle.error(RegistryException(CONFLICT, error, arrayListOf(projects.first().project?.name)))
                 } else handle.next(result)
             }
     }

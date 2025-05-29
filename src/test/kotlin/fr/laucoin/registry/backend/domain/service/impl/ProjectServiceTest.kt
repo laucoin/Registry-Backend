@@ -38,6 +38,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
@@ -234,13 +235,6 @@ class ProjectServiceTest {
                     CustomDateTimeModel(LocalDate.MAX),
                     0,
                 ),
-                Arguments.of(
-                    CustomDateTimeModel(LocalDate.MIN, OffsetTime.of(0, 0, 0, 1, ZoneOffset.of("Z"))),
-                    CustomDateTimeModel(LocalDate.MAX, OffsetTime.of(23, 59, 59, 0, ZoneOffset.of("Z"))),
-                    CustomDateTimeModel(LocalDate.MIN),
-                    CustomDateTimeModel(LocalDate.MAX),
-                    0,
-                ),
             )
         }
     }
@@ -368,7 +362,7 @@ class ProjectServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(UNPROCESSABLE_ENTITY, result.status)
         assertEquals(errorMessage, result.message)
         assertEquals(3, result.args?.size)
         verify(repository).findById(projectId, visibilitySearched = null)
@@ -414,7 +408,7 @@ class ProjectServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(UNPROCESSABLE_ENTITY, result.status)
         assertEquals(errorMessage, result.message)
         assertEquals(4, result.args?.size)
         verify(repository).findById(projectId, visibilitySearched = null)

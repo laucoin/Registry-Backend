@@ -17,7 +17,7 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
 import java.util.UUID
-import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
@@ -114,7 +114,7 @@ class VehicleService(
         ).handle { it, handle ->
             if (it > 0) {
                 log.warn("The vehicle {} already linked to movement(s)", vehicleToUpdate.id)
-                handle.error(RegistryException(FORBIDDEN, error))
+                handle.error(RegistryException(CONFLICT, error))
             } else handle.next(vehicleToUpdate)
         }
     }

@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
@@ -35,9 +36,9 @@ import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -186,28 +187,28 @@ class CommunicationService(
                 when {
                     it.isNotVisible() -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            NOT_FOUND,
                             COMMUNICATION_MOVEMENT_NOT_VISIBLE,
                         )
                     )
 
                     it.dateTime.isAfter(communication.dateTime) -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            UNPROCESSABLE_ENTITY,
                             COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION,
                         )
                     )
 
                     it.contentType !== REGISTERED -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            UNPROCESSABLE_ENTITY,
                             COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED,
                         )
                     )
 
                     it.type !== OUT -> handle.error(
                         RegistryException(
-                            CONFLICT,
+                            UNPROCESSABLE_ENTITY,
                             COMMUNICATION_MOVEMENT_TYPE_NOT_OUT,
                         )
                     )
@@ -239,15 +240,22 @@ class CommunicationService(
                     when {
                         it.isNotVisible() -> handle.error(
                             RegistryException(
-                                CONFLICT,
+                                NOT_FOUND,
                                 COMMUNICATION_ALERT_NOT_VISIBLE,
                             )
                         )
 
                         it.dateTime.isAfter(communication.dateTime) -> handle.error(
                             RegistryException(
-                                CONFLICT,
+                                UNPROCESSABLE_ENTITY,
                                 COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION,
+                            )
+                        )
+
+                        it.status !== AlertStatusEnum.IN_PROGRESS -> handle.error(
+                            RegistryException(
+                                UNPROCESSABLE_ENTITY,
+                                COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION,
                             )
                         )
 

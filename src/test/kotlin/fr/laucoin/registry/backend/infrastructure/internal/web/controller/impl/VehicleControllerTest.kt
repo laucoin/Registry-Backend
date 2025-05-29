@@ -370,7 +370,7 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
         val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
         whenever(service.findVehicleMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
         whenever(movementReaderMapper.toDtoPage(any(), any())).thenReturn(
-            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED, communicationsCount = 1))),
+            PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
         )
 
         // Act

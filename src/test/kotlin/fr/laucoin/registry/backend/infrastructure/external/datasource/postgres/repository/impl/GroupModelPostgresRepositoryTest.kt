@@ -185,7 +185,13 @@ class GroupModelPostgresRepositoryTest(
     fun `Should findById call repository findById`() {
         // Act
         val result =
-            repository.findByIdWithContent(projectId, groupId, visibilitySearched = null, memberAvailabilitySearched = null).block()
+            repository.findByIdWithContent(
+                projectId,
+                groupId,
+                visibilitySearched = null,
+                memberVisibilitySearched = null,
+                memberAvailabilitySearched = null
+            ).block()
 
         // Assert
         assertNotNull(result)
@@ -210,7 +216,13 @@ class GroupModelPostgresRepositoryTest(
 
         // Act
         val result =
-            repository.findByIdWithContent(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null).block()
+            repository.findByIdWithContent(
+                projectId,
+                uuid,
+                visibilitySearched = null,
+                memberVisibilitySearched = null,
+                memberAvailabilitySearched = null
+            ).block()
 
         // Assert
         assertNull(result)

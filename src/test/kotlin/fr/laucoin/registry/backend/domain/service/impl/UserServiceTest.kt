@@ -40,6 +40,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.test.util.ReflectionTestUtils.setField
@@ -112,7 +113,7 @@ class UserServiceTest {
                     USER_ROLE,
                     UserModel().apply { id = uuid; role = USER_ROLE },
                     arrayOf(UserModel().apply { id = uuid; role = USER_ROLE }),
-                    FORBIDDEN,
+                    CONFLICT,
                     USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE,
                     1,
                     1,
@@ -123,7 +124,7 @@ class UserServiceTest {
                     USER_ROLE,
                     UserModel().apply { id = uuid },
                     arrayOf(UserModel().apply { id = uuid }),
-                    FORBIDDEN,
+                    CONFLICT,
                     USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE,
                     0,
                     1,

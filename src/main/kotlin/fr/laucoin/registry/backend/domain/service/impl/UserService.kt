@@ -29,6 +29,7 @@ import java.util.Objects
 import java.util.UUID
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -196,7 +197,7 @@ class UserService(
             .handle { it, handle ->
                 if (it.isEmpty()) {
                     log.warn("The user {} is the last administrator of the application", userToUpdate.id)
-                    handle.error(RegistryException(FORBIDDEN, error))
+                    handle.error(RegistryException(CONFLICT, error))
                 } else handle.next(userToUpdate)
             }
     }

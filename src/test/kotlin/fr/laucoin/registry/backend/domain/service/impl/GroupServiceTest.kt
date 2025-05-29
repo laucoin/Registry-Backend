@@ -37,8 +37,8 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -114,13 +114,14 @@ class GroupServiceTest {
         val uuid = UUID.randomUUID()
         val onlyVisible = true
         val memberAvailabilitySearched = null
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        val memberVisibilitySearched = null
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
 
         // Act
-        service.findGroupById(projectId, uuid, onlyVisible, memberAvailabilitySearched).block()
+        service.findGroupById(projectId, uuid, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched).block()
 
         // Assert
-        verify(repository).findByIdWithContent(projectId, uuid, onlyVisible, memberAvailabilitySearched)
+        verify(repository).findByIdWithContent(projectId, uuid, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched)
     }
 
     @Test
@@ -129,18 +130,19 @@ class GroupServiceTest {
         val uuid = UUID.randomUUID()
         val onlyVisible = true
         val memberAvailabilitySearched = true
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.empty())
+        val memberVisibilitySearched = true
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.empty())
 
         // Act
         val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.findGroupById(projectId, uuid, onlyVisible, memberAvailabilitySearched).block()
+            service.findGroupById(projectId, uuid, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched).block()
         }) as RegistryException
 
         // Assert
         assertEquals(NOT_FOUND, result.status)
         assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
         assertEquals(1, result.args?.size)
-        verify(repository).findByIdWithContent(projectId, uuid, onlyVisible, memberAvailabilitySearched)
+        verify(repository).findByIdWithContent(projectId, uuid, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched)
     }
 
     @Test
@@ -228,7 +230,7 @@ class GroupServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(NOT_FOUND, result.status)
         assertEquals(GROUP_MEMBERS_NOT_VISIBLE, result.message)
         verify(projectService).validateDateTimes(
             projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
@@ -258,7 +260,11 @@ class GroupServiceTest {
         val newParticipants =
             newParticipantIds.map { ParticipantModel().apply { id = it; visible = true; purged = false; type = REGISTERED } }
         whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(groupToUpdate))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+            Mono.just(
+                groupToUpdate
+            )
+        )
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newParticipants.toTypedArray()))
         whenever(repository.update(any())).thenReturn(Mono.just(groupUpdated))
 
@@ -294,7 +300,7 @@ class GroupServiceTest {
         }
         val newParticipants =
             newParticipantIds.map { ParticipantModel().apply { id = it; visible = true; purged = false; type = REGISTERED } }
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newParticipants.toTypedArray()))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
@@ -302,7 +308,13 @@ class GroupServiceTest {
         service.addMembersToGroupById(currentUser(), projectId, uuid, updatedParticipantIds).block()
 
         // Assert
-        verify(repository).findByIdWithContent(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null)
+        verify(repository).findByIdWithContent(
+            projectId,
+            uuid,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(participantRepository).findAllByIds(
             projectId,
             newParticipantIds,
@@ -320,7 +332,7 @@ class GroupServiceTest {
             project = ProjectModel().apply { id = projectId }
             members = participantIds.map { ParticipantModel().apply { id = it } }
         }
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
@@ -329,9 +341,15 @@ class GroupServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(CONFLICT, result.status)
+        assertEquals(UNPROCESSABLE_ENTITY, result.status)
         assertEquals(GROUP_MEMBERS_ALREADY_ADDED, result.message)
-        verify(repository).findByIdWithContent(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null)
+        verify(repository).findByIdWithContent(
+            projectId,
+            uuid,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(repository, never()).update(any())
     }
 
@@ -348,14 +366,20 @@ class GroupServiceTest {
             project = ProjectModel().apply { id = projectId }
             members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
         }
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
         service.removeMemberFromGroupById(currentUser(), projectId, uuid, uuid3).block()
 
         // Assert
-        verify(repository).findByIdWithContent(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null)
+        verify(repository).findByIdWithContent(
+            projectId,
+            uuid,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(repository).update(any())
     }
 
@@ -370,7 +394,7 @@ class GroupServiceTest {
             project = ProjectModel().apply { id = projectId }
             members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
         }
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
@@ -379,9 +403,15 @@ class GroupServiceTest {
         }) as RegistryException
 
         // Assert
-        assertEquals(FORBIDDEN, result.status)
+        assertEquals(CONFLICT, result.status)
         assertEquals(GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED, result.message)
-        verify(repository).findByIdWithContent(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null)
+        verify(repository).findByIdWithContent(
+            projectId,
+            uuid,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(repository, never()).update(any())
     }
 
@@ -390,14 +420,20 @@ class GroupServiceTest {
         // Arrange
         val group = GroupModel().apply { project = ProjectModel().apply { id = projectId }; visible = true }
         val uuid = UUID.randomUUID()
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
         service.disableGroupById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findByIdWithContent(projectId, uuid, visibilitySearched = true, memberAvailabilitySearched = null)
+        verify(repository).findByIdWithContent(
+            projectId,
+            uuid,
+            visibilitySearched = true,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(repository).update(group.apply { visible = false })
     }
 
@@ -406,14 +442,20 @@ class GroupServiceTest {
         // Arrange
         val group = GroupModel().apply { project = ProjectModel().apply { id = projectId }; visible = false }
         val uuid = UUID.randomUUID()
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.update(any())).thenReturn(Mono.just(group))
 
         // Act
         service.enableGroupById(currentUser(), projectId, uuid).block()
 
         // Assert
-        verify(repository).findByIdWithContent(projectId, uuid, visibilitySearched = false, memberAvailabilitySearched = null)
+        verify(repository).findByIdWithContent(
+            projectId,
+            uuid,
+            visibilitySearched = false,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(repository).update(group.apply { visible = true })
     }
 
@@ -422,14 +464,20 @@ class GroupServiceTest {
         // Arrange
         val uuid = UUID.randomUUID()
         val group = GroupModel().apply { id = uuid; project = ProjectModel().apply { id = projectId }; visible = false }
-        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
+        whenever(repository.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
         whenever(repository.deleteById(any())).thenReturn(Mono.empty())
 
         // Act
         service.deleteGroupById(projectId, uuid).block()
 
         // Assert
-        verify(repository).findByIdWithContent(projectId, uuid, visibilitySearched = null, memberAvailabilitySearched = null)
+        verify(repository).findByIdWithContent(
+            projectId,
+            uuid,
+            visibilitySearched = null,
+            memberVisibilitySearched = null,
+            memberAvailabilitySearched = null
+        )
         verify(repository).deleteById(uuid)
     }
 }
