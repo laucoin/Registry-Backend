@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import java.time.Duration
-import java.time.OffsetTime
+import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.Objects
@@ -68,7 +68,7 @@ class PresenceStatusReaderDtoMapper(
                 val interval = Duration.between(
                     now.toZonedDateTime(),
                     startAvailability?.toZonedDateTime(
-                        OffsetTime.MIN
+                        LocalTime.MIN, now.zone() !!
                     )
                 )
 
@@ -82,7 +82,7 @@ class PresenceStatusReaderDtoMapper(
             Objects.nonNull(endAvailability) && endAvailability.isBefore(now) -> {
                 val interval = Duration.between(
                     endAvailability?.toZonedDateTime(
-                        OffsetTime.MAX
+                        LocalTime.MAX, now.zone() !!
                     ), now.toZonedDateTime()
                 )
 

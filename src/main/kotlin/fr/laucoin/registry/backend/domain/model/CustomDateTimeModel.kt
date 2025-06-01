@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.OffsetTime
 import java.time.ZoneId
@@ -39,6 +40,16 @@ data class CustomDateTimeModel(
     }
 
     @JsonIgnore
+    fun toZonedDateTime(localTime: LocalTime, zone: ZoneOffset = ZoneOffset.UTC): ZonedDateTime? {
+        return when {
+            Objects.isNull(date) -> null
+            Objects.nonNull(time) -> time !!.atDate(date).toZonedDateTime()
+            Objects.nonNull(localTime) -> date.atTime(clampOffsetTimeToPostgresRange(OffsetTime.of(localTime, zone))).toZonedDateTime()
+            else -> date.atStartOfDay(ZoneId.of("UTC"))
+        }
+    }
+
+    @JsonIgnore
     private fun clampOffsetTimeToPostgresRange(time: OffsetTime): OffsetTime {
         val offsetSeconds = time.offset.totalSeconds
 
@@ -64,6 +75,11 @@ data class CustomDateTimeModel(
             Objects.isNull(time) -> date.format(ISO_LOCAL_DATE)
             else -> toZonedDateTime() !!.format(ISO_ZONED_DATE_TIME)
         }
+    }
+
+    @JsonIgnore
+    fun zone(): ZoneOffset? {
+        return time?.offset
     }
 
     fun plusHours(hours: Long): CustomDateTimeModel {
