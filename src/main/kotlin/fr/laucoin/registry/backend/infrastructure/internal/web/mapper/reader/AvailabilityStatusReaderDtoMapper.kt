@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import java.time.Duration
-import java.time.OffsetTime
+import java.time.LocalTime
 import java.util.Locale
 import java.util.Objects
 import org.springframework.beans.factory.annotation.Qualifier
@@ -52,7 +52,7 @@ class AvailabilityStatusReaderDtoMapper(
             Objects.nonNull(startAvailability) && AvailabilityStatusEnum.AVAILABLE === model -> {
                 val interval = Duration.between(
                     startAvailability?.toZonedDateTime(
-                        OffsetTime.MIN
+                        LocalTime.MIN, now.zone() !!
                     ), now.toZonedDateTime()
                 )
 
@@ -67,7 +67,7 @@ class AvailabilityStatusReaderDtoMapper(
                 val interval = Duration.between(
                     now.toZonedDateTime(),
                     startAvailability?.toZonedDateTime(
-                        OffsetTime.MIN
+                        LocalTime.MIN, now.zone() !!
                     )
                 )
 
@@ -81,7 +81,7 @@ class AvailabilityStatusReaderDtoMapper(
             Objects.nonNull(endAvailability) && endAvailability.isBefore(now) -> {
                 val interval = Duration.between(
                     endAvailability?.toZonedDateTime(
-                        OffsetTime.MAX
+                        LocalTime.MAX, now.zone() !!
                     ), now.toZonedDateTime()
                 )
 
