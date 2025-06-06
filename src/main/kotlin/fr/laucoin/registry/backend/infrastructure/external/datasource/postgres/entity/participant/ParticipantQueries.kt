@@ -70,6 +70,22 @@ object ParticipantQueries {
                     'name', $GROUP_TABLE.$GROUP_NAME
                 )
             ) FILTER (WHERE $GROUP_TABLE.$ID IS NOT NULL) as $PARTICIPANT_GROUPS,
+            MIN(
+                CASE
+                    WHEN group_presence.$GROUP_START_AVAILABILITY_DATE IS NULL THEN
+                      '-infinity'::timestamptz
+                    ELSE
+                      (group_presence.$GROUP_START_AVAILABILITY_DATE + COALESCE(group_presence.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::time))::timestamptz
+                  END
+            ) AS min_start_availability,
+            MAX(
+                CASE
+                    WHEN group_presence.$GROUP_END_AVAILABILITY_DATE IS NULL THEN
+                      '+infinity'::timestamptz
+                    ELSE
+                      (group_presence.$GROUP_END_AVAILABILITY_DATE + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::time))::timestamptz
+                  END
+            ) AS max_end_availability,
             JSON_AGG(group_presence.$ID) FILTER (WHERE group_presence.$ID IS NOT NULL) as $PARTICIPANT_AVAILABLE_GROUPS,
             JSON_AGG(group_presence_on_date.$ID) FILTER (WHERE group_presence_on_date.$ID IS NOT NULL) as available_groups_on_date
             FROM $PARTICIPANT_TABLE t
@@ -138,24 +154,12 @@ object ParticipantQueries {
         (
             :availabilitySearched IS NULL OR :availabilitySearched = (
                 (
-                    (
-                        t.$PARTICIPANT_START_AVAILABILITY_DATE IS NULL AND (
-                            fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
-                            OR (fg.$PARTICIPANT_AVAILABLE_GROUPS IS NOT NULL AND json_array_length(fg.$PARTICIPANT_AVAILABLE_GROUPS) > 0)
-                        )
-                    ) OR
-                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
+                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
                 ) AND
                 (
-                    (
-                        t.$PARTICIPANT_END_AVAILABILITY_DATE IS NULL AND (
-                            fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
-                            OR (fg.$PARTICIPANT_AVAILABLE_GROUPS IS NOT NULL AND json_array_length(fg.$PARTICIPANT_AVAILABLE_GROUPS) > 0)
-                        )
-                    ) OR
-                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
+                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
                 )
             )
         )

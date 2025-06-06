@@ -2,6 +2,10 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DELETED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DISABLED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_ENABLED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
@@ -348,6 +352,7 @@ class MovementService(
         return validateMovementDate(movement)
             .flatMap { findMovementById(projectId, id, visibilitySearched = null) }
             .validateUpdatableMovementFields(movement)
+            .validateMovementIsAlterable(MOVEMENT_CANNOT_BE_UPDATED)
             .flatMap { validateNoCommunicationConflict(movement, it) }
             .flatMap { validateActivity(movement, it) }
             .flatMap { saveGuestsIfNecessary(currentUser, movement, it, newGuests) }
@@ -571,20 +576,37 @@ class MovementService(
             }
         }
 
+    private fun Mono<MovementModel>.validateMovementIsAlterable(errorMessage: String): Mono<MovementModel> =
+        handle { it, handle ->
+            when {
+                it.reason === DEFINITIVE_DEPARTURE || (it.type === OUT && it.contentType === GUEST) -> handle.error(
+                    RegistryException(
+                        UNPROCESSABLE_ENTITY,
+                        errorMessage,
+                    )
+                )
+
+                else -> handle.next(it)
+            }
+        }
+
     override fun disableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
         return findMovementById(projectId, id, visibilitySearched = true)
+            .validateMovementIsAlterable(MOVEMENT_CANNOT_BE_DISABLED)
             .updateVisibility(visibility = false)
             .updateMovement(currentUser)
     }
 
     override fun enableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
         return findMovementById(projectId, id, visibilitySearched = false)
+            .validateMovementIsAlterable(MOVEMENT_CANNOT_BE_ENABLED)
             .updateVisibility(visibility = true)
             .updateMovement(currentUser)
     }
 
     override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Void> {
         return findMovementById(projectId, id, visibilitySearched = null)
+            .validateMovementIsAlterable(MOVEMENT_CANNOT_BE_DELETED)
             .flatMap { repository.deleteById(id) }
     }
 }
