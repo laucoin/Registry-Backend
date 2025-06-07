@@ -51,8 +51,8 @@ class PurgeController(
     }
 
     @Scheduled(cron = "\${registry.feature.purge.users.cron}")
-    fun scheduledUsersPurge(): Flux<UUID> {
-        return launchPurgeUsers(dateThreshold = null, dryRun = false)
+    fun scheduledUsersPurge() {
+        launchPurgeUsers(dateThreshold = null, dryRun = false).subscribe()
     }
 
     private fun launchPurgeUsers(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
@@ -65,8 +65,8 @@ class PurgeController(
     }
 
     @Scheduled(cron = "\${registry.feature.purge.projects.cron}")
-    fun scheduledProjectsPurge(): Flux<UUID> {
-        return launchPurgeProjects(dateThreshold = null, dryRun = false)
+    fun scheduledProjectsPurge() {
+        launchPurgeProjects(dateThreshold = null, dryRun = false).subscribe()
     }
 
     private fun launchPurgeProjects(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
@@ -79,8 +79,8 @@ class PurgeController(
     }
 
     @Scheduled(cron = "\${registry.feature.purge.projects.content.cron}")
-    fun scheduledProjectsContentsPurge(): Mono<ProjectContentPurgeReaderDto> {
-        return launchPurgeProjectsContents(dateThreshold = null, dryRun = false)
+    fun scheduledProjectsContentsPurge() {
+        launchPurgeProjectsContents(dateThreshold = null, dryRun = false).subscribe()
     }
 
     private fun launchPurgeProjectsContents(dateThreshold: LocalDate?, dryRun: Boolean): Mono<ProjectContentPurgeReaderDto> {
@@ -108,8 +108,8 @@ class PurgeController(
     }
 
     @Scheduled(cron = "\${registry.feature.purge.projects.configuration.cron}")
-    fun scheduledProjectsConfigurationsPurge(): Mono<ProjectConfigurationPurgeReaderDto> {
-        return launchPurgeProjectsConfigurations(dateThreshold = null, dryRun = false)
+    fun scheduledProjectsConfigurationsPurge() {
+        launchPurgeProjectsConfigurations(dateThreshold = null, dryRun = false).subscribe()
     }
 
     private fun launchPurgeProjectsConfigurations(
