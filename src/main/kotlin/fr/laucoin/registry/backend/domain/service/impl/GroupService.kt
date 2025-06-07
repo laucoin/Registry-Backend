@@ -250,4 +250,23 @@ class GroupService(
         )
             .flatMap { repository.deleteById(id) }
     }
+
+    override fun purgeEmptyGroups(
+        participantToExclude: List<UUID>,
+        dryRun: Boolean
+    ): Flux<UUID> {
+        log.info("Purging empty groups")
+        return repository.findEmpty(participantToExclude)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] group {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging group {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} group was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge group", err) }
+                }
+            }
+    }
 }

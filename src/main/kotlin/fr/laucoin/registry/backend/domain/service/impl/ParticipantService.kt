@@ -32,6 +32,7 @@ import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.LocalDate
 import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -230,6 +231,22 @@ class ParticipantService(
             .validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
             .validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
             .flatMap { repository.deleteById(it.id !!) }
+    }
+
+    override fun purgeParticipantsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
+        log.info("Purging participants unused since {}", dateThreshold)
+        return repository.findUnusedSince(dateThreshold)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] participant {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging participant {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} participant was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge participant", err) }
+                }
+            }
     }
 
     private fun validateNoMovementConflict(

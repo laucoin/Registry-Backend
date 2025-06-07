@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentMod
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -65,4 +66,6 @@ interface IMovementModelRepository: IGenericReadProjectModelRepository<MovementM
     fun countAllByVehicleId(projectId: UUID, vehicleId: UUID, searchParams: MovementSearchParamModel): Mono<Long>
 
     fun countAllByActivityId(projectId: UUID, activityId: UUID, searchParams: MovementSearchParamModel): Mono<Long>
+
+    fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID>
 }

@@ -34,4 +34,6 @@ interface IGroupModelRepository: IGenericWriteModelRepository<GroupModel> {
     fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>
 
     fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
+
+    fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
 }

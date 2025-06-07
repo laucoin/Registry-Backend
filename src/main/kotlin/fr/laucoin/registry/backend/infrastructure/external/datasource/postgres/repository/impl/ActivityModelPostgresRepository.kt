@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.repository.IActivityModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IActivityEntityRepository
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -57,6 +58,10 @@ class ActivityModelPostgresRepository(
             searchParams.dateTimeSearched,
             limit,
         ).map(mapper::toModel)
+    }
+
+    override fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID> {
+        return repository.findUnusedSince(dateThreshold)
     }
 
     override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {

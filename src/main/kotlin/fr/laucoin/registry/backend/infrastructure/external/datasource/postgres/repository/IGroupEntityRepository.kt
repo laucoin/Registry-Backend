@@ -2,6 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupQueries.DATE_IN_GROUP_DATES_RANGE_CLAUSE
@@ -104,4 +107,17 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
         """
     )
     fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupEntity>
+
+    @Query(
+        """
+        SELECT t.$ID FROM $GROUP_TABLE t
+        LEFT JOIN (
+            SELECT t.$GROUP_CONTENT_GROUP_ID, COUNT(t.$ID) FROM $GROUP_CONTENT_TABLE t
+            WHERE t.$GROUP_CONTENT_PARTICIPANT_ID NOT IN (:participantToExclude)
+            GROUP BY t.$GROUP_CONTENT_GROUP_ID
+        ) gc ON t.$ID = gc.$GROUP_CONTENT_GROUP_ID
+        WHERE gc.count IS NULL OR gc.count = 0
+        """
+    )
+    fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
 }

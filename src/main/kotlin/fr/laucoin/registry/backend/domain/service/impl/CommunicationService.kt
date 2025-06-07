@@ -170,6 +170,26 @@ class CommunicationService(
             .flatMap { repository.deleteById(it.id !!) }
     }
 
+    override fun purgeOrphanCommunications(
+        movementsToExclude: List<UUID>,
+        alertsToExclude: List<UUID>,
+        dryRun: Boolean
+    ): Flux<UUID> {
+        log.info("Purging orphan communications")
+        return repository.findOrphan(movementsToExclude, alertsToExclude)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] communication {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging communication {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} communication was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge communication", err) }
+                }
+            }
+    }
+
     private fun Mono<CommunicationModel>.updateCommunication(currentUser: CurrentUserModel) = flatMap {
         repository.update(it.apply { update(currentUser) })
     }

@@ -24,6 +24,7 @@ import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
@@ -176,6 +177,22 @@ class UserService(
             .validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
             .validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
             .flatMap { repository.deleteById(it.id !!) }
+    }
+
+    override fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
+        log.info("Purging users inactive since {}", dateThreshold)
+        return repository.findUserIdsOlderThanLastLogin(dateThreshold)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] user {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging user {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} user was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge user", err) }
+                }
+            }
     }
 
     private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) = handle { it, handle ->

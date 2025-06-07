@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
@@ -44,6 +45,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -171,4 +173,36 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
         """
     )
     fun validDateTime(id: UUID, begin: ZonedDateTime?, end: ZonedDateTime?): Mono<ProjectRelationEntity>
+
+    @Query(
+        """
+            WITH
+            last_profile_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $PROJECT_PROFILE_TABLE t GROUP BY $LINKED_PROJECT_ID),
+            last_movement_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $MOVEMENT_TABLE t GROUP BY $LINKED_PROJECT_ID),
+            last_participant_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $PARTICIPANT_TABLE t GROUP BY $LINKED_PROJECT_ID),
+            last_group_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $GROUP_TABLE t GROUP BY $LINKED_PROJECT_ID),
+            last_vehicle_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $VEHICLE_TABLE t GROUP BY $LINKED_PROJECT_ID),
+            last_activity_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $ACTIVITY_TABLE t GROUP BY $LINKED_PROJECT_ID),
+            last_communication_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $COMMUNICATION_TABLE t GROUP BY $LINKED_PROJECT_ID),
+            last_alert_change AS (SELECT t.$LINKED_PROJECT_ID, MAX(t.$LAST_MODIFIER_DATE) AS date_time FROM $ALERT_TABLE t GROUP BY $LINKED_PROJECT_ID)
+            SELECT t.$ID FROM $PROJECT_TABLE t
+            LEFT JOIN last_profile_change ON t.$ID = last_profile_change.$LINKED_PROJECT_ID
+            LEFT JOIN last_movement_change ON t.$ID = last_movement_change.$LINKED_PROJECT_ID
+            LEFT JOIN last_participant_change ON t.$ID = last_participant_change.$LINKED_PROJECT_ID
+            LEFT JOIN last_group_change ON t.$ID = last_group_change.$LINKED_PROJECT_ID
+            LEFT JOIN last_vehicle_change ON t.$ID = last_vehicle_change.$LINKED_PROJECT_ID
+            LEFT JOIN last_activity_change ON t.$ID = last_activity_change.$LINKED_PROJECT_ID
+            LEFT JOIN last_communication_change ON t.$ID = last_communication_change.$LINKED_PROJECT_ID
+            LEFT JOIN last_alert_change ON t.$ID = last_alert_change.$LINKED_PROJECT_ID
+            WHERE (last_profile_change.date_time IS NULL OR last_profile_change.date_time < :dateThreshold)
+                AND (last_movement_change.date_time IS NULL OR last_movement_change.date_time < :dateThreshold)
+                AND (last_participant_change.date_time IS NULL OR last_participant_change.date_time < :dateThreshold)
+                AND (last_group_change.date_time IS NULL OR last_group_change.date_time < :dateThreshold)
+                AND (last_vehicle_change.date_time IS NULL OR last_vehicle_change.date_time < :dateThreshold)
+                AND (last_activity_change.date_time IS NULL OR last_activity_change.date_time < :dateThreshold)
+                AND (last_communication_change.date_time IS NULL OR last_communication_change.date_time < :dateThreshold)
+                AND (last_alert_change.date_time IS NULL OR last_alert_change.date_time < :dateThreshold)
+        """
+    )
+    fun findProjectsEligibleForPurge(dateThreshold: LocalDate): Flux<UUID>
 }

@@ -20,11 +20,13 @@ import fr.laucoin.registry.backend.domain.repository.ICommunicationModelReposito
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Service
@@ -179,6 +181,22 @@ class AlertService(
         return findAlertById(projectId, id, visibilitySearched = null)
             .validateHasNoMovementLinked(ALERT_DELETE_HAS_COMMUNICATION)
             .flatMap { repository.deleteById(it.id !!) }
+    }
+
+    override fun purgeAlertsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
+        log.info("Purging alerts older than {} and uncommented since {}", dateThreshold, dateThreshold)
+        return repository.findOlderThanAndUncommentedSince(dateThreshold)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] alert {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging alert {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} alert was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge alert", err) }
+                }
+            }
     }
 
     private fun Mono<AlertModel>.validateHasNoMovementLinked(error: String) = flatMap { oldAlert ->

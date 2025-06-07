@@ -49,4 +49,9 @@ interface ICommunicationModelRepository: IGenericReadProjectModelRepository<Comm
     fun countAllByMovementId(projectId: UUID, movementId: UUID, searchParams: CommunicationSearchParamModel): Mono<Long>
 
     fun countAllByAlertId(projectId: UUID, alertId: UUID, searchParams: CommunicationSearchParamModel): Mono<Long>
+
+    fun findOrphan(
+        movementsToExclude: List<UUID>,
+        alertsToExclude: List<UUID>,
+    ): Flux<UUID>
 }

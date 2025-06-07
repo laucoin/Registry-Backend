@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.m
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ParticipantEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IParticipantEntityRepository
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -153,6 +154,10 @@ class ParticipantModelPostgresRepository(
     override fun deleteAll(ids: List<UUID>): Mono<Void> {
         return if (ids.isEmpty()) Mono.empty()
         else repository.deleteAllById(ids)
+    }
+
+    override fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID> {
+        return repository.findUnusedSince(dateThreshold)
     }
 
     override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {

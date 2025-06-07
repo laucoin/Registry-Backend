@@ -22,6 +22,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -92,4 +93,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
         """
     )
     fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserEntity>
+
+    @Query("SELECT t.$ID FROM $USER_TABLE t WHERE t.last_login::DATE < :dateThreshold AND $NOT_SERVICE_ACCOUNT")
+    fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
 }

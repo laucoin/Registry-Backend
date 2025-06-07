@@ -1,7 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_NAME
@@ -32,6 +36,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -259,4 +264,18 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         """
     )
     fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementEntity>
+
+    @Query(
+        """
+        SELECT t.$ID
+        FROM $MOVEMENT_TABLE t
+        LEFT JOIN (
+            SELECT MAX(tc.$COMMUNICATION_DATE_TIME), tc.$COMMUNICATION_MOVEMENT_ID FROM $COMMUNICATION_TABLE tc
+            WHERE tc.$COMMUNICATION_MOVEMENT_ID IS NOT NULL
+            GROUP BY tc.$COMMUNICATION_MOVEMENT_ID
+        ) lc ON lc.$COMMUNICATION_MOVEMENT_ID = t.$ID
+        WHERE (lc.max IS NULL OR lc.max < :dateThreshold) AND t.$LAST_MODIFIER_DATE < :dateThreshold
+        """
+    )
+    fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID>
 }

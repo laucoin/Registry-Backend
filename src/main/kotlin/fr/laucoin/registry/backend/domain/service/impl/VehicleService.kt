@@ -16,9 +16,11 @@ import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Service
@@ -100,6 +102,22 @@ class VehicleService(
         return findVehicleById(projectId, id, visibilitySearched = null)
             .validateHasNoMovementLinked(VEHICLE_DELETE_HAS_MOVEMENT)
             .flatMap { repository.deleteById(it.id !!) }
+    }
+
+    override fun purgeVehiclesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
+        log.info("Purging vehicles unused since {}", dateThreshold)
+        return repository.findUnusedSince(dateThreshold)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] vehicle {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging vehicle {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} vehicle was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge vehicle", err) }
+                }
+            }
     }
 
     private fun Mono<VehicleModel>.updateVehicle(currentUser: CurrentUserModel) = flatMap {

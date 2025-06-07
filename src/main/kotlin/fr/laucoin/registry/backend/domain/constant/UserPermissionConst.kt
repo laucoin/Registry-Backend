@@ -9,4 +9,5 @@ object UserPermissionConst {
     const val REGISTRY_PROJECT_C = "REGISTRY_PROJECT_C"
     const val REGISTRY_PROJECT_R = "REGISTRY_PROJECT_R"
     const val REGISTRY_PROFILE_C = "REGISTRY_PROFILE_C"
+    const val REGISTRY_JOB_C = "REGISTRY_JOB_C"
 }

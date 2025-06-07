@@ -47,4 +47,5 @@ interface IGroupService {
     fun disableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel>
     fun enableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel>
     fun deleteGroupById(projectId: UUID, id: UUID): Mono<Void>
+    fun purgeEmptyGroups(participantToExclude: List<UUID>, dryRun: Boolean): Flux<UUID>
 }
