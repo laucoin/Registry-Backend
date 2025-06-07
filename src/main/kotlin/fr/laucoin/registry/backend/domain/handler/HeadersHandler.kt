@@ -19,7 +19,7 @@ class HeadersHandler(
     companion object {
         fun headers(request: ServerHttpRequest): Map<String, String> = request.headers.toSingleValueMap()
 
-        fun getLocaleOrThrow(headers: Map<String, String>, supportedLocales: List<String>): Locale {
+        fun extractLocaleOrDefault(headers: Map<String, String>, supportedLocales: List<String>): Locale {
             val requestedLanguages: List<String> = headers[ACCEPT_LANGUAGE]?.split(",").orEmpty()
 
             var locale: Locale? = null
@@ -37,7 +37,7 @@ class HeadersHandler(
 
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
         val headers: Map<String, String> = headers(exchange.request)
-        val locale: Locale = getLocaleOrThrow(headers, supportedLocales)
+        val locale: Locale = extractLocaleOrDefault(headers, supportedLocales)
 
         val mutatedExchange = exchange.mutate()
             .request { builder -> builder.header(ACCEPT_LANGUAGE, locale.language) }

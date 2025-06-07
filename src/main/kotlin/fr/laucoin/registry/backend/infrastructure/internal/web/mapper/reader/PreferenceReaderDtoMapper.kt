@@ -12,6 +12,8 @@ class PreferenceReaderDtoMapper(
 ): IGenericReaderDtoMapper<PreferencesModel, PreferenceReaderDto> {
     override fun toDto(model: PreferencesModel, locale: Locale): PreferenceReaderDto {
         return PreferenceReaderDto(
+            theme = model.theme,
+            language = model.language,
             selectedProfile = Optional.ofNullable(model.selectedProfile).map {
                 profileMapper.toDto(
                     model.selectedProfile !!,

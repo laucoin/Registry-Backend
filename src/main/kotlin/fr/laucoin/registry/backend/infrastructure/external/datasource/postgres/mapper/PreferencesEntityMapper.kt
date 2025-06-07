@@ -17,6 +17,8 @@ class PreferencesEntityMapper(
     override fun toModel(entity: PreferencesEntity): PreferencesModel {
         return PreferencesModel().apply {
             userId = entity.userId
+            theme = entity.theme
+            language = entity.language
             selectedProfile = mapSelectedProfileEntity(entity)
         }.fillWithEntity(entity)
     }
@@ -47,6 +49,8 @@ class PreferencesEntityMapper(
     override fun toEntity(model: PreferencesModel): PreferencesEntity {
         return PreferencesEntity().apply {
             userId = model.userId
+            theme = model.theme
+            language = model.language
             selectedProfileId = model.selectedProfile?.id
         }.fillWithModel(model)
     }
