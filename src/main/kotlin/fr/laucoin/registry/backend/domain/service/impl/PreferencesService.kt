@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
@@ -12,6 +13,7 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import java.util.Objects
 import java.util.UUID
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
@@ -19,7 +21,9 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 @Service
 class PreferencesService(
     private val repository: IPreferencesModelRepository,
-    private val projectProfileRepository: IProjectProfileModelRepository
+    private val projectProfileRepository: IProjectProfileModelRepository,
+    @Value("\${registry.information.locale.supported}")
+    private val supportedLocales: List<String>,
 ): IPreferencesService, GenericService() {
     override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
         return repository.findByUserId(currentUser.id !!, visibilitySearched = null)
@@ -29,6 +33,31 @@ class PreferencesService(
                 repository.save(preferences)
                     .flatMap { repository.findByUserId(currentUser.id !!, visibilitySearched = null) }
             }
+    }
+
+    override fun updateTheme(
+        currentUser: CurrentUserModel,
+        theme: ThemeEnum
+    ): Mono<PreferencesModel> {
+        return findByUser(currentUser).flatMap {
+            if (it.theme !== theme) {
+                it.theme = theme
+                repository.save(it.apply { update(currentUser) })
+            } else Mono.just(it)
+        }
+    }
+
+    override fun updateLanguage(
+        currentUser: CurrentUserModel,
+        language: String
+    ): Mono<PreferencesModel> {
+        val language = supportedLocales.firstOrNull { s -> s.startsWith(language) }
+        return findByUser(currentUser).flatMap {
+            if (it.language !== language) {
+                it.language = language
+                repository.save(it.apply { update(currentUser) })
+            } else Mono.just(it)
+        }
     }
 
     override fun updateUserPreferenceSelectedProjectProfileById(

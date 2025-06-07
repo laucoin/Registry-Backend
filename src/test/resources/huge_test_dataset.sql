@@ -18,11 +18,11 @@ BEGIN
     INSERT INTO tb_user (
         id, oidc_id, type, first_name, last_name, email, role, birthday, last_login, created_by, last_modified_by, visible
     ) VALUES
-        (global_admin_id, '08513d7b-cce1-4efe-bb27-8d936c4a12b4', 'USER', 'Jane', 'SMITH', 'administrator@sgdf.fr', 'USER_ADMINISTRATOR', '1980-01-01', '2025-03-01 15:28:51.144372 +00:00', global_admin_id, global_admin_id, TRUE),
-        (global_coordinator_id, 'c1a62b72-cbc4-4c34-a40a-8a574ff59da5', 'USER', 'John', 'DOE', 'coordinator@sgdf.fr', 'USER', '1990-01-01', '2025-03-01 15:28:51.144372 +00:00', global_coordinator_id, global_coordinator_id, TRUE),
-        (global_user_id, '5d4a06a8-5c23-4795-b534-446f706af099', 'USER', 'Charles', 'PINA', 'participant@sgdf.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00', global_user_id, global_user_id, TRUE),
-        (global_blocked_user_id, 'c9739eb7-4d96-493f-8c42-702b1805c646', 'USER', 'Aliyah', 'NIELSEN', 'blocked-user@sgdf.fr', 'USER_ADMINISTRATOR', '1970-01-01', '2025-03-01 15:28:51.144372 +00:00', global_blocked_user_id, global_blocked_user_id, FALSE),
-        (global_blocked_profile_id, 'f38ae886-757a-4329-a94f-9a92c0a9523b', 'USER', 'Emil', 'BRADFORD', 'blocked-profile@sgdf.fr', 'USER_ADMINISTRATOR', '1960-01-01', '2025-03-01 15:28:51.144372 +00:00', global_blocked_profile_id, global_blocked_profile_id, TRUE);
+        (global_admin_id, '865f44e7-1fe0-4ce4-87e5-8159f581894d', 'USER', 'Jane', 'SMITH', 'administrator@sgdf.fr', 'USER_ADMINISTRATOR', '1980-01-01', '2025-03-01 15:28:51.144372 +00:00', global_admin_id, global_admin_id, TRUE),
+        (global_coordinator_id, 'b82d96d3-02e5-4ea5-89fc-a1a50092d8d4', 'USER', 'John', 'DOE', 'coordinator@sgdf.fr', 'USER', '1990-01-01', '2025-03-01 15:28:51.144372 +00:00', global_coordinator_id, global_coordinator_id, TRUE),
+        (global_user_id, '37b3186b-4839-472f-a67a-9bd4e8beae4b', 'USER', 'Charles', 'PINA', 'participant@sgdf.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00', global_user_id, global_user_id, TRUE),
+        (global_blocked_user_id, '3f311520-d686-4a3e-88aa-8b9e58a56f88', 'USER', 'Aliyah', 'NIELSEN', 'blocked-user@sgdf.fr', 'USER_ADMINISTRATOR', '1970-01-01', '2025-03-01 15:28:51.144372 +00:00', global_blocked_user_id, global_blocked_user_id, FALSE),
+        (global_blocked_profile_id, 'ba3ea096-fc25-4e5a-ad3e-71a741358116', 'USER', 'Emil', 'BRADFORD', 'blocked-profile@sgdf.fr', 'USER_ADMINISTRATOR', '1960-01-01', '2025-03-01 15:28:51.144372 +00:00', global_blocked_profile_id, global_blocked_profile_id, TRUE);
 
     -- Insert preferences for users
     INSERT INTO tb_preferences (user_id, created_by, last_modified_by) VALUES

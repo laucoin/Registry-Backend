@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.infrastructure.external.IEntityReaderMapper
@@ -32,6 +33,8 @@ class CurrentUserEntityMapper(
         return Optional.ofNullable(entity.preferenceId).map {
             preferencesEntityMapper.toModel(PreferencesEntity().apply {
                 id = it
+                theme = entity.preferenceTheme ?: ThemeEnum.SYSTEM
+                language = entity.preferenceLanguage
                 selectedProfileId = entity.preferenceSelectedProfileId
                 selectedProfileRole = entity.preferenceSelectedProfileRole
                 selectedProfileStatus = entity.preferenceSelectedProfileStatus

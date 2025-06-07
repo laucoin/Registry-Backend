@@ -1,9 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user
 
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
+import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_LANGUAGE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_END_ACCESS_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_END_ACCESS_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_PROJECT_END_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_PROJECT_END_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_PROJECT_ID
@@ -11,11 +14,11 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_PROJECT_OPTIONS
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_PROJECT_START_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_PROJECT_START_TIME
-import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_ROLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_START_ACCESS_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_START_ACCESS_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_STATUS
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.preference.PreferenceFields.PREFERENCE_THEME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.PREFERENCE_ID
 import java.time.LocalDate
 import java.time.OffsetTime
@@ -27,6 +30,12 @@ data class CurrentUserEntity(
     @ReadOnlyProperty
     @Column(PREFERENCE_ID)
     var preferenceId: UUID? = null,
+    @ReadOnlyProperty
+    @Column(PREFERENCE_THEME)
+    var preferenceTheme: ThemeEnum? = null,
+    @ReadOnlyProperty
+    @Column(PREFERENCE_LANGUAGE)
+    var preferenceLanguage: String? = null,
     @ReadOnlyProperty
     @Column(PREFERENCE_SELECTED_PROFILE_ID)
     var preferenceSelectedProfileId: UUID? = null,

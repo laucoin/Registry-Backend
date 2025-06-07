@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_AUTHENTICATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
-import fr.laucoin.registry.backend.domain.handler.HeadersHandler.Companion.getLocaleOrThrow
+import fr.laucoin.registry.backend.domain.handler.HeadersHandler.Companion.extractLocaleOrDefault
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler.Companion.headers
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -67,7 +67,7 @@ class AuthorizationErrorHandler(
     private fun extractLocale(request: ServerHttpRequest): Locale {
         val headers: Map<String, String> = headers(request)
         return try {
-            getLocaleOrThrow(headers, supportedLocales)
+            extractLocaleOrDefault(headers, supportedLocales)
         } catch (e: RegistryException) {
             Locale.getDefault()
         }
