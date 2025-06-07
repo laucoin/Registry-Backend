@@ -15,7 +15,7 @@ class TestContainerDatabase: ApplicationContextInitializer<ConfigurableApplicati
         private const val DB_SCHEMAS = "public"
         private const val SERVICE_PORT = 5432
 
-        private val container = GenericContainer("postgres:16-alpine")
+        private val container = GenericContainer("postgres:17-alpine")
             .withExposedPorts(SERVICE_PORT)
             .withEnv("PGUSER", DB_USERNAME)
             .withEnv("POSTGRES_USER", DB_USERNAME)
