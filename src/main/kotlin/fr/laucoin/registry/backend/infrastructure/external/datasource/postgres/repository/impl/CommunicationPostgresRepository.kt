@@ -157,6 +157,18 @@ class CommunicationPostgresRepository(
         )
     }
 
+    override fun findOrphan(
+        movementsToExclude: List<UUID>,
+        alertsToExclude: List<UUID>,
+    ): Flux<UUID> {
+        return when {
+            movementsToExclude.isEmpty() && alertsToExclude.isEmpty() -> repository.findOrphan()
+            alertsToExclude.isEmpty() -> repository.findOrphanExcludingMovements(movementsToExclude)
+            movementsToExclude.isEmpty() -> repository.findOrphanExcludingAlerts(alertsToExclude)
+            else -> repository.findOrphanExcludingMovementsAndAlerts(movementsToExclude, alertsToExclude)
+        }
+    }
+
     override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel> {
         return repository.findById(projectId, id, visibilitySearched)
             .map(mapper::toModel)

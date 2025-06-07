@@ -16,9 +16,11 @@ import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Service
@@ -101,6 +103,22 @@ class ActivityService(
         return findActivityById(projectId, id, visibilitySearched = null)
             .validateHasNoMovementLinked(ACTIVITY_DELETE_HAS_MOVEMENT)
             .flatMap { repository.deleteById(it.id !!) }
+    }
+
+    override fun purgeActivitiesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
+        log.info("Purging activities unused since {}", dateThreshold)
+        return repository.findUnusedSince(dateThreshold)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] activity {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging activity {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} activity was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge activity", err) }
+                }
+            }
     }
 
     private fun Mono<ActivityModel>.updateActivity(currentUser: CurrentUserModel) = flatMap {

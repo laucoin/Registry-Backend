@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -15,4 +16,5 @@ interface IUserModelRepository: IGenericReadModelRepository<UserModel>, IGeneric
     fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
     fun findServiceAccount(): Mono<CurrentUserModel>
     fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel>
+    fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
 }

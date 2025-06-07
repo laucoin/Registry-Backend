@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -39,4 +40,6 @@ interface IParticipantModelRepository: IGenericReadProjectModelRepository<Partic
     fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel>
 
     fun deleteAll(ids: List<UUID>): Mono<Void>
+
+    fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 }

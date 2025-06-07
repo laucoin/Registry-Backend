@@ -7,7 +7,9 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
+import java.time.LocalDate
 import java.util.UUID
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IVehicleService {
@@ -31,4 +33,5 @@ interface IVehicleService {
     fun disableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
     fun enableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
     fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+    fun purgeVehiclesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.UserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IUserEntityRepository
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -61,6 +62,10 @@ class UserModelPostgresRepository(
 
     override fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel> {
         return repository.findByRoleLevel(roleLevel, visibilitySearched).map(mapper::toModel)
+    }
+
+    override fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID> {
+        return repository.findUserIdsOlderThanLastLogin(dateThreshold)
     }
 
     override fun create(element: UserModel): Mono<UserModel> = save(element)

@@ -20,7 +20,7 @@ import reactor.core.publisher.Mono
 class UserController(
     private val service: IUserService,
     private val readerMapper: UserReaderDtoMapper,
-    private val userRoleReaderMapper: UserRoleReaderDtoMapper
+    private val userRoleReaderMapper: UserRoleReaderDtoMapper,
 ): IUserController {
     override fun findUsers(
         locale: Locale,

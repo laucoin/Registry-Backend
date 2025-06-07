@@ -81,6 +81,11 @@ class GroupModelPostgresRepository(
         ).map(mapper::toModel)
     }
 
+    override fun findEmpty(participantToExclude: List<UUID>): Flux<UUID> {
+        return if (participantToExclude.isEmpty()) Flux.empty()
+        else repository.findEmpty(participantToExclude)
+    }
+
     override fun findByIdWithContent(
         projectId: UUID,
         id: UUID,

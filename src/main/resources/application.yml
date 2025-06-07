@@ -43,6 +43,19 @@ registry:
       searched:
         max-activity-result: 10
         max-alert-result: 10
+    purge:
+      projects:
+        cron: 0 30 1 * * *
+        months-threshold: 12
+        content: # Groupment of movements, communications and alerts
+          cron: 0 0 2 * * *
+          months-threshold: 12
+        configuration: # Groupment of vehicles, activities, groups and participants
+          cron: 0 30 2 * * *
+          months-threshold: 12
+      users:
+        cron: 0 0 1 * * *
+        months-threshold: 12
   security:
     default-role: USER
     oauth2:

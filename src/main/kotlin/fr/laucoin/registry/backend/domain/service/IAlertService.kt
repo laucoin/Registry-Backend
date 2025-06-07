@@ -8,7 +8,9 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import java.time.LocalDate
 import java.util.UUID
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IAlertService {
@@ -33,4 +35,5 @@ interface IAlertService {
     fun disableAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel>
     fun enableAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel>
     fun deleteAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+    fun purgeAlertsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

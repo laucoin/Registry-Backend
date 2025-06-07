@@ -8,7 +8,11 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertQueries.ALERT_STATUS_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertQueries.ALERT_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.alert.AlertQueries.SELECT_ALERT_SEARCH
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_CLAUSE
@@ -17,6 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -91,4 +96,18 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
         """
     )
     fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertEntity>
+
+    @Query(
+        """
+        SELECT t.$ID
+        FROM $ALERT_TABLE t
+        LEFT JOIN (
+            SELECT MAX(tc.$COMMUNICATION_DATE_TIME), tc.$COMMUNICATION_ALERT_ID FROM $COMMUNICATION_TABLE tc
+            WHERE tc.$COMMUNICATION_ALERT_ID IS NOT NULL
+            GROUP BY tc.$COMMUNICATION_ALERT_ID
+        ) lc ON lc.$COMMUNICATION_ALERT_ID = t.$ID
+        WHERE (lc.max IS NULL OR lc.max < :dateThreshold) AND t.$LAST_MODIFIER_DATE < :dateThreshold
+        """
+    )
+    fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID>
 }

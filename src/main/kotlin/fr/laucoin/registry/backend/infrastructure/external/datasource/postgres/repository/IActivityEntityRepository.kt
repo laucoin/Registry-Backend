@@ -8,6 +8,10 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityQueries.DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.activity.ActivityQueries.SELECT_ACTIVITY_SEARCH
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.PROJECT_CLAUSE
@@ -16,6 +20,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.r
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -95,4 +100,18 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
         """
     )
     fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityEntity>
+
+    @Query(
+        """
+        SELECT t.$ID
+        FROM $ACTIVITY_TABLE t
+        LEFT JOIN (
+            SELECT MAX(tm.$MOVEMENT_DATE_TIME), tm.$MOVEMENT_ACTIVITY_ID FROM $MOVEMENT_TABLE tm
+            WHERE tm.$MOVEMENT_ACTIVITY_ID IS NOT NULL
+            GROUP BY tm.$MOVEMENT_ACTIVITY_ID
+        ) lu ON lu.$MOVEMENT_ACTIVITY_ID = t.$ID
+        WHERE (lu.max IS NULL OR lu.max < :dateThreshold) AND t.$LAST_MODIFIER_DATE < :dateThreshold
+        """
+    )
+    fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 }

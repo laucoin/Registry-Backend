@@ -56,6 +56,7 @@ import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.LocalDate
 import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -608,5 +609,21 @@ class MovementService(
         return findMovementById(projectId, id, visibilitySearched = null)
             .validateMovementIsAlterable(MOVEMENT_CANNOT_BE_DELETED)
             .flatMap { repository.deleteById(id) }
+    }
+
+    override fun purgeMovementsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
+        log.info("Purging movements older than {} and uncommented since {}", dateThreshold, dateThreshold)
+        return repository.findOlderThanAndUncommentedSince(dateThreshold)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] movement {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging movement {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} movement was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge movement", err) }
+                }
+            }
     }
 }

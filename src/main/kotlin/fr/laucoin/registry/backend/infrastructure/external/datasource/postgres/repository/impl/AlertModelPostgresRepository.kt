@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.repository.IAlertModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.AlertEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IAlertEntityRepository
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -60,6 +61,10 @@ class AlertModelPostgresRepository(
             searchParams.endDateTimeSearched,
             limit,
         ).map(mapper::toModel)
+    }
+
+    override fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID> {
+        return repository.findOlderThanAndUncommentedSince(dateThreshold)
     }
 
     override fun findById(

@@ -28,7 +28,7 @@ object VehicleQueries {
                 WHERE t.$VISIBLE IS TRUE
                 GROUP BY $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID, t.$LINKED_PROJECT_ID
             ) AS plm ON plm.$VEHICLE_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
-            WHERE plm.$VEHICLE_PREFIX$ID IS NOT NULL AND t.$LINKED_PROJECT_ID = :projectId
+            WHERE plm.$VEHICLE_PREFIX$ID IS NOT NULL
         )
     """
 

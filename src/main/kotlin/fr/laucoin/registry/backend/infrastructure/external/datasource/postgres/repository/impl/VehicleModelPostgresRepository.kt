@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.VehicleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IVehicleEntityRepository
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -74,6 +75,10 @@ class VehicleModelPostgresRepository(
             searchParams.dateTimeSearched,
             limit,
         ).map(mapper::toModel)
+    }
+
+    override fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID> {
+        return repository.findUnusedSince(dateThreshold)
     }
 
     override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {

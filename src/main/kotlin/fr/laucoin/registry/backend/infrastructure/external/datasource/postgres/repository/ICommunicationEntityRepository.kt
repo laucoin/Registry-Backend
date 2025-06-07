@@ -187,4 +187,34 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
         """
     )
     fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationEntity>
+
+    @Query("SELECT t.$ID FROM $COMMUNICATION_TABLE t WHERE t.$COMMUNICATION_MOVEMENT_ID IS NULL AND t.$COMMUNICATION_ALERT_ID IS NULL")
+    fun findOrphan(): Flux<UUID>
+
+    @Query(
+        """
+        SELECT t.$ID FROM $COMMUNICATION_TABLE t
+        WHERE (t.$COMMUNICATION_MOVEMENT_ID IS NULL OR t.$COMMUNICATION_MOVEMENT_ID IN (:movementsToExclude))
+        AND t.$COMMUNICATION_ALERT_ID IS NULL 
+    """
+    )
+    fun findOrphanExcludingMovements(movementsToExclude: List<UUID>): Flux<UUID>
+
+    @Query(
+        """
+        SELECT t.$ID FROM $COMMUNICATION_TABLE t
+        WHERE t.$COMMUNICATION_MOVEMENT_ID IS NULL
+        AND (t.$COMMUNICATION_ALERT_ID IS NULL OR t.$COMMUNICATION_ALERT_ID IN (:alertsToExclude))
+    """
+    )
+    fun findOrphanExcludingAlerts(alertsToExclude: List<UUID>): Flux<UUID>
+
+    @Query(
+        """
+        SELECT t.$ID FROM $COMMUNICATION_TABLE t
+        WHERE (t.$COMMUNICATION_MOVEMENT_ID IS NULL OR t.$COMMUNICATION_MOVEMENT_ID IN (:movementsToExclude))
+        AND (t.$COMMUNICATION_ALERT_ID IS NULL OR t.$COMMUNICATION_ALERT_ID IN (:alertsToExclude))
+    """
+    )
+    fun findOrphanExcludingMovementsAndAlerts(movementsToExclude: List<UUID>, alertsToExclude: List<UUID>): Flux<UUID>
 }

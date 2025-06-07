@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
@@ -9,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_ID
@@ -214,4 +216,13 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         endAvailabilityTime: OffsetTime?,
         endAvailabilityDate: LocalDate?
     ): Flux<ParticipantEntity>
+
+    @Query(
+        """
+        WITH $WITH_PARTICIPANT_LAST_MOVEMENT
+        SELECT t.$ID FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN
+        WHERE (last_movement.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME IS NULL OR last_movement.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME < :dateThreshold) AND t.$LAST_MODIFIER_DATE < :dateThreshold
+        """
+    )
+    fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 }

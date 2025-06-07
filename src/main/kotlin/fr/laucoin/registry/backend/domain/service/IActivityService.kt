@@ -7,7 +7,9 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import java.time.LocalDate
 import java.util.UUID
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IActivityService {
@@ -31,4 +33,5 @@ interface IActivityService {
     fun disableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel>
     fun enableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel>
     fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+    fun purgeActivitiesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

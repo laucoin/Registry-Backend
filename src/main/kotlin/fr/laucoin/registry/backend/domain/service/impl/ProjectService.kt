@@ -18,6 +18,7 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
@@ -150,5 +151,21 @@ class ProjectService(
     override fun deleteProjectById(id: UUID): Mono<Void> {
         return findProjectById(id, visibilitySearched = null)
             .flatMap { repository.deleteById(id) }
+    }
+
+    override fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
+        log.info("Purging projects inactive since {}", dateThreshold)
+        return repository.findProjectsEligibleForPurge(dateThreshold)
+            .flatMap {
+                if (dryRun) {
+                    log.info("[Dry run] project {} would be deleted", it)
+                    Mono.just(it)
+                } else {
+                    log.info("Purging project {}", it)
+                    repository.deleteById(it).thenReturn(it)
+                        .doOnNext { e -> log.info("{} project was deleted", e) }
+                        .doOnError { err -> log.error("Failed to purge project", err) }
+                }
+            }
     }
 }

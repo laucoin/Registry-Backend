@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.m
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.MovementEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IMovementEntityRepository
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -259,6 +260,10 @@ class MovementModelPostgresRepository(
             searchParams.startDateTimeSearched,
             searchParams.endDateTimeSearched,
         )
+    }
+
+    override fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID> {
+        return repository.findOlderThanAndUncommentedSince(dateThreshold)
     }
 
     override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {

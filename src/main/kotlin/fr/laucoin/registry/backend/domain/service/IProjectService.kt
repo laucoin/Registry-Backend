@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -28,4 +29,5 @@ interface IProjectService {
     fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
     fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
     fun deleteProjectById(id: UUID): Mono<Void>
+    fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

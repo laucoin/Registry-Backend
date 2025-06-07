@@ -151,4 +151,10 @@ class SwaggerConfig(
         return GroupedOpenApi.builder().group("project-alerts")
             .pathsToMatch("/api/projects/{projectId}/alerts/**").build()
     }
+
+    @Bean
+    fun purgesApis(): GroupedOpenApi {
+        return GroupedOpenApi.builder().group("data-purges")
+            .pathsToMatch("/api/purge/**").build()
+    }
 }

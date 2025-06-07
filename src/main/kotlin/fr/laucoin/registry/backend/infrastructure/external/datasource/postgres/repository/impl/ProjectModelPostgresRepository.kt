@@ -7,9 +7,11 @@ import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.repository.IProjectModelRepository
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.mapper.ProjectEntityMapper
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.IProjectEntityRepository
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Service
@@ -71,6 +73,10 @@ class ProjectModelPostgresRepository(
     override fun validDateTime(id: UUID, begin: ZonedDateTime?, end: ZonedDateTime?): Mono<Boolean> {
         return repository.validDateTime(id, begin, end)
             .map { (it.count ?: 0) == 0 }
+    }
+
+    override fun findProjectsEligibleForPurge(dateThreshold: LocalDate): Flux<UUID> {
+        return repository.findProjectsEligibleForPurge(dateThreshold)
     }
 
     override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
