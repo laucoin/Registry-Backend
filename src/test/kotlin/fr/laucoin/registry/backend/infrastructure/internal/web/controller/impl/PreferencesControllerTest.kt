@@ -35,7 +35,7 @@ class PreferencesControllerTest(@Autowired private val webClient: WebTestClient)
         // Act
         val result = webClient
             .authenticate()
-            .patch()
+            .post()
             .uri(uriBuilder("$BASE_URL/profile/select", emptyList(), listOf(Pair("profileId", uuid))))
             .exchange()
 
@@ -53,7 +53,7 @@ class PreferencesControllerTest(@Autowired private val webClient: WebTestClient)
         // Act
         val result = webClient
             .authenticate()
-            .patch()
+            .post()
             .uri(uriBuilder("$BASE_URL/projects/{projectId}/profile/select", listOf(uuid), emptyList()))
             .exchange()
 

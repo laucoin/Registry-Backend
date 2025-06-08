@@ -2,11 +2,11 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
+import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import java.util.UUID
 import java.util.stream.Stream
@@ -30,7 +30,8 @@ import reactor.core.publisher.Mono
 class PreferencesServiceTest {
     private val repository: IPreferencesModelRepository = mock()
     private val projectProfileRepository: IProjectProfileModelRepository = mock()
-    private val service: IPreferencesService = PreferencesService(repository, projectProfileRepository)
+    private val supportedLocale: List<String> = listOf("en-US", "fr-FR")
+    private val service: IPreferencesService = PreferencesService(repository, projectProfileRepository, supportedLocale)
 
     companion object {
         @JvmStatic

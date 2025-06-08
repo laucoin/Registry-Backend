@@ -375,11 +375,6 @@ class MovementService(
                     it.content = movement.content
                 }
             }
-            .flatMap {
-                if (movement.reason === DEFINITIVE_DEPARTURE || (movement.type === OUT && movement.isGuestsMovement())) {
-                    updateParticipantsEndAvailability(it)
-                } else Mono.just(it)
-            }
             .updateMovement(currentUser)
             .`as`(transactionalOperator::transactional)
     }
