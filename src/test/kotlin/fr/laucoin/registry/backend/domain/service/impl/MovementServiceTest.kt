@@ -7,10 +7,25 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.EMERGENCY
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.LOGISTICS
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.MEDICAL
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.OTHER
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.PARTNER_ANIMATION
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.SHOPPING
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.VISIT
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -33,6 +48,7 @@ import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
 import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import fr.laucoin.registry.backend.test.ModelExt.movementId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.LocalDate
@@ -47,10 +63,12 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -88,6 +106,16 @@ class MovementServiceTest {
 
     companion object {
         @JvmStatic
+        fun `Should searchReasonsByText return filtered reason depending params`(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(REGISTERED, IN, emptyList<MovementReasonEnum>()),
+                Arguments.of(REGISTERED, OUT, listOf(SHOPPING, MEDICAL, DEFINITIVE_DEPARTURE, OTHER)),
+                Arguments.of(GUEST, IN, listOf(EMERGENCY, LOGISTICS, PARTNER_ANIMATION, VISIT)),
+                Arguments.of(GUEST, OUT, emptyList<MovementReasonEnum>()),
+            )
+        }
+
+        @JvmStatic
         fun `Should createMovement check date, validate activity, validate participants, validate vehicle and call repository create`(): Stream<Arguments> {
             val activityId = UUID.randomUUID()
             val movementActivity = ActivityModel().apply { id = activityId; visible = true }
@@ -106,8 +134,38 @@ class MovementServiceTest {
                         MovementContentModel().apply { participant = movementParticipant1; vehicle = movementVehicle },
                         MovementContentModel().apply { participant = movementParticipant2 },
                     ),
+                    IN,
+                    REGISTERED,
+                    null,
                     movementActivity,
                     1,
+                    1,
+                    0,
+                ),
+                Arguments.of(
+                    listOf(
+                        MovementContentModel().apply { participant = movementParticipant1 },
+                        MovementContentModel().apply { participant = movementParticipant2 },
+                    ),
+                    IN,
+                    REGISTERED,
+                    null,
+                    null,
+                    0,
+                    0,
+                    0,
+                ),
+                Arguments.of(
+                    listOf(
+                        MovementContentModel().apply { participant = movementParticipant1 },
+                        MovementContentModel().apply { participant = movementParticipant2 },
+                    ),
+                    OUT,
+                    REGISTERED,
+                    DEFINITIVE_DEPARTURE,
+                    null,
+                    0,
+                    0,
                     1,
                 ),
                 Arguments.of(
@@ -115,10 +173,14 @@ class MovementServiceTest {
                         MovementContentModel().apply { participant = movementParticipant1 },
                         MovementContentModel().apply { participant = movementParticipant2 },
                     ),
+                    OUT,
+                    GUEST,
+                    null,
                     null,
                     0,
                     0,
-                )
+                    1,
+                ),
             )
         }
 
@@ -288,6 +350,22 @@ class MovementServiceTest {
     }
 
     @Test
+    fun `Should findCurrentMovementsPage call repository findCurrentPage`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = MovementSearchParamModel(typeSearched = IN)
+        whenever(repository.findCurrentPage(any(), any(), any())).thenReturn(
+            Mono.just(PageModel(1, 2, 3, 4, emptyList()))
+        )
+
+        // Act
+        service.findCurrentMovementsPage(projectId, pageable, params).block()
+
+        // Assert
+        verify(repository).findCurrentPage(projectId, pageable, params)
+    }
+
+    @Test
     fun `Should findMovementsContent call repository findContent`() {
         // Arrange
         val ids = listOf(UUID.randomUUID(), UUID.randomUUID())
@@ -298,6 +376,19 @@ class MovementServiceTest {
 
         // Assert
         verify(repository).findContent(projectId, ids)
+    }
+
+    @Test
+    fun `Should findCurrentMovementsContent call repository findCurrentContent`() {
+        // Arrange
+        val ids = listOf(UUID.randomUUID(), UUID.randomUUID())
+        whenever(repository.findCurrentContent(any(), any())).thenReturn(Flux.empty())
+
+        // Act
+        service.findCurrentMovementsContent(projectId, ids).blockFirst()
+
+        // Assert
+        verify(repository).findCurrentContent(projectId, ids)
     }
 
     @Test
@@ -335,7 +426,7 @@ class MovementServiceTest {
     }
 
     @Test
-    fun `Should searchVehicles call repository findWithLimit`() {
+    fun `Should searchVehiclesByText call repository findWithLimit`() {
         // Arrange
         val textSearched = "test"
         whenever(vehicleRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
@@ -351,8 +442,22 @@ class MovementServiceTest {
         )
     }
 
+    @ParameterizedTest
+    @MethodSource
+    fun `Should searchReasonsByText return filtered reason depending params`(
+        typeSearched: ParticipantTypeEnum,
+        movementTypeSearched: MovementTypeEnum,
+        expectedReasons: List<MovementReasonEnum>,
+    ) {
+        // Act
+        val result = service.searchReasonsByText(typeSearched, movementTypeSearched).collectList().block()
+
+        // Assert
+        assertEquals(expectedReasons, result)
+    }
+
     @Test
-    fun `Should searchActivities call repository findWithLimit`() {
+    fun `Should searchActivitiesByText call repository findWithLimit`() {
         // Arrange
         val textSearched = "test"
         val typeSearched = REGISTERED
@@ -369,20 +474,148 @@ class MovementServiceTest {
         )
     }
 
+    @Test
+    fun `Should searchActivitiesByText not call repository findWithLimit for GUEST`() {
+        // Arrange
+        val textSearched = "test"
+        val typeSearched = GUEST
+
+        // Act
+        service.searchActivitiesByText(projectId, typeSearched, textSearched).blockFirst()
+
+        // Assert
+        verifyNoInteractions(activityRepository)
+    }
+
+    @Test
+    fun `Should findMovementCommunicationsPage call repository findPageByMovementId`() {
+        // Arrange
+        val pageable = PageableModel(0, 10)
+        val params = CommunicationSearchParamModel()
+        whenever(communicationRepository.findPageByMovementId(any(), any(), any(), any())).thenReturn(
+            Mono.just(PageModel(1, 2, 3, 4, emptyList()))
+        )
+
+        // Act
+        service.findMovementCommunicationsPage(projectId, movementId, pageable, params).block()
+
+        // Assert
+        verify(communicationRepository).findPageByMovementId(projectId, movementId, pageable, params)
+    }
+
+    @Test
+    fun `Should findParticipantsStatus call multiple repository count`() {
+        // Arrange
+        val registeredPresentMajor = ParticipantSearchParamModel(
+            textSearched = null,
+            isMajor = true,
+            typeSearched = REGISTERED,
+            statusSearched = PresenceStatusEnum.IN,
+            visibilitySearched = true,
+            dateTimeSearched = null
+        )
+        val registeredAbsentMajor = ParticipantSearchParamModel(
+            textSearched = null,
+            isMajor = true,
+            typeSearched = REGISTERED,
+            statusSearched = PresenceStatusEnum.OUT,
+            visibilitySearched = true,
+            dateTimeSearched = null
+        )
+        val registeredPresentMinor = ParticipantSearchParamModel(
+            textSearched = null,
+            isMajor = false,
+            typeSearched = REGISTERED,
+            statusSearched = PresenceStatusEnum.IN,
+            visibilitySearched = true,
+            dateTimeSearched = null
+        )
+        val registeredAbsentMinor = ParticipantSearchParamModel(
+            textSearched = null,
+            isMajor = false,
+            typeSearched = REGISTERED,
+            statusSearched = PresenceStatusEnum.OUT,
+            visibilitySearched = true,
+            dateTimeSearched = null
+        )
+        val presentGuest = ParticipantSearchParamModel(
+            textSearched = null,
+            isMajor = null,
+            typeSearched = GUEST,
+            statusSearched = PresenceStatusEnum.IN,
+            visibilitySearched = true,
+            dateTimeSearched = null
+        )
+        whenever(participantRepository.countAll(any(), eq(registeredPresentMajor))).thenReturn(Mono.just(1L))
+        whenever(participantRepository.countAll(any(), eq(registeredAbsentMajor))).thenReturn(Mono.just(2L))
+        whenever(participantRepository.countAll(any(), eq(registeredPresentMinor))).thenReturn(Mono.just(3L))
+        whenever(participantRepository.countAll(any(), eq(registeredAbsentMinor))).thenReturn(Mono.just(4L))
+        whenever(participantRepository.countAll(any(), eq(presentGuest))).thenReturn(Mono.just(5L))
+
+        // Act
+        val result = service.findParticipantsStatus(projectId).block()
+
+        // Assert
+        assertEquals(1, result !!.registered.presentMajors)
+        assertEquals(2, result.registered.absentMajors)
+        assertEquals(3, result.registered.presentMinors)
+        assertEquals(4, result.registered.absentMinors)
+        assertEquals(5, result.guests)
+        verify(participantRepository).countAll(projectId, registeredPresentMajor)
+        verify(participantRepository).countAll(projectId, registeredAbsentMajor)
+        verify(participantRepository).countAll(projectId, registeredPresentMinor)
+        verify(participantRepository).countAll(projectId, registeredAbsentMinor)
+        verify(participantRepository).countAll(projectId, presentGuest)
+    }
+
+    @Test
+    fun `Should findVehiclesStatus call multiple repository count`() {
+        // Arrange
+        val present = VehicleSearchParamModel(
+            textSearched = null,
+            visibilitySearched = true,
+            statusSearched = PresenceStatusEnum.IN,
+            dateTimeSearched = null
+        )
+        val absent = VehicleSearchParamModel(
+            textSearched = null,
+            visibilitySearched = true,
+            statusSearched = PresenceStatusEnum.OUT,
+            dateTimeSearched = null
+        )
+        whenever(vehicleRepository.countAll(any(), eq(present))).thenReturn(Mono.just(1L))
+        whenever(vehicleRepository.countAll(any(), eq(absent))).thenReturn(Mono.just(2L))
+
+        // Act
+        val result = service.findVehiclesStatus(projectId).block()
+
+        // Assert
+        assertEquals(1, result !!.present)
+        assertEquals(2, result.absent)
+        verify(vehicleRepository).countAll(projectId, present)
+        verify(vehicleRepository).countAll(projectId, absent)
+    }
+
     @ParameterizedTest
     @MethodSource
     fun `Should createMovement check date, validate activity, validate participants, validate vehicle and call repository create`(
         movementContent: List<MovementContentModel>,
+        movementType: MovementTypeEnum,
+        movementContentType: ParticipantTypeEnum,
+        movementReason: MovementReasonEnum?,
         movementActivity: ActivityModel?,
         expectedCallToActivity: Int,
         expectedCallToVehicle: Int,
+        expectedCallToUpdateParticipantEndDate: Int,
     ) {
         // Arrange
         val movementDateTime = ZonedDateTime.now()
 
-        val movement = MovementModel(contentType = REGISTERED).apply {
+        val movement = MovementModel(contentType = movementContentType).apply {
             id = UUID.randomUUID()
             project = ProjectModel().apply { id = projectId }
+            type = movementType
+            reason = movementReason
             dateTime = movementDateTime
             activity = movementActivity
             content = movementContent
@@ -393,6 +626,9 @@ class MovementServiceTest {
             Mono.just(movementActivity ?: ActivityModel())
         )
         whenever(participantRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
+            Flux.just(*movementContent.map { it.participant }.toTypedArray())
+        )
+        whenever(participantRepository.updateAllEndAvailability(any(), any())).thenReturn(
             Flux.just(*movementContent.map { it.participant }.toTypedArray())
         )
         whenever(vehicleRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
@@ -419,6 +655,10 @@ class MovementServiceTest {
             projectId,
             movementContent.mapNotNull { it.participant?.id },
             visibilitySearched = null,
+        )
+        verify(participantRepository, times(expectedCallToUpdateParticipantEndDate)).updateAllEndAvailability(
+            movementContent.mapNotNull { it.participant?.id },
+            CustomDateTimeModel(movement.dateTime),
         )
         verify(vehicleRepository, times(expectedCallToVehicle)).findAllByIds(
             projectId,

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -52,6 +53,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -77,15 +79,16 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
 
         @JvmStatic
         fun `Should findProjects return 200`(): Stream<Arguments> = Stream.of(
-            Arguments.of("not locale", null, null, null, null, null, null),
-            Arguments.of(null, 0, null, null, null, null, null),
-            Arguments.of(null, null, 200, null, null, null, null),
-            Arguments.of(null, null, null, null, null, null, null),
-            Arguments.of(null, null, null, "text", null, null, null),
-            Arguments.of(null, null, null, null, null, true, null),
-            Arguments.of(null, null, null, null, null, false, null),
-            Arguments.of(null, null, null, null, null, null, null),
-            Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+            Arguments.of(emptyList<String>(), "not locale", null, null, null, null, null, null),
+            Arguments.of(emptyList<String>(), null, 0, null, null, null, null, null),
+            Arguments.of(emptyList<String>(), null, null, 200, null, null, null, null),
+            Arguments.of(emptyList<String>(), null, null, null, null, null, null, null),
+            Arguments.of(emptyList<String>(), null, null, null, "text", null, null, null),
+            Arguments.of(listOf(REGISTRY_PROJECT_R), null, null, null, null, false, null, null),
+            Arguments.of(emptyList<String>(), null, null, null, null, null, true, null),
+            Arguments.of(emptyList<String>(), null, null, null, null, null, false, null),
+            Arguments.of(emptyList<String>(), null, null, null, null, null, null, null),
+            Arguments.of(emptyList<String>(), null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
         )
 
         @JvmStatic
@@ -141,6 +144,7 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
     @ParameterizedTest
     @MethodSource
     fun `Should findProjects return 200`(
+        authorities: List<String>,
         requestedLocale: String?,
         pageNumber: Int?,
         pageSize: Int?,
@@ -167,7 +171,7 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
 
         // Act
         val result = webClient
-            .authenticate()
+            .authenticate(*authorities.toTypedArray())
             .get()
             .uri(
                 uriBuilder(
@@ -189,8 +193,34 @@ class ProjectControllerTest(@Autowired private val webClient: WebTestClient): Te
         // Assert
         result.body<PageModel<*>>(OK)
 
-        verify(service).findProjectsPage(currentUser(), pageable, expectedWithProfile, searchParams)
+        verify(service).findProjectsPage(currentUser(*authorities.toTypedArray()), pageable, expectedWithProfile, searchParams)
         verify(readerMapper).toDtoPage(any(), any())
+        verifyNoInteractions(optionsReaderMapper)
+        verifyNoInteractions(writerMapper)
+    }
+
+    @Test
+    fun `Should findProjects return 403`() {
+        // Act
+        val result = webClient
+            .authenticate()
+            .get()
+            .uri(
+                uriBuilder(
+                    BASE_URL,
+                    emptyList(),
+                    listOf(
+                        Pair("withProfile", false),
+                    ),
+                )
+            )
+            .exchange()
+
+        // Assert
+        result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+        verifyNoInteractions(service)
+        verifyNoInteractions(readerMapper)
         verifyNoInteractions(optionsReaderMapper)
         verifyNoInteractions(writerMapper)
     }
