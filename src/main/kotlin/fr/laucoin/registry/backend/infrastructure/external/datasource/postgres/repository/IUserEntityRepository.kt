@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.USER_ROLE_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.CurrentUserEntity
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserEntity
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_EMAIL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_ROLE
@@ -84,6 +85,15 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
         """
     )
     fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserEntity>
+
+    @Query(
+        """
+        SELECT t.*, $SELECT_PREFERENCES, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN $PREFERENCES_JOIN
+        WHERE $NOT_SERVICE_ACCOUNT AND t.$USER_EMAIL = :email AND $VISIBLE_CLAUSE
+        """
+    )
+    fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserEntity>
 
     @Query(
         """

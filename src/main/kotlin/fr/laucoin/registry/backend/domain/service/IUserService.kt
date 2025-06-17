@@ -14,6 +14,7 @@ interface IUserService {
     fun findUsersPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
     fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel>
     fun findUserByOidcId(id: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
+    fun findUserByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel>
     fun serviceAccount(): UserModel
     fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String>
     fun createUser(oidcId: UUID, email: String, firstName: String?, lastName: String?): Mono<CurrentUserModel>

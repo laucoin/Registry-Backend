@@ -58,6 +58,11 @@ class UserModelPostgresRepository(
             .switchIfEmpty(Mono.empty())
     }
 
+    override fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel> {
+        return repository.findByEmail(email, visibilitySearched)
+            .map(currentUserMapper::toModel)
+    }
+
     override fun findServiceAccount(): Mono<CurrentUserModel> = repository.findServiceAccount().map(currentUserMapper::toModel)
 
     override fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel> {

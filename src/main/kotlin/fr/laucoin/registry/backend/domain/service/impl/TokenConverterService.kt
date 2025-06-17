@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
@@ -9,6 +10,7 @@ import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
+import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.convert.converter.Converter
@@ -82,7 +84,24 @@ class TokenConverterService(
 
     private fun Mono<CurrentUserModel>.createNewUserOnNotFound(
         oidcId: UUID, email: String, firstName: String?, lastName: String?
-    ): Mono<CurrentUserModel> = switchIfEmpty { userService.createUser(oidcId, email, firstName, lastName) }
+    ): Mono<CurrentUserModel> = switchIfEmpty {
+        log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
+        if (Objects.isNull(email)) userService.createUser(oidcId, email, firstName, lastName)
+        else {
+            userService.findUserByEmail(email, visibilitySearched = null)
+                .collectList()
+                .handle { it, handle ->
+                    if (it.isEmpty()) {
+                        log.info("No user found with email \"{}\", creating a new user with OIDC ID \"{}\"", email, oidcId)
+                        handle.next(it)
+                    } else {
+                        log.warn("Multiple users found with email \"{}\", cannot create a new user with OIDC ID \"{}\"", email, oidcId)
+                        handle.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED))
+                    }
+                }
+                .flatMap { userService.createUser(oidcId, email, firstName, lastName) }
+        }
+    }
 
     private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap { it ->
         it.promote(roleService.getAuthoritiesByUserRole(it.role))
