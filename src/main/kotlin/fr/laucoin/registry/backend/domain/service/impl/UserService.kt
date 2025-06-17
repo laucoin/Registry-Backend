@@ -69,6 +69,11 @@ class UserService(
             .filter { isNotServiceAccount(it) }
     }
 
+    override fun findUserByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel> {
+        return repository.findByEmail(email, visibilitySearched)
+            .filter { isNotServiceAccount(it) }
+    }
+
     override fun serviceAccount(): UserModel = serviceAccount
 
     override fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String> {

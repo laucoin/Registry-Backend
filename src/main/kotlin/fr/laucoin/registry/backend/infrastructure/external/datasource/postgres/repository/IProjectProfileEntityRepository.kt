@@ -33,6 +33,8 @@ import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.e
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.PROJECT_ROLE_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.role.RoleFields.ROLE_LEVEL
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_PURGED
+import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.external.datasource.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
@@ -186,8 +188,9 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
         FROM $PROJECT_PROFILE_TABLE tpp
         INNER JOIN $PROJECT_ROLE_TABLE tpr ON tpp.$PROJECT_PROFILE_ROLE = tpr.$ENTITY_ROLE_NAME AND tpr.$ROLE_LEVEL = 0
         INNER JOIN $PROJECT_TABLE tp ON tpp.$LINKED_PROJECT_ID = tp.$ID
+        INNER JOIN $USER_TABLE tu ON tpp.$PROJECT_PROFILE_USER_ID = tu.$ID AND tu.$USER_PURGED IS FALSE AND (:visibilitySearched IS NULL OR tu.$VISIBLE = :visibilitySearched)
         INNER JOIN user_profile_project up ON up.$LINKED_PROJECT_ID = tp.$ID
-        AND tpp.$PROJECT_PROFILE_STATUS = 'ACCEPTED' AND (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CURRENT_DATE OR (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME))
+        AND tpp.$PROJECT_PROFILE_STATUS = 'ACCEPTED' AND (:visibilitySearched IS NULL OR tpp.$VISIBLE = :visibilitySearched) AND (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CURRENT_DATE OR (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME))
         AND tpp.$PROJECT_PROFILE_END_ACCESS_DATE IS NULL AND tpp.$PROJECT_PROFILE_END_ACCESS_TIME IS NULL
         GROUP BY tpp.$LINKED_PROJECT_ID, tp.$PROJECT_NAME
         """

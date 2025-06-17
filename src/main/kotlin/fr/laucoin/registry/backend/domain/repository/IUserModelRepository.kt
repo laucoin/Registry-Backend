@@ -14,6 +14,7 @@ interface IUserModelRepository: IGenericReadModelRepository<UserModel>, IGeneric
     fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
     fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel>
     fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
+    fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel>
     fun findServiceAccount(): Mono<CurrentUserModel>
     fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel>
     fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>

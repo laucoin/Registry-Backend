@@ -6,12 +6,13 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMP
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
+import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
+import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -175,6 +176,13 @@ class TokenConverterServiceTest {
             visible = true
             purged = false
         }))
+
+        whenever(
+            userService.findUserByEmail(
+                any(),
+                anyOrNull()
+            )
+        ).thenReturn(if (Objects.nonNull(databaseUser)) Flux.just(databaseUser) else Flux.empty())
 
         val userRole = "USER_ROLE"
         whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
