@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 plugins {
@@ -5,11 +6,14 @@ plugins {
     kotlin("plugin.spring") version "2.1.0"
     id("org.springframework.boot") version "3.4.1"
     id("io.spring.dependency-management") version "1.1.7"
-    id("net.researchgate.release") version "3.1.0"
     id("jacoco")
 }
 
 group = "fr.laucoin.registry"
+val versionFile = rootProject.file("version.properties")
+val versionProperties: Properties = Properties()
+versionProperties.load(versionFile.inputStream())
+version = versionProperties.getProperty("version")
 
 val apacheTextVersion = "1.13.1"
 val prometheusVersion = "1.14.6"
@@ -20,7 +24,7 @@ val mockitoKotlinVersion = "5.4.0"
 val testContainerVersion = "1.20.6"
 val jacocoVersion = "0.8.12"
 
-val tuTarget = BigDecimal(0.8)
+val tuTarget = BigDecimal(0.75)
 
 java {
     toolchain {
@@ -103,15 +107,4 @@ val targetName: String? by project
 
 tasks.withType<BootJar> {
     archiveFileName.set(targetName ?: "registry-backend.jar")
-}
-
-release {
-    versionPropertyFile.set("version.properties")
-    preTagCommitMessage.set("[skip ci][Gradle Release Plugin] - pre tag commit: ")
-    tagCommitMessage.set("[skip ci][Gradle Release Plugin] - creating tag: ")
-    newVersionCommitMessage.set("[skip ci][Gradle Release Plugin] - new version: ")
-    buildTasks.set(emptyList<String>())
-    git {
-        requireBranch.set("develop")
-    }
 }

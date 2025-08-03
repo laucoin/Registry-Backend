@@ -36,7 +36,7 @@ class AlertService(
     private val communicationRepository: ICommunicationModelRepository,
     private val transactionalOperator: TransactionalOperator,
 ): IAlertService, GenericService() {
-    override fun findAlertPage(
+    override fun findAlertsPage(
         projectId: UUID,
         pageable: PageableModel,
         searchParams: AlertSearchParamModel

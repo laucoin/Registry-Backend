@@ -291,7 +291,7 @@ class CommunicationControllerTest(@Autowired private val webClient: WebTestClien
 
 
     @Test
-    fun `Should updateProjectProfile return 200`() {
+    fun `Should updateCommunication return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val communication = CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)

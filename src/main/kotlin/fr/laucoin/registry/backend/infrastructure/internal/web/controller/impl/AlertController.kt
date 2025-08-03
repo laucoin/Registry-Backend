@@ -41,7 +41,7 @@ class AlertController(
         startDateTimeSearched: ZonedDateTime?,
         endDateTimeSearched: ZonedDateTime?
     ): Mono<PageModel<AlertReaderDto>> {
-        return service.findAlertPage(
+        return service.findAlertsPage(
             projectId,
             PageableModel(pageNumber * pageSize, pageSize),
             AlertSearchParamModel(
