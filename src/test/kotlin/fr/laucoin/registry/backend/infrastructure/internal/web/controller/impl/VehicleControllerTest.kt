@@ -488,7 +488,7 @@ class VehicleControllerTest(@Autowired private val webClient: WebTestClient): Te
 
 
     @Test
-    fun `Should updateProjectProfile return 200`() {
+    fun `Should updateVehicle return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val vehicle = VehicleWriterDto(licensePlate = "AB-123-CD", brand = "Toyota", model = "Hilux")

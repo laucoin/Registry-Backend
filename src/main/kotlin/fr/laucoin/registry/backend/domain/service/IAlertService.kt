@@ -14,7 +14,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IAlertService {
-    fun findAlertPage(
+    fun findAlertsPage(
         projectId: UUID,
         pageable: PageableModel,
         searchParams: AlertSearchParamModel,
