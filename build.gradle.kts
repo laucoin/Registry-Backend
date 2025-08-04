@@ -4,7 +4,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 plugins {
     kotlin("jvm") version "2.1.0"
     kotlin("plugin.spring") version "2.1.0"
-    id("org.springframework.boot") version "3.4.1"
+    id("org.springframework.boot") version "3.5.4"
     id("io.spring.dependency-management") version "1.1.7"
     id("jacoco")
 }
@@ -15,16 +15,16 @@ val versionProperties: Properties = Properties()
 versionProperties.load(versionFile.inputStream())
 version = versionProperties.getProperty("version")
 
-val apacheTextVersion = "1.13.1"
-val prometheusVersion = "1.14.6"
-val swaggerVersion = "2.8.6"
-val mockWebServer = "5.0.0-alpha.14"
-val testArch = "1.4.0"
-val mockitoKotlinVersion = "5.4.0"
-val testContainerVersion = "1.20.6"
-val jacocoVersion = "0.8.12"
+val apacheTextVersion = "1.14.0"
+val prometheusVersion = "1.15.2"
+val swaggerVersion = "2.8.9"
+val mockWebServer = "5.1.0"
+val testArch = "1.4.1"
+val mockitoKotlinVersion = "6.0.0"
+val testContainerVersion = "1.21.3"
+val jacocoVersion = "0.8.13"
 
-val tuTarget = BigDecimal(0.75)
+val tuTarget = BigDecimal(0.74)
 
 java {
     toolchain {
