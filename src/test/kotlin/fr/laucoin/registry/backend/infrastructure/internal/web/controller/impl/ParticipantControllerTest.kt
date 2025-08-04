@@ -535,7 +535,7 @@ class ParticipantControllerTest(@Autowired private val webClient: WebTestClient)
 
 
     @Test
-    fun `Should updateProjectProfile return 200`() {
+    fun `Should updateParticipant return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)

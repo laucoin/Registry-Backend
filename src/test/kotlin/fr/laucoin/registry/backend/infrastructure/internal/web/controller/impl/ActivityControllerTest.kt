@@ -479,7 +479,7 @@ class ActivityControllerTest(@Autowired private val webClient: WebTestClient): T
 
 
     @Test
-    fun `Should updateProjectProfile return 200`() {
+    fun `Should updateActivity return 200`() {
         // Arrange
         val uuid = UUID.randomUUID()
         val activity = ActivityWriterDto(name = "Activity 1")
