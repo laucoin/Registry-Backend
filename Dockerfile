@@ -1,5 +1,5 @@
 # Use an appropriate base image that has Java and Gradle installed
-FROM gradle:8.13.0-jdk21-alpine AS temp_build_image
+FROM gradle:8.14.0-jdk21-alpine AS build
 
 # Set the working directory inside the container
 ENV APP_HOME=/usr/app
@@ -12,14 +12,17 @@ COPY . .
 # Build the application using Gradle
 RUN gradle build -x test -PtargetName=$APP_ARTIFACT_NAME
 
-# Use an appropriate base image that has Java and Gradle installed
-FROM eclipse-temurin:21-alpine
+# Use distroless image for the final stage
+FROM gcr.io/distroless/java21-debian12
 
-ENV APP_ARTIFACT_NAME=registry-backend.jar
-ENV APP_HOME=/usr/app
-WORKDIR $APP_HOME
+# Switch to a non-root user for security
+USER nonroot
 
-COPY --from=temp_build_image $APP_HOME/build/libs/$APP_ARTIFACT_NAME $APP_HOME/$APP_ARTIFACT_NAME
+# Copy the application JAR file from the build stage
+COPY --from=build /usr/app/build/libs/registry-backend.jar /registry-backend.jar
 
+# Expose the port the application listens on
 EXPOSE 8081
-CMD ["sh", "-c", "java $JAVA_OPTS -jar $APP_ARTIFACT_NAME"]
+
+# Set the entry point for the container
+ENTRYPOINT ["java", "-jar", "/registry-backend.jar"]
