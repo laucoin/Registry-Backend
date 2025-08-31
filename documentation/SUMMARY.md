@@ -1,0 +1,46 @@
+# Table of contents
+
+* [ℹ️ Summary](../../../../Perso/registry-documentation/README.md)
+* [📖 Glossary](glossary.md)
+* [📦 Lot](../../../../Perso/registry-documentation/lot.md)
+
+## 🤔 Functional
+
+* [📨 GDPR](functional/gdpr.md)
+* [🎓 Permission](functional/permission.md)
+* [🔫 Objects](functional/objects/README.md)
+    * [🏢 Organization 🔵](functional/organization.md)
+        * [🧑‍🤝‍🧑 Structure 🔴](functional/objects/structure.md)
+        * [👷‍♀️ User 🔵](functional/objects/user.md)
+        * [👩‍🏫 Profile 🔵](functional/objects/profile.md)
+        * [🗓️ Event 🔵](functional/objects/event/README.md)
+            * [🗺️ Address 🔴](functional/objects/event/address.md)
+            * [📜 Registration 🟢](functional/objects/event/registration/README.md)
+                * [🤼 Group 🟣](functional/objects/event/registration/group.md)
+                * [🙎 Participant 🔵 & Guest 🟠](functional/objects/event/registration/participant-and-guest.md)
+            * [🚶 Movement 🔵](functional/objects/event/movement/README.md)
+                * [🔍 Movement Detail 🔵](functional/objects/event/movement/movement-detail.md)
+            * [😶‍🌫️ Option](functional/objects/event/option/README.md)
+                * [💬 Reason 🟠](functional/objects/event/movement/reason.md)
+                * [🚗 Vehicle 🟡](functional/objects/event/option/vehicle.md)
+                * [🎳 Activity 🟡](functional/objects/event/option/activity.md)
+                * [📱 Phone Communication 🟣](functional/objects/event/option/phone-communication.md)
+                * [🎙️ Activity Communication 🟠](functional/objects/event/option/activity-communication/README.md)
+                    * [☁️ Smoke Report 🔴](functional/objects/event/option/activity-communication/smoke-report/README.md)
+                        * [📢 Smoke History 🔴](functional/objects/event/option/activity-communication/smoke-report/smoke-history.md)
+                    * [🚶‍♂️ Presence Report 🟣](functional/objects/event/option/activity-communication/movement-report.md)
+                * [🎟️ Ticketing 🟢](functional/objects/event/option/ticketing.md)
+        * [🔥 Fire risk 🔴](functional/objects/fire-risk.md)
+        * [📊 Statistic 🟣](functional/objects/statistic.md)
+
+## 🛠️ Technical
+
+* [📙 Database](technical/database.md)
+* [🖥️ Backend](technical/backend/README.md)
+    * [🏗️ Architecture](technical/backend/architecture.md)
+    * [🔵 Lot 1 (MVP)](technical/backend/lot-1-mvp.md)
+    * [🟢 Lot 2](technical/backend/lot-2.md)
+    * [🟡 Lot 3](technical/backend/lot-3.md)
+    * [🟠 Lot 4](technical/backend/lot-4.md)
+    * [🔴 Lot 5](technical/backend/lot-5.md)
+* [🔐 Authentication](technical/authentication.md)

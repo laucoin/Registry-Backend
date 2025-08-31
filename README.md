@@ -11,6 +11,8 @@ This project was generated with [spring initializr](https://start.spring.io/), a
 This application allows virtual registry management. This is a backend which one is called by the
 frontend (https://gitlab.com/laucoin/registry-frontend.git).
 
+Checkout the full document [here](documentation/README.md).
+
 ## How to install and use it? ⚙️
 
 ### Prerequisites
