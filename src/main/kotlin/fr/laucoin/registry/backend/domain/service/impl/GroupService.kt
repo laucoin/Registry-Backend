@@ -34,9 +34,9 @@ class GroupService(
     private val projectService: IProjectService,
     private val repository: IGroupModelRepository,
     private val participantRepository: IParticipantModelRepository,
-    @Value("\${registry.feature.group.searched.max-participant-result}")
+    @param:Value("\${registry.feature.group.searched.max-participant-result}")
     private val maxParticipantResult: Int,
-): IGroupService, GenericService() {
+) : IGroupService, GenericService() {
     override fun findGroupsPage(
         projectId: UUID,
         pageable: PageableModel,
@@ -66,7 +66,13 @@ class GroupService(
         memberVisibilitySearched: Boolean?,
         memberAvailabilitySearched: Boolean?,
     ): Mono<GroupModel> {
-        return repository.findByIdWithContent(projectId, id, visibilitySearched, memberVisibilitySearched, memberAvailabilitySearched)
+        return repository.findByIdWithContent(
+            projectId,
+            id,
+            visibilitySearched,
+            memberVisibilitySearched,
+            memberAvailabilitySearched
+        )
             .notFoundIfEmpty(id)
     }
 
@@ -82,18 +88,23 @@ class GroupService(
 
     override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
         return projectService.validateDateTimes(
-            group.project !!.id !!,
+            group.project!!.id!!,
             group.startAvailability,
             group.endAvailability,
             GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
         )
-            .flatMap { validateMembers(group.project !!.id !!, group, group.members.mapNotNull { p -> p.id }) }
+            .flatMap { validateMembers(group.project!!.id!!, group, group.members.mapNotNull { p -> p.id }) }
             .flatMap { repository.create(group.apply { create(currentUser) }) }
     }
 
-    override fun updateGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, group: GroupModel): Mono<GroupModel> {
+    override fun updateGroupById(
+        currentUser: CurrentUserModel,
+        projectId: UUID,
+        id: UUID,
+        group: GroupModel
+    ): Mono<GroupModel> {
         return projectService.validateDateTimes(
-            group.project !!.id !!,
+            group.project!!.id!!,
             group.startAvailability,
             group.endAvailability,
             GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,

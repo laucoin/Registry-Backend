@@ -7,8 +7,20 @@ import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
+import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS
+import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN
+import org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS
+import org.springframework.http.HttpHeaders.AUTHORIZATION
+import org.springframework.http.HttpHeaders.CACHE_CONTROL
+import org.springframework.http.HttpHeaders.CONTENT_TYPE
+import org.springframework.http.HttpMethod.DELETE
 import org.springframework.http.HttpMethod.GET
+import org.springframework.http.HttpMethod.HEAD
+import org.springframework.http.HttpMethod.OPTIONS
+import org.springframework.http.HttpMethod.PATCH
 import org.springframework.http.HttpMethod.POST
+import org.springframework.http.HttpMethod.PUT
 import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
@@ -29,11 +41,11 @@ class SecurityConfig(
     private val tokenConverter: TokenConverterService,
     private val authorizationErrorHandler: AuthorizationErrorHandler,
     private val headersHandler: HeadersHandler,
-    @Value("\${external.frontend.base-url}")
-    private val frontendUrl: String,
-    @Value("\${registry.feature.documentation.enabled:false}")
+    @param:Value("\${external.cors.urls}")
+    private val corsUrls: List<String>,
+    @param:Value("\${registry.feature.documentation.enabled:false}")
     private val documentationEnabled: Boolean,
-    @Value("\${registry.feature.observability.enabled:false}")
+    @param:Value("\${registry.feature.observability.enabled:false}")
     private val observabilityEnabled: Boolean,
 ) {
 
@@ -56,7 +68,8 @@ class SecurityConfig(
 
     private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
         if (documentationEnabled) {
-            it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui/**").permitAll()
+            it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui/**")
+                .permitAll()
         }
         if (observabilityEnabled) {
             it.pathMatchers(GET, "/actuator/**").permitAll()
@@ -96,16 +109,25 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf(frontendUrl)
-        configuration.allowedMethods = listOf("HEAD", "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+        configuration.allowedOrigins = corsUrls
+        configuration.allowedMethods = listOf(
+            HEAD.name(),
+            GET.name(),
+            POST.name(),
+            PUT.name(),
+            DELETE.name(),
+            PATCH.name(),
+            OPTIONS.name(),
+        )
         configuration.allowCredentials = true
         configuration.allowedHeaders = listOf(
-            "Authorization",
-            "Cache-Control",
-            "Content-Type",
-            "Access-Control-Allow-Origin",
-            "Access-Control-Expose-Headers",
-            "Access-Control-Allow-Headers"
+            AUTHORIZATION,
+            CACHE_CONTROL,
+            CONTENT_TYPE,
+            ACCEPT_LANGUAGE,
+            ACCESS_CONTROL_ALLOW_ORIGIN,
+            ACCESS_CONTROL_ALLOW_HEADERS,
+            ACCESS_CONTROL_EXPOSE_HEADERS,
         )
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)

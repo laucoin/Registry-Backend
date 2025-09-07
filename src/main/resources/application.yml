@@ -14,8 +14,8 @@ registry:
     name: Registry
     description: This application allows virtual registry management. This is a backend which one is called by the frontend.
     locale:
-      default: en-US
-      supported: en-US, fr-FR
+      default: en
+      supported: en,fr
     support:
       name: Luc AUCOIN
       email: luc.aucoin1998@gmail.com

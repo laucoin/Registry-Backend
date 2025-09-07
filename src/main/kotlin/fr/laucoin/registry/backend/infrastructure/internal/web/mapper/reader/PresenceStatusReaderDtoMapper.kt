@@ -8,27 +8,26 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT
 import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
 import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.Objects
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
 
 @Component
 class PresenceStatusReaderDtoMapper(
-    @Qualifier("messagesSource") private val translateService: MessageSource,
-): GenericDurationReaderDtoMapper(translateService) {
+    private val translateService: ITranslateService,
+) : GenericDurationReaderDtoMapper(translateService) {
     fun toDto(
         model: PresenceStatusEnum,
         locale: Locale,
     ): LabelDto {
         return LabelDto(
             model.name,
-            translateService.getMessage("$PRESENCE_STATUS_PREFIX$model", null, locale),
+            translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model", locale = locale),
         )
     }
 
@@ -58,9 +57,9 @@ class PresenceStatusReaderDtoMapper(
                 val interval = Duration.between(lastMovement, now.toZonedDateTime())
 
                 translateService.getMessage(
-                    "$PRESENCE_STATUS_DURATION_PREFIX$model",
-                    arrayOf(formatDuration(interval, locale)),
-                    locale
+                    code = "$PRESENCE_STATUS_DURATION_PREFIX$model",
+                    args = arrayOf(formatDuration(interval, locale)),
+                    locale = locale,
                 )
             }
 
@@ -68,40 +67,39 @@ class PresenceStatusReaderDtoMapper(
                 val interval = Duration.between(
                     now.toZonedDateTime(),
                     startAvailability?.toZonedDateTime(
-                        LocalTime.MIN, now.zone() !!
+                        LocalTime.MIN, now.zone()!!
                     )
                 )
 
                 translateService.getMessage(
-                    "${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE",
-                    arrayOf(formatDuration(interval, locale)),
-                    locale
+                    code = "${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE",
+                    args = arrayOf(formatDuration(interval, locale)),
+                    locale = locale,
                 )
             }
 
             Objects.nonNull(endAvailability) && endAvailability.isBefore(now) -> {
                 val interval = Duration.between(
                     endAvailability?.toZonedDateTime(
-                        LocalTime.MAX, now.zone() !!
+                        LocalTime.MAX, now.zone()!!
                     ), now.toZonedDateTime()
                 )
 
                 translateService.getMessage(
-                    "${PRESENCE_STATUS_DURATION_PREFIX}LEFT",
-                    arrayOf(formatDuration(interval, locale)),
-                    locale
+                    code = "${PRESENCE_STATUS_DURATION_PREFIX}LEFT",
+                    args = arrayOf(formatDuration(interval, locale)),
+                    locale = locale,
                 )
             }
 
             Objects.isNull(lastMovement) -> {
                 translateService.getMessage(
-                    "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET",
-                    null,
-                    locale
+                    code = "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET",
+                    locale = locale
                 )
             }
 
-            else -> translateService.getMessage("$PRESENCE_STATUS_PREFIX$model", null, locale)
+            else -> translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model", locale = locale)
         }
     }
 }

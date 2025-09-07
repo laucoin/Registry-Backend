@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.Locale
@@ -12,15 +13,13 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 
 class UserReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
+    private val translateService: ITranslateService = mock()
     private val mapper: UserReaderDtoMapper = UserReaderDtoMapper(translateService)
 
     companion object {
@@ -63,7 +62,7 @@ class UserReaderDtoMapperTest {
         expectedRoleTranslation: Int,
     ) {
         // Arrange
-        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("Administrator")
+        whenever(translateService.getMessage(any(), any())).thenReturn("Administrator")
 
         // Act
         val result = mapper.toDto(user, Locale.getDefault())
@@ -71,7 +70,6 @@ class UserReaderDtoMapperTest {
         // Assert
         verify(translateService, times(expectedRoleTranslation)).getMessage(
             "${USER_ROLE_PREFIX}ADMIN",
-            null,
             Locale.getDefault()
         )
 

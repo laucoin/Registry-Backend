@@ -56,9 +56,6 @@ import fr.laucoin.registry.backend.domain.repository.IVehicleModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.time.LocalDate
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
@@ -74,6 +71,8 @@ import reactor.kotlin.core.util.function.component3
 import reactor.kotlin.core.util.function.component4
 import reactor.kotlin.core.util.function.component5
 import reactor.util.function.Tuple2
+import java.time.LocalDate
+import java.util.*
 
 @Service
 class MovementService(
@@ -85,15 +84,15 @@ class MovementService(
     private val communicationRepository: ICommunicationModelRepository,
     private val groupRepository: IGroupModelRepository,
     private val transactionalOperator: TransactionalOperator,
-    @Value("\${registry.feature.movement.searched.max-participant-result}")
+    @param:Value("\${registry.feature.movement.searched.max-participant-result}")
     private val maxParticipantResult: Int,
-    @Value("\${registry.feature.movement.searched.max-group-result}")
+    @param:Value("\${registry.feature.movement.searched.max-group-result}")
     private val maxGroupResult: Int,
-    @Value("\${registry.feature.movement.searched.max-vehicle-result}")
+    @param:Value("\${registry.feature.movement.searched.max-vehicle-result}")
     private val maxVehicleResult: Int,
-    @Value("\${registry.feature.movement.searched.max-activity-result}")
+    @param:Value("\${registry.feature.movement.searched.max-activity-result}")
     private val maxActivityResult: Int,
-): IMovementService, GenericService() {
+) : IMovementService, GenericService() {
     override fun findMovementsPage(
         projectId: UUID,
         pageable: PageableModel,
@@ -167,7 +166,9 @@ class MovementService(
         return vehicleRepository.findWithLimit(
             maxVehicleResult,
             projectId,
-            VehicleSearchParamModel(visibilitySearched = true, availabilitySearched = true).apply { this.textSearched = textSearched },
+            VehicleSearchParamModel(visibilitySearched = true, availabilitySearched = true).apply {
+                this.textSearched = textSearched
+            },
         )
     }
 
@@ -303,7 +304,7 @@ class MovementService(
 
     private fun validateMovementDate(movement: MovementModel): Mono<UUID> {
         return projectService.validateDateTime(
-            movement.project !!.id !!,
+            movement.project!!.id!!,
             CustomDateTimeModel(movement.dateTime),
             MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
         )
@@ -319,17 +320,17 @@ class MovementService(
             .flatMap { saveGuestsIfNecessary(currentUser, movement, movement, newGuests) }
             .flatMap {
                 validateParticipants(
-                    movement.project !!.id !!,
+                    movement.project!!.id!!,
                     movement,
-                    movement.content.mapNotNull { c -> c.participant !!.id },
-                    movement.content.filter { c -> Objects.nonNull(c.vehicle) }.mapNotNull { c -> c.participant !!.id }
+                    movement.content.mapNotNull { c -> c.participant!!.id },
+                    movement.content.filter { c -> Objects.nonNull(c.vehicle) }.mapNotNull { c -> c.participant!!.id }
                 )
             }
             .flatMap {
                 val newVehicleIds: List<UUID> = movement.content.mapNotNull { c -> c.vehicle?.id }
                 if (newVehicleIds.isEmpty()) Mono.just(it)
                 else validateVehicles(
-                    movement.project !!.id !!,
+                    movement.project!!.id!!,
                     movement,
                     newVehicleIds
                 )
@@ -387,7 +388,7 @@ class MovementService(
         return if (Objects.isNull(movement.activity) || movement.activity?.id == oldMovement?.activity?.id) Mono.just(
             oldMovement ?: movement
         )
-        else activityRepository.findById(movement.project !!.id !!, movement.activity !!.id !!, visibilitySearched = null)
+        else activityRepository.findById(movement.project!!.id!!, movement.activity!!.id!!, visibilitySearched = null)
             .switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT)) }
             .handle { it, handle ->
                 if (it.isNotVisible()) handle.error(
@@ -400,14 +401,17 @@ class MovementService(
             }
     }
 
-    private fun validateNoCommunicationConflict(movement: MovementModel, oldMovement: MovementModel): Mono<MovementModel> {
+    private fun validateNoCommunicationConflict(
+        movement: MovementModel,
+        oldMovement: MovementModel
+    ): Mono<MovementModel> {
         return if (movement.dateTime.isAfter(oldMovement.dateTime)) {
             val params = CommunicationSearchParamModel(
                 visibilitySearched = null,
                 startDateTimeSearched = null,
                 endDateTimeSearched = movement.dateTime,
             )
-            communicationRepository.countAllByMovementId(movement.project !!.id !!, oldMovement.id !!, params)
+            communicationRepository.countAllByMovementId(movement.project!!.id!!, oldMovement.id!!, params)
                 .handle { it, handle ->
                     if (it > 0L) handle.error(
                         RegistryException(
@@ -439,7 +443,7 @@ class MovementService(
                 }
             }
 
-        return participantRepository.findAllByIds(movement.project !!.id !!, guestIdsToUpdate, visibilitySearched = null)
+        return participantRepository.findAllByIds(movement.project!!.id!!, guestIdsToUpdate, visibilitySearched = null)
             .map {
                 val updatedGuest = guests.find { g -> g.id == it.id }
                 it.apply {
@@ -499,7 +503,7 @@ class MovementService(
                         )
                     )
 
-                    it.any { p -> ! p.birthday.isMajor() && driverIds.contains(p.id) } -> handle.error(
+                    it.any { p -> !p.birthday.isMajor() && driverIds.contains(p.id) } -> handle.error(
                         RegistryException(
                             UNPROCESSABLE_ENTITY,
                             MOVEMENT_DRIVERS_NOT_MAJOR,
@@ -520,7 +524,11 @@ class MovementService(
             .map { movement }
     }
 
-    private fun validateVehicles(projectId: UUID, movement: MovementModel, newVehicleIds: List<UUID>): Mono<MovementModel> {
+    private fun validateVehicles(
+        projectId: UUID,
+        movement: MovementModel,
+        newVehicleIds: List<UUID>
+    ): Mono<MovementModel> {
         return vehicleRepository.findAllByIds(projectId, newVehicleIds, visibilitySearched = null)
             .collectList()
             .handle { it, handle ->

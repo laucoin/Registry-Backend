@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PreferenceReaderDto
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -16,16 +17,14 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 
 class CurrentUserReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
+    private val translateService: ITranslateService = mock()
     private val preferenceMapper: PreferenceReaderDtoMapper = mock()
     private val mapper: CurrentUserReaderDtoMapper = CurrentUserReaderDtoMapper(translateService, preferenceMapper)
 
@@ -86,7 +85,7 @@ class CurrentUserReaderDtoMapperTest {
     ) {
         // Arrange
         val authority = REGISTRY_PROJECT_R
-        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("Role translated")
+        whenever(translateService.getMessage(any(), any())).thenReturn("Role translated")
         whenever(preferenceMapper.toDto(any(), any())).thenReturn(PreferenceReaderDto())
 
         // Act
@@ -95,7 +94,6 @@ class CurrentUserReaderDtoMapperTest {
         // Assert
         verify(translateService, times(expectedRoleTranslation)).getMessage(
             "${USER_ROLE_PREFIX}ROLE",
-            null,
             Locale.getDefault()
         )
         verify(preferenceMapper, times(expectedPreferencesCast)).toDto(

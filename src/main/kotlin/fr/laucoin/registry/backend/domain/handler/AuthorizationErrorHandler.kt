@@ -7,23 +7,18 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_AUTHENTICATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
-import fr.laucoin.registry.backend.domain.handler.HeadersHandler.Companion.extractLocaleOrDefault
-import fr.laucoin.registry.backend.domain.handler.HeadersHandler.Companion.headers
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
-import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ErrorDto
 import java.util.Locale
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Bean
+import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.http.MediaType.APPLICATION_JSON
-import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException
@@ -36,41 +31,54 @@ import reactor.core.publisher.Mono
 
 @Component
 class AuthorizationErrorHandler(
-    @Value("\${registry.information.locale.supported}")
-    private val supportedLocales: List<String>,
-    @Qualifier("errorsSource")
-    private val translateService: MessageSource,
+    private val translateService: ITranslateService,
     private val gson: Gson,
-): ServerAuthenticationFailureHandler {
-    override fun onAuthenticationFailure(webFilterExchange: WebFilterExchange, exception: AuthenticationException): Mono<Void> {
+) : ServerAuthenticationFailureHandler {
+    override fun onAuthenticationFailure(
+        webFilterExchange: WebFilterExchange,
+        exception: AuthenticationException
+    ): Mono<Void> {
         val response = webFilterExchange.exchange.response
-        val locale = extractLocale(webFilterExchange.exchange.request)
         return when (exception) {
-            is JwtConversionException -> response.writeWith(buildBody(response, exception.status, exception.code, locale))
-            is InvalidBearerTokenException -> response.writeWith(buildBody(response, UNAUTHORIZED, INVALID_TOKEN, locale))
-            else -> response.writeWith(buildBody(response, INTERNAL_SERVER_ERROR, FAILED_TO_LOGIN_FOR_UNKNOWN_REASON, locale))
+            is JwtConversionException -> response.writeWith(
+                buildBody(
+                    response,
+                    exception.status,
+                    exception.code,
+                    LocaleContextHolder.getLocale()
+                )
+            )
+
+            is InvalidBearerTokenException -> response.writeWith(
+                buildBody(
+                    response,
+                    UNAUTHORIZED,
+                    INVALID_TOKEN,
+                    LocaleContextHolder.getLocale()
+                )
+            )
+
+            else -> response.writeWith(
+                buildBody(
+                    response,
+                    INTERNAL_SERVER_ERROR,
+                    FAILED_TO_LOGIN_FOR_UNKNOWN_REASON,
+                    LocaleContextHolder.getLocale()
+                )
+            )
         }
     }
 
     @Bean
     fun unauthorizedHandler(): ServerAuthenticationEntryPoint = ServerAuthenticationEntryPoint { exchange, _ ->
         val response = exchange.response
-        response.writeWith(buildBody(response, UNAUTHORIZED, NOT_AUTHENTICATED, extractLocale(exchange.request)))
+        response.writeWith(buildBody(response, UNAUTHORIZED, NOT_AUTHENTICATED, LocaleContextHolder.getLocale()))
     }
 
     @Bean
     fun accessDeniedHandler(): ServerAccessDeniedHandler = ServerAccessDeniedHandler { exchange, _ ->
         val response = exchange.response
-        response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION, extractLocale(exchange.request)))
-    }
-
-    private fun extractLocale(request: ServerHttpRequest): Locale {
-        val headers: Map<String, String> = headers(request)
-        return try {
-            extractLocaleOrDefault(headers, supportedLocales)
-        } catch (e: RegistryException) {
-            Locale.getDefault()
-        }
+        response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION, LocaleContextHolder.getLocale()))
     }
 
     private fun buildBody(
@@ -86,8 +94,8 @@ class AuthorizationErrorHandler(
             statusCode = status.value(),
             statusName = status.name,
             code = errorCode,
-            title = translateService.getMessage("$ERROR_TITLE_PREFIX${status.value()}", null, locale),
-            message = translateService.getMessage("$ERROR_MESSAGE_PREFIX$errorCode", null, locale),
+            title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}", locale = locale),
+            message = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$errorCode", locale = locale),
         )
 
         return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))

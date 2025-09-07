@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import java.util.Locale
@@ -22,10 +23,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 
 class ProjectProfileReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
+    private val translateService: ITranslateService = mock()
     private val projectMapper: ProjectReaderDtoMapper = mock()
     private val partialUserMapper: PartialUserReaderDtoMapper = mock()
     private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()

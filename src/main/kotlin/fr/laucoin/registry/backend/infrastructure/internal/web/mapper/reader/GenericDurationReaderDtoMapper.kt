@@ -1,40 +1,62 @@
 package fr.laucoin.registry.backend.infrastructure.internal.web.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.DURATION_PREFIX
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.time.Duration
 import java.util.Locale
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
 
 @Component
 class GenericDurationReaderDtoMapper(
-    @Qualifier("messagesSource") private val translateService: MessageSource,
+    private val translateService: ITranslateService,
 ) {
     protected fun formatDuration(duration: Duration, locale: Locale): String {
         return when {
-            duration.seconds == 1L -> translateService.getMessage("${DURATION_PREFIX}second", null, locale)
-            duration.seconds < 60 -> translateService.getMessage("${DURATION_PREFIX}seconds", arrayOf(duration.seconds), locale)
-            duration.toMinutes() == 1L -> translateService.getMessage("${DURATION_PREFIX}minute", null, locale)
+            duration.seconds == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}second", locale = locale)
+            duration.seconds < 60 -> translateService.getMessage(
+                code = "${DURATION_PREFIX}seconds",
+                args = arrayOf(duration.seconds),
+                locale = locale,
+            )
+
+            duration.toMinutes() == 1L -> translateService.getMessage(
+                code = "${DURATION_PREFIX}minute",
+                locale = locale,
+            )
+
             duration.toMinutes() <= 60 -> translateService.getMessage(
-                "${DURATION_PREFIX}minutes",
-                arrayOf(duration.toMinutes()),
-                locale
+                code = "${DURATION_PREFIX}minutes",
+                args = arrayOf(duration.toMinutes()),
+                locale = locale,
             )
 
-            duration.toHours() == 1L -> translateService.getMessage("${DURATION_PREFIX}hour", null, locale)
-            duration.toHours() < 24 -> translateService.getMessage("${DURATION_PREFIX}hours", arrayOf(duration.toHours()), locale)
-            duration.toDays() == 1L -> translateService.getMessage("${DURATION_PREFIX}day", null, locale)
-            duration.toDays() < 31 -> translateService.getMessage("${DURATION_PREFIX}days", arrayOf(duration.toDays()), locale)
-            duration.toDays() < 61 -> translateService.getMessage("${DURATION_PREFIX}month", null, locale)
+            duration.toHours() == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}hour", locale = locale)
+            duration.toHours() < 24 -> translateService.getMessage(
+                code = "${DURATION_PREFIX}hours",
+                args = arrayOf(duration.toHours()),
+                locale = locale,
+            )
+
+            duration.toDays() == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}day", locale = locale)
+            duration.toDays() < 31 -> translateService.getMessage(
+                code = "${DURATION_PREFIX}days",
+                args = arrayOf(duration.toDays()),
+                locale = locale,
+            )
+
+            duration.toDays() < 61 -> translateService.getMessage(code = "${DURATION_PREFIX}month", locale = locale)
             duration.toDays() < 365 -> translateService.getMessage(
-                "${DURATION_PREFIX}months",
-                arrayOf((duration.toDays() / 30L).toInt()),
-                locale
+                code = "${DURATION_PREFIX}months",
+                args = arrayOf((duration.toDays() / 30L).toInt()),
+                locale = locale,
             )
 
-            duration.toDays() < 730 -> translateService.getMessage("${DURATION_PREFIX}year", null, locale)
-            else -> translateService.getMessage("${DURATION_PREFIX}years", arrayOf((duration.toDays() / 365L).toInt()), locale)
+            duration.toDays() < 730 -> translateService.getMessage(code = "${DURATION_PREFIX}year", locale = locale)
+            else -> translateService.getMessage(
+                code = "${DURATION_PREFIX}years",
+                args = arrayOf((duration.toDays() / 365L).toInt()),
+                locale = locale,
+            )
         }
     }
 }

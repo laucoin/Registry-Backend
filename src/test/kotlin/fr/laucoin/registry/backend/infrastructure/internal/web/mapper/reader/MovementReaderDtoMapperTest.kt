@@ -6,10 +6,11 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.MovementReasonsReaderDto
+import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectReaderDto
 import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -17,21 +18,25 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 
 class MovementReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
+    private val translateService: ITranslateService = mock()
     private val projectMapper: ProjectReaderDtoMapper = mock()
     private val activityReasonMapper: MovementActivityReasonReaderDtoMapper = mock()
     private val reasonMapper: MovementReasonReaderDtoMapper = mock()
     private val movementContentMapper: MovementContentReaderDtoMapper = mock()
     private val mapper: MovementReaderDtoMapper =
-        MovementReaderDtoMapper(translateService, projectMapper, activityReasonMapper, reasonMapper, movementContentMapper)
+        MovementReaderDtoMapper(
+            translateService,
+            projectMapper,
+            activityReasonMapper,
+            reasonMapper,
+            movementContentMapper
+        )
 
     companion object {
         @JvmStatic
@@ -62,7 +67,7 @@ class MovementReaderDtoMapperTest {
         expectedProjectCast: Int,
     ) {
         // Arrange
-        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn("translated")
+        whenever(translateService.getMessage(code = any(), locale = any())).thenReturn("translated")
         whenever(activityReasonMapper.toDto(any(), any())).thenReturn(
             MovementReasonsReaderDto(
                 value = "value",
@@ -79,13 +84,15 @@ class MovementReaderDtoMapperTest {
 
         // Assert
         verify(translateService, times(expectedTranslation)).getMessage(
-            "$MOVEMENT_TYPE_PREFIX${movement.type}",
-            null,
-            Locale.getDefault(),
+            code = "$MOVEMENT_TYPE_PREFIX${movement.type}",
+            locale = Locale.getDefault(),
         )
         verify(movementContentMapper).toDtoList(movement.content, Locale.getDefault())
         verify(projectMapper, times(expectedProjectCast)).toDto(movement.project ?: ProjectModel(), Locale.getDefault())
-        verify(activityReasonMapper, times(expectedActivityCast)).toDto(movement.activity ?: ActivityModel(), Locale.getDefault())
+        verify(activityReasonMapper, times(expectedActivityCast)).toDto(
+            movement.activity ?: ActivityModel(),
+            Locale.getDefault()
+        )
 
         assertEquals(movement.id, result.id)
         assertEquals(movement.dateTime, result.dateTime)

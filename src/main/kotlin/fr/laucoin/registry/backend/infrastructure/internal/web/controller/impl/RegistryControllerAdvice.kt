@@ -7,11 +7,10 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MES
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.impl.LoggerService
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IRegistryControllerAdvice
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ErrorDto
 import java.util.Locale
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -28,8 +27,8 @@ import reactor.core.publisher.Mono
 
 @RestControllerAdvice
 class RegistryControllerAdvice(
-    @Qualifier("errorsSource") private val translateService: MessageSource,
-): IRegistryControllerAdvice, LoggerService() {
+    private val translateService: ITranslateService,
+) : IRegistryControllerAdvice, LoggerService() {
     override fun handleRegistryException(exception: RegistryException): Mono<ResponseEntity<ErrorDto>> {
         return buildError(exception.status, exception.code, exception.args?.toArray())
     }
@@ -38,7 +37,7 @@ class RegistryControllerAdvice(
         val error = exception.allErrors.first()
         return buildError(
             status = BAD_REQUEST,
-            code = error.defaultMessage !!,
+            code = error.defaultMessage!!,
             args = error.arguments ?: emptyArray(),
         )
     }
@@ -47,7 +46,7 @@ class RegistryControllerAdvice(
         return buildError(
             status = BAD_REQUEST,
             code = PARAMETER_TYPE_MISMATCH,
-            args = arrayOf(exception.cause),
+            args = arrayOf(exception.cause).filterNotNull().toTypedArray(),
         )
     }
 
@@ -55,8 +54,8 @@ class RegistryControllerAdvice(
         val error: ParameterValidationResult = exception.valueResults.first()
         return buildError(
             status = BAD_REQUEST,
-            code = error.resolvableErrors.first().defaultMessage !!,
-            args = arrayOf(error.argument),
+            code = error.resolvableErrors.first().defaultMessage!!,
+            args = arrayOf(error.argument).filterNotNull().toTypedArray(),
         )
     }
 
@@ -85,7 +84,7 @@ class RegistryControllerAdvice(
     private fun buildError(
         status: HttpStatus,
         code: String,
-        args: Array<Any?>? = null,
+        args: Array<Any>? = null,
     ): Mono<ResponseEntity<ErrorDto>> {
         return Mono.deferContextual {
             val locale = it.get(Locale::class.java)
@@ -93,12 +92,18 @@ class RegistryControllerAdvice(
                 statusCode = status.value(),
                 statusName = status.name,
                 code = code,
-                title = translateService.getMessage("$ERROR_TITLE_PREFIX${status.value()}", null, locale),
+                title = translateService.getMessage(
+                    code = "$ERROR_TITLE_PREFIX${status.value()}",
+                    locale = locale,
+                ),
                 message = translateService.getMessage(
-                    "$ERROR_MESSAGE_PREFIX$code",
-                    args,
-                    translateService.getMessage("$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR", null, locale),
-                    locale
+                    code = "$ERROR_MESSAGE_PREFIX$code",
+                    args = args,
+                    default = translateService.getMessage(
+                        code = "$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR",
+                        locale = locale,
+                    ),
+                    locale = locale
                 ),
             )
 

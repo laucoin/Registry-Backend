@@ -6,26 +6,25 @@ import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
 import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.LabelDto
 import java.time.Duration
 import java.time.LocalTime
 import java.util.Locale
 import java.util.Objects
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
 
 @Component
 class AvailabilityStatusReaderDtoMapper(
-    @Qualifier("messagesSource") private val translateService: MessageSource,
-): GenericDurationReaderDtoMapper(translateService) {
+    private val translateService: ITranslateService,
+) : GenericDurationReaderDtoMapper(translateService) {
     fun toDto(
         model: AvailabilityStatusEnum,
         locale: Locale,
     ): LabelDto {
         return LabelDto(
             model.name,
-            translateService.getMessage("$AVAILABILITY_STATUS_PREFIX$model", null, locale),
+            translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model", locale = locale),
         )
     }
 
@@ -52,14 +51,14 @@ class AvailabilityStatusReaderDtoMapper(
             Objects.nonNull(startAvailability) && AvailabilityStatusEnum.AVAILABLE === model -> {
                 val interval = Duration.between(
                     startAvailability?.toZonedDateTime(
-                        LocalTime.MIN, now.zone() !!
+                        LocalTime.MIN, now.zone()!!
                     ), now.toZonedDateTime()
                 )
 
                 translateService.getMessage(
-                    "$AVAILABILITY_STATUS_DURATION_PREFIX$model",
-                    arrayOf(formatDuration(interval, locale)),
-                    locale
+                    code = "$AVAILABILITY_STATUS_DURATION_PREFIX$model",
+                    args = arrayOf(formatDuration(interval, locale)),
+                    locale = locale,
                 )
             }
 
@@ -67,32 +66,32 @@ class AvailabilityStatusReaderDtoMapper(
                 val interval = Duration.between(
                     now.toZonedDateTime(),
                     startAvailability?.toZonedDateTime(
-                        LocalTime.MIN, now.zone() !!
+                        LocalTime.MIN, now.zone()!!
                     )
                 )
 
                 translateService.getMessage(
-                    "${AVAILABILITY_STATUS_DURATION_PREFIX}NOT_YET",
-                    arrayOf(formatDuration(interval, locale)),
-                    locale
+                    code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NOT_YET",
+                    args = arrayOf(formatDuration(interval, locale)),
+                    locale = locale,
                 )
             }
 
             Objects.nonNull(endAvailability) && endAvailability.isBefore(now) -> {
                 val interval = Duration.between(
                     endAvailability?.toZonedDateTime(
-                        LocalTime.MAX, now.zone() !!
+                        LocalTime.MAX, now.zone()!!
                     ), now.toZonedDateTime()
                 )
 
                 translateService.getMessage(
-                    "${AVAILABILITY_STATUS_DURATION_PREFIX}NO_MORE",
-                    arrayOf(formatDuration(interval, locale)),
-                    locale
+                    code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NO_MORE",
+                    args = arrayOf(formatDuration(interval, locale)),
+                    locale = locale,
                 )
             }
 
-            else -> translateService.getMessage("$AVAILABILITY_STATUS_PREFIX$model", null, locale)
+            else -> translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model", locale = locale)
         }
     }
 }

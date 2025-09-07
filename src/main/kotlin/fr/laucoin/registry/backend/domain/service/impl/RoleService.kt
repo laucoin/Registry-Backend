@@ -9,19 +9,18 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.repository.IRoleModelRepository
 import fr.laucoin.registry.backend.domain.service.IRoleService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.stereotype.Service
+import java.util.*
 
 @Service
 class RoleService(
     private val repository: IRoleModelRepository,
-    @Value("\${registry.security.default-role}")
+    @param:Value("\${registry.security.default-role}")
     private val defaultUserRole: String,
-): ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
+) : ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
     private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
     private val userRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
@@ -52,22 +51,22 @@ class RoleService(
     }
 
     override fun getAuthoritiesByUserRole(role: String?): List<String> {
-        return if (! userRoles.containsKey(role)) {
+        return if (!userRoles.containsKey(role)) {
             log.warn("User role \"{}\" not found in \"{}\"", role, userRoles.keys)
             emptyList()
-        } else userRoles[role] !!.second
+        } else userRoles[role]!!.second
     }
 
     override fun getAuthoritiesByProjectRole(role: String, projectId: UUID, visibility: Boolean?): List<String> {
-        if (! projectRoles.containsKey(role)) {
+        if (!projectRoles.containsKey(role)) {
             log.warn("Project role \"{}\" not found in \"{}\"", role, projectRoles.keys)
             return emptyList()
         }
 
         val roleAuthoritiesMapping = projectRoles[role]
         return when {
-            Objects.isNull(roleAuthoritiesMapping) || (visibility != true && roleAuthoritiesMapping !!.first != 0) -> emptyList()
-            visibility != true && roleAuthoritiesMapping !!.first == 0 ->
+            Objects.isNull(roleAuthoritiesMapping) || (visibility != true && roleAuthoritiesMapping!!.first != 0) -> emptyList()
+            visibility != true && roleAuthoritiesMapping!!.first == 0 ->
                 roleAuthoritiesMapping.second.filter {
                     listOf(
                         REGISTRY_PROJECT_R,
@@ -77,7 +76,7 @@ class RoleService(
                 }
                     .map { "${projectId}_$it" }
 
-            else -> roleAuthoritiesMapping !!.second.map { "${projectId}_$it" }
+            else -> roleAuthoritiesMapping!!.second.map { "${projectId}_$it" }
         }
     }
 
@@ -104,8 +103,8 @@ class RoleService(
         if (Objects.isNull(roleLevel)) {
             return emptyList()
         }
-        val eligibleRoles = roles.filter { it.value.first > roleLevel !! }.keys.toMutableList()
-        eligibleRoles.add(role !!)
+        val eligibleRoles = roles.filter { it.value.first > roleLevel!! }.keys.toMutableList()
+        eligibleRoles.add(role!!)
         return eligibleRoles
     }
 }
