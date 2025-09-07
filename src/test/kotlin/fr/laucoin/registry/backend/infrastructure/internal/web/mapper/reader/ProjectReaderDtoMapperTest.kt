@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
@@ -18,10 +19,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 
 class ProjectReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
+    private val translateService: ITranslateService = mock()
     private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
     private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapper(translateService, availabilityMapper)
 
@@ -84,8 +84,8 @@ class ProjectReaderDtoMapperTest {
         assertEquals(project.end, result.end)
         assertEquals(project.options?.size, result.options?.size)
         if ((project.options?.size ?: 0) > 0) {
-            for (i in project.options !!.indices) {
-                assertEquals(project.options !![i].name, result.options !![i].value)
+            for (i in project.options!!.indices) {
+                assertEquals(project.options!![i].name, result.options!![i].value)
             }
         }
         assertEquals(project.options?.size, result.options?.size)

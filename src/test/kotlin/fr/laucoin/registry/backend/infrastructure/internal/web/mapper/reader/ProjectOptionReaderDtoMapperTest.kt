@@ -5,18 +5,17 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_O
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.util.Locale
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.context.MessageSource
 
 class ProjectOptionReaderDtoMapperTest {
-    private val translateService: MessageSource = mock()
+    private val translateService: ITranslateService = mock()
     private val mapper: ProjectOptionsReaderDtoMapper = ProjectOptionsReaderDtoMapper(translateService)
 
     @Test
@@ -24,15 +23,18 @@ class ProjectOptionReaderDtoMapperTest {
         // Arrange
         val option: ProjectOptionEnum = COMMUNICATION
         val label = "translated"
-        whenever(translateService.getMessage(any(), anyOrNull(), any())).thenReturn(label)
+        whenever(translateService.getMessage(any(), any())).thenReturn(label)
 
         // Act
         val result = mapper.toDto(option, Locale.getDefault())
 
         // Assert
-        verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$COMMUNICATION", null, Locale.getDefault())
-        verify(translateService).getMessage("${PROJECT_OPTION_FORM_ASK_PREFIX}$COMMUNICATION", null, Locale.getDefault())
-        verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$ACTIVITY", null, Locale.getDefault())
+        verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$COMMUNICATION", Locale.getDefault())
+        verify(translateService).getMessage(
+            "${PROJECT_OPTION_FORM_ASK_PREFIX}$COMMUNICATION",
+            Locale.getDefault()
+        )
+        verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$ACTIVITY", Locale.getDefault())
 
         assertEquals(option, result.value)
         assertEquals(label, result.label)

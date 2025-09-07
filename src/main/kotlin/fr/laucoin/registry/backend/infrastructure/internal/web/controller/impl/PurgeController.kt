@@ -14,38 +14,37 @@ import fr.laucoin.registry.backend.domain.service.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.internal.web.controller.IPurgeController
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.internal.web.dto.reader.ProjectContentPurgeReaderDto
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.*
 
 @RestController
 class PurgeController(
     private val userService: IUserService,
-    @Value("\${registry.feature.purge.users.months-threshold:}")
+    @param:Value("\${registry.feature.purge.users.months-threshold:}")
     private val userPurgeMonthThreshold: Long?,
     private val projectService: IProjectService,
-    @Value("\${registry.feature.purge.projects.months-threshold:}")
+    @param:Value("\${registry.feature.purge.projects.months-threshold:}")
     private val projectPurgeMonthThreshold: Long?,
     private val movementService: IMovementService,
     private val alertService: IAlertService,
     private val communicationService: ICommunicationService,
-    @Value("\${registry.feature.purge.projects.content.months-threshold:}")
+    @param:Value("\${registry.feature.purge.projects.content.months-threshold:}")
     private val projectContentPurgeMonthThreshold: Long?,
     private val activityService: IActivityService,
     private val vehicleService: IVehicleService,
     private val participantService: IParticipantService,
     private val groupService: IGroupService,
-    @Value("\${registry.feature.purge.projects.configuration.months-threshold:}")
+    @param:Value("\${registry.feature.purge.projects.configuration.months-threshold:}")
     private val projectConfigurationPurgeMonthThreshold: Long?,
-): IPurgeController {
+) : IPurgeController {
     override fun purgeUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
         return launchPurgeUsers(dateThreshold, dryRun)
     }
@@ -74,7 +73,10 @@ class PurgeController(
         return projectService.purgeProjectsIfNecessary(deleteOlderThan, dryRun)
     }
 
-    override fun purgeProjectsContentsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Mono<ProjectContentPurgeReaderDto> {
+    override fun purgeProjectsContentsIfNecessary(
+        dateThreshold: LocalDate?,
+        dryRun: Boolean
+    ): Mono<ProjectContentPurgeReaderDto> {
         return launchPurgeProjectsContents(dateThreshold, dryRun)
     }
 
@@ -83,13 +85,17 @@ class PurgeController(
         launchPurgeProjectsContents(dateThreshold = null, dryRun = false).subscribe()
     }
 
-    private fun launchPurgeProjectsContents(dateThreshold: LocalDate?, dryRun: Boolean): Mono<ProjectContentPurgeReaderDto> {
+    private fun launchPurgeProjectsContents(
+        dateThreshold: LocalDate?,
+        dryRun: Boolean
+    ): Mono<ProjectContentPurgeReaderDto> {
         val deleteOlderThan = buildDateThreshold(projectContentPurgeMonthThreshold, dateThreshold)
         return Mono.zip(
             movementService.purgeMovementsIfNecessary(deleteOlderThan, dryRun).collectList(),
             alertService.purgeAlertsIfNecessary(deleteOlderThan, dryRun).collectList(),
         ).flatMap { movementAndAlertIds ->
-            communicationService.purgeOrphanCommunications(movementAndAlertIds.t1, movementAndAlertIds.t2, dryRun).collectList()
+            communicationService.purgeOrphanCommunications(movementAndAlertIds.t1, movementAndAlertIds.t2, dryRun)
+                .collectList()
                 .map {
                     ProjectContentPurgeReaderDto(
                         movementAndAlertIds.t1,
@@ -142,6 +148,6 @@ class PurgeController(
         return dateThreshold ?: LocalDate.ofInstant(
             Instant.now(),
             ZoneId.of("UTC")
-        ).minusMonths(thresholdInMonth !!)
+        ).minusMonths(thresholdInMonth!!)
     }
 }

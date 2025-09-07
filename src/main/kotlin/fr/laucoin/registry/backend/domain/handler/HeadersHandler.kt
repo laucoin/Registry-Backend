@@ -13,9 +13,9 @@ import reactor.core.publisher.Mono
 
 @Component
 class HeadersHandler(
-    @Value("\${registry.information.locale.supported}")
+    @param:Value("\${registry.information.locale.supported}")
     private val supportedLocales: List<String>,
-): WebFilter {
+) : WebFilter {
     companion object {
         fun headers(request: ServerHttpRequest): Map<String, String> = request.headers.toSingleValueMap()
 

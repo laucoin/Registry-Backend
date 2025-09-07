@@ -21,13 +21,13 @@ import reactor.core.publisher.Mono
 @Service
 class KeycloakAuthenticationAdapter(
     private val mapper: AuthenticationTokenEntityMapper,
-    @Value("\${external.keycloak.base-url}/realms/\${external.keycloak.realm}")
+    @param:Value("\${external.keycloak.base-url}/realms/\${external.keycloak.realm}")
     private val baseUri: String,
-    @Value("\${external.keycloak.client-id}")
+    @param:Value("\${external.keycloak.client-id}")
     private val clientId: String,
-    @Value("\${external.keycloak.client-secret}")
+    @param:Value("\${external.keycloak.client-secret}")
     private val clientSecret: String,
-): IAuthenticationPort {
+) : IAuthenticationPort {
     private val http: WebClient = WebClient.create(baseUri)
 
     companion object {
@@ -79,7 +79,9 @@ class KeycloakAuthenticationAdapter(
             .onStatus(
                 { it.is4xxClientError },
                 { Mono.error(RegistryException(UNAUTHORIZED, errorMessage)) })
-            .onStatus({ it.is5xxServerError }, { Mono.error(RegistryException(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
+            .onStatus(
+                { it.is5xxServerError },
+                { Mono.error(RegistryException(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
             .bodyToMono(KeycloakTokenEntity::class.java)
             .map(mapper::toModel)
     }

@@ -11,27 +11,26 @@ import fr.laucoin.registry.backend.domain.repository.IPreferencesModelRepository
 import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
+import java.util.*
 
 @Service
 class PreferencesService(
     private val repository: IPreferencesModelRepository,
     private val projectProfileRepository: IProjectProfileModelRepository,
-    @Value("\${registry.information.locale.supported}")
+    @param:Value("\${registry.information.locale.supported}")
     private val supportedLocales: List<String>,
-): IPreferencesService, GenericService() {
+) : IPreferencesService, GenericService() {
     override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
-        return repository.findByUserId(currentUser.id !!, visibilitySearched = null)
+        return repository.findByUserId(currentUser.id!!, visibilitySearched = null)
             .switchIfEmpty {
                 val preferences = PreferencesModel(userId = currentUser.id)
                 preferences.create(currentUser)
                 repository.save(preferences)
-                    .flatMap { repository.findByUserId(currentUser.id !!, visibilitySearched = null) }
+                    .flatMap { repository.findByUserId(currentUser.id!!, visibilitySearched = null) }
             }
     }
 
@@ -65,7 +64,11 @@ class PreferencesService(
         profileId: UUID?
     ): Mono<PreferencesModel> {
         return if (Objects.isNull(profileId)) return selectedProfile(currentUser)
-        else projectProfileRepository.findProjectProfileByUserIdAndId(currentUser.id !!, profileId !!, visibilitySearched = true)
+        else projectProfileRepository.findProjectProfileByUserIdAndId(
+            currentUser.id!!,
+            profileId!!,
+            visibilitySearched = true
+        )
             .notFoundIfEmpty(profileId)
             .flatMap { selectedProfile(currentUser, it) }
     }
@@ -79,12 +82,15 @@ class PreferencesService(
             availabilitySearched = true,
             statusSearched = listOf(ACCEPTED)
         )
-        return projectProfileRepository.findProjectProfileByProjectAndUserId(projectId, currentUser.id !!, search)
+        return projectProfileRepository.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, search)
             .notFoundIfEmpty(projectId)
             .flatMap { selectedProfile(currentUser, it) }
     }
 
-    private fun selectedProfile(currentUser: CurrentUserModel, profile: ProjectProfileModel? = null): Mono<PreferencesModel> {
+    private fun selectedProfile(
+        currentUser: CurrentUserModel,
+        profile: ProjectProfileModel? = null
+    ): Mono<PreferencesModel> {
         return findByUser(currentUser).flatMap {
             if (it.selectedProfile?.id == profile?.id) Mono.just(it)
             else {

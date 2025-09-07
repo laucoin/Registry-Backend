@@ -11,13 +11,13 @@ import io.swagger.v3.oas.models.security.OAuthFlows
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2
-import java.util.Objects
 import org.springdoc.core.customizers.OpenApiCustomizer
 import org.springdoc.core.models.GroupedOpenApi
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import java.util.*
 
 
 @Configuration
@@ -34,11 +34,11 @@ import org.springframework.context.annotation.Configuration
     )
 )
 class SwaggerConfig(
-    @Value("\${registry.security.oauth2.url:}/auth")
+    @param:Value("\${registry.security.oauth2.url:}/auth")
     private val authUrl: String?,
-    @Value("\${registry.security.oauth2.url:}/token")
+    @param:Value("\${registry.security.oauth2.url:}/token")
     private val tokenUrl: String?,
-    @Value("\${registry.server.prefix:''}")
+    @param:Value("\${registry.server.prefix:''}")
     private val apiPrefix: String,
 ) {
     companion object {
@@ -74,7 +74,7 @@ class SwaggerConfig(
     @Bean
     fun customOpenApi(): OpenApiCustomizer {
         return OpenApiCustomizer { openApi: OpenAPI ->
-            openApi.paths.entries.removeIf { entry: Map.Entry<String, PathItem?> -> ! entry.key.startsWith(apiPrefix) }
+            openApi.paths.entries.removeIf { entry: Map.Entry<String, PathItem?> -> !entry.key.startsWith(apiPrefix) }
         }
     }
 

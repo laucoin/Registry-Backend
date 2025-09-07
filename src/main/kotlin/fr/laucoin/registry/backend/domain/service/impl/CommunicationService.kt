@@ -33,8 +33,6 @@ import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -43,6 +41,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
+import java.util.*
 
 @Service
 class CommunicationService(
@@ -50,11 +49,11 @@ class CommunicationService(
     private val repository: ICommunicationModelRepository,
     private val movementRepository: IMovementModelRepository,
     private val alertRepository: IAlertModelRepository,
-    @Value("\${registry.feature.communication.searched.max-activity-result}")
+    @param:Value("\${registry.feature.communication.searched.max-activity-result}")
     private val maxActivityResult: Int,
-    @Value("\${registry.feature.communication.searched.max-alert-result}")
+    @param:Value("\${registry.feature.communication.searched.max-alert-result}")
     private val maxAlertResult: Int,
-): ICommunicationService, GenericService() {
+) : ICommunicationService, GenericService() {
     override fun findCommunicationPage(
         projectId: UUID,
         pageable: PageableModel,
@@ -108,7 +107,7 @@ class CommunicationService(
         communication: CommunicationModel
     ): Mono<CommunicationModel> {
         return projectService.validateDateTime(
-            communication.project !!.id !!,
+            communication.project!!.id!!,
             CustomDateTimeModel(communication.dateTime),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
         )
@@ -124,7 +123,7 @@ class CommunicationService(
         communication: CommunicationModel
     ): Mono<CommunicationModel> {
         return projectService.validateDateTime(
-            communication.project !!.id !!,
+            communication.project!!.id!!,
             CustomDateTimeModel(communication.dateTime),
             COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
         )
@@ -167,7 +166,7 @@ class CommunicationService(
         id: UUID
     ): Mono<Void> {
         return findCommunicationById(projectId, id, visibilitySearched = null)
-            .flatMap { repository.deleteById(it.id !!) }
+            .flatMap { repository.deleteById(it.id!!) }
     }
 
     override fun purgeOrphanCommunications(
@@ -201,8 +200,19 @@ class CommunicationService(
         return if (Objects.isNull(communication.movement) || communication.movement?.id == oldCommunication?.movement?.id) Mono.just(
             oldCommunication ?: communication
         )
-        else movementRepository.findById(communication.project !!.id !!, communication.movement !!.id !!, visibilitySearched = null)
-            .switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT)) }
+        else movementRepository.findById(
+            communication.project!!.id!!,
+            communication.movement!!.id!!,
+            visibilitySearched = null
+        )
+            .switchIfEmpty {
+                Mono.error(
+                    RegistryException(
+                        NOT_FOUND,
+                        COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT
+                    )
+                )
+            }
             .handle { it, handle ->
                 when {
                     it.isNotVisible() -> handle.error(
@@ -247,15 +257,26 @@ class CommunicationService(
             oldCommunication ?: communication
         )
         else {
-            if (! currentUser.hasAuthority(communication.project !!.id !!, REGISTRY_PROJECT_OPTION_ALERT)) {
+            if (!currentUser.hasAuthority(communication.project!!.id!!, REGISTRY_PROJECT_OPTION_ALERT)) {
                 throw RegistryException(
                     status = FORBIDDEN,
                     code = NOT_ENOUGH_PERMISSION,
                 )
             }
 
-            alertRepository.findById(communication.project !!.id !!, communication.alert !!.id !!, visibilitySearched = null)
-                .switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT)) }
+            alertRepository.findById(
+                communication.project!!.id!!,
+                communication.alert!!.id!!,
+                visibilitySearched = null
+            )
+                .switchIfEmpty {
+                    Mono.error(
+                        RegistryException(
+                            NOT_FOUND,
+                            COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
+                        )
+                    )
+                }
                 .handle { it, handle ->
                     when {
                         it.isNotVisible() -> handle.error(

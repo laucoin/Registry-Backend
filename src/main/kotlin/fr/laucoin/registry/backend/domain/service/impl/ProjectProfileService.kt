@@ -21,13 +21,13 @@ import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.OffsetTime
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.OffsetTime
+import java.util.*
 
 @Service
 class ProjectProfileService(
@@ -35,9 +35,9 @@ class ProjectProfileService(
     private val repository: IProjectProfileModelRepository,
     private val roleService: IRoleService,
     private val userRepository: IUserModelRepository,
-    @Value("\${registry.feature.profile.searched.max-user-result}")
+    @param:Value("\${registry.feature.profile.searched.max-user-result}")
     private val maxUserResult: Int,
-): IProjectProfileService, GenericProfileService(repository) {
+) : IProjectProfileService, GenericProfileService(repository) {
     override fun findProjectProfilesPage(
         projectId: UUID,
         pageable: PageableModel,
@@ -47,26 +47,33 @@ class ProjectProfileService(
             .findProjectProfilesPageByProjectId(projectId, pageable, searchParams)
     }
 
-    override fun findProjectProfileById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel> {
+    override fun findProjectProfileById(
+        projectId: UUID,
+        id: UUID,
+        visibilitySearched: Boolean?
+    ): Mono<ProjectProfileModel> {
         return repository.findById(projectId, id, visibilitySearched)
             .notFoundIfEmpty(id)
     }
 
     override fun searchUsers(textSearched: String?): Flux<UserModel> {
-        return userRepository.findWithLimit(maxUserResult, UserSearchParamModel(textSearched, visibilitySearched = true))
+        return userRepository.findWithLimit(
+            maxUserResult,
+            UserSearchParamModel(textSearched, visibilitySearched = true)
+        )
     }
 
     override fun getAssignableProjectRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<String> {
         return repository.findProjectProfileByProjectAndUserId(
             projectId,
-            currentUser.id !!,
+            currentUser.id!!,
             ProjectProfileSearchParamModel(
                 visibilitySearched = true,
                 availabilitySearched = true,
                 statusSearched = listOf(ACCEPTED),
             ),
         )
-            .notFoundIfEmpty(Pair(projectId, currentUser.id !!))
+            .notFoundIfEmpty(Pair(projectId, currentUser.id!!))
             .map { roleService.getAssignableProjectRoles(it) }
             .flatMapMany { Flux.fromIterable(it) }
     }
@@ -85,13 +92,13 @@ class ProjectProfileService(
             profiles.first().endAccess?.toZonedDateTime(OffsetTime.MAX)
         )
             .map { allowedUsers ->
-                profiles.filter { allowedUsers.contains(it.user !!.id) }
+                profiles.filter { allowedUsers.contains(it.user!!.id) }
                     .map { it.apply { create(currentUser) } }
             }
             .flatMapMany { repository.saveAll(it) }
             .collectList()
             .map {
-                val savedUserId = it.mapNotNull { profile -> profile.user !!.id }
+                val savedUserId = it.mapNotNull { profile -> profile.user!!.id }
                 Pair(savedUserId, userIds.minus(savedUserId.toSet()))
             }
     }
@@ -106,7 +113,7 @@ class ProjectProfileService(
             .flatMap {
                 validateNoProfileConflict(
                     projectId,
-                    listOf(it.user !!.id !!),
+                    listOf(it.user!!.id!!),
                     it.id,
                     profile.endAccess?.toZonedDateTime(OffsetTime.MIN),
                     profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
@@ -124,14 +131,22 @@ class ProjectProfileService(
             .updateProjectProfile(currentUser)
     }
 
-    override fun blockProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ProjectProfileModel> {
+    override fun blockProjectProfileById(
+        currentUser: CurrentUserModel,
+        projectId: UUID,
+        id: UUID
+    ): Mono<ProjectProfileModel> {
         return findProjectProfileById(projectId, id, visibilitySearched = true)
             .validateNotLastProjectRoleLevel0(PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR)
             .updateVisibility(visibility = false)
             .updateProjectProfile(currentUser)
     }
 
-    override fun unblockProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ProjectProfileModel> {
+    override fun unblockProjectProfileById(
+        currentUser: CurrentUserModel,
+        projectId: UUID,
+        id: UUID
+    ): Mono<ProjectProfileModel> {
         return findProjectProfileById(projectId, id, visibilitySearched = false)
             .updateVisibility(visibility = true)
             .updateProjectProfile(currentUser)
@@ -144,7 +159,7 @@ class ProjectProfileService(
     }
 
     private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
-        profileService.validateNotLastProjectRoleLevel0(it.user !!.id !!, it.project !!.id !!, it, error)
+        profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.project!!.id!!, it, error)
     }
 
     private fun Mono<ProjectProfileModel>.validateRole(
@@ -152,7 +167,7 @@ class ProjectProfileService(
     ) = flatMap { profileToUpdate ->
         repository.findProjectProfileByProjectAndUserId(
             projectId,
-            currentUser.id !!,
+            currentUser.id!!,
             ProjectProfileSearchParamModel(
                 visibilitySearched = true,
                 availabilitySearched = true,
@@ -161,17 +176,19 @@ class ProjectProfileService(
         )
             .handle { it, handle ->
                 val eligibleRoles = roleService.getAssignableProjectRoles(it)
-                if (! eligibleRoles.contains(profileToUpdate.role)) {
+                if (!eligibleRoles.contains(profileToUpdate.role)) {
                     log.warn(
                         "User \"{}\" cannot update project profile with a role higher up the breast.",
                         currentUser.id,
                     )
                     handle.error(
                         RegistryException(
-                            FORBIDDEN, PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER, arrayListOf(profileToUpdate.role)
+                            FORBIDDEN,
+                            PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER,
+                            arrayListOf(profileToUpdate.role)
                         )
                     )
-                } else if (! eligibleRoles.contains(profile.role)) {
+                } else if (!eligibleRoles.contains(profile.role)) {
                     log.warn(
                         "User \"{}\" tried to update project profile with a role higher up the breast.",
                         currentUser.id,

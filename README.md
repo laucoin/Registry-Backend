@@ -52,7 +52,6 @@ Install [Java 21 or later](https://www.oracle.com/fr/java/technologies/downloads
    > to [docker-compose.yml](docker-compose.yml) for the replacement)
 
    ```
-   -Dspring.profiles.active=<organization> # For example: laucoin
    -Dregistry.datasource.schemas=<database-schemas> # For example: public
    -Dregistry.datasource.base-url=<database-url> # For example: localhost:5432 (Without http(s)://)
    -Dregistry.datasource.database=<database-name> # For example: postgres
@@ -66,7 +65,7 @@ Install [Java 21 or later](https://www.oracle.com/fr/java/technologies/downloads
    -Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
    -Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
    -Dregistry.feature.documentation.enabled=false # true only for development
-   -Dexternal.frontend.base-url=<frontend-base-url> # For example: http://localhost:4200 (With http(s)://)
+   -Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
    ```
 6. Enjoy the following commands 🎉
 
@@ -110,7 +109,8 @@ The application can be cleaned using:
 ./gradlew clean
 ```
 
-It removes the buildDir folder, thus cleaning everything including leftovers from previous builds which are no longer relevant.
+It removes the buildDir folder, thus cleaning everything including leftovers from previous builds which are no longer
+relevant.
 
 #### Further help
 
