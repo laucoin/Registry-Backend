@@ -38,8 +38,7 @@ class ActivityService(
 	}
 
 	override fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
-		return port.findById(projectId, id, visibilitySearched)
-			.notFoundIfEmpty(id)
+		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
 	}
 
 	override fun findActivityMovementsPage(
@@ -57,8 +56,7 @@ class ActivityService(
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
-		)
-			.flatMap { port.create(activity.apply { create(currentUser) }) }
+		).flatMap { port.create(activity.apply { create(currentUser) }) }
 	}
 
 	override fun updateActivityById(
@@ -115,8 +113,8 @@ class ActivityService(
 				} else {
 					log.info("Purging activity {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} activity was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge activity", err) }
+						.doOnNext { e -> log.info("Activity {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge activity {}", it, err) }
 				}
 			}
 	}

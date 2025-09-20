@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_PREFIX
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -31,58 +32,73 @@ class RoleServiceTest {
 	private val service: RoleService = RoleService(port, defaultRole)
 
 	private val roles = hashMapOf(
-		"ROLE_0" to Pair(0, listOf("PERMISSION_0")),
-		"ROLE_1_1" to Pair(1, listOf("PERMISSION_1")),
-		"ROLE_1_2" to Pair(1, listOf("PERMISSION_1")),
-		"ROLE_2" to Pair(2, listOf("PERMISSION_2")),
+		ROLE_0 to Pair(0, listOf(PERMISSION_0, REGISTRY_PROJECT_R)),
+		ROLE_1_1 to Pair(1, listOf(PERMISSION_1, REGISTRY_PROJECT_R)),
+		ROLE_1_2 to Pair(1, listOf(PERMISSION_1, REGISTRY_PROJECT_R)),
+		ROLE_2 to Pair(2, listOf(PERMISSION_2, REGISTRY_PROJECT_R)),
 	)
 
-	companion object {
+	private companion object {
+		private const val WRONG_ROLE = "WRONG_ROLE"
+
+		private const val ROLE_0 = "ROLE_0"
+		private const val ROLE_1_1 = "ROLE_1_1"
+		private const val ROLE_1_2 = "ROLE_1_2"
+		private const val ROLE_2 = "ROLE_2"
+
+		private const val PERMISSION_0 = "PERMISSION_0"
+		private const val PERMISSION_1 = "PERMISSION_1"
+		private const val PERMISSION_2 = "PERMISSION_2"
+
 		@JvmStatic
 		fun `Should getLevelByUserRole return this right level`(): Stream<Arguments> = Stream.of(
 			Arguments.of(null, null),
-			Arguments.of("WRONG_ROLE", null),
-			Arguments.of("ROLE_0", 0),
-			Arguments.of("ROLE_1_1", 1),
-			Arguments.of("ROLE_1_2", 1),
-			Arguments.of("ROLE_2", 2),
+			Arguments.of(WRONG_ROLE, null),
+			Arguments.of(ROLE_0, 0),
+			Arguments.of(ROLE_1_1, 1),
+			Arguments.of(ROLE_1_2, 1),
+			Arguments.of(ROLE_2, 2),
 		)
 
 		@JvmStatic
 		fun `Should getLevelByProjectRole return this right level`(): Stream<Arguments> = Stream.of(
-			Arguments.of("WRONG_ROLE", 0),
-			Arguments.of("ROLE_0", 0),
-			Arguments.of("ROLE_1_1", 1),
-			Arguments.of("ROLE_1_2", 1),
-			Arguments.of("ROLE_2", 2),
+			Arguments.of(WRONG_ROLE, 0),
+			Arguments.of(ROLE_0, 0),
+			Arguments.of(ROLE_1_1, 1),
+			Arguments.of(ROLE_1_2, 1),
+			Arguments.of(ROLE_2, 2),
 		)
 
 		@JvmStatic
 		fun `Should getAuthoritiesByUserRole return a list of associated authorities`(): Stream<Arguments> = Stream.of(
-			Arguments.of("WRONG_ROLE", emptyList<String>()),
-			Arguments.of("ROLE_0", listOf("PERMISSION_0")),
-			Arguments.of("ROLE_1_1", listOf("PERMISSION_1")),
-			Arguments.of("ROLE_1_2", listOf("PERMISSION_1")),
-			Arguments.of("ROLE_2", listOf("PERMISSION_2")),
+			Arguments.of(WRONG_ROLE, emptyList<String>()),
+			Arguments.of(ROLE_0, listOf(PERMISSION_0, REGISTRY_PROJECT_R)),
+			Arguments.of(ROLE_1_1, listOf(PERMISSION_1, REGISTRY_PROJECT_R)),
+			Arguments.of(ROLE_1_2, listOf(PERMISSION_1, REGISTRY_PROJECT_R)),
+			Arguments.of(ROLE_2, listOf(PERMISSION_2, REGISTRY_PROJECT_R)),
 		)
 
 		@JvmStatic
 		fun `Should getAuthoritiesByProjectRole return a list of associated authorities`(): Stream<Arguments> =
 			Stream.of(
-				Arguments.of("WRONG_ROLE", emptyList<String>()),
-				Arguments.of("ROLE_0", listOf("${projectId}_PERMISSION_0")),
-				Arguments.of("ROLE_1_1", listOf("${projectId}_PERMISSION_1")),
-				Arguments.of("ROLE_1_2", listOf("${projectId}_PERMISSION_1")),
-				Arguments.of("ROLE_2", listOf("${projectId}_PERMISSION_2")),
+				Arguments.of(WRONG_ROLE, emptyList<String>(), false),
+				Arguments.of(ROLE_0, listOf("${projectId}_$PERMISSION_0", "${projectId}_$REGISTRY_PROJECT_R"), true),
+				Arguments.of(ROLE_1_1, listOf("${projectId}_$PERMISSION_1", "${projectId}_$REGISTRY_PROJECT_R"), true),
+				Arguments.of(ROLE_1_2, listOf("${projectId}_$PERMISSION_1", "${projectId}_$REGISTRY_PROJECT_R"), true),
+				Arguments.of(ROLE_2, listOf("${projectId}_$PERMISSION_2", "${projectId}_${REGISTRY_PROJECT_R}"), true),
+				Arguments.of(ROLE_0, listOf("${projectId}_$REGISTRY_PROJECT_R"), false),
+				Arguments.of(ROLE_1_1, emptyList<String>(), false),
+				Arguments.of(ROLE_1_2, emptyList<String>(), false),
+				Arguments.of(ROLE_2, emptyList<String>(), false),
 			)
 
 		@JvmStatic
 		fun `Assignable roles`(): Stream<Arguments> = Stream.of(
-			Arguments.of("ROLE_0", listOf("ROLE_0", "ROLE_1_1", "ROLE_1_2", "ROLE_2")),
-			Arguments.of("ROLE_1_1", listOf("ROLE_1_1", "ROLE_2")),
-			Arguments.of("ROLE_1_2", listOf("ROLE_1_2", "ROLE_2")),
-			Arguments.of("ROLE_2", listOf("ROLE_2")),
-			Arguments.of("WRONG_ROLE", emptyList<String>()),
+			Arguments.of(ROLE_0, listOf(ROLE_0, ROLE_1_1, ROLE_1_2, ROLE_2)),
+			Arguments.of(ROLE_1_1, listOf(ROLE_1_1, ROLE_2)),
+			Arguments.of(ROLE_1_2, listOf(ROLE_1_2, ROLE_2)),
+			Arguments.of(ROLE_2, listOf(ROLE_2)),
+			Arguments.of(WRONG_ROLE, emptyList<String>()),
 		)
 	}
 
@@ -91,15 +107,15 @@ class RoleServiceTest {
 		// Arrange
 		val event: ContextRefreshedEvent = mock()
 		val userRole = RoleModel(
-			role = "USER_ROLE_0",
+			role = "USER_$ROLE_0",
 			level = 0,
-			permissions = listOf("USER_PERMISSION_0"),
+			permissions = listOf("USER_$PERMISSION_0"),
 		)
 		whenever(port.findUserRoles()).thenReturn(Flux.just(userRole))
 		val projectRole = RoleModel(
-			role = "PROJECT_ROLE_0",
+			role = "PROJECT_$ROLE_0",
 			level = 0,
-			permissions = listOf("PROJECT_PERMISSION_0"),
+			permissions = listOf("PROJECT_$PERMISSION_0"),
 		)
 		whenever(port.findProjectRoles()).thenReturn(Flux.just(projectRole))
 
@@ -152,7 +168,7 @@ class RoleServiceTest {
 		val result = service.getLevel0RoleFromProjectRoles()
 
 		// Assert
-		assertEquals("ROLE_0", result)
+		assertEquals(ROLE_0, result)
 	}
 
 	@Test
@@ -197,12 +213,13 @@ class RoleServiceTest {
 	fun `Should getAuthoritiesByProjectRole return a list of associated authorities`(
 		role: String,
 		expectedAuthorities: List<String>,
+		visibility: Boolean,
 	) {
 		// Arrange
 		setField(service, "projectRoles", roles)
 
 		// Act
-		val result = service.getAuthoritiesByProjectRole(role, projectId, visibility = true)
+		val result = service.getAuthoritiesByProjectRole(role, projectId, visibility)
 
 		// Assert
 		assertEquals(expectedAuthorities, result)
@@ -226,12 +243,13 @@ class RoleServiceTest {
 	fun `Should getProjectIdsFromCurrentUserProfiles return formatted authorities for project option`() {
 		// Arrange
 		val authorities: MutableList<GrantedAuthority> = mutableListOf(
-			SimpleGrantedAuthority("ROLE_0"),
-			SimpleGrantedAuthority("ROLE_1"),
+			SimpleGrantedAuthority(ROLE_0),
+			SimpleGrantedAuthority(WRONG_ROLE),
 			SimpleGrantedAuthority("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${VEHICLE}"),
 			SimpleGrantedAuthority("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${ACTIVITY}"),
 		)
 		val currentUser: CurrentUserModel = mock()
+
 		whenever(currentUser.authorities).thenReturn(authorities)
 
 		// Act
@@ -257,9 +275,7 @@ class RoleServiceTest {
 
 		// Assert
 		assertEquals(expectedAssignableRoles.size, result.size)
-		expectedAssignableRoles.forEach {
-			assertTrue(result.contains(it))
-		}
+		expectedAssignableRoles.forEach { assertTrue(result.contains(it)) }
 	}
 
 	@ParameterizedTest
@@ -277,8 +293,6 @@ class RoleServiceTest {
 
 		// Assert
 		assertEquals(expectedAssignableRoles.size, result.size)
-		expectedAssignableRoles.forEach {
-			assertTrue(result.contains(it))
-		}
+		expectedAssignableRoles.forEach { assertTrue(result.contains(it)) }
 	}
 }

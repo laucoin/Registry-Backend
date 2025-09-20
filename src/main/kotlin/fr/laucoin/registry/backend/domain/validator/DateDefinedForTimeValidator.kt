@@ -1,26 +1,15 @@
 package fr.laucoin.registry.backend.domain.validator
 
 import fr.laucoin.registry.backend.domain.annotation.DateDefinedForTime
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 
-class DateDefinedForTimeValidator: GenericValidator<DateDefinedForTime, Any>() {
-	private lateinit var dateField: String
-	private lateinit var timeField: String
-
-	override fun initialize(constraintAnnotation: DateDefinedForTime) {
-		dateField = constraintAnnotation.dateField
-		timeField = constraintAnnotation.timeField
-	}
-
-	override fun isValid(value: Any, context: ConstraintValidatorContext): Boolean {
-		val dateValue = extractValue(dateField, value)
-		val timeValue = extractValue(timeField, value)
-
-		return (
-				Objects.isNull(dateValue) && Objects.isNull(timeValue)
-						|| Objects.nonNull(dateValue) && Objects.nonNull(timeValue)
-						|| Objects.nonNull(dateValue) && Objects.isNull(timeValue)
-				)
+class DateDefinedForTimeValidator: GenericValidator<DateDefinedForTime, CustomDateTimeWriterDto>() {
+	override fun isValid(value: CustomDateTimeWriterDto, context: ConstraintValidatorContext): Boolean {
+		return when {
+			Objects.isNull(value.date) -> Objects.isNull(value.time)
+			else -> true
+		}
 	}
 }

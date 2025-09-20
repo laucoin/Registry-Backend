@@ -17,7 +17,12 @@ import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import fr.laucoin.registry.backend.test.ModelExt.commonProject
+import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
+import fr.laucoin.registry.backend.test.ModelExt.commonUser
 import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
+import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.Objects
 import java.util.UUID
@@ -48,38 +53,30 @@ class UserProjectProfileServiceTest {
 	private val roleService: IRoleService = mock()
 	private val preferencesPort: IPreferencesPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
-	private val service: IUserProjectProfileService =
-		UserProjectProfileService(port, roleService, preferencesPort, transactionalOperator)
+	private val service: IUserProjectProfileService = UserProjectProfileService(
+		port, roleService, preferencesPort, transactionalOperator
+	)
 
-	companion object {
+	private companion object {
+		private const val PROJECT_ROLE = "PROJECT_ROLE"
+
 		@JvmStatic
 		fun `Should validateNotLastProjectRoleLevel0 return the given Object`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(null, null),
 				Arguments.of(
-					projectId,
-					ProjectProfileRoleCountModel(level0 = 0, project = ProjectModel().apply { id = UUID.randomUUID() })
+					projectId, ProjectProfileRoleCountModel(commonProject().apply { id = UUID.randomUUID() }, 0)
 				),
+				Arguments.of(projectId, ProjectProfileRoleCountModel(commonProject(), 2)),
 			)
 		}
 
 		@JvmStatic
 		fun `Should validateNotLastProjectRoleLevel0 throw RegistryException`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(
-					projectId,
-					ProjectProfileRoleCountModel(
-						level0 = 1,
-						project = ProjectModel().apply { id = projectId; name = "Test Project" }
-					)
-				),
-				Arguments.of(
-					projectId,
-					ProjectProfileRoleCountModel(
-						level0 = 0,
-						project = ProjectModel().apply { id = projectId; name = "Test Project" }
-					)
-				),
+				Arguments.of(projectId, ProjectProfileRoleCountModel(commonProject(), 1)),
+				Arguments.of(projectId, ProjectProfileRoleCountModel(commonProject(), 1)),
+				Arguments.of(null, ProjectProfileRoleCountModel(ProjectModel(), 1)),
 			)
 		}
 
@@ -97,9 +94,9 @@ class UserProjectProfileServiceTest {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
-		whenever(port.findProjectProfilesPageByUserId(any(), any(), any())).thenReturn(
-			Mono.just(PageModel(1, 2, 3, 4, emptyList()))
-		)
+
+		whenever(port.findProjectProfilesPageByUserId(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectProfilesPage(projectId, pageable, params).block()
@@ -115,22 +112,20 @@ class UserProjectProfileServiceTest {
 		profileCount: ProjectProfileRoleCountModel?
 	) {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val user = UserModel()
-		whenever(
-			port.findLevel0ProjectProfileRoleByUserId(
-				any(),
-				any()
-			)
-		).thenReturn(if (Objects.nonNull(profileCount)) Flux.just(profileCount!!) else Flux.empty())
+		val user = commonUser()
+
+		whenever(port.findLevel0ProjectProfileRoleByUserId(any(), any()))
+			.thenReturn(if (Objects.nonNull(profileCount)) Flux.just(profileCount!!) else Flux.empty())
 
 		// Act
-		val result =
-			service.validateNotLastProjectRoleLevel0(uuid, projectId = projectId, user, error = "ERROR_MESSAGE").block()
+		val result = service
+			.validateNotLastProjectRoleLevel0(userId, projectId = projectId, user, error = "ERROR_MESSAGE")
+			.block()
 
 		// Assert
 		assertEquals(user, result)
-		verify(port).findLevel0ProjectProfileRoleByUserId(uuid, visibilitySearched = true)
+
+		verify(port).findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
 	}
 
 	@ParameterizedTest
@@ -140,37 +135,29 @@ class UserProjectProfileServiceTest {
 		profileCount: ProjectProfileRoleCountModel
 	) {
 		// Arrange
-		val uuid = UUID.randomUUID()
 		val errorMessage = "ERROR_MESSAGE"
-		whenever(
-			port.findLevel0ProjectProfileRoleByUserId(
-				any(),
-				any()
-			)
-		).thenReturn(Flux.just(profileCount))
+
+		whenever(port.findLevel0ProjectProfileRoleByUserId(any(), any()))
+			.thenReturn(Flux.just(profileCount))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.validateNotLastProjectRoleLevel0(uuid, projectId = projectId, UserModel(), errorMessage).block()
+			service.validateNotLastProjectRoleLevel0(userId, projectId = projectId, UserModel(), errorMessage).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(errorMessage, result.message)
 
-		verify(port).findLevel0ProjectProfileRoleByUserId(uuid, visibilitySearched = true)
+		verify(port).findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
 	}
 
 	@Test
 	fun `Should createSupportProjectProfile call port findUserIdsWithProjectProfile and create`() {
 		// Arrange
-		val profileRole = "PROJECT_ROLE"
-		val profile = ProjectProfileModel().apply {
-			user = currentUser()
-			project = ProjectModel().apply { id = projectId }
-			role = profileRole
-		}
-		whenever(roleService.getLevel0RoleFromProjectRoles()).thenReturn(profileRole)
+		val profile = commonProjectProfile().apply { role = PROJECT_ROLE }
+
+		whenever(roleService.getLevel0RoleFromProjectRoles()).thenReturn(PROJECT_ROLE)
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(),
@@ -181,13 +168,11 @@ class UserProjectProfileServiceTest {
 				anyOrNull()
 			)
 		).thenReturn(Flux.empty())
+
 		whenever(port.create(any())).thenReturn(Mono.just(profile))
-		whenever(
-			preferencesPort.findByUserId(
-				any(),
-				anyOrNull()
-			)
-		).thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
+		whenever(preferencesPort.findByUserId(any(), anyOrNull()))
+			.thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
+
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
@@ -195,6 +180,7 @@ class UserProjectProfileServiceTest {
 
 		// Assert
 		assertEquals(profile, result)
+
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			eq(projectId),
 			eq(listOf(currentUser().id!!)),
@@ -203,6 +189,7 @@ class UserProjectProfileServiceTest {
 			any(),
 			any(),
 		)
+
 		verify(port).create(any())
 		verify(preferencesPort).findByUserId(currentUser().id!!, visibilitySearched = null)
 		verify(transactionalOperator).transactional(any<Mono<*>>())
@@ -211,13 +198,9 @@ class UserProjectProfileServiceTest {
 	@Test
 	fun `Should createSupportProjectProfile call port findUserIdsWithProjectProfile and throw because profile duplicated`() {
 		// Arrange
-		val profileRole = "PROJECT_ROLE"
-		val profile = ProjectProfileModel().apply {
-			user = currentUser()
-			project = ProjectModel().apply { id = projectId }
-			role = profileRole
-		}
-		whenever(roleService.getLevel0RoleFromProjectRoles()).thenReturn(profileRole)
+		val profile = commonProjectProfile().apply { role = PROJECT_ROLE }
+
+		whenever(roleService.getLevel0RoleFromProjectRoles()).thenReturn(PROJECT_ROLE)
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(),
@@ -228,13 +211,11 @@ class UserProjectProfileServiceTest {
 				anyOrNull()
 			)
 		).thenReturn(Flux.just(currentUser().id!!))
+
 		whenever(port.create(any())).thenReturn(Mono.just(profile))
-		whenever(
-			preferencesPort.findByUserId(
-				any(),
-				anyOrNull()
-			)
-		).thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
+		whenever(preferencesPort.findByUserId(any(), anyOrNull()))
+			.thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
+
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
@@ -245,6 +226,7 @@ class UserProjectProfileServiceTest {
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
+
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			eq(projectId),
 			eq(listOf(currentUser().id!!)),
@@ -253,6 +235,7 @@ class UserProjectProfileServiceTest {
 			any(),
 			any(),
 		)
+
 		verify(port, never()).create(any())
 		verify(preferencesPort, never()).findByUserId(any(), anyOrNull())
 	}
@@ -264,12 +247,7 @@ class UserProjectProfileServiceTest {
 		expectedCallToUpdatePreferences: Int
 	) {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val profile = ProjectProfileModel().apply {
-			id = uuid
-			project = ProjectModel().apply { id = projectId }
-		}
-		whenever(port.create(any())).thenReturn(Mono.just(profile))
+		whenever(port.create(any())).thenReturn(Mono.just(commonProjectProfile()))
 		whenever(preferencesPort.findByUserId(any(), anyOrNull())).thenReturn(Mono.just(userPreferences))
 		whenever(preferencesPort.save(any())).thenReturn(Mono.just(userPreferences))
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
@@ -287,72 +265,55 @@ class UserProjectProfileServiceTest {
 	@Test
 	fun `Should updateUserProjectProfileStatusById update Project Profile status is INVITED`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val profile = ProjectProfileModel().apply {
-			id = uuid
-			project = ProjectModel().apply { id = projectId }
-			status = INVITED
-		}
+		val profile = commonProjectProfile().apply { status = INVITED }
+
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.updateUserProjectProfileStatusById(currentUser(), uuid, ACCEPTED).block()
+		service.updateUserProjectProfileStatusById(currentUser(), projectProfileId, ACCEPTED).block()
 
 		// Assert
 		verify(port).update(any())
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, uuid, visibilitySearched = true)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
 	}
 
 	@Test
 	fun `Should updateUserProjectProfileStatusById throw RegistryException`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val profile = ProjectProfileModel().apply {
-			id = uuid
-			project = ProjectModel().apply { id = projectId }
-			status = ACCEPTED
-		}
+		val profile = commonProjectProfile().apply { status = ACCEPTED }
+
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateUserProjectProfileStatusById(currentUser(), uuid, ACCEPTED).block()
+			service.updateUserProjectProfileStatusById(currentUser(), projectProfileId, ACCEPTED).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
-		assertEquals(uuid.toString(), result.args?.first())
+		assertEquals(projectProfileId.toString(), result.args?.first())
 
 		verify(port, never()).update(any())
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, uuid, visibilitySearched = true)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
 	}
 
 	@Test
 	fun `Should deleteUserProjectProfileById delete Profile`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val profile = ProjectProfileModel().apply {
-			id = uuid
-			user = currentUser()
-			project = ProjectModel().apply { id = projectId }
-		}
-		whenever(
-			port.findLevel0ProjectProfileRoleByUserId(
-				any(),
-				any()
-			)
-		).thenReturn(Flux.empty())
+		val profile = commonProjectProfile().apply { user = currentUser() }
+
+		whenever(port.findLevel0ProjectProfileRoleByUserId(any(), any())).thenReturn(Flux.empty())
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteUserProjectProfileById(currentUser(), uuid).block()
+		service.deleteUserProjectProfileById(currentUser(), projectProfileId).block()
 
 		// Assert
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, uuid, visibilitySearched = null)
-		verify(port).deleteById(uuid)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = null)
+		verify(port).deleteById(projectProfileId)
 	}
 }

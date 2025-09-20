@@ -1,26 +1,88 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CreatedProjectProfilesReaderDto
 import java.util.Locale
 import java.util.UUID
+import java.util.stream.Stream
 import kotlin.test.assertEquals
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 
 class CreatedProjectProfilesReaderDtoMapperTest {
-	private val mapper: CreatedProjectProfilesReaderDtoMapper = CreatedProjectProfilesReaderDtoMapper()
+	private val mapper = CreatedProjectProfilesReaderDtoMapper()
 
-	@Test
-	fun `Should toDto convert Pair of user ids (with and without profiles) to CreatedProjectProfilesReaderDto`() {
+	private companion object {
+		private val uuid1 = UUID.randomUUID()
+		private val uuid2 = UUID.randomUUID()
+		private val uuid3 = UUID.randomUUID()
+
+		private val model = Pair(listOf(uuid1, uuid2), listOf(uuid3))
+		private val dto = CreatedProjectProfilesReaderDto(listOf(uuid1, uuid2), listOf(uuid3))
+
+		@JvmStatic
+		fun `Pair to CreatedProjectProfilesReaderDto data`(): Stream<Arguments> {
+			return Stream.of(
+				Arguments.of(model, dto, 1, 1),
+			)
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("Pair to CreatedProjectProfilesReaderDto data")
+	fun `Should toDto convert Pair to CreatedProjectProfilesReaderDto`(
+		model: Pair<List<UUID>, List<UUID>>, dto: CreatedProjectProfilesReaderDto
+	) {
+		// Act
+		val result = mapper.toDto(model, Locale.getDefault())
+
+		// Assert
+		assertEquals(dto, result)
+	}
+
+	@ParameterizedTest
+	@MethodSource("Pair to CreatedProjectProfilesReaderDto data")
+	fun `Should toDto convert Pair list to CreatedProjectProfilesReaderDto list`(
+		model: Pair<List<UUID>, List<UUID>>, dto: CreatedProjectProfilesReaderDto
+	) {
 		// Arrange
-		val content = Pair(
-			listOf(UUID.randomUUID(), UUID.randomUUID()),
-			listOf(UUID.randomUUID()),
+		val models = listOf(model)
+		val dtos = listOf(dto)
+
+		// Act
+		val result = mapper.toDtoList(models, Locale.getDefault())
+
+		// Assert
+		assertEquals(dtos, result)
+	}
+
+	@ParameterizedTest
+	@MethodSource("Pair to CreatedProjectProfilesReaderDto data")
+	fun `Should toDto convert Pair page to CreatedProjectProfilesReaderDto page`(
+		model: Pair<List<UUID>, List<UUID>>, dto: CreatedProjectProfilesReaderDto
+	) {
+		// Arrange
+		val modelPage = PageModel(
+			pageNumber = 0,
+			pageSize = 10,
+			totalPages = 1,
+			totalElements = 1,
+			content = listOf(model),
+		)
+		val dtoPage = PageModel(
+			pageNumber = 0,
+			pageSize = 10,
+			totalPages = 1,
+			totalElements = 1,
+			content = listOf(dto),
+			lastRefresh = modelPage.lastRefresh,
 		)
 
 		// Act
-		val result = mapper.toDto(content, Locale.getDefault())
+		val result = mapper.toDtoPage(modelPage, Locale.getDefault())
 
 		// Assert
-		assertEquals(content.first.size, result.createdUserIds.size)
-		assertEquals(content.second.size, result.notCreatedUserIds.size)
+		assertEquals(dtoPage, result)
 	}
 }

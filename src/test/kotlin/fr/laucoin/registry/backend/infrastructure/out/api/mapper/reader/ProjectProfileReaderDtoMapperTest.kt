@@ -32,7 +32,7 @@ class ProjectProfileReaderDtoMapperTest {
 	private val mapper: ProjectProfileReaderDtoMapper =
 		ProjectProfileReaderDtoMapper(translateService, projectMapper, availabilityMapper, partialUserMapper)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should toDto convert ProjectProfileModel to ProjectProfileReaderDto`(): Stream<Arguments> {
 			return Stream.of(

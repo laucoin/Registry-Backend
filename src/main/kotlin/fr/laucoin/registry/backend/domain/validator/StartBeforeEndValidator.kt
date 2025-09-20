@@ -2,8 +2,6 @@ package fr.laucoin.registry.backend.domain.validator
 
 import fr.laucoin.registry.backend.domain.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
-import fr.laucoin.registry.backend.domain.extension.DateExt.isBeforeOrEqual
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
@@ -28,16 +26,10 @@ class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
 		return when {
 			startValue is ZonedDateTime && endValue is ZonedDateTime -> startValue.isBefore(endValue)
 			startValue is LocalDate && endValue is LocalDate -> startValue.isBefore(endValue)
-			startValue is CustomDateTimeWriterDto && endValue is CustomDateTimeWriterDto -> {
-				val startDateTime =
-					if (Objects.nonNull(startValue.date)) CustomDateTimeModel(
-						startValue.date!!,
-						startValue.time
-					) else null
-				val endDateTime =
-					if (Objects.nonNull(endValue.date)) CustomDateTimeModel(endValue.date!!, endValue.time) else null
-				startDateTime.isBeforeOrEqual(endDateTime)
-			}
+			startValue is CustomDateTimeWriterDto && endValue is CustomDateTimeWriterDto -> isValid(
+				startValue,
+				endValue
+			)
 
 			Objects.isNull(startValue) || Objects.isNull(endValue) -> true
 			else -> {
@@ -50,6 +42,19 @@ class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
 				)
 				throw exception
 			}
+		}
+	}
+
+	private fun isValid(startValue: CustomDateTimeWriterDto, endValue: CustomDateTimeWriterDto): Boolean {
+		return when {
+			startValue.date!!.isBefore(endValue.date) -> true
+			startValue.date!!.isEqual(endValue.date) -> {
+				val startTime = startValue.time ?: return true
+				val endTime = endValue.time ?: return true
+				startTime.isBefore(endTime)
+			}
+
+			else -> false
 		}
 	}
 }

@@ -206,8 +206,8 @@ class UserService(
 				} else {
 					log.info("Purging user {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} user was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge user", err) }
+						.doOnNext { e -> log.info("User {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge user {}", it, err) }
 				}
 			}
 	}

@@ -6,12 +6,12 @@ import java.time.ZonedDateTime
 
 data class CurrentUserReaderDto(
 	var authorities: List<String>,
-	var preferences: PreferenceReaderDto?,
-	var firstName: String?,
-	var lastName: String?,
-	var email: String?,
-	var role: LabelDto?,
-	var birthday: LocalDate?,
-	var lastLogin: ZonedDateTime?,
+	var preferences: PreferenceReaderDto? = null,
+	var firstName: String? = null,
+	var lastName: String? = null,
+	var email: String? = null,
+	var role: LabelDto? = null,
+	var birthday: LocalDate? = null,
+	var lastLogin: ZonedDateTime? = null,
 	var purged: Boolean,
 ): GenericReaderDto()

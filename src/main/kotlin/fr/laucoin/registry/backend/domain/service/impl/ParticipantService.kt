@@ -8,10 +8,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
-import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
-import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
-import fr.laucoin.registry.backend.domain.extension.DateExt.isBeforeOrEqual
-import fr.laucoin.registry.backend.domain.extension.DateExt.isEqualOrAfter
+import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
+import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -262,8 +260,8 @@ class ParticipantService(
 				} else {
 					log.info("Purging participant {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} participant was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge participant", err) }
+						.doOnNext { e -> log.info("Participant {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge participant {}", it, err) }
 				}
 			}
 	}
@@ -271,76 +269,73 @@ class ParticipantService(
 	private fun validateNoMovementConflict(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
-		return if (
-			oldParticipant.startAvailability.isEqualOrAfter(participant.startAvailability)
-			&& oldParticipant.endAvailability.isBeforeOrEqual(participant.endAvailability)
-		) Mono.just(oldParticipant)
-		else Mono.zip(
-			validateNoMovementConflictBefore(participant, oldParticipant),
+		val smartStartCheck = if (participant.startAvailability.asStartIsAfterOther(oldParticipant.startAvailability))
+			validateNoMovementConflictBefore(participant, oldParticipant)
+		else Mono.just(oldParticipant)
+
+		val smartEndCheck = if (participant.endAvailability.asEndIsBeforeOther(oldParticipant.endAvailability))
 			validateNoMovementConflictAfter(participant, oldParticipant)
-		).map { oldParticipant }
+		else Mono.just(oldParticipant)
+
+		return Mono.zip(smartStartCheck, smartEndCheck).map { oldParticipant }
 	}
 
 	private fun validateNoMovementConflictBefore(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
-		return if (
-			participant.startAvailability.isAfter(oldParticipant.startAvailability)
-			&& Objects.nonNull(participant.startAvailability)
-		) {
-			movementPort.countAllByParticipantId(
-				oldParticipant.project!!.id!!,
-				oldParticipant.id!!,
-				MovementSearchParamModel(
-					visibilitySearched = null,
-					typeSearched = null,
-					endDateTimeSearched = participant.startAvailability!!.toZonedDateTime(),
+		return movementPort.countAllByParticipantId(
+			oldParticipant.project!!.id!!,
+			oldParticipant.id!!,
+			MovementSearchParamModel(
+				visibilitySearched = null,
+				typeSearched = null,
+				endDateTimeSearched = participant.startAvailability!!.toZonedDateTime(),
+			)
+		).handle { it, handle ->
+			if (it > 0) {
+				log.warn(
+					"The participant {} already has {} movement(s) before the new end date",
+					oldParticipant.id,
+					it
 				)
-			).handle { it, handle ->
-				if (it > 0) {
-					log.warn(
-						"The participant {} already has {} movement(s) before the new end date",
-						oldParticipant.id,
-						it
+				handle.error(
+					RegistryException(
+						UNPROCESSABLE_ENTITY,
+						PARTICIPANT_OUT_OF_MOVEMENT_DATETIME,
+						arrayListOf(it),
 					)
-					handle.error(
-						RegistryException(
-							UNPROCESSABLE_ENTITY,
-							PARTICIPANT_OUT_OF_MOVEMENT_DATETIME,
-							arrayListOf(it)
-						)
-					)
-				} else handle.next(oldParticipant)
-			}
-		} else Mono.just(oldParticipant)
+				)
+			} else handle.next(oldParticipant)
+		}
 	}
 
 	private fun validateNoMovementConflictAfter(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
-		return if (
-			participant.endAvailability.isBefore(oldParticipant.endAvailability)
-			&& Objects.nonNull(participant.endAvailability)
-		) {
-			movementPort.countAllByParticipantId(
-				oldParticipant.project!!.id!!,
-				oldParticipant.id!!,
-				MovementSearchParamModel(
-					visibilitySearched = null,
-					typeSearched = null,
-					startDateTimeSearched = participant.endAvailability!!.toZonedDateTime(),
+		return movementPort.countAllByParticipantId(
+			oldParticipant.project!!.id!!,
+			oldParticipant.id!!,
+			MovementSearchParamModel(
+				visibilitySearched = null,
+				typeSearched = null,
+				startDateTimeSearched = participant.endAvailability!!.toZonedDateTime(),
+			)
+		).handle { it, handle ->
+			if (it > 0) {
+				log.warn(
+					"The participant {} already has {} movement(s) after the new start date",
+					oldParticipant.id,
+					it
 				)
-			).handle { it, handle ->
-				if (it > 0) {
-					log.warn(
-						"The participant {} already has {} movement(s) after the new start date",
-						oldParticipant.id,
-						it
+				handle.error(
+					RegistryException(
+						UNPROCESSABLE_ENTITY,
+						PARTICIPANT_OUT_OF_MOVEMENT_DATETIME,
+						arrayListOf(it),
 					)
-					handle.error(RegistryException(UNPROCESSABLE_ENTITY, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME))
-				} else handle.next(oldParticipant)
-			}
-		} else Mono.just(oldParticipant)
+				)
+			} else handle.next(oldParticipant)
+		}
 	}
 
 	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String) = flatMap { participantToUpdate ->

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController
 	importOptions = [DoNotIncludeTests::class],
 )
 class HexagonalArchitectureTest {
-	companion object {
+	private companion object {
 		private const val BACKEND = "fr.laucoin.registry.backend"
 		private const val CONFIG = "$BACKEND.config"
 		private const val DOMAIN = "$BACKEND.domain"

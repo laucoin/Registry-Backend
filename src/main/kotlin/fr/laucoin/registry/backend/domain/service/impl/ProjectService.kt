@@ -2,9 +2,8 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
-import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
-import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
-import fr.laucoin.registry.backend.domain.extension.DateExt.notInRange
+import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
+import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -62,7 +61,7 @@ class ProjectService(
 	override fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID> {
 		return findProjectById(id, visibilitySearched = null)
 			.handle { it, handle ->
-				if (dateTime.notInRange(it.begin, it.end)) {
+				if (it.isNotInRange(dateTime)) {
 					log.warn("Failed to editing, date {} is out of project range [{}, {}]", dateTime, it.begin, it.end)
 					handle.error(
 						RegistryException(
@@ -83,7 +82,7 @@ class ProjectService(
 	): Mono<UUID> {
 		return findProjectById(id, visibilitySearched = null)
 			.handle { it, handle ->
-				if (start.notInRange(it.begin, it.end) || end.notInRange(it.begin, it.end)) {
+				if (it.isNotInRange(start) || it.isNotInRange(end)) {
 					log.warn(
 						"Failed to editing, one or more dates ({}, {}) are out of project range [{}, {}]",
 						start,
@@ -135,7 +134,7 @@ class ProjectService(
 	}
 
 	private fun Mono<ProjectModel>.validateDates(project: ProjectModel): Mono<ProjectModel> = flatMap {
-		if (it.begin.isBefore(project.begin) || it.end.isAfter(project.end)) {
+		if (project.begin.asStartIsAfterOther(it.begin) || project.end.asEndIsBeforeOther(it.end)) {
 			port.validDateTime(
 				it.id!!,
 				project.begin?.toZonedDateTime(OffsetTime.MIN),
@@ -177,8 +176,8 @@ class ProjectService(
 				} else {
 					log.info("Purging project {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} project was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge project", err) }
+						.doOnNext { e -> log.info("Project {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge project {}", it, err) }
 				}
 			}
 	}

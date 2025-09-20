@@ -20,7 +20,7 @@ import org.springframework.http.HttpStatus.BAD_REQUEST
 class ProjectOptionValidatorTest {
 	private val optionValidator = ProjectOptionValidator()
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should isValid evaluate if Project options are valid`(): Stream<Arguments> = Stream.of(
 			Arguments.of(null, true),

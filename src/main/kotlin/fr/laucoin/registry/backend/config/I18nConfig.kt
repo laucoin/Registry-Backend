@@ -20,7 +20,7 @@ class I18nConfig(
 	@Value("\${registry.information.locale.default}")
 	val defaultLocale: Locale,
 ): LocaleContextResolver {
-	companion object {
+	private companion object {
 		private const val I18N_MESSAGE: String = "classpath:i18n/messages"
 		private const val I18N_ERROR: String = "classpath:i18n/errors"
 	}

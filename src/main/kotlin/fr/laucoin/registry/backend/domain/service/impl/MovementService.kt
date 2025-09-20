@@ -17,10 +17,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
-import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
@@ -135,32 +133,39 @@ class MovementService(
 		textSearched: String?
 	): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>> {
 		return zip(
-			participantPort.findWithLimit(
-				maxParticipantResult,
-				projectId,
-				searchParams = ParticipantSearchParamModel(
-					isMajor = null,
-					typeSearched,
-					visibilitySearched = true,
-					availabilitySearched = true,
-				).apply { this.textSearched = textSearched },
-			).collectList(),
-			groupPort.findWithLimit(
-				maxGroupResult,
-				projectId,
-				GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true),
-			).collectList().flatMap { groups ->
+			findParticipantWithLimit(projectId, typeSearched, textSearched).collectList(),
+			findGroupWithLimit(projectId, textSearched),
+		)
+	}
+
+	private fun findParticipantWithLimit(
+		projectId: UUID, typeSearched: ParticipantTypeEnum, textSearched: String?
+	): Flux<ParticipantModel> {
+		val participantSearch = ParticipantSearchParamModel().apply {
+			this.typeSearched = typeSearched
+			this.textSearched = textSearched
+			visibilitySearched = true
+			availabilitySearched = true
+		}
+
+		return participantPort.findWithLimit(maxParticipantResult, projectId, participantSearch)
+	}
+
+	private fun findGroupWithLimit(projectId: UUID, textSearched: String?): Mono<List<GroupModel>> {
+		val groupSearch = GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true)
+
+		return groupPort.findWithLimit(maxGroupResult, projectId, groupSearch)
+			.collectList()
+			.flatMap { groups ->
 				groupPort.findContent(
 					projectId,
 					groups.mapNotNull(GroupModel::id),
 					visibilitySearched = true,
 					availabilitySearched = true,
-				)
-					.map {
-						groups.first { g -> g.id == it.first }.apply { members = it.second }
-					}.collectList()
-			},
-		)
+				).map {
+					groups.first { g -> g.id == it.first }.apply { members = it.second }
+				}.collectList()
+			}
 	}
 
 	override fun searchVehiclesByText(projectId: UUID, textSearched: String?): Flux<VehicleModel> {
@@ -261,12 +266,12 @@ class MovementService(
 				)
 			)
 		)
-			.map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentChild, registeredAbsentChild, guestPresent) ->
+			.map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentMinor, registeredAbsentMinor, guestPresent) ->
 				ProjectStatusModel(
 					registered = ProjectStatusModel.ParticipantStatusModel(
-						registeredPresentChild,
+						registeredPresentMinor,
 						registeredPresentAdult,
-						registeredAbsentChild,
+						registeredAbsentMinor,
 						registeredAbsentAdult,
 					),
 					guests = guestPresent,
@@ -337,7 +342,7 @@ class MovementService(
 				)
 			}
 			.flatMap {
-				if (movement.reason === DEFINITIVE_DEPARTURE || (movement.type === OUT && movement.isGuestsMovement())) {
+				if (movement.isLastParticipantMovement()) {
 					updateParticipantsEndAvailability(it)
 				} else Mono.just(it)
 			}
@@ -584,7 +589,7 @@ class MovementService(
 	private fun Mono<MovementModel>.validateMovementIsAlterable(errorMessage: String): Mono<MovementModel> =
 		handle { it, handle ->
 			when {
-				it.reason === DEFINITIVE_DEPARTURE || (it.type === OUT && it.contentType === GUEST) -> handle.error(
+				it.isLastParticipantMovement() -> handle.error(
 					RegistryException(
 						UNPROCESSABLE_ENTITY,
 						errorMessage,
@@ -625,8 +630,8 @@ class MovementService(
 				} else {
 					log.info("Purging movement {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} movement was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge movement", err) }
+						.doOnNext { e -> log.info("Movement {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge movement {}", it, err) }
 				}
 			}
 	}

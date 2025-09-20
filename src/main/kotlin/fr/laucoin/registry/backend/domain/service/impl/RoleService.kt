@@ -59,23 +59,22 @@ class RoleService(
 	}
 
 	override fun getAuthoritiesByProjectRole(role: String, projectId: UUID, visibility: Boolean?): List<String> {
-		if (!projectRoles.containsKey(role)) {
-			log.warn("Project role \"{}\" not found in \"{}\"", role, projectRoles.keys)
-			return emptyList()
-		}
-
 		val roleAuthoritiesMapping = projectRoles[role]
 		return when {
-			Objects.isNull(roleAuthoritiesMapping) || (visibility != true && roleAuthoritiesMapping!!.first != 0) -> emptyList()
-			visibility != true && roleAuthoritiesMapping!!.first == 0 ->
-				roleAuthoritiesMapping.second.filter {
+			Objects.isNull(roleAuthoritiesMapping) -> {
+				log.warn("Project role \"{}\" not found in \"{}\"", role, projectRoles.keys)
+				emptyList()
+			}
+
+			visibility != true && roleAuthoritiesMapping!!.first != 0 -> emptyList()
+			visibility != true ->
+				roleAuthoritiesMapping!!.second.filter {
 					listOf(
 						REGISTRY_PROJECT_R,
 						REGISTRY_PROJECT_U,
 						REGISTRY_PROJECT_D
 					).contains(it)
-				}
-					.map { "${projectId}_$it" }
+				}.map { "${projectId}_$it" }
 
 			else -> roleAuthoritiesMapping!!.second.map { "${projectId}_$it" }
 		}

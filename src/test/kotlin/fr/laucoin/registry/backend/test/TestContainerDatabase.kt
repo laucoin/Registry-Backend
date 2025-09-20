@@ -6,7 +6,7 @@ import org.springframework.context.ConfigurableApplicationContext
 import org.testcontainers.containers.GenericContainer
 
 class TestContainerDatabase: ApplicationContextInitializer<ConfigurableApplicationContext> {
-	companion object {
+	private companion object {
 		private const val CONFIG_PREFIX = "registry.datasource."
 
 		private const val DB_USERNAME = "backend"

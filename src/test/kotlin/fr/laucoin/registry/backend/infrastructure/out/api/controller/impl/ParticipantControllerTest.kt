@@ -94,7 +94,7 @@ class ParticipantControllerTest: TestContext() {
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
-	companion object {
+	private companion object {
 		private const val BASE_URL = "/api/projects/{projectId}/participants"
 
 		@JvmStatic

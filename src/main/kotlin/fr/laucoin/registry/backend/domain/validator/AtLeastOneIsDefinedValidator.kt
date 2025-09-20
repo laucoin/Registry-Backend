@@ -19,7 +19,9 @@ class AtLeastOneIsDefinedValidator: GenericValidator<AtLeastOneIsDefined, Any>()
 		val firstValue = extractValue(firstField, value)
 		val secondValue = extractValue(secondField, value)
 
-		return if (firstValue.isIterable() && secondValue.isIterable()) {
+		val firstValueIsIterable = (firstValue.isIterable() || Objects.isNull(firstValue))
+		val secondValueIsIterable = (secondValue.isIterable() || Objects.isNull(secondValue))
+		return if (firstValueIsIterable && secondValueIsIterable) {
 			firstValue.isNotEmpty() || secondValue.isNotEmpty()
 		} else {
 			Objects.nonNull(firstValue) || Objects.nonNull(secondValue)

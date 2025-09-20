@@ -23,7 +23,7 @@ class UserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
 	private val mapper: UserReaderDtoMapper = UserReaderDtoMapper(translateService)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should toDto convert UserModel to UserReaderDto`(): Stream<Arguments> {
 			return Stream.of(

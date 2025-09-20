@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -20,7 +21,7 @@ import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 class StartBeforeEndValidatorTest {
 	private val dateValidator = StartBeforeEndValidator()
 
-	companion object {
+	private companion object {
 		private val yesterdayDateTime: ZonedDateTime = ZonedDateTime.now().minusDays(1)
 		private val nowDateTime: ZonedDateTime = ZonedDateTime.now()
 		private val tomorrowDateTime: ZonedDateTime = ZonedDateTime.now().plusDays(1)
@@ -58,6 +59,48 @@ class StartBeforeEndValidatorTest {
 			Arguments.of(yesterdayDate, nowDate, true),
 			Arguments.of(nowDate, yesterdayDate, false),
 			Arguments.of(nowDate, tomorrowDate, true),
+		)
+
+		@JvmStatic
+		fun `Should isValid validate CustomDateTimeWriterDto`(): Stream<Arguments> = Stream.of(
+			Arguments.of(null, null, true),
+			Arguments.of(null, CustomDateTimeWriterDto(nowDate), true),
+			Arguments.of(CustomDateTimeWriterDto(nowDate), null, true),
+			Arguments.of(CustomDateTimeWriterDto(nowDate), CustomDateTimeWriterDto(nowDate), true),
+			Arguments.of(CustomDateTimeWriterDto(tomorrowDate), CustomDateTimeWriterDto(nowDate), false),
+			Arguments.of(CustomDateTimeWriterDto(yesterdayDate), CustomDateTimeWriterDto(nowDate), true),
+			Arguments.of(CustomDateTimeWriterDto(nowDate), CustomDateTimeWriterDto(yesterdayDate), false),
+			Arguments.of(CustomDateTimeWriterDto(nowDate), CustomDateTimeWriterDto(tomorrowDate), true),
+			Arguments.of(
+				CustomDateTimeWriterDto(nowDate, nowDateTime.toOffsetDateTime().toOffsetTime()),
+				CustomDateTimeWriterDto(nowDate),
+				true
+			),
+			Arguments.of(
+				CustomDateTimeWriterDto(nowDate, nowDateTime.toOffsetDateTime().toOffsetTime()),
+				CustomDateTimeWriterDto(nowDate, nowDateTime.toOffsetDateTime().toOffsetTime()),
+				false
+			),
+			Arguments.of(
+				CustomDateTimeWriterDto(tomorrowDate, tomorrowDateTime.toOffsetDateTime().toOffsetTime()),
+				CustomDateTimeWriterDto(nowDate, nowDateTime.toOffsetDateTime().toOffsetTime()),
+				false
+			),
+			Arguments.of(
+				CustomDateTimeWriterDto(yesterdayDate, yesterdayDateTime.toOffsetDateTime().toOffsetTime()),
+				CustomDateTimeWriterDto(nowDate, nowDateTime.toOffsetDateTime().toOffsetTime()),
+				true
+			),
+			Arguments.of(
+				CustomDateTimeWriterDto(nowDate, nowDateTime.toOffsetDateTime().toOffsetTime()),
+				CustomDateTimeWriterDto(yesterdayDate, yesterdayDateTime.toOffsetDateTime().toOffsetTime()),
+				false
+			),
+			Arguments.of(
+				CustomDateTimeWriterDto(nowDate, nowDateTime.toOffsetDateTime().toOffsetTime()),
+				CustomDateTimeWriterDto(tomorrowDate, tomorrowDateTime.toOffsetDateTime().toOffsetTime()),
+				true
+			),
 		)
 	}
 
@@ -155,10 +198,37 @@ class StartBeforeEndValidatorTest {
 		assertEquals(expected, result)
 	}
 
+	@ParameterizedTest
+	@MethodSource
+	fun `Should isValid validate CustomDateTimeWriterDto`(
+		start: CustomDateTimeWriterDto?,
+		end: CustomDateTimeWriterDto?,
+		expected: Boolean,
+	) {
+		// Arrange
+		val context: ConstraintValidatorContext = mock()
+		val data = ClassWithDate(startCustomDateTime = start, endCustomDateTime = end)
+		dateValidator.initialize(
+			StartBeforeEnd(
+				startField = "startCustomDateTime",
+				endField = "endCustomDateTime",
+				message = "TEST_MESSAGE"
+			)
+		)
+
+		// Act
+		val result = dateValidator.isValid(data, context)
+
+		// Assert
+		assertEquals(expected, result)
+	}
+
 	data class ClassWithDate(
 		val startZonedDateTime: ZonedDateTime? = null,
 		val endZonedDateTime: ZonedDateTime? = null,
 		val startLocalDate: LocalDate? = null,
 		val endLocalDate: LocalDate? = null,
+		val startCustomDateTime: CustomDateTimeWriterDto? = null,
+		val endCustomDateTime: CustomDateTimeWriterDto? = null,
 	)
 }

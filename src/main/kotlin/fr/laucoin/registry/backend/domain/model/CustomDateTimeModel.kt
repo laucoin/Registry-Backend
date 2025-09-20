@@ -22,6 +22,7 @@ data class CustomDateTimeModel(
 	companion object {
 		val MIN = CustomDateTimeModel(OffsetDateTime.MIN.toZonedDateTime())
 		val MAX = CustomDateTimeModel(OffsetDateTime.MAX.toZonedDateTime())
+		val EPOCH = CustomDateTimeModel(LocalDate.EPOCH)
 
 		@JsonIgnore
 		fun now(): CustomDateTimeModel {

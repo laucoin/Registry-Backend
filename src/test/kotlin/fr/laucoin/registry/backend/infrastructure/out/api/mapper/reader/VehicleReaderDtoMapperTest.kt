@@ -23,7 +23,7 @@ class VehicleReaderDtoMapperTest {
 	private val projectMapper: ProjectReaderDtoMapper = mock()
 	private val mapper: VehicleReaderDtoMapper = VehicleReaderDtoMapper(projectMapper, presenceStatusMapper)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should toDto convert VehicleModel to VehicleReaderDto`(): Stream<Arguments> {
 			return Stream.of(

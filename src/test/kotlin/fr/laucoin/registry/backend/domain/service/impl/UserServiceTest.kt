@@ -19,7 +19,10 @@ import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_ROLE
+import fr.laucoin.registry.backend.test.ModelExt.commonUser
+import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.LocalDate
 import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
@@ -55,21 +58,18 @@ class UserServiceTest {
 	private val userProjectProfileService: IUserProjectProfileService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
-	private val service =
-		UserService(port, preferencesService, userProjectProfileService, transactionalOperator, roleService)
+	private val service = UserService(
+		port, preferencesService, userProjectProfileService, transactionalOperator, roleService
+	)
 
 	private val serviceAccountId = UUID.randomUUID()
 	private val serviceAccount = CurrentUserModel().apply { id = serviceAccountId; role = USER_ROLE }
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should updateUserIfPersonalDataChanged update and return User`(): Stream<Arguments> = Stream.of(
 			Arguments.of(UserModel()),
-			Arguments.of(UserModel().apply {
-				firstName = "John"
-				lastName = "DOE"
-				email = "John.DOE@test.com"
-			}),
+			Arguments.of(commonUser()),
 		)
 
 		@JvmStatic
@@ -144,6 +144,7 @@ class UserServiceTest {
 		// Arrange
 		val event: ContextRefreshedEvent = mock()
 		val serviceAccount = CurrentUserModel()
+
 		whenever(port.findServiceAccount()).thenReturn(Mono.just(serviceAccount))
 
 		// Act
@@ -158,9 +159,9 @@ class UserServiceTest {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = UserSearchParamModel()
-		whenever(port.findPage(any(), any())).thenReturn(
-			Mono.just(PageModel(1, 2, 3, 4, emptyList()))
-		)
+
+		whenever(port.findPage(any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findUsersPage(pageable, params).block()
@@ -172,25 +173,24 @@ class UserServiceTest {
 	@Test
 	fun `Should findUserById call port findById`() {
 		// Arrange
-		val user = UserModel()
-		val uuid = UUID.randomUUID()
 		val onlyVisible = true
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(user))
+
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonUser()))
 
 		// Act
-		service.findUserById(uuid, onlyVisible).block()
+		service.findUserById(userId, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(uuid, onlyVisible)
+		verify(port).findById(userId, onlyVisible)
 	}
 
 	@Test
 	fun `Should findUserById call port findById throw on empty result`() {
 		// Arrange
 		val onlyVisible = true
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(UserModel().apply {
-			id = serviceAccountId
-		}))
+
+		whenever(port.findById(any(), anyOrNull()))
+			.thenReturn(Mono.just(UserModel().apply { id = serviceAccountId }))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -201,6 +201,8 @@ class UserServiceTest {
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
+		assertEquals(serviceAccountId.toString(), result.args?.first())
+
 		verify(port).findById(serviceAccountId, onlyVisible)
 	}
 
@@ -208,6 +210,7 @@ class UserServiceTest {
 	fun `Should findUserByOidcId call port findByOidcId`() {
 		// Arrange
 		val onlyVisible = true
+
 		whenever(port.findByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser()))
 
 		// Act
@@ -215,6 +218,20 @@ class UserServiceTest {
 
 		// Assert
 		verify(port).findByOidcId(currentUser().oidcId!!, onlyVisible)
+	}
+
+	@Test
+	fun `Should findUserByEmail call port findByEmail`() {
+		// Arrange
+		val onlyVisible = true
+
+		whenever(port.findByEmail(any(), anyOrNull())).thenReturn(Flux.just(currentUser()))
+
+		// Act
+		service.findUserByEmail(currentUser().email!!, onlyVisible).collectList().block()
+
+		// Assert
+		verify(port).findByEmail(currentUser().email!!, onlyVisible)
 	}
 
 	@Test
@@ -246,23 +263,14 @@ class UserServiceTest {
 	@Test
 	fun `Should createUser create and return User`() {
 		// Arrange
-		val userOidcId = UUID.randomUUID()
-		val userFirstName = "John"
-		val userLastName = "DOE"
-		val userEmail = "$userFirstName.$userLastName@test.com"
-		val user = UserModel().apply {
-			oidcId = userOidcId
-			firstName = userFirstName
-			lastName = userLastName
-			email = userEmail
-		}
+		val user = currentUser()
 
 		whenever(port.create(any())).thenReturn(Mono.just(user))
 		whenever(preferencesService.findByUser(any())).thenReturn(Mono.just(PreferencesModel(userId = user.id)))
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
-		service.createUser(userOidcId, userEmail, userFirstName, userLastName).block()
+		service.createUser(user.oidcId!!, user.email!!, user.firstName, user.lastName).block()
 
 		// Assert
 		verify(port).create(any())
@@ -346,6 +354,7 @@ class UserServiceTest {
 		// Assert
 		assertEquals(expectedErrorStatus, result.status)
 		assertEquals(expectedError, result.message)
+
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService, times(expectedGetRoleLevel)).getLevelByUserRole(USER_ROLE)
 		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, visibilitySearched = true)
@@ -356,7 +365,7 @@ class UserServiceTest {
 	fun `Should blockUserById block and return User`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
+		val foundUser = commonUser().apply { id = uuid; role = USER_ROLE }
 		val currentUser = currentUser().apply { role = USER_ROLE }
 
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
@@ -404,6 +413,7 @@ class UserServiceTest {
 		// Assert
 		assertEquals(FORBIDDEN, result.status)
 		assertEquals(USER_BLOCK_CURRENT_USER, result.message)
+
 		verify(port).findById(uuid, visibilitySearched = true)
 		verify(roleService).getAssignableUserRoles(currentUser())
 		verify(roleService, never()).getLevelByUserRole(anyOrNull())
@@ -423,7 +433,7 @@ class UserServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
 
 		// Act
-		service.unblockUserById(currentUser, uuid).block()
+		service.unblockUserById(currentUser, userId).block()
 
 		// Assert
 		verify(roleService).getAssignableUserRoles(currentUser)
@@ -498,5 +508,39 @@ class UserServiceTest {
 			foundUser,
 			USER_DELETE_LAST_PROJECT_ADMINISTRATOR
 		)
+	}
+
+	@Test
+	fun `Should purgeUsersIfNecessary call not logged user since a date, and call port deleteById`() {
+		// Arrange
+		val date = LocalDate.EPOCH
+		val uuid1 = UUID.randomUUID()
+		val uuid2 = UUID.randomUUID()
+
+		whenever(port.findUserIdsOlderThanLastLogin(any())).thenReturn(Flux.just(uuid1, uuid2))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
+
+		// Act
+		service.purgeUsersIfNecessary(date, false).collectList().block()
+
+		// Assert
+		verify(port).findUserIdsOlderThanLastLogin(date)
+		verify(port).deleteById(uuid1)
+		verify(port).deleteById(uuid2)
+	}
+
+	@Test
+	fun `Should purgeUsersIfNecessary call not logged user since a date, and not call port deleteById because of dryRun`() {
+		// Arrange
+		val date = LocalDate.EPOCH
+
+		whenever(port.findUserIdsOlderThanLastLogin(any())).thenReturn(Flux.just(UUID.randomUUID()))
+
+		// Act
+		service.purgeUsersIfNecessary(date, true).collectList().block()
+
+		// Assert
+		verify(port).findUserIdsOlderThanLastLogin(date)
+		verify(port, never()).deleteById(any())
 	}
 }

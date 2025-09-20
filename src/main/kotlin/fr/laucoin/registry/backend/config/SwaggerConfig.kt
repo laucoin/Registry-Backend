@@ -41,7 +41,7 @@ class SwaggerConfig(
 	@param:Value("\${registry.server.prefix:''}")
 	private val apiPrefix: String,
 ) {
-	companion object {
+	private companion object {
 		private const val CLIENT_NAME = "OAuth2"
 	}
 

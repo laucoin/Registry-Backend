@@ -15,7 +15,7 @@ import org.mockito.kotlin.mock
 class ProfileAcceptOrRejectValidatorTest {
 	private val acceptanceValidator = ProfileAcceptOrRejectValidator()
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should isValid evaluate if Profile status is ACCEPTED or REJECTED`(): Stream<Arguments> = Stream.of(
 			Arguments.of(INVITED, false),

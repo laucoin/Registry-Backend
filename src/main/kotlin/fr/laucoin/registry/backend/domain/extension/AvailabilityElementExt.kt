@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.domain.extension
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
-import fr.laucoin.registry.backend.domain.extension.DateExt.isBeforeOrEqual
-import fr.laucoin.registry.backend.domain.extension.DateExt.isEqualOrAfter
+import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
+import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -19,12 +19,12 @@ object AvailabilityElementExt {
 		val now = CustomDateTimeModel.now()
 		val available = (
 				(
-						Objects.isNull(startAvailability?.date) && (groups.isEmpty() || availableGroups.isNotEmpty())
-								|| startAvailability.isBeforeOrEqual(now)
+						Objects.isNull(startAvailability) && (groups.isEmpty() || availableGroups.isNotEmpty())
+								|| now.asStartIsAfterOther(startAvailability)
 						) &&
 						(
-								Objects.isNull(endAvailability?.date) && (groups.isEmpty() || availableGroups.isNotEmpty())
-										|| endAvailability.isEqualOrAfter(now)
+								Objects.isNull(endAvailability) && (groups.isEmpty() || availableGroups.isNotEmpty())
+										|| now.asEndIsBeforeOther(endAvailability)
 								)
 				)
 		return status(available, lastMovementType)
@@ -32,7 +32,7 @@ object AvailabilityElementExt {
 
 	fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
 		val now = CustomDateTimeModel.now()
-		val available = startAvailability.isBeforeOrEqual(now) && endAvailability.isEqualOrAfter(now)
+		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
 		return status(available, lastMovementType)
 	}
 
@@ -46,25 +46,25 @@ object AvailabilityElementExt {
 
 	fun ProjectModel.buildStatus(): AvailabilityStatusEnum {
 		val now = CustomDateTimeModel.now()
-		val available = begin.isBeforeOrEqual(now) && end.isEqualOrAfter(now)
+		val available = now.asStartIsAfterOther(begin) && now.asEndIsBeforeOther(end)
 		return availability(available)
 	}
 
 	fun ProjectProfileModel.buildStatus(): AvailabilityStatusEnum {
 		val now = CustomDateTimeModel.now()
-		val available = startAccess.isBeforeOrEqual(now) && endAccess.isEqualOrAfter(now)
+		val available = now.asStartIsAfterOther(startAccess) && now.asEndIsBeforeOther(endAccess)
 		return availability(available)
 	}
 
 	fun GroupModel.buildStatus(): AvailabilityStatusEnum {
 		val now = CustomDateTimeModel.now()
-		val available = startAvailability.isBeforeOrEqual(now) && endAvailability.isEqualOrAfter(now)
+		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
 		return availability(available)
 	}
 
 	fun ActivityModel.buildStatus(): AvailabilityStatusEnum {
 		val now = CustomDateTimeModel.now()
-		val available = startAvailability.isBeforeOrEqual(now) && endAvailability.isEqualOrAfter(now)
+		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
 		return availability(available)
 	}
 

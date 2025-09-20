@@ -18,7 +18,7 @@ class PreferenceReaderDtoMapperTest {
 	private val profileMapper: ProjectProfileReaderDtoMapper = mock()
 	private val mapper: PreferenceReaderDtoMapper = PreferenceReaderDtoMapper(profileMapper)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should toDto convert PreferencesModel to PreferenceReaderDto`(): Stream<Arguments> {
 			return Stream.of(

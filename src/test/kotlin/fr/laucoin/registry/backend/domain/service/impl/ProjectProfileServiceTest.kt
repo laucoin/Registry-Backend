@@ -23,6 +23,7 @@ import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.LocalDate
 import java.util.UUID
@@ -55,7 +56,7 @@ class ProjectProfileServiceTest {
 	private val maxUser: Int = 1
 	private val service = ProjectProfileService(profileService, port, roleService, userPort, maxUser)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should createProjectProfiles call port findUserIdsWithProjectProfile and saveAll`(): Stream<Arguments> {
 			val uuid1 = UUID.randomUUID()
@@ -121,20 +122,21 @@ class ProjectProfileServiceTest {
 	@Test
 	fun `Should findProjectProfileById call port findById throw on empty result`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
 		val onlyVisible = true
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findProjectProfileById(projectId, uuid, onlyVisible).block()
+			service.findProjectProfileById(projectId, projectProfileId, onlyVisible).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
-		verify(port).findById(projectId, uuid, onlyVisible)
+		assertEquals(projectProfileId.toString(), result.args?.first())
+
+		verify(port).findById(projectId, projectProfileId, onlyVisible)
 	}
 
 	@Test

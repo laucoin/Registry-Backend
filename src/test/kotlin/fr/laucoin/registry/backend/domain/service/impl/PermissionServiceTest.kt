@@ -17,7 +17,7 @@ import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
 class PermissionServiceTest {
 	private val service: PermissionService = PermissionService()
 
-	companion object {
+	private companion object {
 		private const val RIGHT_ROLE = "ROLE_PROJECT"
 		private const val WRONG_ROLE = "ROLE_USER"
 		private val uuid = UUID.randomUUID()
