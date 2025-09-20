@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MES
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import fr.laucoin.registry.backend.infrastructure.internal.web.dto.ErrorDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
 import java.util.Locale
 import org.springframework.context.annotation.Bean
 import org.springframework.context.i18n.LocaleContextHolder
@@ -31,73 +31,73 @@ import reactor.core.publisher.Mono
 
 @Component
 class AuthorizationErrorHandler(
-    private val translateService: ITranslateService,
-    private val gson: Gson,
-) : ServerAuthenticationFailureHandler {
-    override fun onAuthenticationFailure(
-        webFilterExchange: WebFilterExchange,
-        exception: AuthenticationException
-    ): Mono<Void> {
-        val response = webFilterExchange.exchange.response
-        return when (exception) {
-            is JwtConversionException -> response.writeWith(
-                buildBody(
-                    response,
-                    exception.status,
-                    exception.code,
-                    LocaleContextHolder.getLocale()
-                )
-            )
+	private val translateService: ITranslateService,
+	private val gson: Gson,
+): ServerAuthenticationFailureHandler {
+	override fun onAuthenticationFailure(
+		webFilterExchange: WebFilterExchange,
+		exception: AuthenticationException
+	): Mono<Void> {
+		val response = webFilterExchange.exchange.response
+		return when (exception) {
+			is JwtConversionException -> response.writeWith(
+				buildBody(
+					response,
+					exception.status,
+					exception.code,
+					LocaleContextHolder.getLocale()
+				)
+			)
 
-            is InvalidBearerTokenException -> response.writeWith(
-                buildBody(
-                    response,
-                    UNAUTHORIZED,
-                    INVALID_TOKEN,
-                    LocaleContextHolder.getLocale()
-                )
-            )
+			is InvalidBearerTokenException -> response.writeWith(
+				buildBody(
+					response,
+					UNAUTHORIZED,
+					INVALID_TOKEN,
+					LocaleContextHolder.getLocale()
+				)
+			)
 
-            else -> response.writeWith(
-                buildBody(
-                    response,
-                    INTERNAL_SERVER_ERROR,
-                    FAILED_TO_LOGIN_FOR_UNKNOWN_REASON,
-                    LocaleContextHolder.getLocale()
-                )
-            )
-        }
-    }
+			else -> response.writeWith(
+				buildBody(
+					response,
+					INTERNAL_SERVER_ERROR,
+					FAILED_TO_LOGIN_FOR_UNKNOWN_REASON,
+					LocaleContextHolder.getLocale()
+				)
+			)
+		}
+	}
 
-    @Bean
-    fun unauthorizedHandler(): ServerAuthenticationEntryPoint = ServerAuthenticationEntryPoint { exchange, _ ->
-        val response = exchange.response
-        response.writeWith(buildBody(response, UNAUTHORIZED, NOT_AUTHENTICATED, LocaleContextHolder.getLocale()))
-    }
+	@Bean
+	fun unauthorizedHandler(): ServerAuthenticationEntryPoint = ServerAuthenticationEntryPoint { exchange, _ ->
+		val response = exchange.response
+		response.writeWith(buildBody(response, UNAUTHORIZED, NOT_AUTHENTICATED, LocaleContextHolder.getLocale()))
+	}
 
-    @Bean
-    fun accessDeniedHandler(): ServerAccessDeniedHandler = ServerAccessDeniedHandler { exchange, _ ->
-        val response = exchange.response
-        response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION, LocaleContextHolder.getLocale()))
-    }
+	@Bean
+	fun accessDeniedHandler(): ServerAccessDeniedHandler = ServerAccessDeniedHandler { exchange, _ ->
+		val response = exchange.response
+		response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION, LocaleContextHolder.getLocale()))
+	}
 
-    private fun buildBody(
-        response: ServerHttpResponse,
-        status: HttpStatus,
-        errorCode: String,
-        locale: Locale,
-    ): Mono<DataBuffer> {
-        response.statusCode = status
-        response.headers.contentType = APPLICATION_JSON
+	private fun buildBody(
+		response: ServerHttpResponse,
+		status: HttpStatus,
+		errorCode: String,
+		locale: Locale,
+	): Mono<DataBuffer> {
+		response.statusCode = status
+		response.headers.contentType = APPLICATION_JSON
 
-        val error = ErrorDto(
-            statusCode = status.value(),
-            statusName = status.name,
-            code = errorCode,
-            title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}", locale = locale),
-            message = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$errorCode", locale = locale),
-        )
+		val error = ErrorDto(
+			statusCode = status.value(),
+			statusName = status.name,
+			code = errorCode,
+			title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}", locale = locale),
+			message = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$errorCode", locale = locale),
+		)
 
-        return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))
-    }
+		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))
+	}
 }

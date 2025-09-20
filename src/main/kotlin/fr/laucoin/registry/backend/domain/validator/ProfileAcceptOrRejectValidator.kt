@@ -8,7 +8,7 @@ import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 
 class ProfileAcceptOrRejectValidator: ConstraintValidator<ProfileAcceptOrReject, ProfileStatusEnum> {
-    override fun isValid(value: ProfileStatusEnum, context: ConstraintValidatorContext): Boolean {
-        return listOf(ACCEPTED, REJECTED).contains(value)
-    }
+	override fun isValid(value: ProfileStatusEnum, context: ConstraintValidatorContext): Boolean {
+		return listOf(ACCEPTED, REJECTED).contains(value)
+	}
 }

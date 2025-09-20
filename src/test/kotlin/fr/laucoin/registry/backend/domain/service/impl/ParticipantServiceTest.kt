@@ -18,10 +18,10 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
-import fr.laucoin.registry.backend.domain.repository.IGroupModelRepository
-import fr.laucoin.registry.backend.domain.repository.IMovementModelRepository
-import fr.laucoin.registry.backend.domain.repository.IParticipantModelRepository
-import fr.laucoin.registry.backend.domain.repository.IUserModelRepository
+import fr.laucoin.registry.backend.domain.port.IGroupPort
+import fr.laucoin.registry.backend.domain.port.IMovementPort
+import fr.laucoin.registry.backend.domain.port.IParticipantPort
+import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -49,484 +49,526 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class ParticipantServiceTest {
-    private val repository: IParticipantModelRepository = mock()
-    private val projectService: IProjectService = mock()
-    private val userRepository: IUserModelRepository = mock()
-    private val movementRepository: IMovementModelRepository = mock()
-    private val groupRepository: IGroupModelRepository = mock()
-    private val maxUsers: Int = 1
-    private val maxGroups: Int = 1
-    private val service: IParticipantService = ParticipantService(
-        projectService, repository, userRepository, movementRepository, groupRepository, maxUsers, maxGroups
-    )
+	private val port: IParticipantPort = mock()
+	private val projectService: IProjectService = mock()
+	private val userPort: IUserPort = mock()
+	private val movementPort: IMovementPort = mock()
+	private val groupPort: IGroupPort = mock()
+	private val maxUsers: Int = 1
+	private val maxGroups: Int = 1
+	private val service: IParticipantService = ParticipantService(
+		projectService, port, userPort, movementPort, groupPort, maxUsers, maxGroups
+	)
 
-    companion object {
-        @JvmStatic
-        fun `Should createParticipant check date, user, groups and call repository create`(): Stream<Arguments> {
-            return Stream.of(
-                Arguments.of(ParticipantModel(), 0, 0),
-                Arguments.of(ParticipantModel().apply { user = UserModel().apply { id = UUID.randomUUID() } }, 1, 0),
-                Arguments.of(ParticipantModel().apply { groups = listOf(GroupModel().apply { id = UUID.randomUUID() }) }, 0, 1),
-            )
-        }
+	companion object {
+		@JvmStatic
+		fun `Should createParticipant check date, user, groups and call port create`(): Stream<Arguments> {
+			return Stream.of(
+				Arguments.of(ParticipantModel(), 0, 0),
+				Arguments.of(ParticipantModel().apply { user = UserModel().apply { id = UUID.randomUUID() } }, 1, 0),
+				Arguments.of(ParticipantModel().apply {
+					groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
+				}, 0, 1),
+			)
+		}
 
-        @JvmStatic
-        fun `Should updateParticipantById check date, get existing participants, check user, groups and call repository create`(): Stream<Arguments> {
-            val participantUser = UserModel().apply { id = UUID.randomUUID() }
-            val participantGroupId1 = UUID.randomUUID()
-            val participantGroup1 = GroupModel().apply { id = participantGroupId1; visible = true }
-            val participantGroupId2 = UUID.randomUUID()
-            val participantGroup2 = GroupModel().apply { id = participantGroupId2; visible = true }
+		@JvmStatic
+		fun `Should updateParticipantById check date, get existing participants, check user, groups and call port create`(): Stream<Arguments> {
+			val participantUser = UserModel().apply { id = UUID.randomUUID() }
+			val participantGroupId1 = UUID.randomUUID()
+			val participantGroup1 = GroupModel().apply { id = participantGroupId1; visible = true }
+			val participantGroupId2 = UUID.randomUUID()
+			val participantGroup2 = GroupModel().apply { id = participantGroupId2; visible = true }
 
-            return Stream.of(
-                Arguments.of(
-                    participantUser,
-                    participantUser,
-                    listOf(participantGroup1, participantGroup2),
-                    listOf(participantGroup1, participantGroup2),
-                    emptyList<GroupModel>(),
-                    0,
-                    0,
-                ),
-                Arguments.of(
-                    null,
-                    participantUser,
-                    listOf(participantGroup1, participantGroup2),
-                    listOf(participantGroup1, participantGroup2),
-                    emptyList<GroupModel>(),
-                    1,
-                    0,
-                ),
-                Arguments.of(
-                    participantUser,
-                    null,
-                    listOf(participantGroup1, participantGroup2),
-                    listOf(participantGroup1, participantGroup2),
-                    emptyList<GroupModel>(),
-                    0,
-                    0,
-                ),
-                Arguments.of(
-                    participantUser,
-                    participantUser,
-                    listOf(participantGroup1),
-                    listOf(participantGroup1, participantGroup2),
-                    listOf(participantGroup2),
-                    0,
-                    1,
-                ),
-                Arguments.of(
-                    participantUser,
-                    participantUser,
-                    listOf(participantGroup1, participantGroup2),
-                    listOf(participantGroup1),
-                    emptyList<GroupModel>(),
-                    0,
-                    0,
-                ),
-            )
-        }
+			return Stream.of(
+				Arguments.of(
+					participantUser,
+					participantUser,
+					listOf(participantGroup1, participantGroup2),
+					listOf(participantGroup1, participantGroup2),
+					emptyList<GroupModel>(),
+					0,
+					0,
+				),
+				Arguments.of(
+					null,
+					participantUser,
+					listOf(participantGroup1, participantGroup2),
+					listOf(participantGroup1, participantGroup2),
+					emptyList<GroupModel>(),
+					1,
+					0,
+				),
+				Arguments.of(
+					participantUser,
+					null,
+					listOf(participantGroup1, participantGroup2),
+					listOf(participantGroup1, participantGroup2),
+					emptyList<GroupModel>(),
+					0,
+					0,
+				),
+				Arguments.of(
+					participantUser,
+					participantUser,
+					listOf(participantGroup1),
+					listOf(participantGroup1, participantGroup2),
+					listOf(participantGroup2),
+					0,
+					1,
+				),
+				Arguments.of(
+					participantUser,
+					participantUser,
+					listOf(participantGroup1, participantGroup2),
+					listOf(participantGroup1),
+					emptyList<GroupModel>(),
+					0,
+					0,
+				),
+			)
+		}
 
-        @JvmStatic
-        fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and call repository update`(): Stream<Arguments> {
-            return Stream.of(
-                Arguments.of(emptyList<GroupModel>(), 0),
-                Arguments.of(listOf(GroupModel().apply { id = UUID.randomUUID() }), 1),
-            )
-        }
-    }
+		@JvmStatic
+		fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and call port update`(): Stream<Arguments> {
+			return Stream.of(
+				Arguments.of(emptyList<GroupModel>(), 0),
+				Arguments.of(listOf(GroupModel().apply { id = UUID.randomUUID() }), 1),
+			)
+		}
+	}
 
-    @Test
-    fun `Should findParticipantsPage call repository findPage`() {
-        // Arrange
-        val pageable = PageableModel(0, 10)
-        val params = ParticipantSearchParamModel()
-        whenever(repository.findPage(any(), any(), any())).thenReturn(
-            Mono.just(PageModel(1, 2, 3, 4, emptyList()))
-        )
+	@Test
+	fun `Should findParticipantsPage call port findPage`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = ParticipantSearchParamModel()
+		whenever(port.findPage(any(), any(), any())).thenReturn(
+			Mono.just(PageModel(1, 2, 3, 4, emptyList()))
+		)
 
-        // Act
-        service.findParticipantsPage(projectId, pageable, params).block()
+		// Act
+		service.findParticipantsPage(projectId, pageable, params).block()
 
-        // Assert
-        verify(repository).findPage(projectId, pageable, params)
-    }
+		// Assert
+		verify(port).findPage(projectId, pageable, params)
+	}
 
-    @Test
-    fun `Should findParticipantsByIds call repository findAllByIds`() {
-        // Arrange
-        val participant = ParticipantModel().apply { project = ProjectModel().apply { id = projectId } }
-        val uuid = UUID.randomUUID()
-        val onlyVisible = true
-        whenever(repository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(participant))
+	@Test
+	fun `Should findParticipantsByIds call port findAllByIds`() {
+		// Arrange
+		val participant = ParticipantModel().apply { project = ProjectModel().apply { id = projectId } }
+		val uuid = UUID.randomUUID()
+		val onlyVisible = true
+		whenever(port.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(participant))
 
-        // Act
-        service.findParticipantsByIds(projectId, listOf(uuid), onlyVisible).blockFirst()
+		// Act
+		service.findParticipantsByIds(projectId, listOf(uuid), onlyVisible).blockFirst()
 
-        // Assert
-        verify(repository).findAllByIds(projectId, listOf(uuid), onlyVisible)
-    }
+		// Assert
+		verify(port).findAllByIds(projectId, listOf(uuid), onlyVisible)
+	}
 
-    @Test
-    fun `Should findParticipantById call repository findById`() {
-        // Arrange
-        val participant = ParticipantModel().apply { project = ProjectModel().apply { id = projectId } }
-        val uuid = UUID.randomUUID()
-        val onlyVisible = true
-        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+	@Test
+	fun `Should findParticipantById call port findById`() {
+		// Arrange
+		val participant = ParticipantModel().apply { project = ProjectModel().apply { id = projectId } }
+		val uuid = UUID.randomUUID()
+		val onlyVisible = true
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
 
-        // Act
-        service.findParticipantById(projectId, uuid, onlyVisible).block()
+		// Act
+		service.findParticipantById(projectId, uuid, onlyVisible).block()
 
-        // Assert
-        verify(repository).findById(projectId, uuid, onlyVisible)
-    }
+		// Assert
+		verify(port).findById(projectId, uuid, onlyVisible)
+	}
 
-    @Test
-    fun `Should searchUsers call userRepository findWithLimit`() {
-        // Arrange
-        val textSearched = "text"
-        whenever(userRepository.findWithLimit(any(), any())).thenReturn(Flux.empty())
+	@Test
+	fun `Should searchUsers call userPort findWithLimit`() {
+		// Arrange
+		val textSearched = "text"
+		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.empty())
 
-        // Act
-        service.searchUsersByText(projectId, textSearched).blockFirst()
+		// Act
+		service.searchUsersByText(projectId, textSearched).blockFirst()
 
-        // Assert
-        verify(userRepository).findWithLimit(maxUsers, UserSearchParamModel(textSearched, visibilitySearched = true))
-    }
+		// Assert
+		verify(userPort).findWithLimit(maxUsers, UserSearchParamModel(textSearched, visibilitySearched = true))
+	}
 
-    @Test
-    fun `Should searchGroups call groupRepository findWithLimit`() {
-        // Arrange
-        val textSearched = "text"
-        whenever(groupRepository.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
+	@Test
+	fun `Should searchGroups call groupPort findWithLimit`() {
+		// Arrange
+		val textSearched = "text"
+		whenever(groupPort.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
-        // Act
-        service.searchGroupsByText(projectId, textSearched).blockFirst()
+		// Act
+		service.searchGroupsByText(projectId, textSearched).blockFirst()
 
-        // Assert
-        verify(groupRepository).findWithLimit(
-            maxGroups,
-            projectId,
-            GroupSearchParamModel(textSearched, visibilitySearched = true),
-        )
-    }
+		// Assert
+		verify(groupPort).findWithLimit(
+			maxGroups,
+			projectId,
+			GroupSearchParamModel(textSearched, visibilitySearched = true),
+		)
+	}
 
-    @Test
-    fun `Should findParticipantMovementsPage call movementRepository findPageByParticipantId`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val pageable = PageableModel(0, 10)
-        val params = MovementSearchParamModel(typeSearched = IN)
-        whenever(movementRepository.findPageByParticipantId(any(), any(), any(), any())).thenReturn(Mono.empty())
+	@Test
+	fun `Should findParticipantMovementsPage call movementPort findPageByParticipantId`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val pageable = PageableModel(0, 10)
+		val params = MovementSearchParamModel(typeSearched = IN)
+		whenever(movementPort.findPageByParticipantId(any(), any(), any(), any())).thenReturn(Mono.empty())
 
-        // Act
-        service.findParticipantMovementsPage(projectId, uuid, pageable, params).block()
+		// Act
+		service.findParticipantMovementsPage(projectId, uuid, pageable, params).block()
 
-        // Assert
-        verify(movementRepository).findPageByParticipantId(
-            projectId,
-            uuid,
-            pageable,
-            params,
-        )
-    }
+		// Assert
+		verify(movementPort).findPageByParticipantId(
+			projectId,
+			uuid,
+			pageable,
+			params,
+		)
+	}
 
-    @ParameterizedTest
-    @MethodSource
-    fun `Should createParticipant check date, user, groups and call repository create`(
-        participant: ParticipantModel,
-        expectedUserVerification: Int,
-        expectedGroupVerification: Int,
-    ) {
-        // Arrange
-        participant.apply { project = ProjectModel().apply { id = projectId } }
-        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
-        whenever(repository.create(any())).thenReturn(Mono.just(participant))
-        whenever(repository.findByUserId(any(), any())).thenReturn(Flux.empty())
-        whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*participant.groups.toTypedArray()))
+	@ParameterizedTest
+	@MethodSource
+	fun `Should createParticipant check date, user, groups and call port create`(
+		participant: ParticipantModel,
+		expectedUserVerification: Int,
+		expectedGroupVerification: Int,
+	) {
+		// Arrange
+		participant.apply { project = ProjectModel().apply { id = projectId } }
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(
+			Mono.just(
+				projectId
+			)
+		)
+		whenever(port.create(any())).thenReturn(Mono.just(participant))
+		whenever(port.findByUserId(any(), any())).thenReturn(Flux.empty())
+		whenever(
+			groupPort.findAllByIds(
+				any(),
+				any(),
+				anyOrNull()
+			)
+		).thenReturn(Flux.just(*participant.groups.toTypedArray()))
 
-        // Act
-        service.createParticipant(currentUser(), participant).block()
+		// Act
+		service.createParticipant(currentUser(), participant).block()
 
-        // Assert
-        verify(projectService).validateDateTimes(
-            projectId,
-            start = null,
-            end = null,
-            PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
-        )
-        verify(repository, times(expectedUserVerification)).findByUserId(projectId, participant.user?.id ?: UUID.randomUUID())
-        verify(groupRepository, times(expectedGroupVerification)).findAllByIds(
-            projectId,
-            participant.groups.mapNotNull { it.id },
-            null
-        )
-        verify(repository).create(participant)
-    }
+		// Assert
+		verify(projectService).validateDateTimes(
+			projectId,
+			start = null,
+			end = null,
+			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+		)
+		verify(port, times(expectedUserVerification)).findByUserId(
+			projectId,
+			participant.user?.id ?: UUID.randomUUID()
+		)
+		verify(groupPort, times(expectedGroupVerification)).findAllByIds(
+			projectId,
+			participant.groups.mapNotNull { it.id },
+			null
+		)
+		verify(port).create(participant)
+	}
 
-    @Test
-    fun `Should createParticipant check date, user and throw because participant is already linked`() {
-        // Arrange
-        val participant = ParticipantModel().apply {
-            user = UserModel().apply { id = UUID.randomUUID() }
-            project = ProjectModel().apply { id = projectId }
-        }
-        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
-        whenever(repository.findByUserId(any(), any())).thenReturn(Flux.just(participant))
+	@Test
+	fun `Should createParticipant check date, user and throw because participant is already linked`() {
+		// Arrange
+		val participant = ParticipantModel().apply {
+			user = UserModel().apply { id = UUID.randomUUID() }
+			project = ProjectModel().apply { id = projectId }
+		}
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(
+			Mono.just(
+				projectId
+			)
+		)
+		whenever(port.findByUserId(any(), any())).thenReturn(Flux.just(participant))
 
-        // Act
-        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.createParticipant(currentUser(), participant).block()
-        }) as RegistryException
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createParticipant(currentUser(), participant).block()
+		}) as RegistryException
 
-        // Assert
-        assertEquals(UNPROCESSABLE_ENTITY, result.status)
-        assertEquals(PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER, result.message)
-        verify(projectService).validateDateTimes(
-            projectId,
-            start = null,
-            end = null,
-            PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
-        )
-        verify(repository).findByUserId(projectId, participant.user?.id ?: UUID.randomUUID())
-        verify(groupRepository, never()).findAllByIds(any(), any(), anyOrNull())
-        verify(repository, never()).create(any())
-    }
+		// Assert
+		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER, result.message)
+		verify(projectService).validateDateTimes(
+			projectId,
+			start = null,
+			end = null,
+			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+		)
+		verify(port).findByUserId(projectId, participant.user?.id ?: UUID.randomUUID())
+		verify(groupPort, never()).findAllByIds(any(), any(), anyOrNull())
+		verify(port, never()).create(any())
+	}
 
-    @Test
-    fun `Should createParticipant check date, user, groups and throw because group is not found`() {
-        // Arrange
-        val participant = ParticipantModel().apply {
-            groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
-            project = ProjectModel().apply { id = projectId }
-        }
-        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
-        whenever(repository.create(any())).thenReturn(Mono.just(participant))
-        whenever(repository.findByUserId(any(), any())).thenReturn(Flux.empty())
-        whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+	@Test
+	fun `Should createParticipant check date, user, groups and throw because group is not found`() {
+		// Arrange
+		val participant = ParticipantModel().apply {
+			groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
+			project = ProjectModel().apply { id = projectId }
+		}
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(
+			Mono.just(
+				projectId
+			)
+		)
+		whenever(port.create(any())).thenReturn(Mono.just(participant))
+		whenever(port.findByUserId(any(), any())).thenReturn(Flux.empty())
+		whenever(groupPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
 
-        // Act
-        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.createParticipant(currentUser(), participant).block()
-        }) as RegistryException
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createParticipant(currentUser(), participant).block()
+		}) as RegistryException
 
-        // Assert
-        assertEquals(NOT_FOUND, result.status)
-        assertEquals(PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT, result.message)
-        verify(projectService).validateDateTimes(
-            projectId,
-            start = null,
-            end = null,
-            PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
-        )
-        verify(repository, never()).findByUserId(any(), any())
-        verify(groupRepository).findAllByIds(projectId, participant.groups.mapNotNull { it.id }, null)
-        verify(repository, never()).create(any())
-    }
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		assertEquals(PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT, result.message)
+		verify(projectService).validateDateTimes(
+			projectId,
+			start = null,
+			end = null,
+			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+		)
+		verify(port, never()).findByUserId(any(), any())
+		verify(groupPort).findAllByIds(projectId, participant.groups.mapNotNull { it.id }, null)
+		verify(port, never()).create(any())
+	}
 
-    @Test
-    fun `Should createParticipant check date, user, groups and throw because group is not visible`() {
-        // Arrange
-        val participant = ParticipantModel().apply {
-            groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
-            project = ProjectModel().apply { id = projectId }
-        }
-        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
-        whenever(repository.create(any())).thenReturn(Mono.just(participant))
-        whenever(repository.findByUserId(any(), any())).thenReturn(Flux.empty())
-        whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
-            Flux.just(GroupModel().apply { id = UUID.randomUUID(); visible = false })
-        )
+	@Test
+	fun `Should createParticipant check date, user, groups and throw because group is not visible`() {
+		// Arrange
+		val participant = ParticipantModel().apply {
+			groups = listOf(GroupModel().apply { id = UUID.randomUUID() })
+			project = ProjectModel().apply { id = projectId }
+		}
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(
+			Mono.just(
+				projectId
+			)
+		)
+		whenever(port.create(any())).thenReturn(Mono.just(participant))
+		whenever(port.findByUserId(any(), any())).thenReturn(Flux.empty())
+		whenever(groupPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(
+			Flux.just(GroupModel().apply { id = UUID.randomUUID(); visible = false })
+		)
 
-        // Act
-        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.createParticipant(currentUser(), participant).block()
-        }) as RegistryException
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createParticipant(currentUser(), participant).block()
+		}) as RegistryException
 
-        // Assert
-        assertEquals(NOT_FOUND, result.status)
-        assertEquals(PARTICIPANT_GROUPS_NOT_VISIBLE, result.message)
-        verify(projectService).validateDateTimes(
-            projectId,
-            start = null,
-            end = null,
-            PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
-        )
-        verify(repository, never()).findByUserId(any(), any())
-        verify(groupRepository).findAllByIds(projectId, participant.groups.mapNotNull { it.id }, null)
-        verify(repository, never()).create(any())
-    }
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		assertEquals(PARTICIPANT_GROUPS_NOT_VISIBLE, result.message)
+		verify(projectService).validateDateTimes(
+			projectId,
+			start = null,
+			end = null,
+			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+		)
+		verify(port, never()).findByUserId(any(), any())
+		verify(groupPort).findAllByIds(projectId, participant.groups.mapNotNull { it.id }, null)
+		verify(port, never()).create(any())
+	}
 
-    @ParameterizedTest
-    @MethodSource
-    fun `Should updateParticipantById check date, get existing participants, check user, groups and call repository create`(
-        previousUser: UserModel?,
-        updatedUser: UserModel?,
-        previousGroups: List<GroupModel>,
-        updatedGroups: List<GroupModel>,
-        newGroups: List<GroupModel>,
-        expectedUserVerification: Int,
-        expectedGroupVerification: Int,
-    ) {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val participantToUpdate = ParticipantModel().apply {
-            id = uuid
-            groups = previousGroups
-            user = previousUser
-            project = ProjectModel().apply { id = projectId }
-        }
-        val participantUpdated = ParticipantModel().apply {
-            id = uuid
-            groups = updatedGroups
-            user = updatedUser
-            project = ProjectModel().apply { id = projectId }
-        }
-        whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
-        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participantToUpdate))
-        whenever(repository.update(any())).thenReturn(Mono.just(participantUpdated))
-        whenever(repository.findByUserId(any(), any())).thenReturn(Flux.empty())
-        whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(*newGroups.toTypedArray()))
+	@ParameterizedTest
+	@MethodSource
+	fun `Should updateParticipantById check date, get existing participants, check user, groups and call port create`(
+		previousUser: UserModel?,
+		updatedUser: UserModel?,
+		previousGroups: List<GroupModel>,
+		updatedGroups: List<GroupModel>,
+		newGroups: List<GroupModel>,
+		expectedUserVerification: Int,
+		expectedGroupVerification: Int,
+	) {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val participantToUpdate = ParticipantModel().apply {
+			id = uuid
+			groups = previousGroups
+			user = previousUser
+			project = ProjectModel().apply { id = projectId }
+		}
+		val participantUpdated = ParticipantModel().apply {
+			id = uuid
+			groups = updatedGroups
+			user = updatedUser
+			project = ProjectModel().apply { id = projectId }
+		}
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(
+			Mono.just(
+				projectId
+			)
+		)
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participantToUpdate))
+		whenever(port.update(any())).thenReturn(Mono.just(participantUpdated))
+		whenever(port.findByUserId(any(), any())).thenReturn(Flux.empty())
+		whenever(
+			groupPort.findAllByIds(
+				any(),
+				any(),
+				anyOrNull()
+			)
+		).thenReturn(Flux.just(*newGroups.toTypedArray()))
 
-        // Act
-        service.updateParticipantById(currentUser(), projectId, uuid, participantUpdated)
-            .block()
+		// Act
+		service.updateParticipantById(currentUser(), projectId, uuid, participantUpdated)
+			.block()
 
-        // Assert
-        verify(projectService).validateDateTimes(
-            projectId,
-            start = null,
-            end = null,
-            PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
-        )
-        verify(repository).findById(projectId, uuid, visibilitySearched = null)
-        verify(repository, times(expectedUserVerification)).findByUserId(projectId, updatedUser?.id ?: UUID.randomUUID())
-        verify(groupRepository, times(expectedGroupVerification)).findAllByIds(
-            projectId,
-            newGroups.mapNotNull { it.id },
-            visibilitySearched = null
-        )
-        verify(repository).update(any())
-    }
+		// Assert
+		verify(projectService).validateDateTimes(
+			projectId,
+			start = null,
+			end = null,
+			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+		)
+		verify(port).findById(projectId, uuid, visibilitySearched = null)
+		verify(port, times(expectedUserVerification)).findByUserId(
+			projectId,
+			updatedUser?.id ?: UUID.randomUUID()
+		)
+		verify(groupPort, times(expectedGroupVerification)).findAllByIds(
+			projectId,
+			newGroups.mapNotNull { it.id },
+			visibilitySearched = null
+		)
+		verify(port).update(any())
+	}
 
-    @ParameterizedTest
-    @MethodSource
-    fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and call repository update`(
-        participantGroups: List<GroupModel>,
-        expectedCallGroupVerification: Int,
-    ) {
-        // Arrange
-        val participant = ParticipantModel().apply {
-            groups = participantGroups
-            project = ProjectModel().apply { id = projectId }
-            visible = true
-        }
-        val uuid = UUID.randomUUID()
-        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-        whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
-            Flux.just(
-                *participantGroups.map { GroupModel().apply { members = listOf(participant, ParticipantModel()) } }.toTypedArray()
-            )
-        )
-        whenever(repository.update(any())).thenReturn(Mono.just(participant))
+	@ParameterizedTest
+	@MethodSource
+	fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and call port update`(
+		participantGroups: List<GroupModel>,
+		expectedCallGroupVerification: Int,
+	) {
+		// Arrange
+		val participant = ParticipantModel().apply {
+			groups = participantGroups
+			project = ProjectModel().apply { id = projectId }
+			visible = true
+		}
+		val uuid = UUID.randomUUID()
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(groupPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(
+			Flux.just(
+				*participantGroups.map { GroupModel().apply { members = listOf(participant, ParticipantModel()) } }
+					.toTypedArray()
+			)
+		)
+		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
-        // Act
-        service.disableParticipantById(currentUser(), projectId, uuid).block()
+		// Act
+		service.disableParticipantById(currentUser(), projectId, uuid).block()
 
-        // Assert
-        verify(repository).findById(projectId, uuid, visibilitySearched = true)
-        verify(groupRepository, times(expectedCallGroupVerification)).findAllByIds(
-            projectId,
-            participantGroups.mapNotNull { it.id },
-            visibilitySearched = null,
-        )
-        verify(repository).update(participant.apply { visible = false })
-    }
+		// Assert
+		verify(port).findById(projectId, uuid, visibilitySearched = true)
+		verify(groupPort, times(expectedCallGroupVerification)).findAllByIds(
+			projectId,
+			participantGroups.mapNotNull { it.id },
+			visibilitySearched = null,
+		)
+		verify(port).update(participant.apply { visible = false })
+	}
 
-    @Test
-    fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and throw`() {
-        // Arrange
-        val groupId = UUID.randomUUID()
-        val participantGroup = GroupModel().apply { id = groupId }
-        val uuid = UUID.randomUUID()
-        val participant = ParticipantModel().apply {
-            id = uuid
-            groups = listOf(participantGroup)
-            project = ProjectModel().apply { id = projectId }
-            visible = true
-        }
-        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-        whenever(groupRepository.findAllByIds(any(), any(), anyOrNull())).thenReturn(
-            Flux.just(GroupModel().apply { members = listOf(participant) })
-        )
-        whenever(repository.update(any())).thenReturn(Mono.just(participant))
+	@Test
+	fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and throw`() {
+		// Arrange
+		val groupId = UUID.randomUUID()
+		val participantGroup = GroupModel().apply { id = groupId }
+		val uuid = UUID.randomUUID()
+		val participant = ParticipantModel().apply {
+			id = uuid
+			groups = listOf(participantGroup)
+			project = ProjectModel().apply { id = projectId }
+			visible = true
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(groupPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(
+			Flux.just(GroupModel().apply { members = listOf(participant) })
+		)
+		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
-        // Act
-        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.disableParticipantById(currentUser(), projectId, uuid).block()
-        }) as RegistryException
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.disableParticipantById(currentUser(), projectId, uuid).block()
+		}) as RegistryException
 
-        // Assert
-        assertEquals(CONFLICT, result.status)
-        assertEquals(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER, result.message)
-        verify(repository).findById(projectId, uuid, visibilitySearched = true)
-        verify(groupRepository).findAllByIds(projectId, listOf(groupId), visibilitySearched = null)
-        verify(repository, never()).update(any())
-    }
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER, result.message)
+		verify(port).findById(projectId, uuid, visibilitySearched = true)
+		verify(groupPort).findAllByIds(projectId, listOf(groupId), visibilitySearched = null)
+		verify(port, never()).update(any())
+	}
 
-    @Test
-    fun `Should enableParticipantById call existing participant and call repository update`() {
-        // Arrange
-        val participant = ParticipantModel().apply { project = ProjectModel().apply { id = projectId }; visible = false }
-        val uuid = UUID.randomUUID()
-        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-        whenever(repository.update(any())).thenReturn(Mono.just(participant))
+	@Test
+	fun `Should enableParticipantById call existing participant and call port update`() {
+		// Arrange
+		val participant =
+			ParticipantModel().apply { project = ProjectModel().apply { id = projectId }; visible = false }
+		val uuid = UUID.randomUUID()
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
-        // Act
-        service.enableParticipantById(currentUser(), projectId, uuid).block()
+		// Act
+		service.enableParticipantById(currentUser(), projectId, uuid).block()
 
-        // Assert
-        verify(repository).findById(projectId, uuid, visibilitySearched = false)
-        verify(repository).update(participant.apply { visible = true })
-    }
+		// Assert
+		verify(port).findById(projectId, uuid, visibilitySearched = false)
+		verify(port).update(participant.apply { visible = true })
+	}
 
-    @Test
-    fun `Should deleteParticipantById call existing participant, check no movement, and call repository deleteById`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val participant = ParticipantModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
-        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-        whenever(movementRepository.countAllByParticipantId(any(), any(), any())).thenReturn(Mono.just(0))
-        whenever(repository.deleteById(any())).thenReturn(Mono.empty())
+	@Test
+	fun `Should deleteParticipantById call existing participant, check no movement, and call port deleteById`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val participant = ParticipantModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.countAllByParticipantId(any(), any(), any())).thenReturn(Mono.just(0))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
-        // Act
-        service.deleteParticipantById(currentUser(), projectId, uuid).block()
+		// Act
+		service.deleteParticipantById(currentUser(), projectId, uuid).block()
 
-        // Assert
-        verify(repository).findById(projectId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByParticipantId(projectId, uuid, MovementSearchParamModel())
-        verify(repository).deleteById(uuid)
-    }
+		// Assert
+		verify(port).findById(projectId, uuid, visibilitySearched = null)
+		verify(movementPort).countAllByParticipantId(projectId, uuid, MovementSearchParamModel())
+		verify(port).deleteById(uuid)
+	}
 
-    @Test
-    fun `Should deleteParticipantById call existing participant, throw if movements are linked`() {
-        // Arrange
-        val uuid = UUID.randomUUID()
-        val participant = ParticipantModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
-        whenever(repository.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-        whenever(movementRepository.countAllByParticipantId(any(), any(), any())).thenReturn(Mono.just(1))
+	@Test
+	fun `Should deleteParticipantById call existing participant, throw if movements are linked`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val participant = ParticipantModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.countAllByParticipantId(any(), any(), any())).thenReturn(Mono.just(1))
 
-        // Act
-        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            service.deleteParticipantById(currentUser(), projectId, uuid).block()
-        }) as RegistryException
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.deleteParticipantById(currentUser(), projectId, uuid).block()
+		}) as RegistryException
 
-        // Assert
-        assertEquals(CONFLICT, result.status)
-        assertEquals(PARTICIPANT_DELETE_HAS_MOVEMENT, result.message)
-        verify(repository).findById(projectId, uuid, visibilitySearched = null)
-        verify(movementRepository).countAllByParticipantId(projectId, uuid, MovementSearchParamModel())
-        verify(repository, never()).deleteById(any())
-    }
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(PARTICIPANT_DELETE_HAS_MOVEMENT, result.message)
+		verify(port).findById(projectId, uuid, visibilitySearched = null)
+		verify(movementPort).countAllByParticipantId(projectId, uuid, MovementSearchParamModel())
+		verify(port, never()).deleteById(any())
+	}
 }

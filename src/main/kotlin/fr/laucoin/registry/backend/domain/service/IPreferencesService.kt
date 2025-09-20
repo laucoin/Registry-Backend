@@ -7,10 +7,17 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 interface IPreferencesService {
-    fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel>
+	fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel>
 
-    fun updateTheme(currentUser: CurrentUserModel, theme: ThemeEnum): Mono<PreferencesModel>
-    fun updateLanguage(currentUser: CurrentUserModel, language: String): Mono<PreferencesModel>
-    fun updateUserPreferenceSelectedProjectProfileById(currentUser: CurrentUserModel, profileId: UUID?): Mono<PreferencesModel>
-    fun updateUserPreferenceSelectedProjectProfileByProjectId(currentUser: CurrentUserModel, projectId: UUID): Mono<PreferencesModel>
+	fun updateTheme(currentUser: CurrentUserModel, theme: ThemeEnum): Mono<PreferencesModel>
+	fun updateLanguage(currentUser: CurrentUserModel, language: String): Mono<PreferencesModel>
+	fun updateUserPreferenceSelectedProjectProfileById(
+		currentUser: CurrentUserModel,
+		profileId: UUID?
+	): Mono<PreferencesModel>
+
+	fun updateUserPreferenceSelectedProjectProfileByProjectId(
+		currentUser: CurrentUserModel,
+		projectId: UUID
+	): Mono<PreferencesModel>
 }

@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 import java.time.ZonedDateTime.now
 
 data class VehicleStatusModel(
-    var present: Long,
-    var absent: Long,
-    val lastRefresh: ZonedDateTime = now()
+	var present: Long,
+	var absent: Long,
+	val lastRefresh: ZonedDateTime = now()
 )

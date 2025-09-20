@@ -11,9 +11,9 @@ import kotlin.reflect.KClass
 @Retention(RUNTIME)
 @Constraint(validatedBy = [StartBeforeEndValidator::class])
 annotation class StartBeforeEnd(
-    val startField: String,
-    val endField: String,
-    val message: String,
-    val groups: Array<KClass<*>> = [],
-    val payload: Array<KClass<out Any>> = []
+	val startField: String,
+	val endField: String,
+	val message: String,
+	val groups: Array<KClass<*>> = [],
+	val payload: Array<KClass<out Any>> = []
 )

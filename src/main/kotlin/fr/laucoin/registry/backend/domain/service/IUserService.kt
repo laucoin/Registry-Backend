@@ -11,24 +11,24 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IUserService {
-    fun findUsersPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
-    fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel>
-    fun findUserByOidcId(id: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
-    fun findUserByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel>
-    fun serviceAccount(): UserModel
-    fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String>
-    fun createUser(oidcId: UUID, email: String, firstName: String?, lastName: String?): Mono<CurrentUserModel>
-    fun updateUserIfPersonalDataChanged(
-        user: CurrentUserModel,
-        email: String,
-        firstName: String?,
-        lastName: String?
-    ): Mono<CurrentUserModel>
+	fun findUsersPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
+	fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel>
+	fun findUserByOidcId(id: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
+	fun findUserByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel>
+	fun serviceAccount(): UserModel
+	fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String>
+	fun createUser(oidcId: UUID, email: String, firstName: String?, lastName: String?): Mono<CurrentUserModel>
+	fun updateUserIfPersonalDataChanged(
+		user: CurrentUserModel,
+		email: String,
+		firstName: String?,
+		lastName: String?
+	): Mono<CurrentUserModel>
 
-    fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel>
-    fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
-    fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
-    fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
-    fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Void>
-    fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
+	fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel>
+	fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+	fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+	fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+	fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Void>
+	fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

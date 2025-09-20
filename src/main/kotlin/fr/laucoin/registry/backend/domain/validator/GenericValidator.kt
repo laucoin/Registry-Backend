@@ -10,23 +10,23 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
 abstract class GenericValidator<A: Annotation?, T>: ConstraintValidator<A, T> {
-    protected val log = LoggerFactory.getLogger(this::class.java)
+	protected val log = LoggerFactory.getLogger(this::class.java)
 
-    protected fun extractValue(fieldName: String, value: Any): Any? {
-        val properties = value::class.memberProperties
-        val fieldProperty = properties.firstOrNull { it.name == fieldName }
+	protected fun extractValue(fieldName: String, value: Any): Any? {
+		val properties = value::class.memberProperties
+		val fieldProperty = properties.firstOrNull { it.name == fieldName }
 
-        if (Objects.isNull(fieldProperty)) {
-            val exception = RegistryException(INTERNAL_SERVER_ERROR, NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME)
-            log.error(
-                "The field name ({}) don't exist for the object ({})",
-                fieldName,
-                value,
-                exception
-            )
-            throw exception
-        }
+		if (Objects.isNull(fieldProperty)) {
+			val exception = RegistryException(INTERNAL_SERVER_ERROR, NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME)
+			log.error(
+				"The field name ({}) don't exist for the object ({})",
+				fieldName,
+				value,
+				exception
+			)
+			throw exception
+		}
 
-        return (fieldProperty as KProperty1<*, *>).getter.call(value)
-    }
+		return (fieldProperty as KProperty1<*, *>).getter.call(value)
+	}
 }

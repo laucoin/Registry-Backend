@@ -13,30 +13,30 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
 
 class ProfileAcceptOrRejectValidatorTest {
-    private val acceptanceValidator = ProfileAcceptOrRejectValidator()
+	private val acceptanceValidator = ProfileAcceptOrRejectValidator()
 
-    companion object {
-        @JvmStatic
-        fun `Should isValid evaluate if Profile status is ACCEPTED or REJECTED`(): Stream<Arguments> = Stream.of(
-            Arguments.of(INVITED, false),
-            Arguments.of(ACCEPTED, true),
-            Arguments.of(REJECTED, true),
-        )
-    }
+	companion object {
+		@JvmStatic
+		fun `Should isValid evaluate if Profile status is ACCEPTED or REJECTED`(): Stream<Arguments> = Stream.of(
+			Arguments.of(INVITED, false),
+			Arguments.of(ACCEPTED, true),
+			Arguments.of(REJECTED, true),
+		)
+	}
 
-    @ParameterizedTest
-    @MethodSource
-    fun `Should isValid evaluate if Profile status is ACCEPTED or REJECTED`(
-        status: ProfileStatusEnum,
-        expected: Boolean,
-    ) {
-        // Arrange
-        val context: ConstraintValidatorContext = mock()
+	@ParameterizedTest
+	@MethodSource
+	fun `Should isValid evaluate if Profile status is ACCEPTED or REJECTED`(
+		status: ProfileStatusEnum,
+		expected: Boolean,
+	) {
+		// Arrange
+		val context: ConstraintValidatorContext = mock()
 
-        // Act
-        val result = acceptanceValidator.isValid(status, context)
+		// Act
+		val result = acceptanceValidator.isValid(status, context)
 
-        // Assert
-        assertEquals(expected, result)
-    }
+		// Assert
+		assertEquals(expected, result)
+	}
 }

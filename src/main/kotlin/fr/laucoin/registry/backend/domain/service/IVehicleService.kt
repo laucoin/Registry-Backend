@@ -13,25 +13,31 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IVehicleService {
-    fun findVehiclesPage(
-        projectId: UUID,
-        pageable: PageableModel,
-        searchParams: VehicleSearchParamModel,
-    ): Mono<PageModel<VehicleModel>>
+	fun findVehiclesPage(
+		projectId: UUID,
+		pageable: PageableModel,
+		searchParams: VehicleSearchParamModel,
+	): Mono<PageModel<VehicleModel>>
 
-    fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+	fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
 
-    fun findVehicleMovementsPage(
-        projectId: UUID,
-        id: UUID,
-        pageable: PageableModel,
-        searchParams: MovementSearchParamModel,
-    ): Mono<PageModel<MovementModel>>
+	fun findVehicleMovementsPage(
+		projectId: UUID,
+		id: UUID,
+		pageable: PageableModel,
+		searchParams: MovementSearchParamModel,
+	): Mono<PageModel<MovementModel>>
 
-    fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel>
-    fun updateVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, vehicle: VehicleModel): Mono<VehicleModel>
-    fun disableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
-    fun enableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
-    fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
-    fun purgeVehiclesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
+	fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel>
+	fun updateVehicleById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		vehicle: VehicleModel
+	): Mono<VehicleModel>
+
+	fun disableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
+	fun enableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel>
+	fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+	fun purgeVehiclesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

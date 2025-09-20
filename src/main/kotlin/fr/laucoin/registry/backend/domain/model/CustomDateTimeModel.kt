@@ -14,78 +14,80 @@ import java.util.Objects
 
 
 data class CustomDateTimeModel(
-    var date: LocalDate,
-    var time: OffsetTime? = null,
+	var date: LocalDate,
+	var time: OffsetTime? = null,
 ) {
-    constructor(dateTime: ZonedDateTime): this(dateTime.toLocalDate(), dateTime.toOffsetDateTime().toOffsetTime())
+	constructor(dateTime: ZonedDateTime): this(dateTime.toLocalDate(), dateTime.toOffsetDateTime().toOffsetTime())
 
-    companion object {
-        val MIN = CustomDateTimeModel(OffsetDateTime.MIN.toZonedDateTime())
-        val MAX = CustomDateTimeModel(OffsetDateTime.MAX.toZonedDateTime())
+	companion object {
+		val MIN = CustomDateTimeModel(OffsetDateTime.MIN.toZonedDateTime())
+		val MAX = CustomDateTimeModel(OffsetDateTime.MAX.toZonedDateTime())
 
-        @JsonIgnore
-        fun now(): CustomDateTimeModel {
-            return CustomDateTimeModel(ZonedDateTime.now(ZoneId.of("UTC")))
-        }
-    }
+		@JsonIgnore
+		fun now(): CustomDateTimeModel {
+			return CustomDateTimeModel(ZonedDateTime.now(ZoneId.of("UTC")))
+		}
+	}
 
-    @JsonIgnore
-    fun toZonedDateTime(defaultTime: OffsetTime? = null): ZonedDateTime? {
-        return when {
-            Objects.isNull(date) -> null
-            Objects.nonNull(time) -> time !!.atDate(date).toZonedDateTime()
-            Objects.nonNull(defaultTime) -> date.atTime(clampOffsetTimeToPostgresRange(defaultTime !!)).toZonedDateTime()
-            else -> date.atStartOfDay(ZoneId.of("UTC"))
-        }
-    }
+	@JsonIgnore
+	fun toZonedDateTime(defaultTime: OffsetTime? = null): ZonedDateTime? {
+		return when {
+			Objects.isNull(date) -> null
+			Objects.nonNull(time) -> time!!.atDate(date).toZonedDateTime()
+			Objects.nonNull(defaultTime) -> date.atTime(clampOffsetTimeToPostgresRange(defaultTime!!)).toZonedDateTime()
+			else -> date.atStartOfDay(ZoneId.of("UTC"))
+		}
+	}
 
-    @JsonIgnore
-    fun toZonedDateTime(localTime: LocalTime, zone: ZoneOffset = ZoneOffset.UTC): ZonedDateTime? {
-        return when {
-            Objects.isNull(date) -> null
-            Objects.nonNull(time) -> time !!.atDate(date).toZonedDateTime()
-            Objects.nonNull(localTime) -> date.atTime(clampOffsetTimeToPostgresRange(OffsetTime.of(localTime, zone))).toZonedDateTime()
-            else -> date.atStartOfDay(ZoneId.of("UTC"))
-        }
-    }
+	@JsonIgnore
+	fun toZonedDateTime(localTime: LocalTime, zone: ZoneOffset = ZoneOffset.UTC): ZonedDateTime? {
+		return when {
+			Objects.isNull(date) -> null
+			Objects.nonNull(time) -> time!!.atDate(date).toZonedDateTime()
+			Objects.nonNull(localTime) -> date.atTime(clampOffsetTimeToPostgresRange(OffsetTime.of(localTime, zone)))
+				.toZonedDateTime()
 
-    @JsonIgnore
-    private fun clampOffsetTimeToPostgresRange(time: OffsetTime): OffsetTime {
-        val offsetSeconds = time.offset.totalSeconds
+			else -> date.atStartOfDay(ZoneId.of("UTC"))
+		}
+	}
 
-        // Postgres only supports a range of -14 to +14 hours for offsets
-        // (OffsetTime.MIN/MAX are outside this range (e.g., -18 hours))
-        val minOffsetSeconds = ZoneOffset.ofHours(- 14).totalSeconds
-        val maxOffsetSeconds = ZoneOffset.ofHours(14).totalSeconds
+	@JsonIgnore
+	private fun clampOffsetTimeToPostgresRange(time: OffsetTime): OffsetTime {
+		val offsetSeconds = time.offset.totalSeconds
 
-        val clampedOffsetSeconds = when {
-            offsetSeconds < minOffsetSeconds -> minOffsetSeconds
-            offsetSeconds > maxOffsetSeconds -> maxOffsetSeconds
-            else -> offsetSeconds
-        }
+		// Postgres only supports a range of -14 to +14 hours for offsets
+		// (OffsetTime.MIN/MAX are outside this range (e.g., -18 hours))
+		val minOffsetSeconds = ZoneOffset.ofHours(-14).totalSeconds
+		val maxOffsetSeconds = ZoneOffset.ofHours(14).totalSeconds
 
-        val clampedOffset = ZoneOffset.ofTotalSeconds(clampedOffsetSeconds)
-        return time.withOffsetSameLocal(clampedOffset)
-    }
+		val clampedOffsetSeconds = when {
+			offsetSeconds < minOffsetSeconds -> minOffsetSeconds
+			offsetSeconds > maxOffsetSeconds -> maxOffsetSeconds
+			else -> offsetSeconds
+		}
 
-    @JsonIgnore
-    override fun toString(): String {
-        return when {
-            Objects.isNull(date) -> ""
-            Objects.isNull(time) -> date.format(ISO_LOCAL_DATE)
-            else -> toZonedDateTime() !!.format(ISO_ZONED_DATE_TIME)
-        }
-    }
+		val clampedOffset = ZoneOffset.ofTotalSeconds(clampedOffsetSeconds)
+		return time.withOffsetSameLocal(clampedOffset)
+	}
 
-    @JsonIgnore
-    fun zone(): ZoneOffset? {
-        return time?.offset
-    }
+	@JsonIgnore
+	override fun toString(): String {
+		return when {
+			Objects.isNull(date) -> ""
+			Objects.isNull(time) -> date.format(ISO_LOCAL_DATE)
+			else -> toZonedDateTime()!!.format(ISO_ZONED_DATE_TIME)
+		}
+	}
 
-    fun plusHours(hours: Long): CustomDateTimeModel {
-        if (Objects.nonNull(time)) {
-            time = time !!.plusHours(hours)
-        }
-        return this
-    }
+	@JsonIgnore
+	fun zone(): ZoneOffset? {
+		return time?.offset
+	}
+
+	fun plusHours(hours: Long): CustomDateTimeModel {
+		if (Objects.nonNull(time)) {
+			time = time!!.plusHours(hours)
+		}
+		return this
+	}
 }

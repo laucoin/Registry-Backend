@@ -5,8 +5,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT
 import jakarta.validation.constraints.NotBlank
 
 data class AuthenticationInfoModel(
-    @field:NotBlank(message = REDIRECT_URI_BLANK)
-    val redirectUri: String?,
-    @field:NotBlank(message = AUTHORIZATION_CODE_BLANK)
-    val authorizationCode: String?,
+	@field:NotBlank(message = REDIRECT_URI_BLANK)
+	val redirectUri: String?,
+	@field:NotBlank(message = AUTHORIZATION_CODE_BLANK)
+	val authorizationCode: String?,
 )

@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.domain.model
 import java.time.ZonedDateTime
 
 data class CommunicationModel(
-    var dateTime: ZonedDateTime = ZonedDateTime.now(),
-    var message: String? = null,
-    var movement: MovementModel? = null,
-    var alert: AlertModel? = null,
+	var dateTime: ZonedDateTime = ZonedDateTime.now(),
+	var message: String? = null,
+	var movement: MovementModel? = null,
+	var alert: AlertModel? = null,
 ): GenericProjectModel()

@@ -7,30 +7,30 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.Compani
 import java.time.ZonedDateTime
 
 data class ParticipantSearchParamModel(
-    var isMajor: Boolean? = null,
-    var typeSearched: ParticipantTypeEnum? = null,
-    var visibilitySearched: Boolean? = null,
-    var availabilitySearched: Boolean? = null,
-    var presenceSearched: Boolean? = null,
-    var dateTimeSearched: ZonedDateTime? = null,
+	var isMajor: Boolean? = null,
+	var typeSearched: ParticipantTypeEnum? = null,
+	var visibilitySearched: Boolean? = null,
+	var availabilitySearched: Boolean? = null,
+	var presenceSearched: Boolean? = null,
+	var dateTimeSearched: ZonedDateTime? = null,
 ) {
-    var textSearched: String? = null
+	var textSearched: String? = null
 
-    constructor(
-        textSearched: String? = null,
-        isMajor: Boolean? = null,
-        typeSearched: ParticipantTypeEnum? = null,
-        visibilitySearched: Boolean? = null,
-        statusSearched: PresenceStatusEnum? = null,
-        dateTimeSearched: ZonedDateTime?,
-    ): this(
-        isMajor = isMajor,
-        typeSearched = typeSearched,
-        visibilitySearched = visibilitySearched,
-        availabilitySearched = statusSearched.isAvailable(),
-        presenceSearched = statusSearched.isPresent(),
-        dateTimeSearched = dateTimeSearched,
-    ) {
-        this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
-    }
+	constructor(
+		textSearched: String? = null,
+		isMajor: Boolean? = null,
+		typeSearched: ParticipantTypeEnum? = null,
+		visibilitySearched: Boolean? = null,
+		statusSearched: PresenceStatusEnum? = null,
+		dateTimeSearched: ZonedDateTime?,
+	): this(
+		isMajor = isMajor,
+		typeSearched = typeSearched,
+		visibilitySearched = visibilitySearched,
+		availabilitySearched = statusSearched.isAvailable(),
+		presenceSearched = statusSearched.isPresent(),
+		dateTimeSearched = dateTimeSearched,
+	) {
+		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+	}
 }

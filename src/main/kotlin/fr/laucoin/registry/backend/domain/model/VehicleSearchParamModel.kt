@@ -6,24 +6,24 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.Compani
 import java.time.ZonedDateTime
 
 data class VehicleSearchParamModel(
-    var visibilitySearched: Boolean? = null,
-    var availabilitySearched: Boolean? = null,
-    var presenceSearched: Boolean? = null,
-    var dateTimeSearched: ZonedDateTime? = null,
+	var visibilitySearched: Boolean? = null,
+	var availabilitySearched: Boolean? = null,
+	var presenceSearched: Boolean? = null,
+	var dateTimeSearched: ZonedDateTime? = null,
 ) {
-    var textSearched: String? = null
+	var textSearched: String? = null
 
-    constructor(
-        textSearched: String? = null,
-        visibilitySearched: Boolean? = null,
-        statusSearched: PresenceStatusEnum? = null,
-        dateTimeSearched: ZonedDateTime?,
-    ): this(
-        visibilitySearched = visibilitySearched,
-        availabilitySearched = statusSearched.isAvailable(),
-        presenceSearched = statusSearched.isPresent(),
-        dateTimeSearched = dateTimeSearched,
-    ) {
-        this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
-    }
+	constructor(
+		textSearched: String? = null,
+		visibilitySearched: Boolean? = null,
+		statusSearched: PresenceStatusEnum? = null,
+		dateTimeSearched: ZonedDateTime?,
+	): this(
+		visibilitySearched = visibilitySearched,
+		availabilitySearched = statusSearched.isAvailable(),
+		presenceSearched = statusSearched.isPresent(),
+		dateTimeSearched = dateTimeSearched,
+	) {
+		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+	}
 }

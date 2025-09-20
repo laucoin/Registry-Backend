@@ -4,49 +4,53 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileErro
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.repository.IProjectProfileModelRepository
+import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import reactor.core.publisher.Mono
 
 open class GenericProfileService(
-    private val repository: IProjectProfileModelRepository,
+	private val repository: IProjectProfilePort,
 ): GenericService() {
-    protected fun validateNoProfileConflict(
-        projectId: UUID,
-        userIds: List<UUID>,
-        profileId: UUID?,
-        startAccess: ZonedDateTime?,
-        endAccess: ZonedDateTime?
-    ): Mono<List<UUID>> {
-        return repository.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-            projectId,
-            userIds,
-            profileId,
-            statusSearched = listOf(ACCEPTED, INVITED),
-            startDateTimeSearched = startAccess,
-            endDateTimeSearched = endAccess,
-        )
-            .collectList()
-            .handle { userIdsWithConflictualProfile, handle ->
-                when {
-                    userIdsWithConflictualProfile.size == userIds.size -> {
-                        log.warn("Another profile already exist for the user(s) \"{}\" on the project \"{}\".", userIds, projectId)
-                        handle.error(RegistryException(CONFLICT, PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE))
-                    }
+	protected fun validateNoProfileConflict(
+		projectId: UUID,
+		userIds: List<UUID>,
+		profileId: UUID?,
+		startAccess: ZonedDateTime?,
+		endAccess: ZonedDateTime?
+	): Mono<List<UUID>> {
+		return repository.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+			projectId,
+			userIds,
+			profileId,
+			statusSearched = listOf(ACCEPTED, INVITED),
+			startDateTimeSearched = startAccess,
+			endDateTimeSearched = endAccess,
+		)
+			.collectList()
+			.handle { userIdsWithConflictualProfile, handle ->
+				when {
+					userIdsWithConflictualProfile.size == userIds.size -> {
+						log.warn(
+							"Another profile already exist for the user(s) \"{}\" on the project \"{}\".",
+							userIds,
+							projectId
+						)
+						handle.error(RegistryException(CONFLICT, PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE))
+					}
 
-                    userIdsWithConflictualProfile.isNotEmpty() -> {
-                        log.warn(
-                            "Partial request because, profile already exist for the user(s) \"{}\" on the project \"{}\".",
-                            userIds.filter { userIdsWithConflictualProfile.contains(it) },
-                            projectId
-                        )
-                        handle.next(userIds.filter { ! userIdsWithConflictualProfile.contains(it) })
-                    }
+					userIdsWithConflictualProfile.isNotEmpty() -> {
+						log.warn(
+							"Partial request because, profile already exist for the user(s) \"{}\" on the project \"{}\".",
+							userIds.filter { userIdsWithConflictualProfile.contains(it) },
+							projectId
+						)
+						handle.next(userIds.filter { !userIdsWithConflictualProfile.contains(it) })
+					}
 
-                    else -> handle.next(userIds)
-                }
-            }
-    }
+					else -> handle.next(userIds)
+				}
+			}
+	}
 }

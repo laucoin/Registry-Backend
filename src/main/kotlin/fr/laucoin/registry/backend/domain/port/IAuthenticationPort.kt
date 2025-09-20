@@ -5,8 +5,8 @@ import fr.laucoin.registry.backend.domain.model.TokenModel
 import reactor.core.publisher.Mono
 
 interface IAuthenticationPort {
-    fun getLoginUri(redirectUri: String): AuthenticationUriModel
-    fun getLogoutUri(redirectUri: String): AuthenticationUriModel
-    fun getAuthenticationToken(authorizationCode: String, redirectUri: String): Mono<TokenModel>
-    fun refreshAuthenticationToken(refreshToken: String): Mono<TokenModel>
+	fun getLoginUri(redirectUri: String): AuthenticationUriModel
+	fun getLogoutUri(redirectUri: String): AuthenticationUriModel
+	fun getAuthenticationToken(authorizationCode: String, redirectUri: String): Mono<TokenModel>
+	fun refreshAuthenticationToken(refreshToken: String): Mono<TokenModel>
 }
