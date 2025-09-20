@@ -17,42 +17,42 @@ import org.springframework.web.server.i18n.LocaleContextResolver
 
 @Configuration
 class I18nConfig(
-    @Value("\${registry.information.locale.default}")
-    val defaultLocale: Locale,
-) : LocaleContextResolver {
-    companion object {
-        private const val I18N_MESSAGE: String = "classpath:i18n/messages"
-        private const val I18N_ERROR: String = "classpath:i18n/errors"
-    }
+	@Value("\${registry.information.locale.default}")
+	val defaultLocale: Locale,
+): LocaleContextResolver {
+	companion object {
+		private const val I18N_MESSAGE: String = "classpath:i18n/messages"
+		private const val I18N_ERROR: String = "classpath:i18n/errors"
+	}
 
-    @Bean(name = ["messagesSource"])
-    fun messagesSource(): MessageSource {
-        Locale.setDefault(defaultLocale)
-        val messageSource = ReloadableResourceBundleMessageSource()
-        messageSource.setBasename(I18N_MESSAGE)
-        messageSource.setDefaultEncoding(Charsets.UTF_8.name())
-        messageSource.setUseCodeAsDefaultMessage(true)
-        messageSource.setDefaultLocale(defaultLocale)
-        return messageSource
-    }
+	@Bean(name = ["messagesSource"])
+	fun messagesSource(): MessageSource {
+		Locale.setDefault(defaultLocale)
+		val messageSource = ReloadableResourceBundleMessageSource()
+		messageSource.setBasename(I18N_MESSAGE)
+		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
+		messageSource.setUseCodeAsDefaultMessage(true)
+		messageSource.setDefaultLocale(defaultLocale)
+		return messageSource
+	}
 
-    @Bean(name = ["errorsSource"])
-    fun errorsSource(): MessageSource {
-        Locale.setDefault(defaultLocale)
-        val messageSource = ReloadableResourceBundleMessageSource()
-        messageSource.setBasename(I18N_ERROR)
-        messageSource.setDefaultEncoding(Charsets.UTF_8.name())
-        messageSource.setUseCodeAsDefaultMessage(true)
-        messageSource.setDefaultLocale(defaultLocale)
-        return messageSource
-    }
+	@Bean(name = ["errorsSource"])
+	fun errorsSource(): MessageSource {
+		Locale.setDefault(defaultLocale)
+		val messageSource = ReloadableResourceBundleMessageSource()
+		messageSource.setBasename(I18N_ERROR)
+		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
+		messageSource.setUseCodeAsDefaultMessage(true)
+		messageSource.setDefaultLocale(defaultLocale)
+		return messageSource
+	}
 
-    override fun resolveLocaleContext(exchange: ServerWebExchange): LocaleContext {
-        val language: String? = exchange.request.headers.getFirst(HttpHeaders.ACCEPT_LANGUAGE)
-        return SimpleLocaleContext(Locale.forLanguageTag(language) ?: Locale.getDefault())
-    }
+	override fun resolveLocaleContext(exchange: ServerWebExchange): LocaleContext {
+		val language: String? = exchange.request.headers.getFirst(HttpHeaders.ACCEPT_LANGUAGE)
+		return SimpleLocaleContext(Locale.forLanguageTag(language) ?: Locale.getDefault())
+	}
 
-    override fun setLocaleContext(exchange: ServerWebExchange, localeContext: LocaleContext?) {
-        throw RegistryException(HttpStatus.NOT_IMPLEMENTED, ErrorConst.NOT_IMPLEMENTED_YET)
-    }
+	override fun setLocaleContext(exchange: ServerWebExchange, localeContext: LocaleContext?) {
+		throw RegistryException(HttpStatus.NOT_IMPLEMENTED, ErrorConst.NOT_IMPLEMENTED_YET)
+	}
 }

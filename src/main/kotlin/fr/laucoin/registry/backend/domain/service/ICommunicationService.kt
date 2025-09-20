@@ -12,32 +12,36 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface ICommunicationService {
-    fun findCommunicationPage(
-        projectId: UUID,
-        pageable: PageableModel,
-        searchParams: CommunicationSearchParamModel,
-    ): Mono<PageModel<CommunicationModel>>
+	fun findCommunicationPage(
+		projectId: UUID,
+		pageable: PageableModel,
+		searchParams: CommunicationSearchParamModel,
+	): Mono<PageModel<CommunicationModel>>
 
-    fun findCommunicationById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
+	fun findCommunicationById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
 
-    fun searchOutMovementWithActivityByText(projectId: UUID, textSearched: String?): Flux<MovementModel>
+	fun searchOutMovementWithActivityByText(projectId: UUID, textSearched: String?): Flux<MovementModel>
 
-    fun searchAlertByText(projectId: UUID, textSearched: String?): Flux<AlertModel>
+	fun searchAlertByText(projectId: UUID, textSearched: String?): Flux<AlertModel>
 
-    fun createCommunication(
-        currentUser: CurrentUserModel,
-        communication: CommunicationModel
-    ): Mono<CommunicationModel>
+	fun createCommunication(
+		currentUser: CurrentUserModel,
+		communication: CommunicationModel
+	): Mono<CommunicationModel>
 
-    fun updateCommunicationById(
-        currentUser: CurrentUserModel,
-        projectId: UUID,
-        id: UUID,
-        communication: CommunicationModel
-    ): Mono<CommunicationModel>
+	fun updateCommunicationById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		communication: CommunicationModel
+	): Mono<CommunicationModel>
 
-    fun disableCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<CommunicationModel>
-    fun enableCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<CommunicationModel>
-    fun deleteCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
-    fun purgeOrphanCommunications(movementsToExclude: List<UUID>, alertsToExclude: List<UUID>, dryRun: Boolean): Flux<UUID>
+	fun disableCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<CommunicationModel>
+	fun enableCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<CommunicationModel>
+	fun deleteCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+	fun purgeOrphanCommunications(
+		movementsToExclude: List<UUID>,
+		alertsToExclude: List<UUID>,
+		dryRun: Boolean
+	): Flux<UUID>
 }

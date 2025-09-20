@@ -8,34 +8,34 @@ import java.util.Objects
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
 class MinUpperMaxValidator: GenericValidator<MinUpperMax, Any>() {
-    private lateinit var startField: String
-    private lateinit var endField: String
+	private lateinit var startField: String
+	private lateinit var endField: String
 
-    override fun initialize(constraintAnnotation: MinUpperMax) {
-        startField = constraintAnnotation.startField
-        endField = constraintAnnotation.endField
-    }
+	override fun initialize(constraintAnnotation: MinUpperMax) {
+		startField = constraintAnnotation.startField
+		endField = constraintAnnotation.endField
+	}
 
-    override fun isValid(value: Any, context: ConstraintValidatorContext): Boolean {
-        val startValue = extractValue(startField, value)
-        val endValue = extractValue(endField, value)
+	override fun isValid(value: Any, context: ConstraintValidatorContext): Boolean {
+		val startValue = extractValue(startField, value)
+		val endValue = extractValue(endField, value)
 
-        return when {
-            startValue is Int && endValue is Int -> startValue <= endValue
-            startValue is Double && endValue is Double -> startValue <= endValue
-            startValue is Float && endValue is Float -> startValue <= endValue
-            startValue is Long && endValue is Long -> startValue <= endValue
-            Objects.isNull(startValue) || Objects.isNull(endValue) -> true
-            else -> {
-                val exception = RegistryException(INTERNAL_SERVER_ERROR, COMPARING_WRONG_PARAMETER_TYPE)
-                log.error(
-                    "The two fields ({}, {}) are not of the same type or the type is not supported (we support only nullable ZonedDateTime and ZonedDateTime).",
-                    startValue,
-                    endValue,
-                    exception
-                )
-                throw exception
-            }
-        }
-    }
+		return when {
+			startValue is Int && endValue is Int -> startValue <= endValue
+			startValue is Double && endValue is Double -> startValue <= endValue
+			startValue is Float && endValue is Float -> startValue <= endValue
+			startValue is Long && endValue is Long -> startValue <= endValue
+			Objects.isNull(startValue) || Objects.isNull(endValue) -> true
+			else -> {
+				val exception = RegistryException(INTERNAL_SERVER_ERROR, COMPARING_WRONG_PARAMETER_TYPE)
+				log.error(
+					"The two fields ({}, {}) are not of the same type or the type is not supported (we support only nullable ZonedDateTime and ZonedDateTime).",
+					startValue,
+					endValue,
+					exception
+				)
+				throw exception
+			}
+		}
+	}
 }

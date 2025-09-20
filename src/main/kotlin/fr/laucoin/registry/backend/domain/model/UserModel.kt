@@ -11,28 +11,28 @@ import java.util.UUID
 
 
 open class UserModel(
-    var oidcId: UUID? = null,
-    var type: UserTypeEnum = USER,
-    var firstName: String? = null,
-    var lastName: String? = null,
-    var email: String? = null,
-    var role: String? = null,
-    var birthday: LocalDate? = null,
-    var lastLogin: ZonedDateTime? = now(),
-    var purged: Boolean = false,
+	var oidcId: UUID? = null,
+	var type: UserTypeEnum = USER,
+	var firstName: String? = null,
+	var lastName: String? = null,
+	var email: String? = null,
+	var role: String? = null,
+	var birthday: LocalDate? = null,
+	var lastLogin: ZonedDateTime? = now(),
+	var purged: Boolean = false,
 ): GenericModel() {
-    fun personalDataChanged(email: String, firstName: String?, lastName: String?): Boolean =
-        this.email != email || this.firstName != firstName || this.lastName != lastName || this.birthday != birthday
+	fun personalDataChanged(email: String, firstName: String?, lastName: String?): Boolean =
+		this.email != email || this.firstName != firstName || this.lastName != lastName || this.birthday != birthday
 
-    fun impersonate() {
-        this.firstName = generateRandomString()
-        this.lastName = generateRandomString()
-        this.email = generateRandomString()
-        this.birthday = null
+	fun impersonate() {
+		this.firstName = generateRandomString()
+		this.lastName = generateRandomString()
+		this.email = generateRandomString()
+		this.birthday = null
 
-        this.purged = true
-    }
+		this.purged = true
+	}
 
-    @JsonIgnore
-    fun isPurged() = purged
+	@JsonIgnore
+	fun isPurged() = purged
 }

@@ -38,99 +38,99 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
 class SecurityConfig(
-    private val tokenConverter: TokenConverterService,
-    private val authorizationErrorHandler: AuthorizationErrorHandler,
-    private val headersHandler: HeadersHandler,
-    @param:Value("\${external.cors.urls}")
-    private val corsUrls: List<String>,
-    @param:Value("\${registry.feature.documentation.enabled:false}")
-    private val documentationEnabled: Boolean,
-    @param:Value("\${registry.feature.observability.enabled:false}")
-    private val observabilityEnabled: Boolean,
+	private val tokenConverter: TokenConverterService,
+	private val authorizationErrorHandler: AuthorizationErrorHandler,
+	private val headersHandler: HeadersHandler,
+	@param:Value("\${external.cors.urls}")
+	private val corsUrls: List<String>,
+	@param:Value("\${registry.feature.documentation.enabled:false}")
+	private val documentationEnabled: Boolean,
+	@param:Value("\${registry.feature.observability.enabled:false}")
+	private val observabilityEnabled: Boolean,
 ) {
 
-    @Bean
-    fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
-        return http
-            .disableCsrf()
-            .handleHeaders()
-            .configureResourceAccess()
-            .disableAuthForm()
-            .configureLogout()
-            .configureOAuth2Server()
-            .handleException()
-            .build()
-    }
+	@Bean
+	fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+		return http
+			.disableCsrf()
+			.handleHeaders()
+			.configureResourceAccess()
+			.disableAuthForm()
+			.configureLogout()
+			.configureOAuth2Server()
+			.handleException()
+			.build()
+	}
 
-    private fun ServerHttpSecurity.disableCsrf() = csrf { it.disable() }
+	private fun ServerHttpSecurity.disableCsrf() = csrf { it.disable() }
 
-    private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
+	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
 
-    private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
-        if (documentationEnabled) {
-            it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui/**")
-                .permitAll()
-        }
-        if (observabilityEnabled) {
-            it.pathMatchers(GET, "/actuator/**").permitAll()
-        }
-        it.pathMatchers(GET, "/api/authentication/login/uri", "/api/authentication/logout/uri").permitAll()
-        it.pathMatchers(POST, "/api/authentication/token", "/api/authentication/token/refresh").permitAll()
-        it.anyExchange().authenticated()
-    }
+	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
+		if (documentationEnabled) {
+			it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui/**")
+				.permitAll()
+		}
+		if (observabilityEnabled) {
+			it.pathMatchers(GET, "/actuator/**").permitAll()
+		}
+		it.pathMatchers(GET, "/api/authentication/login/uri", "/api/authentication/logout/uri").permitAll()
+		it.pathMatchers(POST, "/api/authentication/token", "/api/authentication/token/refresh").permitAll()
+		it.anyExchange().authenticated()
+	}
 
-    private fun ServerHttpSecurity.disableAuthForm() = formLogin { it.disable() }
+	private fun ServerHttpSecurity.disableAuthForm() = formLogin { it.disable() }
 
-    private fun ServerHttpSecurity.configureLogout() = logout {
-        val logoutUrl = "/logout"
-        it.logoutUrl(logoutUrl)
-        it.requiresLogout(ServerWebExchangeMatchers.pathMatchers(GET, *arrayOf(logoutUrl)))
-    }
+	private fun ServerHttpSecurity.configureLogout() = logout {
+		val logoutUrl = "/logout"
+		it.logoutUrl(logoutUrl)
+		it.requiresLogout(ServerWebExchangeMatchers.pathMatchers(GET, *arrayOf(logoutUrl)))
+	}
 
-    private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
-        resourceServer.authenticationFailureHandler(authorizationErrorHandler)
-        resourceServer.jwt {
-            it.jwtAuthenticationConverter(tokenConverter)
-        }
-    }
+	private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
+		resourceServer.authenticationFailureHandler(authorizationErrorHandler)
+		resourceServer.jwt {
+			it.jwtAuthenticationConverter(tokenConverter)
+		}
+	}
 
-    private fun ServerHttpSecurity.handleException() = exceptionHandling {
-        it.accessDeniedHandler(authorizationErrorHandler.accessDeniedHandler())
-        it.authenticationEntryPoint(authorizationErrorHandler.unauthorizedHandler())
-    }
+	private fun ServerHttpSecurity.handleException() = exceptionHandling {
+		it.accessDeniedHandler(authorizationErrorHandler.accessDeniedHandler())
+		it.authenticationEntryPoint(authorizationErrorHandler.unauthorizedHandler())
+	}
 
-    @Bean
-    fun expressionHandler(): MethodSecurityExpressionHandler {
-        val handler = DefaultMethodSecurityExpressionHandler()
-        handler.setPermissionEvaluator(PermissionService())
-        return handler
-    }
+	@Bean
+	fun expressionHandler(): MethodSecurityExpressionHandler {
+		val handler = DefaultMethodSecurityExpressionHandler()
+		handler.setPermissionEvaluator(PermissionService())
+		return handler
+	}
 
-    @Bean
-    fun corsConfigurationSource(): CorsConfigurationSource {
-        val configuration = CorsConfiguration()
-        configuration.allowedOrigins = corsUrls
-        configuration.allowedMethods = listOf(
-            HEAD.name(),
-            GET.name(),
-            POST.name(),
-            PUT.name(),
-            DELETE.name(),
-            PATCH.name(),
-            OPTIONS.name(),
-        )
-        configuration.allowCredentials = true
-        configuration.allowedHeaders = listOf(
-            AUTHORIZATION,
-            CACHE_CONTROL,
-            CONTENT_TYPE,
-            ACCEPT_LANGUAGE,
-            ACCESS_CONTROL_ALLOW_ORIGIN,
-            ACCESS_CONTROL_ALLOW_HEADERS,
-            ACCESS_CONTROL_EXPOSE_HEADERS,
-        )
-        val source = UrlBasedCorsConfigurationSource()
-        source.registerCorsConfiguration("/**", configuration)
-        return source
-    }
+	@Bean
+	fun corsConfigurationSource(): CorsConfigurationSource {
+		val configuration = CorsConfiguration()
+		configuration.allowedOrigins = corsUrls
+		configuration.allowedMethods = listOf(
+			HEAD.name(),
+			GET.name(),
+			POST.name(),
+			PUT.name(),
+			DELETE.name(),
+			PATCH.name(),
+			OPTIONS.name(),
+		)
+		configuration.allowCredentials = true
+		configuration.allowedHeaders = listOf(
+			AUTHORIZATION,
+			CACHE_CONTROL,
+			CONTENT_TYPE,
+			ACCEPT_LANGUAGE,
+			ACCESS_CONTROL_ALLOW_ORIGIN,
+			ACCESS_CONTROL_ALLOW_HEADERS,
+			ACCESS_CONTROL_EXPOSE_HEADERS,
+		)
+		val source = UrlBasedCorsConfigurationSource()
+		source.registerCorsConfiguration("/**", configuration)
+		return source
+	}
 }

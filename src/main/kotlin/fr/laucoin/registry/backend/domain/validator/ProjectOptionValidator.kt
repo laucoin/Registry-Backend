@@ -9,20 +9,20 @@ import jakarta.validation.ConstraintValidatorContext
 import org.springframework.http.HttpStatus.BAD_REQUEST
 
 class ProjectOptionValidator: ConstraintValidator<ProjectOptionDependencies, List<ProjectOptionEnum>> {
-    override fun isValid(options: List<ProjectOptionEnum>?, context: ConstraintValidatorContext): Boolean {
-        val missingOptions = mutableSetOf<ProjectOptionEnum>()
-        options?.forEach {
-            missingOptions.addAll(it.requiredOptions.minus(options))
-        }
+	override fun isValid(options: List<ProjectOptionEnum>?, context: ConstraintValidatorContext): Boolean {
+		val missingOptions = mutableSetOf<ProjectOptionEnum>()
+		options?.forEach {
+			missingOptions.addAll(it.requiredOptions.minus(options))
+		}
 
-        if (missingOptions.isNotEmpty()) {
-            throw RegistryException(
-                BAD_REQUEST,
-                PROJECT_OPTIONS_MISSING,
-                arrayListOf(missingOptions.joinToString(", "))
-            )
-        }
+		if (missingOptions.isNotEmpty()) {
+			throw RegistryException(
+				BAD_REQUEST,
+				PROJECT_OPTIONS_MISSING,
+				arrayListOf(missingOptions.joinToString(", "))
+			)
+		}
 
-        return true
-    }
+		return true
+	}
 }

@@ -15,36 +15,36 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IParticipantService {
-    fun findParticipantsPage(
-        projectId: UUID,
-        pageable: PageableModel,
-        searchParams: ParticipantSearchParamModel,
-    ): Mono<PageModel<ParticipantModel>>
+	fun findParticipantsPage(
+		projectId: UUID,
+		pageable: PageableModel,
+		searchParams: ParticipantSearchParamModel,
+	): Mono<PageModel<ParticipantModel>>
 
-    fun findBirthdays(projectId: UUID): Flux<ParticipantModel>
+	fun findBirthdays(projectId: UUID): Flux<ParticipantModel>
 
-    fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
-    fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
-    fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel>
-    fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel>
+	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
+	fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
+	fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel>
+	fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel>
 
-    fun findParticipantMovementsPage(
-        projectId: UUID,
-        id: UUID,
-        pageable: PageableModel,
-        searchParams: MovementSearchParamModel,
-    ): Mono<PageModel<MovementModel>>
+	fun findParticipantMovementsPage(
+		projectId: UUID,
+		id: UUID,
+		pageable: PageableModel,
+		searchParams: MovementSearchParamModel,
+	): Mono<PageModel<MovementModel>>
 
-    fun createParticipant(currentUser: CurrentUserModel, participant: ParticipantModel): Mono<ParticipantModel>
-    fun updateParticipantById(
-        currentUser: CurrentUserModel,
-        projectId: UUID,
-        id: UUID,
-        participant: ParticipantModel
-    ): Mono<ParticipantModel>
+	fun createParticipant(currentUser: CurrentUserModel, participant: ParticipantModel): Mono<ParticipantModel>
+	fun updateParticipantById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		participant: ParticipantModel
+	): Mono<ParticipantModel>
 
-    fun disableParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantModel>
-    fun enableParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantModel>
-    fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
-    fun purgeParticipantsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
+	fun disableParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantModel>
+	fun enableParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantModel>
+	fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+	fun purgeParticipantsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

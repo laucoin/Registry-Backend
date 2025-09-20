@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
 @Retention(RUNTIME)
 @Constraint(validatedBy = [MovementGuestContentValidator::class])
 annotation class MovementGuestContent(
-    val message: String,
-    val groups: Array<KClass<*>> = [],
-    val payload: Array<KClass<out Any>> = []
+	val message: String,
+	val groups: Array<KClass<*>> = [],
+	val payload: Array<KClass<out Any>> = []
 )

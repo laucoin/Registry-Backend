@@ -16,26 +16,26 @@ import reactor.core.publisher.Mono
 
 class ReactiveExtTest {
 
-    companion object {
-        @JvmStatic
-        fun `Should notFoundIfEmpty throw a 404`(): Stream<Arguments> = Stream.of(
-            Arguments.of(Mono.empty<String>(), UUID.randomUUID()),
-            Arguments.of(Mono.empty<Int>(), UUID.randomUUID()),
-        )
-    }
+	companion object {
+		@JvmStatic
+		fun `Should notFoundIfEmpty throw a 404`(): Stream<Arguments> = Stream.of(
+			Arguments.of(Mono.empty<String>(), UUID.randomUUID()),
+			Arguments.of(Mono.empty<Int>(), UUID.randomUUID()),
+		)
+	}
 
-    @ParameterizedTest
-    @MethodSource
-    fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>, id: UUID) {
-        // Act
-        val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-            value.notFoundIfEmpty(id).block()
-        }) as RegistryException
+	@ParameterizedTest
+	@MethodSource
+	fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>, id: UUID) {
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			value.notFoundIfEmpty(id).block()
+		}) as RegistryException
 
-        // Assert
-        assertEquals(NOT_FOUND, result.status)
-        assertEquals(id.toString(), result.args?.first())
-        assertEquals(1, result.args?.size)
-        assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
-    }
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		assertEquals(id.toString(), result.args?.first())
+		assertEquals(1, result.args?.size)
+		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
+	}
 }

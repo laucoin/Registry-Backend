@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
 @Retention(RUNTIME)
 @Constraint(validatedBy = [ProfileAcceptOrRejectValidator::class])
 annotation class ProfileAcceptOrReject(
-    val message: String = PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED,
-    val groups: Array<KClass<*>> = [],
-    val payload: Array<KClass<out Any>> = []
+	val message: String = PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED,
+	val groups: Array<KClass<*>> = [],
+	val payload: Array<KClass<out Any>> = []
 )

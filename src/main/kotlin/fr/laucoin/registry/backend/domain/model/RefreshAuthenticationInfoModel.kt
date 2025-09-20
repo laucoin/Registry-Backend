@@ -4,6 +4,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_
 import jakarta.validation.constraints.NotBlank
 
 data class RefreshAuthenticationInfoModel(
-    @field:NotBlank(message = REFRESH_TOKEN_BLANK)
-    val refreshToken: String?,
+	@field:NotBlank(message = REFRESH_TOKEN_BLANK)
+	val refreshToken: String?,
 )

@@ -11,9 +11,9 @@ import kotlin.reflect.KClass
 @Retention(RUNTIME)
 @Constraint(validatedBy = [BothCannotBeDefinedValidator::class])
 annotation class BothCannotBeDefined(
-    val first: String,
-    val second: String,
-    val message: String,
-    val groups: Array<KClass<*>> = [],
-    val payload: Array<KClass<out Any>> = []
+	val first: String,
+	val second: String,
+	val message: String,
+	val groups: Array<KClass<*>> = [],
+	val payload: Array<KClass<out Any>> = []
 )

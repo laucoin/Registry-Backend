@@ -12,32 +12,32 @@ import org.springframework.security.oauth2.jwt.Jwt
 
 class UserExtTest {
 
-    companion object {
-        @JvmStatic
-        fun `Should getClaimAsUUID return UUID`(): Stream<Arguments> = Stream.of(
-            Arguments.of(false, "", null),
-            Arguments.of(true, "wrongFormat", null),
-            Arguments.of(true, "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000"),
-        )
-    }
+	companion object {
+		@JvmStatic
+		fun `Should getClaimAsUUID return UUID`(): Stream<Arguments> = Stream.of(
+			Arguments.of(false, "", null),
+			Arguments.of(true, "wrongFormat", null),
+			Arguments.of(true, "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000"),
+		)
+	}
 
-    @ParameterizedTest
-    @MethodSource
-    fun `Should getClaimAsUUID return UUID`(
-        asKey: Boolean,
-        uuid: String,
-        expected: String?,
-    ) {
-        // Arrange
-        val key = "uuid"
-        val jwt: Jwt = mock()
-        whenever(jwt.hasClaim(key)).thenReturn(asKey)
-        whenever(jwt.getClaimAsString(key)).thenReturn(uuid)
+	@ParameterizedTest
+	@MethodSource
+	fun `Should getClaimAsUUID return UUID`(
+		asKey: Boolean,
+		uuid: String,
+		expected: String?,
+	) {
+		// Arrange
+		val key = "uuid"
+		val jwt: Jwt = mock()
+		whenever(jwt.hasClaim(key)).thenReturn(asKey)
+		whenever(jwt.getClaimAsString(key)).thenReturn(uuid)
 
-        // Act
-        val result = jwt.getClaimAsUUID(key)
+		// Act
+		val result = jwt.getClaimAsUUID(key)
 
-        // Assert
-        assertEquals(expected, result?.toString())
-    }
+		// Assert
+		assertEquals(expected, result?.toString())
+	}
 }
