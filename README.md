@@ -17,9 +17,11 @@ Checkout the full documentation [here](documentation/README.md).
 
 ### Prerequisites
 
-Install [Java 21 or later](https://www.oracle.com/fr/java/technologies/downloads/#java21)
+Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads/#java25)
 
 ### Build and run locally
+
+##### Procedure
 
 1. Clone this repository with:
     ```shell
@@ -33,41 +35,30 @@ Install [Java 21 or later](https://www.oracle.com/fr/java/technologies/downloads
     ```shell
     cd registry-backend/
     ```
-3. Set up your local environment with a
-    ```shell
-    docker-compose pull
-    ```
-   and
-    ```shell
-    docker-compose up -d
-    ```
-4. Configure Keycloak
-    - Go to http://localhost:8080/admin/ and login with the following credentials:
-        - Username: `admin`
-        - Password: `admin`
-    - Import realm from `docker-volumes/keycloak/realm/ne.json`
-    - Create all users you need
-5. Setup configuration file
-   > Please create an `src/main/resources/application-*-local.yml` file and add the following config (for local refer
-   > to [docker-compose.yml](docker-compose.yml) for the replacement)
+3. You can use dev container
+4. Enjoy the following commands 🎉
 
-   ```
-   -Dregistry.datasource.schemas=<database-schemas> # For example: public
-   -Dregistry.datasource.base-url=<database-url> # For example: localhost:5432 (Without http(s)://)
-   -Dregistry.datasource.database=<database-name> # For example: postgres
-   -Dregistry.datasource.username=<database-username> # For example: postgres
-   -Dregistry.datasource.password=<database-username> # For example: postgres
-   -Dexternal.keycloak.base-url=<oidc-provider-base-url> # For example: http://localhost:8080 (With http(s)://)
-   -Dexternal.keycloak.realm=<oidc-provider-realm> # For example: laucoin
-   -Dexternal.keycloak.client-id=<oidc-provider-client-id> # For example: registry
-   -Dexternal.keycloak.client-secret=<oidc-provider-client-secret> # For example: XXXX
-   -Dexternal.keycloak.swagger.client-id=<oidc-provider-client-id> # For example: registry
-   -Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
-   -Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
-   -Dregistry.feature.documentation.enabled=false # true only for development
-   -Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
-   ```
-6. Enjoy the following commands 🎉
+> If you can to run it directly without dev container, you can check the [prerequisites](#prerequisites) section
+> and [compose.yml](.devcontainer/compose.yml) file to run required dependencies.
+
+##### JAVA_OPTS
+
+```
+-Dregistry.datasource.schemas=<database-schemas> # For example: public
+-Dregistry.datasource.base-url=<database-url> # For example: localhost:5432 (Without http(s)://)
+-Dregistry.datasource.database=<database-name> # For example: postgres
+-Dregistry.datasource.username=<database-username> # For example: postgres
+-Dregistry.datasource.password=<database-username> # For example: postgres
+-Dexternal.keycloak.base-url=<oidc-provider-base-url> # For example: http://localhost:8080 (With http(s)://)
+-Dexternal.keycloak.realm=<oidc-provider-realm> # For example: laucoin
+-Dexternal.keycloak.client-id=<oidc-provider-client-id> # For example: registry
+-Dexternal.keycloak.client-secret=<oidc-provider-client-secret> # For example: XXXX
+-Dexternal.keycloak.swagger.client-id=<oidc-provider-client-id> # For example: registry
+-Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
+-Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
+-Dregistry.feature.documentation.enabled=false # true only for development
+-Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
+```
 
 #### Running the application in dev mode
 
