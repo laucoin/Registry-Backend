@@ -5,7 +5,8 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 *.log
-docker-volume/keycloak/*
+.devcontainer/workspace
+.devcontainer/postgres/data
 
 ### STS ###
 .apt_generated
