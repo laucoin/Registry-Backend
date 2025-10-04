@@ -16,18 +16,19 @@ import reactor.core.publisher.Mono
 
 class ReactiveExtTest {
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should notFoundIfEmpty throw a 404`(): Stream<Arguments> = Stream.of(
-			Arguments.of(Mono.empty<String>(), UUID.randomUUID()),
-			Arguments.of(Mono.empty<Int>(), UUID.randomUUID()),
+			Arguments.of(Mono.empty<String>()),
+			Arguments.of(Mono.empty<Int>()),
 		)
 	}
 
 	@ParameterizedTest
 	@MethodSource
-	fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>, id: UUID) {
+	fun <T> `Should notFoundIfEmpty throw a 404`(value: Mono<T>) {
 		// Act
+		val id = UUID.randomUUID()
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
 			value.notFoundIfEmpty(id).block()
 		}) as RegistryException

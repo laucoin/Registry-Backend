@@ -18,7 +18,7 @@ import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 class MinUpperMaxValidatorTest {
 	private val numberValidator = MinUpperMaxValidator()
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should isValid throw for no-existing specified field`(): Stream<Arguments> = Stream.of(
 			Arguments.of("test", "end"),

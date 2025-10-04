@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
@@ -12,11 +13,14 @@ import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
-import java.util.Objects
-import java.util.UUID
+import fr.laucoin.registry.backend.test.ModelExt.userId
+import fr.laucoin.registry.backend.test.ModelExt.userOidcId
+import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -24,6 +28,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -46,11 +51,21 @@ class TokenConverterServiceTest {
 		userService, profilePort, roleService, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY
 	)
 
-	companion object {
+	private val jwt = mock<Jwt>()
+	private val claims = mapOf(
+		USER_ID_KEY to userOidcId.toString(),
+		EMAIL_KEY to currentUser().email,
+		FIRST_NAME_KEY to currentUser().firstName,
+		LAST_NAME_KEY to currentUser().lastName,
+	)
+
+	private companion object {
 		private const val USER_ID_KEY = "sub"
 		private const val EMAIL_KEY = "email"
 		private const val FIRST_NAME_KEY = "given_name"
 		private const val LAST_NAME_KEY = "family_name"
+		private const val USER_ROLE = "USER_ROLE"
+		private const val PROJECT_ROLE = "PROJECT_ROLE"
 
 		@JvmStatic
 		fun `Should convert throw JwtConversionException when jwt does not have email or user id`(): Stream<Arguments> =
@@ -69,18 +84,18 @@ class TokenConverterServiceTest {
 			)
 
 		@JvmStatic
-		fun `Should convert return Authentication`(): Stream<Arguments> {
-			val currentUser = CurrentUserModel().apply {
-				email = "john.doe@test.com"
-				firstName = "John"
-				lastName = "DOE"
-			}
-			return Stream.of(
-				Arguments.of(currentUser, currentUser, null, 0, 1),
-				Arguments.of(null, currentUser, emptyList<ProjectOptionEnum>(), 1, 0),
-				Arguments.of(currentUser, currentUser, listOf(VEHICLE), 0, 1),
-			)
-		}
+		fun `Should convert return Authentication`(): Stream<Arguments> = Stream.of(
+			Arguments.of(currentUser().apply { role = USER_ROLE }, currentUser(), false, null, 0, 1),
+			Arguments.of(null, currentUser(), false, emptyList<ProjectOptionEnum>(), 1, 0),
+			Arguments.of(currentUser().apply { role = USER_ROLE }, currentUser(), true, null, 0, 1),
+			Arguments.of(currentUser().apply { role = USER_ROLE }, currentUser(), true, listOf(VEHICLE), 0, 1),
+		)
+	}
+
+	@BeforeEach
+	fun setup() {
+		whenever(jwt.claims).thenReturn(claims)
+		whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
 	}
 
 	@ParameterizedTest
@@ -90,7 +105,6 @@ class TokenConverterServiceTest {
 		hasEmail: Boolean,
 	) {
 		// Arrange
-		val jwt = mock<Jwt>()
 		whenever(jwt.hasClaim(USER_ID_KEY)).thenReturn(hasUserId)
 		whenever(jwt.hasClaim(EMAIL_KEY)).thenReturn(hasEmail)
 
@@ -117,23 +131,9 @@ class TokenConverterServiceTest {
 		expectedMessage: String,
 	) {
 		// Arrange
-		val jwt = mock<Jwt>()
-		val userId = UUID.randomUUID()
-		whenever(jwt.claims).thenReturn(
-			mapOf(
-				USER_ID_KEY to userId.toString(),
-				EMAIL_KEY to "john.doe@test.com",
-				FIRST_NAME_KEY to "John",
-				LAST_NAME_KEY to "DOE",
-			)
-		)
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
-		whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
 
-		val currentUser = CurrentUserModel().apply {
-			visible = userVisible
-			purged = userPurged
-		}
+		val currentUser = currentUser().apply { visible = userVisible; purged = userPurged }
 		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser))
 
 		// Act
@@ -146,60 +146,33 @@ class TokenConverterServiceTest {
 		assertEquals(expectedMessage, result.message)
 
 		verifyNoInteractions(roleService)
-		verify(userService).findUserByOidcId(userId, visibilitySearched = null)
+		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
 		verifyNoInteractions(profilePort)
 	}
 
 	@ParameterizedTest
 	@MethodSource
 	fun `Should convert return Authentication`(
-		databaseUser: CurrentUserModel?,
+		oidcDatabaseUser: CurrentUserModel?,
 		currentUser: CurrentUserModel,
+		projectIsVisible: Boolean,
 		projectOptions: List<ProjectOptionEnum>?,
 		expectedUserCreation: Int,
 		expectedUserUpdate: Int,
 	) {
 		// Arrange
-		val jwt = mock<Jwt>()
-		val userId = UUID.randomUUID()
-		val userOidcId = UUID.randomUUID()
-		whenever(jwt.claims).thenReturn(
-			mapOf(
-				USER_ID_KEY to userOidcId.toString(),
-				EMAIL_KEY to currentUser.email,
-				FIRST_NAME_KEY to currentUser.firstName,
-				LAST_NAME_KEY to currentUser.lastName,
-			)
-		)
+		val projectRole = ProjectProfileRoleModel(projectId, projectOptions, projectIsVisible, PROJECT_ROLE)
+
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
-		whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
-
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.justOrEmpty(databaseUser?.apply {
-			visible = true
-			purged = false
-		}))
-
-		whenever(
-			userService.findUserByEmail(
-				any(),
-				anyOrNull()
-			)
-		).thenReturn(if (Objects.nonNull(databaseUser)) Flux.just(databaseUser) else Flux.empty())
-
-		val userRole = "USER_ROLE"
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.justOrEmpty(oidcDatabaseUser))
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
 		whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
-			.thenReturn(Mono.just(currentUser.apply { id = userId; oidcId = userOidcId; role = userRole }))
+			.thenReturn(Mono.just(currentUser().apply { role = USER_ROLE }))
+
 		whenever(userService.updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull()))
-			.thenReturn(Mono.just(currentUser.apply { id = userId; oidcId = userOidcId; role = userRole }))
+			.thenReturn(Mono.just(currentUser().apply { role = USER_ROLE }))
 
-		val projectRole = "PROJECT_ROLE"
-		val role = ProjectProfileRoleModel(
-			projectId,
-			projectOptions = projectOptions,
-			role = projectRole
-		)
-
-		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.just(role))
+		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.just(projectRole))
 		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
 		whenever(roleService.getAuthoritiesByProjectRole(any(), any(), anyOrNull())).thenReturn(emptyList())
 
@@ -208,20 +181,38 @@ class TokenConverterServiceTest {
 
 		// Assert
 		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
-		verify(userService, times(expectedUserCreation)).createUser(
-			userOidcId,
-			currentUser.email!!,
-			currentUser.firstName,
-			currentUser.lastName
-		)
+		verify(userService, times(expectedUserCreation))
+			.createUser(userOidcId, currentUser.email!!, currentUser.firstName, currentUser.lastName)
+
 		verify(userService, times(expectedUserUpdate)).updateUserIfPersonalDataChanged(
-			any(),
-			eq(currentUser.email!!),
-			eq(currentUser.firstName),
-			eq(currentUser.lastName),
+			any(), eq(currentUser.email!!), eq(currentUser.firstName), eq(currentUser.lastName)
 		)
+
 		verify(profilePort).findProjectProfilesRolesByUserId(userId)
-		verify(roleService).getAuthoritiesByUserRole(userRole)
-		verify(roleService).getAuthoritiesByProjectRole(eq(projectRole), eq(projectId), anyOrNull())
+		verify(roleService).getAuthoritiesByUserRole(USER_ROLE)
+		verify(roleService).getAuthoritiesByProjectRole(eq(PROJECT_ROLE), eq(projectId), anyOrNull())
+	}
+
+	@Test
+	fun `Should throw when user already exist with the email`() {
+		// Arrange
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(CurrentUserModel()))
+
+		// Act
+		val result = assertThrows(JwtConversionException::class.java) {
+			service.convert(jwt).block()
+		}
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
+
+		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+		verifyNoInteractions(profilePort)
+		verifyNoInteractions(roleService)
 	}
 }

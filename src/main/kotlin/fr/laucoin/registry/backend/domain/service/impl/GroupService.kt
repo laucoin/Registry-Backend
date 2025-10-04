@@ -275,8 +275,8 @@ class GroupService(
 				} else {
 					log.info("Purging group {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} group was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge group", err) }
+						.doOnNext { e -> log.info("Group {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge group{}", it, err) }
 				}
 			}
 	}

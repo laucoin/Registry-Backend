@@ -7,9 +7,9 @@ import jakarta.validation.constraints.NotNull
 import java.time.LocalDate
 import java.time.OffsetTime
 
-@DateDefinedForTime(dateField = "date", timeField = "time", message = TIME_IS_SET_BUT_NOT_DATE)
+@DateDefinedForTime(message = TIME_IS_SET_BUT_NOT_DATE)
 data class CustomDateTimeWriterDto(
-	@NotNull(message = DATE_IS_NULL)
+	@field:NotNull(message = DATE_IS_NULL)
 	var date: LocalDate? = null,
 	var time: OffsetTime? = null,
 )

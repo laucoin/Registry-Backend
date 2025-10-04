@@ -49,7 +49,7 @@ class UserProjectProfileControllerTest: TestContext() {
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
-	companion object {
+	private companion object {
 		private const val BASE_URL = "/api/users/profiles"
 
 		@JvmStatic

@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_D
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_STATUS_IS_NOT_UPDATABLE
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
@@ -22,7 +23,6 @@ import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.time.LocalDate
 import java.util.UUID
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -50,6 +50,7 @@ class AlertService(
 		visibilitySearched: Boolean?
 	): Mono<AlertModel> {
 		return port.findById(projectId, id, visibilitySearched)
+			.notFoundIfEmpty(id)
 	}
 
 	override fun findAlertCommunicationsPage(
@@ -125,19 +126,20 @@ class AlertService(
 			.updateAlert(currentUser)
 	}
 
-	private fun Mono<AlertModel>.validateAlertDateWithLinkedCommunications(newAlert: AlertModel): Mono<AlertModel> =
+	private fun Mono<AlertModel>.validateAlertDateWithLinkedCommunications(updatedAlert: AlertModel): Mono<AlertModel> =
 		flatMap { oldAlert ->
-			communicationPort.countAllByAlertId(
+			if (oldAlert.dateTime.isEqual(updatedAlert.dateTime)) Mono.just(oldAlert)
+			else communicationPort.countAllByAlertId(
 				oldAlert.project!!.id!!,
 				oldAlert.id!!,
 				CommunicationSearchParamModel(
 					textSearched = null,
 					visibilitySearched = null,
 					startDateTimeSearched = null,
-					endDateTimeSearched = newAlert.dateTime,
+					endDateTimeSearched = updatedAlert.dateTime,
 				)
 			).handle { it, handle ->
-				if (it >= 0) {
+				if (it > 0L) {
 					val exception = RegistryException(
 						UNPROCESSABLE_ENTITY,
 						ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME,
@@ -179,7 +181,7 @@ class AlertService(
 		id: UUID
 	): Mono<Void> {
 		return findAlertById(projectId, id, visibilitySearched = null)
-			.validateHasNoMovementLinked(ALERT_DELETE_HAS_COMMUNICATION)
+			.validateHasNoCommunicationLinked(ALERT_DELETE_HAS_COMMUNICATION)
 			.flatMap { port.deleteById(it.id!!) }
 	}
 
@@ -193,13 +195,13 @@ class AlertService(
 				} else {
 					log.info("Purging alert {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} alert was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge alert", err) }
+						.doOnNext { e -> log.info("Alert {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge alert {}", it, err) }
 				}
 			}
 	}
 
-	private fun Mono<AlertModel>.validateHasNoMovementLinked(error: String) = flatMap { oldAlert ->
+	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String) = flatMap { oldAlert ->
 		communicationPort.countAllByAlertId(
 			oldAlert.project!!.id!!,
 			oldAlert.id!!,
@@ -207,7 +209,7 @@ class AlertService(
 		).handle { it, handle ->
 			if (it > 0) {
 				log.warn("The alert {} already linked to communication(s)", oldAlert.id)
-				handle.error(RegistryException(CONFLICT, error))
+				handle.error(RegistryException(UNPROCESSABLE_ENTITY, error))
 			} else handle.next(oldAlert)
 		}
 	}

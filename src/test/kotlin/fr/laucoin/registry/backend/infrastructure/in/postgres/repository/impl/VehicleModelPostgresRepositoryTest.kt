@@ -44,7 +44,7 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 	@Autowired
 	private lateinit var repository: IVehiclePort
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> {
 			return Stream.of(

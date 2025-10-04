@@ -12,7 +12,7 @@ import org.springframework.security.oauth2.jwt.Jwt
 
 class UserExtTest {
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should getClaimAsUUID return UUID`(): Stream<Arguments> = Stream.of(
 			Arguments.of(false, "", null),
@@ -23,11 +23,7 @@ class UserExtTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should getClaimAsUUID return UUID`(
-		asKey: Boolean,
-		uuid: String,
-		expected: String?,
-	) {
+	fun `Should getClaimAsUUID return UUID`(asKey: Boolean, uuid: String, expected: String?) {
 		// Arrange
 		val key = "uuid"
 		val jwt: Jwt = mock()

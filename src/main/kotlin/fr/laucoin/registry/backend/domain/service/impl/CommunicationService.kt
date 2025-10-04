@@ -68,8 +68,7 @@ class CommunicationService(
 		id: UUID,
 		visibilitySearched: Boolean?
 	): Mono<CommunicationModel> {
-		return port.findById(projectId, id, visibilitySearched)
-			.notFoundIfEmpty(id)
+		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
 	}
 
 	override fun searchOutMovementWithActivityByText(
@@ -184,8 +183,8 @@ class CommunicationService(
 				} else {
 					log.info("Purging communication {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} communication was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge communication", err) }
+						.doOnNext { e -> log.info("Communication {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge communication{}", it, err) }
 				}
 			}
 	}
@@ -198,9 +197,9 @@ class CommunicationService(
 		communication: CommunicationModel,
 		oldCommunication: CommunicationModel? = null
 	): Mono<CommunicationModel> {
-		return if (Objects.isNull(communication.movement) || communication.movement?.id == oldCommunication?.movement?.id) Mono.just(
-			oldCommunication ?: communication
-		)
+		val communicationToReturn = oldCommunication ?: communication
+		return if (Objects.isNull(communication.movement) || communication.movement!!.id == oldCommunication?.movement?.id)
+			Mono.just(communicationToReturn)
 		else movementPort.findById(
 			communication.project!!.id!!,
 			communication.movement!!.id!!,
@@ -244,7 +243,7 @@ class CommunicationService(
 						)
 					)
 
-					else -> handle.next(oldCommunication ?: communication)
+					else -> handle.next(communicationToReturn)
 				}
 			}
 	}
@@ -254,9 +253,9 @@ class CommunicationService(
 		communication: CommunicationModel,
 		oldCommunication: CommunicationModel? = null
 	): Mono<CommunicationModel> {
-		return if (Objects.isNull(communication.alert) || communication.alert?.id == oldCommunication?.alert?.id) Mono.just(
-			oldCommunication ?: communication
-		)
+		val communicationToReturn = oldCommunication ?: communication
+		return if (Objects.isNull(communication.alert) || communication.alert!!.id == oldCommunication?.alert?.id)
+			Mono.just(communicationToReturn)
 		else {
 			if (!currentUser.hasAuthority(communication.project!!.id!!, REGISTRY_PROJECT_OPTION_ALERT)) {
 				throw RegistryException(
@@ -301,7 +300,7 @@ class CommunicationService(
 							)
 						)
 
-						else -> handle.next(oldCommunication ?: communication)
+						else -> handle.next(communicationToReturn)
 					}
 				}
 		}

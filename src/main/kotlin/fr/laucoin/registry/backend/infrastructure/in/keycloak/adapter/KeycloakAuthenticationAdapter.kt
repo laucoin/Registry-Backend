@@ -30,7 +30,7 @@ class KeycloakAuthenticationAdapter(
 ): IAuthenticationPort {
 	private val http: WebClient = WebClient.create(baseUri)
 
-	companion object {
+	private companion object {
 		private const val BASE_PATH = "/protocol/openid-connect"
 		private const val AUTHENTICATION_PATH = "$BASE_PATH/auth"
 		private const val TOKEN_PATH = "$BASE_PATH/token"

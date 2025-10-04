@@ -5,8 +5,8 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT
-import fr.laucoin.registry.backend.domain.extension.DateExt.isAfter
-import fr.laucoin.registry.backend.domain.extension.DateExt.isBefore
+import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
+import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
@@ -63,7 +63,7 @@ class PresenceStatusReaderDtoMapper(
 				)
 			}
 
-			Objects.nonNull(startAvailability) && startAvailability.isAfter(now) -> {
+			now.asStartIsAfterOther(startAvailability) -> {
 				val interval = Duration.between(
 					now.toZonedDateTime(),
 					startAvailability?.toZonedDateTime(
@@ -78,7 +78,7 @@ class PresenceStatusReaderDtoMapper(
 				)
 			}
 
-			Objects.nonNull(endAvailability) && endAvailability.isBefore(now) -> {
+			now.asEndIsBeforeOther(endAvailability) -> {
 				val interval = Duration.between(
 					endAvailability?.toZonedDateTime(
 						LocalTime.MAX, now.zone()!!

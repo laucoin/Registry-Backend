@@ -1,5 +1,5 @@
 # Use an appropriate base image that has Java and Gradle installed
-FROM gradle:8.14.0-jdk21-alpine AS build
+FROM gradle:9.1.0-jdk21-alpine AS build
 
 # Set the working directory inside the container
 ENV APP_HOME=/usr/app
@@ -10,10 +10,10 @@ WORKDIR $APP_HOME
 COPY . .
 
 # Build the application using Gradle
-RUN gradle build -x test -PtargetName=$APP_ARTIFACT_NAME
+RUN gradle build -x test -PtargetName="$APP_ARTIFACT_NAME"
 
 # Use distroless image for the final stage
-FROM gcr.io/distroless/java21-debian12
+FROM gcr.io/distroless/java21-debian12:nonroot
 
 # Switch to a non-root user for security
 USER nonroot

@@ -25,6 +25,14 @@ class PreferencesService(
 	@param:Value("\${registry.information.locale.supported}")
 	private val supportedLocales: List<String>,
 ): IPreferencesService, GenericService() {
+	private companion object {
+		private val SEARCH_ACTIVE = ProjectProfileSearchParamModel(
+			visibilitySearched = true,
+			availabilitySearched = true,
+			statusSearched = listOf(ACCEPTED)
+		)
+	}
+
 	override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
 		return port.findByUserId(currentUser.id!!, visibilitySearched = null)
 			.switchIfEmpty {
@@ -78,12 +86,7 @@ class PreferencesService(
 		currentUser: CurrentUserModel,
 		projectId: UUID
 	): Mono<PreferencesModel> {
-		val search = ProjectProfileSearchParamModel(
-			visibilitySearched = true,
-			availabilitySearched = true,
-			statusSearched = listOf(ACCEPTED)
-		)
-		return projectProfilePort.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, search)
+		return projectProfilePort.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, SEARCH_ACTIVE)
 			.notFoundIfEmpty(projectId)
 			.flatMap { selectedProfile(currentUser, it) }
 	}

@@ -10,7 +10,6 @@ import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
-import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.convert.converter.Converter
@@ -86,32 +85,29 @@ class TokenConverterService(
 		oidcId: UUID, email: String, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> = switchIfEmpty {
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
-		if (Objects.isNull(email)) userService.createUser(oidcId, email, firstName, lastName)
-		else {
-			userService.findUserByEmail(email, visibilitySearched = null)
-				.collectList()
-				.handle { it, handle ->
-					if (it.isEmpty()) {
-						log.info(
-							"No user found with email \"{}\", creating a new user with OIDC ID \"{}\"",
-							email,
-							oidcId
-						)
-						handle.next(it)
-					} else {
-						log.warn(
-							"Multiple users found with email \"{}\", cannot create a new user with OIDC ID \"{}\"",
-							email,
-							oidcId
-						)
-						handle.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED))
-					}
+		userService.findUserByEmail(email, visibilitySearched = null)
+			.collectList()
+			.handle { it, handle ->
+				if (it.isEmpty()) {
+					log.info(
+						"No user found with email \"{}\", creating a new user with OIDC ID \"{}\"",
+						email,
+						oidcId
+					)
+					handle.next(it)
+				} else {
+					log.warn(
+						"Multiple users found with email \"{}\", cannot create a new user with OIDC ID \"{}\"",
+						email,
+						oidcId
+					)
+					handle.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED))
 				}
-				.flatMap { userService.createUser(oidcId, email, firstName, lastName) }
-		}
+			}
+			.flatMap { userService.createUser(oidcId, email, firstName, lastName) }
 	}
 
-	private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap { it ->
+	private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap {
 		it.promote(roleService.getAuthoritiesByUserRole(it.role))
 		profilePort.findProjectProfilesRolesByUserId(it.id!!)
 			.collectList()

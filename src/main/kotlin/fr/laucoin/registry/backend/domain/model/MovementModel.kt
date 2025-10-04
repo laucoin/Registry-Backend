@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.domain.model
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import java.time.ZonedDateTime
 import java.util.Objects
@@ -39,12 +41,16 @@ data class MovementModel(
 		return getNewContent(movement).filter { Objects.nonNull(it.vehicle) }.mapNotNull { it.participant?.id }
 	}
 
-	fun isGuestsMovement(): Boolean {
+	fun isLastParticipantMovement(): Boolean {
+		return reason === DEFINITIVE_DEPARTURE || (type === OUT && isGuestsMovement())
+	}
+
+	private fun isGuestsMovement(): Boolean {
 		return contentType === ParticipantTypeEnum.GUEST
 	}
 
 	fun atLeastOldGuestIfGuestsEntrance(movement: MovementModel): Boolean {
-		if (type != MovementTypeEnum.IN || contentType != ParticipantTypeEnum.GUEST) return false
+		if (type == OUT || !isGuestsMovement()) return false
 		return content.any { old -> movement.content.any { new -> old.participant?.id == new.participant?.id } }
 	}
 

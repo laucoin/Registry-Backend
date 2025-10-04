@@ -7,16 +7,17 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
+import fr.laucoin.registry.backend.test.ModelExt.commonVehicle
 import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.LocalDate
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -30,6 +31,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class VehicleServiceTest {
@@ -43,9 +45,9 @@ class VehicleServiceTest {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = VehicleSearchParamModel()
-		whenever(port.findPage(any(), any(), any())).thenReturn(
-			Mono.just(PageModel(1, 2, 3, 4, emptyList()))
-		)
+
+		whenever(port.findPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findVehiclesPage(projectId, pageable, params).block()
@@ -57,35 +59,36 @@ class VehicleServiceTest {
 	@Test
 	fun `Should findVehicleById call port findById`() {
 		// Arrange
-		val vehicle = VehicleModel().apply { project = ProjectModel().apply { id = projectId } }
-		val uuid = UUID.randomUUID()
 		val onlyVisible = true
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
+
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonVehicle()))
 
 		// Act
-		service.findVehicleById(projectId, uuid, onlyVisible).block()
+		service.findVehicleById(projectId, vehicleId, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, onlyVisible)
+		verify(port).findById(projectId, vehicleId, onlyVisible)
 	}
 
 	@Test
 	fun `Should findVehicleById call port findById throw on empty result`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
 		val onlyVisible = true
+
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findVehicleById(projectId, uuid, onlyVisible).block()
+			service.findVehicleById(projectId, vehicleId, onlyVisible).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
-		verify(port).findById(projectId, uuid, onlyVisible)
+		assertEquals(vehicleId.toString(), result.args?.first())
+
+		verify(port).findById(projectId, vehicleId, onlyVisible)
 	}
 
 	@Test
@@ -94,9 +97,9 @@ class VehicleServiceTest {
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 10)
 		val params = MovementSearchParamModel(typeSearched = MovementTypeEnum.IN)
-		whenever(movementPort.findPageByVehicleId(any(), any(), any(), any())).thenReturn(
-			Mono.just(PageModel(1, 2, 3, 4, emptyList()))
-		)
+
+		whenever(movementPort.findPageByVehicleId(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findVehicleMovementsPage(projectId, uuid, pageable, params).block()
@@ -108,12 +111,11 @@ class VehicleServiceTest {
 	@Test
 	fun `Should createVehicle check date and call port create`() {
 		// Arrange
-		val vehicle = VehicleModel().apply { project = ProjectModel().apply { id = projectId } }
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(
-			Mono.just(
-				projectId
-			)
-		)
+		val vehicle = commonVehicle()
+
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(projectId))
+
 		whenever(port.create(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
@@ -126,24 +128,23 @@ class VehicleServiceTest {
 			end = null,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
+
 		verify(port).create(vehicle)
 	}
 
 	@Test
 	fun `Should updateVehicleById check date, check existing vehicle, call port updateVehicle`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val vehicle = VehicleModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any())).thenReturn(
-			Mono.just(
-				projectId
-			)
-		)
+		val vehicle = commonVehicle()
+
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(projectId))
+
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.updateVehicleById(currentUser(), projectId, uuid, vehicle).block()
+		service.updateVehicleById(currentUser(), projectId, vehicleId, vehicle).block()
 
 		// Assert
 		verify(projectService).validateDateTimes(
@@ -152,78 +153,110 @@ class VehicleServiceTest {
 			end = null,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(port).findById(projectId, uuid, visibilitySearched = null)
+
+		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
 		verify(port).update(vehicle)
 	}
 
 	@Test
 	fun `Should disableVehicleById call existing vehicle and call port update`() {
 		// Arrange
-		val vehicle = VehicleModel().apply { project = ProjectModel().apply { id = projectId }; visible = true }
-		val uuid = UUID.randomUUID()
+		val vehicle = commonVehicle()
+
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.disableVehicleById(currentUser(), projectId, uuid).block()
+		service.disableVehicleById(currentUser(), projectId, vehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, visibilitySearched = true)
+		verify(port).findById(projectId, vehicleId, visibilitySearched = true)
 		verify(port).update(vehicle.apply { visible = false })
 	}
 
 	@Test
 	fun `Should enableVehicleById call existing vehicle and call port update`() {
 		// Arrange
-		val vehicle = VehicleModel().apply { project = ProjectModel().apply { id = projectId }; visible = false }
-		val uuid = UUID.randomUUID()
+		val vehicle = commonVehicle().apply { visible = false }
+
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.enableVehicleById(currentUser(), projectId, uuid).block()
+		service.enableVehicleById(currentUser(), projectId, vehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, visibilitySearched = false)
+		verify(port).findById(projectId, vehicleId, visibilitySearched = false)
 		verify(port).update(vehicle.apply { visible = true })
 	}
 
 	@Test
 	fun `Should deleteVehicleById call existing vehicle, check no movement, and call port deleteById`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val vehicle = VehicleModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonVehicle()))
 		whenever(movementPort.countAllByVehicleId(any(), any(), any())).thenReturn(Mono.just(0))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteVehicleById(currentUser(), projectId, uuid).block()
+		service.deleteVehicleById(currentUser(), projectId, vehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, visibilitySearched = null)
-		verify(movementPort).countAllByVehicleId(projectId, uuid, MovementSearchParamModel())
-		verify(port).deleteById(uuid)
+		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
+		verify(movementPort).countAllByVehicleId(projectId, vehicleId, MovementSearchParamModel())
+		verify(port).deleteById(vehicleId)
 	}
 
 	@Test
 	fun `Should deleteVehicleById call existing vehicle, throw if movements are linked`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val vehicle = VehicleModel().apply { id = uuid; project = ProjectModel().apply { id = projectId } }
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonVehicle()))
 		whenever(movementPort.countAllByVehicleId(any(), any(), any())).thenReturn(Mono.just(1))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.deleteVehicleById(currentUser(), projectId, uuid).block()
+			service.deleteVehicleById(currentUser(), projectId, vehicleId).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(VEHICLE_DELETE_HAS_MOVEMENT, result.message)
-		verify(port).findById(projectId, uuid, visibilitySearched = null)
-		verify(movementPort).countAllByVehicleId(projectId, uuid, MovementSearchParamModel())
+
+		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
+		verify(movementPort).countAllByVehicleId(projectId, vehicleId, MovementSearchParamModel())
+		verify(port, never()).deleteById(any())
+	}
+
+	@Test
+	fun `Should purgeVehiclesIfNecessary call unused vehicle since a date, and call port deleteById`() {
+		// Arrange
+		val date = LocalDate.EPOCH
+		val uuid1 = UUID.randomUUID()
+		val uuid2 = UUID.randomUUID()
+
+		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(uuid1, uuid2))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
+
+		// Act
+		service.purgeVehiclesIfNecessary(date, false).collectList().block()
+
+		// Assert
+		verify(port).findUnusedSince(date)
+		verify(port).deleteById(uuid1)
+		verify(port).deleteById(uuid2)
+	}
+
+	@Test
+	fun `Should purgeVehiclesIfNecessary call unused vehicle since a date, and not call port deleteById because of dryRun`() {
+		// Arrange
+		val date = LocalDate.EPOCH
+
+		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(UUID.randomUUID()))
+
+		// Act
+		service.purgeVehiclesIfNecessary(date, true).collectList().block()
+
+		// Assert
+		verify(port).findUnusedSince(date)
 		verify(port, never()).deleteById(any())
 	}
 }

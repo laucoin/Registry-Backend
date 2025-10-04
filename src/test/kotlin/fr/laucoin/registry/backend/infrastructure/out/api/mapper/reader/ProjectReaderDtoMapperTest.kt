@@ -25,7 +25,7 @@ class ProjectReaderDtoMapperTest {
 	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
 	private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapper(translateService, availabilityMapper)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should toDto convert ProjectModel to ProjectReaderDto`(): Stream<Arguments> {
 			return Stream.of(

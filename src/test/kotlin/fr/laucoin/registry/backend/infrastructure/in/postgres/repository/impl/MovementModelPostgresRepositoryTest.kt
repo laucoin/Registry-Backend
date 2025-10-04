@@ -62,7 +62,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	@Autowired
 	private lateinit var repository: IMovementPort
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should findContent call contentRepository findAllByMovementIds`(): Stream<Arguments> {
 			return Stream.of(

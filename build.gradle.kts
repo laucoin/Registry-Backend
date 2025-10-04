@@ -2,17 +2,17 @@ import java.util.Properties
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 plugins {
-	kotlin("jvm") version "2.1.0"
-	kotlin("plugin.spring") version "2.1.0"
-	id("org.springframework.boot") version "3.5.4"
+	kotlin("jvm") version "2.2.0"
+	kotlin("plugin.spring") version "2.2.0"
+	id("org.springframework.boot") version "3.5.6"
 	id("io.spring.dependency-management") version "1.1.7"
 	id("jacoco")
 }
 
 group = "fr.laucoin.registry"
+
 val versionFile = rootProject.file("version.properties")
-val versionProperties: Properties = Properties()
-versionProperties.load(versionFile.inputStream())
+val versionProperties = Properties().apply { load(versionFile.inputStream()) }
 version = versionProperties.getProperty("version")
 
 val apacheTextVersion = "1.14.0"
@@ -23,12 +23,12 @@ val testArch = "1.4.1"
 val mockitoKotlinVersion = "6.0.0"
 val testContainerVersion = "1.21.3"
 val jacocoVersion = "0.8.13"
+val tuTarget = 0.80.toBigDecimal()
 
-val tuTarget = BigDecimal(0.74)
-
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+kotlin {
+	jvmToolchain(21)
+	compilerOptions {
+		freeCompilerArgs.addAll(listOf("-Xjsr305=strict"))
 	}
 }
 
@@ -49,6 +49,13 @@ dependencies {
 	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+	// Monitoring & Observability 👀
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	implementation("io.micrometer:micrometer-registry-prometheus:$prometheusVersion")
+
+	// Documentation 📚
+	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
+
 	// Data 💾
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -57,13 +64,6 @@ dependencies {
 	implementation("org.flywaydb:flyway-database-postgresql")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.postgresql:r2dbc-postgresql")
-
-	// Monitoring & Observability 👀
-	implementation("org.springframework.boot:spring-boot-starter-actuator")
-	implementation("io.micrometer:micrometer-registry-prometheus:$prometheusVersion")
-
-	// Documentation 📚
-	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
 	// Test 🧪
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -77,34 +77,29 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-kotlin {
-	compilerOptions {
-		freeCompilerArgs.addAll("-Xjsr305=strict")
-	}
-}
-
 jacoco {
 	toolVersion = jacocoVersion
 }
 
-tasks.jacocoTestCoverageVerification {
-	violationRules {
-		rule {
-			limit {
-				minimum = tuTarget
+tasks {
+	jacocoTestCoverageVerification {
+		violationRules {
+			rule {
+				limit {
+					minimum = tuTarget
+				}
 			}
 		}
 	}
-}
 
-tasks.withType<Test> {
-	useJUnitPlatform()
-	maxParallelForks = Runtime.getRuntime().availableProcessors()
-	finalizedBy(tasks.jacocoTestCoverageVerification, tasks.jacocoTestReport)
-}
+	withType<Test> {
+		useJUnitPlatform()
+		maxParallelForks = Runtime.getRuntime().availableProcessors()
+		finalizedBy(jacocoTestCoverageVerification, jacocoTestReport)
+	}
 
-val targetName: String? by project
-
-tasks.withType<BootJar> {
-	archiveFileName.set(targetName ?: "registry-backend.jar")
+	withType<BootJar> {
+		val targetName: String? by project
+		archiveFileName.set(targetName ?: "registry-backend.jar")
+	}
 }

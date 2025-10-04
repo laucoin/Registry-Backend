@@ -29,7 +29,7 @@ class ParticipantReaderDtoMapperTest {
 	private val mapper: ParticipantReaderDtoMapper =
 		ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, projectMapper, groupMapper)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should toDto convert ParticipantModel to ParticipantReaderDto`(): Stream<Arguments> {
 			return Stream.of(

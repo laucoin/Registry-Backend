@@ -11,8 +11,6 @@ import kotlin.reflect.KClass
 @Retention(RUNTIME)
 @Constraint(validatedBy = [DateDefinedForTimeValidator::class])
 annotation class DateDefinedForTime(
-	val dateField: String,
-	val timeField: String,
 	val message: String,
 	val groups: Array<KClass<*>> = [],
 	val payload: Array<KClass<out Any>> = []

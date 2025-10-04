@@ -4,9 +4,10 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
 import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.userId
+import fr.laucoin.registry.backend.test.ModelExt.userOidcId
 import java.net.URI
 import java.util.Objects
-import java.util.UUID
 import java.util.function.Function
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -30,14 +31,11 @@ object WebTestClientExt {
 
 
 	private val user = UserModel(
-		oidcId = UUID.fromString("08513d7b-cce1-4efe-bb27-8d936c4a12b4"),
+		oidcId = userOidcId,
 		firstName = FIRST_NAME,
 		lastName = LAST_NAME,
 		email = "$FIRST_NAME.$LAST_NAME@test.com"
-	).apply {
-		id = UUID.fromString("9cd10ea7-96c1-4f82-8366-d11d2e3ec300")
-		oidcId = UUID.fromString("08513d7b-cce1-4efe-bb27-8d936c4a12b4")
-	}
+	).apply { id = userId }
 
 	fun buildAuthority(authority: String): String = "${projectId}_$authority"
 

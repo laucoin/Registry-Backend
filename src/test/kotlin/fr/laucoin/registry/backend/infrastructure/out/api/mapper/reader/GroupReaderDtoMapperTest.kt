@@ -1,20 +1,26 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
+import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
+import fr.laucoin.registry.backend.test.ModelExt.groupId
 import java.util.Locale
-import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -24,69 +30,143 @@ class GroupReaderDtoMapperTest {
 	private val projectMapper: ProjectReaderDtoMapper = mock()
 	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
 	private val memberMapper: ParticipantReaderDtoMapper = mock()
-	private val mapper: GroupReaderDtoMapper = GroupReaderDtoMapper(projectMapper, availabilityMapper, memberMapper)
+	private val mapper = GroupReaderDtoMapper(projectMapper, availabilityMapper, memberMapper)
 
-	companion object {
+	private companion object {
+		private val participantDto = ParticipantReaderDto()
+		private val activityStatus = LabelDto(value = AVAILABLE.name, label = "Available")
+		private val dtoProject = ProjectReaderDto()
+
+		private val model = GroupModel(
+			members = listOf(ParticipantModel()),
+		).apply {
+			name = "Group 1"
+			status = AVAILABLE
+			startAvailability = CustomDateTimeModel.MIN
+			endAvailability = CustomDateTimeModel.MAX
+			membersCount = 1
+			insideMembersCount = 2
+			outsideMembersCount = 3
+			id = groupId
+			project = ProjectModel()
+			visible = true
+			creation = HistoryModel()
+			lastEdition = HistoryModel()
+		}
+
+		private val dto = GroupReaderDto().apply {
+			name = "Group 1"
+			status = activityStatus
+			startAvailability = CustomDateTimeModel.MIN
+			endAvailability = CustomDateTimeModel.MAX
+			membersCount = 1
+			insideMembersCount = 2
+			outsideMembersCount = 3
+			id = groupId
+			project = dtoProject
+			members = listOf(participantDto)
+			visible = true
+			creation = HistoryModel()
+			lastEdition = HistoryModel()
+		}
+
 		@JvmStatic
-		fun `Should toDto convert GroupModel to GroupAndContentReaderDto`(): Stream<Arguments> {
+		fun `GroupModel to GroupReaderDto data`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(
-					GroupModel(
-						members = emptyList(),
-					).apply {
-						id = UUID.randomUUID()
-						name = "Project"
-						startAvailability = CustomDateTimeModel.MIN
-						startAvailability = CustomDateTimeModel.MAX
-						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
-					},
-					0,
-				),
-				Arguments.of(
-					GroupModel(
-						members = emptyList(),
-					).apply {
-						id = UUID.randomUUID()
-						project = ProjectModel()
-						members = listOf(ParticipantModel())
-						name = "Project"
-						startAvailability = CustomDateTimeModel.MIN
-						startAvailability = CustomDateTimeModel.MAX
-						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
-					},
-					1,
-				),
+				Arguments.of(model, dto, 1, 1),
+				Arguments.of(GroupModel(), GroupReaderDto(members = listOf(participantDto)), 0, 0),
 			)
 		}
 	}
 
+	@BeforeEach
+	fun setup() {
+		whenever(memberMapper.toDtoList(any(), any())).thenReturn(listOf(participantDto))
+		whenever(availabilityMapper.toDto(any(), any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(projectMapper.toDto(any(), any())).thenReturn(dtoProject)
+	}
+
 	@ParameterizedTest
-	@MethodSource
-	fun `Should toDto convert GroupModel to GroupAndContentReaderDto`(
-		group: GroupModel,
+	@MethodSource("GroupModel to GroupReaderDto data")
+	fun `Should toDto convert GroupModel to GroupReaderDto`(
+		model: GroupModel,
+		dto: GroupReaderDto,
+		expectedAvailabilityCast: Int,
+		expectedProjectCast: Int,
+	) {
+		// Act
+		val result = mapper.toDto(model, Locale.getDefault())
+
+		// Assert
+		assertEquals(dto, result)
+
+		verify(memberMapper).toDtoList(model.members, Locale.getDefault())
+		verify(availabilityMapper, times(expectedAvailabilityCast))
+			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+	}
+
+	@ParameterizedTest
+	@MethodSource("GroupModel to GroupReaderDto data")
+	fun `Should toDto convert GroupModel list to GroupReaderDto list`(
+		model: GroupModel,
+		dto: GroupReaderDto,
+		expectedAvailabilityCast: Int,
 		expectedProjectCast: Int,
 	) {
 		// Arrange
-		whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
-		whenever(memberMapper.toDtoList(any(), any())).thenReturn(listOf(ParticipantReaderDto()))
+		val models = listOf(model)
+		val dtos = listOf(dto)
 
 		// Act
-		val result = mapper.toDto(group, Locale.getDefault())
+		val result = mapper.toDtoList(models, Locale.getDefault())
 
 		// Assert
-		verify(projectMapper, times(expectedProjectCast)).toDto(group.project ?: ProjectModel(), Locale.getDefault())
-		verify(memberMapper).toDtoList(group.members, Locale.getDefault())
+		assertEquals(dtos, result)
 
-		assertEquals(group.id, result.id)
-		assertEquals(group.name, result.name)
-		assertEquals(group.startAvailability, result.startAvailability)
-		assertEquals(group.endAvailability, result.endAvailability)
-		assertEquals(group.visible, result.visible)
-		assertEquals(group.creation, result.creation)
-		assertEquals(group.lastEdition, result.lastEdition)
+		verify(memberMapper).toDtoList(model.members, Locale.getDefault())
+		verify(availabilityMapper, times(expectedAvailabilityCast))
+			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+	}
+
+	@ParameterizedTest
+	@MethodSource("GroupModel to GroupReaderDto data")
+	fun `Should toDto convert GroupModel page to GroupReaderDto page`(
+		model: GroupModel,
+		dto: GroupReaderDto,
+		expectedAvailabilityCast: Int,
+		expectedProjectCast: Int,
+	) {
+		// Arrange
+		val modelPage = PageModel(
+			pageNumber = 0,
+			pageSize = 10,
+			totalPages = 1,
+			totalElements = 1,
+			content = listOf(model),
+		)
+		val dtoPage = PageModel(
+			pageNumber = 0,
+			pageSize = 10,
+			totalPages = 1,
+			totalElements = 1,
+			content = listOf(dto),
+			lastRefresh = modelPage.lastRefresh,
+		)
+
+		// Act
+		val result = mapper.toDtoPage(modelPage, Locale.getDefault())
+
+		// Assert
+		assertEquals(dtoPage, result)
+
+		verify(memberMapper).toDtoList(model.members, Locale.getDefault())
+		verify(availabilityMapper, times(expectedAvailabilityCast))
+			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
 	}
 }

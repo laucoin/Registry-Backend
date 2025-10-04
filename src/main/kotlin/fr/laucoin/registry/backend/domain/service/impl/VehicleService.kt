@@ -114,8 +114,8 @@ class VehicleService(
 				} else {
 					log.info("Purging vehicle {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("{} vehicle was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge vehicle", err) }
+						.doOnNext { e -> log.info("Vehicle {} was deleted", e) }
+						.doOnError { err -> log.error("Failed to purge vehicle {}", it, err) }
 				}
 			}
 	}

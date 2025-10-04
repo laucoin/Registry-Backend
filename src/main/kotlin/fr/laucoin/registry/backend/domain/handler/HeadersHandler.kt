@@ -16,7 +16,7 @@ class HeadersHandler(
 	@param:Value("\${registry.information.locale.supported}")
 	private val supportedLocales: List<String>,
 ): WebFilter {
-	companion object {
+	private companion object {
 		fun headers(request: ServerHttpRequest): Map<String, String> = request.headers.toSingleValueMap()
 
 		fun extractLocaleOrDefault(headers: Map<String, String>, supportedLocales: List<String>): Locale {

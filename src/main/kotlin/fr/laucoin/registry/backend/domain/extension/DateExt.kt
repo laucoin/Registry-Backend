@@ -6,57 +6,41 @@ import java.time.OffsetTime
 import java.util.Objects
 
 object DateExt {
-	fun CustomDateTimeModel?.isBefore(other: CustomDateTimeModel?): Boolean {
+	fun CustomDateTimeModel?.asStartIsAfterOther(other: CustomDateTimeModel?): Boolean {
 		return when {
-			Objects.isNull(other) -> false
-			Objects.isNull(this) || this!!.date.isBefore(other!!.date) -> true
-			date.isEqual(other.date) -> {
-				val objectTime = time ?: OffsetTime.MIN
-				val otherTime = other.time ?: OffsetTime.MIN
-				objectTime!!.isBefore(otherTime)
-			}
+			Objects.isNull(other) -> Objects.nonNull(this)
+			Objects.isNull(this) -> false
+			this!!.date.isAfter(other!!.date) -> true
+			this.date.isEqual(other.date) -> this.time.asStartIsAfterOther(other.time)
 
 			else -> false
 		}
 	}
 
-	fun CustomDateTimeModel?.isAfter(other: CustomDateTimeModel?): Boolean {
+	private fun OffsetTime?.asStartIsAfterOther(other: OffsetTime?): Boolean {
 		return when {
-			Objects.isNull(other) -> false
-			Objects.isNull(this) || this!!.date.isAfter(other!!.date) -> true
-			date.isEqual(other.date) -> {
-				val objectTime = time ?: OffsetTime.MIN
-				val otherTime = other.time ?: OffsetTime.MIN
-				objectTime!!.isAfter(otherTime)
-			}
+			Objects.isNull(other) -> Objects.nonNull(this)
+			Objects.isNull(this) -> false
+			else -> this!!.isAfter(other)
+		}
+	}
+
+	fun CustomDateTimeModel?.asEndIsBeforeOther(other: CustomDateTimeModel?): Boolean {
+		return when {
+			Objects.isNull(other) -> Objects.nonNull(this)
+			Objects.isNull(this) -> false
+			this!!.date.isBefore(other!!.date) -> true
+			this.date.isEqual(other.date) -> this.time.asEndIsBeforeOther(other.time)
 
 			else -> false
 		}
 	}
 
-	fun CustomDateTimeModel?.isBeforeOrEqual(other: CustomDateTimeModel?): Boolean {
+	private fun OffsetTime?.asEndIsBeforeOther(other: OffsetTime?): Boolean {
 		return when {
-			Objects.isNull(this) || Objects.isNull(other) || this!!.date.isBefore(other!!.date) -> true
-			date.isEqual(other.date) -> {
-				val objectTime = time ?: OffsetTime.MIN
-				val otherTime = other.time ?: OffsetTime.MIN
-				objectTime!!.isBefore(otherTime) || objectTime === otherTime
-			}
-
-			else -> false
-		}
-	}
-
-	fun CustomDateTimeModel?.isEqualOrAfter(other: CustomDateTimeModel?): Boolean {
-		return when {
-			Objects.isNull(this) || Objects.isNull(other) || this!!.date.isAfter(other!!.date) -> true
-			date.isEqual(other.date) -> {
-				val objectTime = time ?: OffsetTime.MAX
-				val otherTime = other.time ?: OffsetTime.MAX
-				objectTime!!.isAfter(otherTime) || objectTime === otherTime
-			}
-
-			else -> false
+			Objects.isNull(other) -> Objects.nonNull(this)
+			Objects.isNull(this) -> false
+			else -> this!!.isBefore(other)
 		}
 	}
 
@@ -68,11 +52,23 @@ object DateExt {
 		} ?: false
 	}
 
-	private fun CustomDateTimeModel?.inRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {
-		return Objects.isNull(this) || (start.isBeforeOrEqual(this) && end.isEqualOrAfter(this))
-	}
+	fun CustomDateTimeModel?.isInRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {
+		val realStart = (start ?: CustomDateTimeModel.MIN)
+		if (Objects.isNull(realStart.time)) realStart.time = OffsetTime.MIN
+		val realEnd = (end ?: CustomDateTimeModel.MAX)
+		if (Objects.isNull(realEnd.time)) realEnd.time = OffsetTime.MAX
+		val realChallengerForStart = this ?: realStart
+		if (Objects.isNull(realChallengerForStart.time)) realChallengerForStart.time = realStart.time
+		val realChallengerForEnd = this ?: realEnd
+		if (Objects.isNull(realChallengerForEnd.time)) realChallengerForEnd.time = realEnd.time
 
-	fun CustomDateTimeModel?.notInRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {
-		return this.inRange(start, end).not()
+		val isEqualStart =
+			realStart.date.isEqual(realChallengerForStart.date) && realStart.time!!.isEqual(realChallengerForStart.time)
+		val isEqualEnd =
+			realEnd.date.isEqual(realChallengerForEnd.date) && realEnd.time!!.isEqual(realChallengerForEnd.time)
+		val isStrictlyInRange =
+			(realStart.asStartIsAfterOther(realChallengerForStart) || realEnd.asEndIsBeforeOther(realChallengerForEnd)).not()
+
+		return isEqualStart || isEqualEnd || isStrictlyInRange
 	}
 }

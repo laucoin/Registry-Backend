@@ -42,7 +42,7 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 	@Autowired
 	private lateinit var port: IProjectPort
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should validDateTime call repository validDateTime`(): Stream<Arguments> {
 			return Stream.of(

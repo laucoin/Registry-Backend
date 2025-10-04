@@ -53,7 +53,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 	@Autowired
 	private lateinit var repository: IParticipantPort
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> {
 			return Stream.of(

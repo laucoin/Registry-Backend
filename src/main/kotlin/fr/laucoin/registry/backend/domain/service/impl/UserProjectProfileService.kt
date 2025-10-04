@@ -50,13 +50,13 @@ class UserProjectProfileService(
 		error: String
 	): Mono<T> {
 		return port.findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
-			.filter { Objects.isNull(projectId) || it.project?.id == projectId }
+			.filter { Objects.isNull(projectId) || Objects.equals(it.project!!.id, projectId) }
 			.collectList()
 			.handle { it, handle ->
 				val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
 				if (projects.isNotEmpty()) {
 					log.warn("The user {} is the last administrator of {} project(s)", userId, it.size)
-					handle.error(RegistryException(CONFLICT, error, arrayListOf(projects.first().project?.name)))
+					handle.error(RegistryException(CONFLICT, error, arrayListOf(projects.first().project!!.name)))
 				} else handle.next(result)
 			}
 	}

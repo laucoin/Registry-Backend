@@ -44,7 +44,7 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 	@Autowired
 	private lateinit var repository: IActivityPort
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> {
 			return Stream.of(

@@ -39,7 +39,7 @@ class MovementReaderDtoMapperTest {
 			movementContentMapper
 		)
 
-	companion object {
+	private companion object {
 		@JvmStatic
 		fun `Should toDto convert MovementModel to MovementReaderDto`(): Stream<Arguments> {
 			return Stream.of(
