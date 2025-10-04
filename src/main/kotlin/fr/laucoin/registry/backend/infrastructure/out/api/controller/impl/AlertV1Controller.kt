@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IAlertService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IAlertController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IAlertV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.AlertCreationWriterDto
@@ -17,21 +17,19 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.Communic
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.AlertWriterDtoMapper
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
 @RestController
-class AlertController(
+class AlertV1Controller(
 	private val service: IAlertService,
 	private val readerMapper: AlertReaderDtoMapper,
 	private val communicationReaderMapper: CommunicationReaderDtoMapper,
 	private val writerMapper: AlertWriterDtoMapper,
 	private val creationWriterMapper: AlertCreationWriterDtoMapper,
-): IAlertController {
+): IAlertV1Controller {
 	override fun findAlerts(
-		locale: Locale,
 		projectId: UUID,
 		pageNumber: Int,
 		pageSize: Int,
@@ -41,30 +39,23 @@ class AlertController(
 		startDateTimeSearched: ZonedDateTime?,
 		endDateTimeSearched: ZonedDateTime?
 	): Mono<PageModel<AlertReaderDto>> {
-		return service.findAlertsPage(
-			projectId,
-			PageableModel(pageNumber * pageSize, pageSize),
-			AlertSearchParamModel(
-				textSearched,
-				visibilitySearched,
-				statusSearched,
-				startDateTimeSearched,
-				endDateTimeSearched
-			)
-		).map { readerMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = AlertSearchParamModel(
+			textSearched,
+			visibilitySearched,
+			statusSearched,
+			startDateTimeSearched,
+			endDateTimeSearched
+		)
+
+		return service.findAlertsPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
-	override fun findAlertById(
-		locale: Locale,
-		projectId: UUID,
-		id: UUID
-	): Mono<AlertReaderDto> {
-		return service.findAlertById(projectId, id, visibilitySearched = null)
-			.map { readerMapper.toDto(it, locale) }
+	override fun findAlertById(projectId: UUID, id: UUID): Mono<AlertReaderDto> {
+		return service.findAlertById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
 	override fun findAlertCommunications(
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		pageNumber: Int,
@@ -74,71 +65,64 @@ class AlertController(
 		startDateTimeSearched: ZonedDateTime?,
 		endDateTimeSearched: ZonedDateTime?
 	): Mono<PageModel<CommunicationReaderDto>> {
-		return service.findAlertCommunicationsPage(
-			projectId,
-			id,
-			PageableModel(pageNumber * pageSize, pageSize),
-			CommunicationSearchParamModel(textSearched, visibilitySearched, startDateTimeSearched, endDateTimeSearched),
-		).map { communicationReaderMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = CommunicationSearchParamModel(
+			textSearched, visibilitySearched, startDateTimeSearched, endDateTimeSearched
+		)
+
+		return service.findAlertCommunicationsPage(projectId, id, pageable, searchParams)
+			.map(communicationReaderMapper::toDtoPage)
 	}
 
 	override fun createAlert(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		alert: AlertCreationWriterDto
 	): Mono<AlertReaderDto> {
-		return service.createAlert(currentUser, creationWriterMapper.toModel(alert, projectId))
-			.map { readerMapper.toDto(it, locale) }
+		val alertModel = creationWriterMapper.toModel(alert, projectId)
+		return service.createAlert(currentUser, alertModel).map(readerMapper::toDto)
 	}
 
 	override fun updateAlertById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		alert: AlertWriterDto
 	): Mono<AlertReaderDto> {
-		return service.updateAlertById(currentUser, projectId, id, writerMapper.toModel(alert, projectId))
-			.map { readerMapper.toDto(it, locale) }
+		val alertModel = writerMapper.toModel(alert, projectId)
+		return service.updateAlertById(currentUser, projectId, id, alertModel).map(readerMapper::toDto)
 	}
 
 	override fun updateAlertStatusById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		status: AlertStatusEnum
 	): Mono<AlertReaderDto> {
-		return service.updateAlertStatusById(currentUser, projectId, id, status)
-			.map { readerMapper.toDto(it, locale) }
+		return service.updateAlertStatusById(currentUser, projectId, id, status).map(readerMapper::toDto)
 	}
 
 	override fun disableAlertById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertReaderDto> {
-		return service.disableAlertById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.disableAlertById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun enableAlertById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertReaderDto> {
-		return service.enableAlertById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.enableAlertById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun deleteAlertById(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID
-	): Mono<Void> {
+	): Mono<Unit> {
 		return service.deleteAlertById(currentUser, projectId, id)
 	}
 }

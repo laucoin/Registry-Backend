@@ -50,9 +50,9 @@ class CommunicationService(
 	private val port: ICommunicationPort,
 	private val movementPort: IMovementPort,
 	private val alertPort: IAlertPort,
-	@param:Value("\${registry.feature.communication.searched.max-activity-result}")
+	@param:Value($$"${registry.feature.communication.searched.max-activity-result}")
 	private val maxActivityResult: Int,
-	@param:Value("\${registry.feature.communication.searched.max-alert-result}")
+	@param:Value($$"${registry.feature.communication.searched.max-alert-result}")
 	private val maxAlertResult: Int,
 ): ICommunicationService, GenericService() {
 	override fun findCommunicationPage(
@@ -164,7 +164,7 @@ class CommunicationService(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID
-	): Mono<Void> {
+	): Mono<Unit> {
 		return findCommunicationById(projectId, id, visibilitySearched = null)
 			.flatMap { port.deleteById(it.id!!) }
 	}

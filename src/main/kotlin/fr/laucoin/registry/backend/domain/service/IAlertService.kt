@@ -40,6 +40,6 @@ interface IAlertService {
 
 	fun disableAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel>
 	fun enableAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel>
-	fun deleteAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+	fun deleteAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit>
 	fun purgeAlertsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

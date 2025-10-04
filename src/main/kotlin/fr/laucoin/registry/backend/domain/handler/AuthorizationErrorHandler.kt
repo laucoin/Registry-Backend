@@ -10,9 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TIT
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
-import java.util.Locale
 import org.springframework.context.annotation.Bean
-import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -45,7 +43,6 @@ class AuthorizationErrorHandler(
 					response,
 					exception.status,
 					exception.code,
-					LocaleContextHolder.getLocale()
 				)
 			)
 
@@ -54,7 +51,6 @@ class AuthorizationErrorHandler(
 					response,
 					UNAUTHORIZED,
 					INVALID_TOKEN,
-					LocaleContextHolder.getLocale()
 				)
 			)
 
@@ -63,7 +59,6 @@ class AuthorizationErrorHandler(
 					response,
 					INTERNAL_SERVER_ERROR,
 					FAILED_TO_LOGIN_FOR_UNKNOWN_REASON,
-					LocaleContextHolder.getLocale()
 				)
 			)
 		}
@@ -72,20 +67,19 @@ class AuthorizationErrorHandler(
 	@Bean
 	fun unauthorizedHandler(): ServerAuthenticationEntryPoint = ServerAuthenticationEntryPoint { exchange, _ ->
 		val response = exchange.response
-		response.writeWith(buildBody(response, UNAUTHORIZED, NOT_AUTHENTICATED, LocaleContextHolder.getLocale()))
+		response.writeWith(buildBody(response, UNAUTHORIZED, NOT_AUTHENTICATED))
 	}
 
 	@Bean
 	fun accessDeniedHandler(): ServerAccessDeniedHandler = ServerAccessDeniedHandler { exchange, _ ->
 		val response = exchange.response
-		response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION, LocaleContextHolder.getLocale()))
+		response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION))
 	}
 
 	private fun buildBody(
 		response: ServerHttpResponse,
 		status: HttpStatus,
 		errorCode: String,
-		locale: Locale,
 	): Mono<DataBuffer> {
 		response.statusCode = status
 		response.headers.contentType = APPLICATION_JSON
@@ -94,8 +88,8 @@ class AuthorizationErrorHandler(
 			statusCode = status.value(),
 			statusName = status.name,
 			code = errorCode,
-			title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}", locale = locale),
-			message = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$errorCode", locale = locale),
+			title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}"),
+			message = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$errorCode"),
 		)
 
 		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))

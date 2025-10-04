@@ -21,7 +21,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
 ### Properties
 
 * **Name**\
-  The name is the human identifier for the Activity. It must not be unique but it's recommended to create the most explicit name.
+  The name is the human identifier for the Activity. It must not be unique but it's recommended to create the most
+  explicit name.
 * **Estimated Duration**\
   Indicative information about activity (Example: 2-3 hours)
 * **Required communication time**\
@@ -49,7 +50,8 @@ If the Event has the Activity Option.
 * I can delete an Activity
 
 {% hint style="info" %}
-Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to this context.
+Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to
+this context.
 {% endhint %}
 
 ## Constraints

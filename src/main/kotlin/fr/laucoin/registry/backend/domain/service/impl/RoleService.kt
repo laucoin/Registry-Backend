@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service
 @Service
 class RoleService(
 	private val port: IRolePort,
-	@param:Value("\${registry.security.default-role}")
+	@param:Value($$"${registry.security.default-role}")
 	private val defaultUserRole: String,
 ): ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
 	private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -55,7 +55,7 @@ class RoleService(
 		return if (!userRoles.containsKey(role)) {
 			log.warn("User role \"{}\" not found in \"{}\"", role, userRoles.keys)
 			emptyList()
-		} else userRoles[role]!!.second
+		} else userRoles[role]?.second ?: emptyList()
 	}
 
 	override fun getAuthoritiesByProjectRole(role: String, projectId: UUID, visibility: Boolean?): List<String> {

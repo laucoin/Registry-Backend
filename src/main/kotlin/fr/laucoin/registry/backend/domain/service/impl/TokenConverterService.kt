@@ -29,13 +29,13 @@ class TokenConverterService(
 	private val userService: IUserService,
 	private val profilePort: IProjectProfilePort,
 	private val roleService: IRoleService,
-	@param:Value("\${registry.security.oauth2.claims.user-id}")
+	@param:Value($$"${registry.security.oauth2.claims.user-id}")
 	private val userIdKey: String,
-	@param:Value("\${registry.security.oauth2.claims.email}")
+	@param:Value($$"${registry.security.oauth2.claims.email}")
 	private val emailKey: String,
-	@param:Value("\${registry.security.oauth2.claims.first-name}")
+	@param:Value($$"${registry.security.oauth2.claims.first-name}")
 	private val firstNameKey: String,
-	@param:Value("\${registry.security.oauth2.claims.last-name}")
+	@param:Value($$"${registry.security.oauth2.claims.last-name}")
 	private val lastNameKey: String,
 ): Converter<Jwt, Mono<AbstractAuthenticationToken>>, LoggerService() {
 

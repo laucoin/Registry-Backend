@@ -5,10 +5,8 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
 import java.util.UUID
-import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -17,18 +15,11 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
 @Tag(name = "User's Preferences management", description = "API for User's Preferences-related operations")
-@RequestMapping("/api/users/preferences")
-interface IPreferencesController {
+@RequestMapping("/api/v1/users/preferences")
+interface IPreferencesV1Controller {
 	@Operation(
 		summary = "Save theme",
 		description = "Save theme preferences for other devices",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PostMapping("/theme")
 	fun updateTheme(
@@ -39,13 +30,6 @@ interface IPreferencesController {
 	@Operation(
 		summary = "Save language",
 		description = "Save language preferences for other devices",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PostMapping("/language")
 	fun updateLanguage(
@@ -57,13 +41,6 @@ interface IPreferencesController {
 	@Operation(
 		summary = "Change Default Profile",
 		description = "Changes the Project on which default operations are performed by changing Profile.",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PostMapping("/profile/select")
 	fun updateSelectedProjectProfile(
@@ -74,13 +51,6 @@ interface IPreferencesController {
 	@Operation(
 		summary = "Change Default Profile by Project id",
 		description = "Changes the Project on which default operations are performed by changing Profile.",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PostMapping("/projects/{projectId}/profile/select")
 	fun updateSelectedProjectProfileWithProjectId(

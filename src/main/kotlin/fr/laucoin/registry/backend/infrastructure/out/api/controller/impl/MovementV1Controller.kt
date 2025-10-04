@@ -13,7 +13,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.domain.service.IMovementService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IMovementController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IMovementV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
@@ -33,7 +33,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.GuestMov
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.GuestWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ParticipantMovementWriterDtoMapper
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import org.apache.commons.text.similarity.JaroWinklerSimilarity
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -42,7 +41,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
-class MovementController(
+class MovementV1Controller(
 	private val service: IMovementService,
 	private val readerMapper: MovementReaderDtoMapper,
 	private val readerContentMapper: MovementContentReaderDtoMapper,
@@ -54,12 +53,11 @@ class MovementController(
 	private val writerMapper: ParticipantMovementWriterDtoMapper,
 	private val guestMovementWriterMapper: GuestMovementWriterDtoMapper,
 	private val guestWriterMapper: GuestWriterDtoMapper,
-): IMovementController {
+): IMovementV1Controller {
 	private val similarity: JaroWinklerSimilarity = JaroWinklerSimilarity()
 
 	override fun findMovements(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		pageNumber: Int,
 		pageSize: Int,
@@ -71,104 +69,83 @@ class MovementController(
 		endDateTimeSearched: ZonedDateTime?
 	): Mono<PageModel<MovementReaderDto>> {
 		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
-			throw RegistryException(
-				status = FORBIDDEN,
-				code = NOT_ENOUGH_PERMISSION,
-			)
+			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
-		return (if (currentMovements) {
-			service.findCurrentMovementsPage(
-				projectId,
-				PageableModel(pageNumber * pageSize, pageSize),
-				MovementSearchParamModel(
-					visibilitySearched,
-					linkedToActivity,
-					typeSearched,
-					startDateTimeSearched,
-					endDateTimeSearched
-				)
-			)
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = MovementSearchParamModel(
+			visibilitySearched,
+			linkedToActivity,
+			typeSearched,
+			startDateTimeSearched,
+			endDateTimeSearched
+		)
+
+		val movements = if (currentMovements) {
+			service.findCurrentMovementsPage(projectId, pageable, searchParams)
 		} else {
-			service.findMovementsPage(
-				projectId,
-				PageableModel(pageNumber * pageSize, pageSize),
-				MovementSearchParamModel(
-					visibilitySearched,
-					linkedToActivity,
-					typeSearched,
-					startDateTimeSearched,
-					endDateTimeSearched
-				)
-			)
-		}).map { readerMapper.toDtoPage(it, locale) }
+			service.findMovementsPage(projectId, pageable, searchParams)
+		}
+
+		return movements.map(readerMapper::toDtoPage)
 	}
 
 	override fun findMovementsContents(
-		locale: Locale,
 		projectId: UUID,
 		movementIds: List<UUID>,
 		currentMovements: Boolean,
 	): Flux<Pair<UUID, List<MovementContentReaderDto>>> {
-		return (if (currentMovements) {
+		val contents = if (currentMovements) {
 			service.findCurrentMovementsContent(projectId, movementIds)
 		} else {
 			service.findMovementsContent(projectId, movementIds)
-		}).map { Pair(it.first, it.second.map { content -> readerContentMapper.toDto(content, locale) }) }
+		}
+
+		return contents.map { Pair(it.first, it.second.map(readerContentMapper::toDto)) }
 	}
 
-	override fun findMovementById(locale: Locale, projectId: UUID, id: UUID): Mono<MovementReaderDto> {
-		return service.findMovementById(projectId, id, visibilitySearched = null)
-			.map { readerMapper.toDto(it, locale) }
+	override fun findMovementById(projectId: UUID, id: UUID): Mono<MovementReaderDto> {
+		return service.findMovementById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
 	override fun searchReasonsAndActivities(
-		locale: Locale,
 		projectId: UUID,
 		typeSearched: MovementTypeEnum,
 		contentTypeSearched: ParticipantTypeEnum,
 		textSearched: String?,
 	): Flux<MovementReasonsReaderDto> {
 		return service.searchActivitiesByText(projectId, contentTypeSearched, textSearched)
-			.map { activityReasonReaderMapper.toDto(it, locale) }
-			.mergeWith(searchReasons(locale, textSearched, typeSearched, contentTypeSearched))
+			.map(activityReasonReaderMapper::toDto)
+			.mergeWith(searchReasons(textSearched, typeSearched, contentTypeSearched))
 	}
 
 	private fun searchReasons(
-		locale: Locale,
 		textSearched: String?,
 		typeSearched: MovementTypeEnum,
 		contentTypeSearched: ParticipantTypeEnum,
 	): Flux<MovementReasonsReaderDto> {
 		return service.searchReasonsByText(contentTypeSearched, typeSearched)
-			.map { reasonReaderMapper.toDto(it, locale) }
+			.map(reasonReaderMapper::toDto)
 			.map { Pair(it, similarity.apply(it.label, textSearched ?: it.label)) }
 			.filter { it.second > 0 }
-			.map { it.first }
+			.map(Pair<MovementReasonsReaderDto, Double>::first)
 	}
 
 	override fun searchParticipantsAndGroups(
-		locale: Locale,
 		projectId: UUID,
 		contentTypeSearched: ParticipantTypeEnum,
 		textSearched: String?
 	): Mono<MovementParticipantsAndGroupsReaderDto> {
 		return service.searchParticipantsAndGroupsByText(projectId, contentTypeSearched, textSearched)
 			.map { Pair(it.t1, it.t2) }
-			.map { movementParticipantsAndGroupsMapper.toDto(it, locale) }
+			.map(movementParticipantsAndGroupsMapper::toDto)
 	}
 
-	override fun searchVehicles(
-		locale: Locale,
-		projectId: UUID,
-		textSearched: String?
-	): Flux<VehicleReaderDto> {
-		return service.searchVehiclesByText(projectId, textSearched)
-			.map { vehiclesMapper.toDto(it, locale) }
+	override fun searchVehicles(projectId: UUID, textSearched: String?): Flux<VehicleReaderDto> {
+		return service.searchVehiclesByText(projectId, textSearched).map(vehiclesMapper::toDto)
 	}
 
 	override fun findMovementCommunications(
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		pageNumber: Int,
@@ -178,17 +155,13 @@ class MovementController(
 		startDateTimeSearched: ZonedDateTime?,
 		endDateTimeSearched: ZonedDateTime?
 	): Mono<PageModel<CommunicationReaderDto>> {
-		return service.findMovementCommunicationsPage(
-			projectId,
-			id,
-			PageableModel(pageNumber * pageSize, pageSize),
-			CommunicationSearchParamModel(
-				textSearched,
-				visibilitySearched,
-				startDateTimeSearched,
-				endDateTimeSearched
-			)
-		).map { communicationReaderMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber, pageSize)
+		val searchParams = CommunicationSearchParamModel(
+			textSearched, visibilitySearched, startDateTimeSearched, endDateTimeSearched
+		)
+
+		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
+			.map(communicationReaderMapper::toDtoPage)
 	}
 
 	override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel> {
@@ -201,75 +174,62 @@ class MovementController(
 
 	override fun createMovement(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		movement: ParticipantMovementWriterDto,
 	): Mono<MovementReaderDto> {
-		return service.createMovement(currentUser, writerMapper.toModel(movement, projectId))
-			.map { readerMapper.toDto(it, locale) }
+		return service.createMovement(currentUser, writerMapper.toModel(movement, projectId)).map(readerMapper::toDto)
 	}
 
 	override fun updateMovementById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		movement: ParticipantMovementWriterDto
 	): Mono<MovementReaderDto> {
-		return service.updateMovementById(currentUser, projectId, id, writerMapper.toModel(movement, projectId))
-			.map { readerMapper.toDto(it, locale) }
+		val movementModel = writerMapper.toModel(movement, projectId)
+		return service.updateMovementById(currentUser, projectId, id, movementModel).map(readerMapper::toDto)
 	}
 
 	override fun createGuestsMovement(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		movement: GuestMovementWriterDto
 	): Mono<MovementReaderDto> {
-		return service.createMovement(
-			currentUser,
-			guestMovementWriterMapper.toModel(movement, projectId),
-			guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId),
-		).map { readerMapper.toDto(it, locale) }
+		val movementModel = guestMovementWriterMapper.toModel(movement, projectId)
+		val newGuestModels = guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId)
+		return service.createMovement(currentUser, movementModel, newGuestModels).map(readerMapper::toDto)
 	}
 
 	override fun updateGuestsMovementById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		movement: GuestMovementWriterDto
 	): Mono<MovementReaderDto> {
-		return service.updateMovementById(
-			currentUser,
-			projectId,
-			id,
-			guestMovementWriterMapper.toModel(movement, projectId),
-			guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId),
-		).map { readerMapper.toDto(it, locale) }
+		val movementModel = guestMovementWriterMapper.toModel(movement, projectId)
+		val newGuestModels = guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId)
+
+		return service.updateMovementById(currentUser, projectId, id, movementModel, newGuestModels)
+			.map(readerMapper::toDto)
 	}
 
 	override fun disableMovementById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID
 	): Mono<MovementReaderDto> {
-		return service.disableMovementById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.disableMovementById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun enableMovementById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID
 	): Mono<MovementReaderDto> {
-		return service.enableMovementById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.enableMovementById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
-	override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Unit> {
 		return service.deleteMovementById(projectId, id)
 	}
 }

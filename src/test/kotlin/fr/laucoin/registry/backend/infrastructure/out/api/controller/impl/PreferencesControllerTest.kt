@@ -26,7 +26,7 @@ class PreferencesControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/users/preferences"
+		private const val BASE_URL = "/api/v1/users/preferences"
 	}
 
 	@Test

@@ -4,15 +4,15 @@ import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IPreferencesController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IPreferencesV1Controller
 import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
 @RestController
-class PreferencesController(
+class PreferencesV1Controller(
 	private val service: IPreferencesService,
-): IPreferencesController {
+): IPreferencesV1Controller {
 	override fun updateTheme(
 		currentUser: CurrentUserModel,
 		theme: ThemeEnum

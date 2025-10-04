@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IProjectProfileController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IProjectProfileV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CreatedProjectProfilesReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
@@ -20,7 +20,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectP
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ProjectProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ProjectProfilesWriterDtoMapper
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
@@ -38,9 +37,8 @@ class ProjectProfileController(
 	private val createdProjectProfilesReaderMapper: CreatedProjectProfilesReaderDtoMapper,
 	private val writerMapper: ProjectProfileWriterDtoMapper,
 	private val profilesWriterMapper: ProjectProfilesWriterDtoMapper,
-): IProjectProfileController {
+): IProjectProfileV1Controller {
 	override fun findProjectProfiles(
-		locale: Locale,
 		projectId: UUID,
 		pageNumber: Int,
 		pageSize: Int,
@@ -49,85 +47,68 @@ class ProjectProfileController(
 		statusSearched: ProfileStatusEnum?,
 		dateTimeSearched: ZonedDateTime?
 	): Mono<PageModel<ProjectProfileReaderDto>> {
-		return service.findProjectProfilesPage(
-			projectId,
-			PageableModel(pageNumber * pageSize, pageSize),
-			ProjectProfileSearchParamModel(
-				textSearched,
-				availabilitySearched,
-				statusSearched,
-				dateTimeSearched
-			),
-		).map { readerMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = ProjectProfileSearchParamModel(
+			textSearched, availabilitySearched, statusSearched, dateTimeSearched
+		)
+
+		return service.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
-	override fun findProjectProfileById(locale: Locale, projectId: UUID, id: UUID): Mono<ProjectProfileReaderDto> {
-		return service.findProjectProfileById(projectId, id, visibilitySearched = null)
-			.map { readerMapper.toDto(it, locale) }
+	override fun findProjectProfileById(projectId: UUID, id: UUID): Mono<ProjectProfileReaderDto> {
+		return service.findProjectProfileById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
-	override fun searchUsers(locale: Locale, projectId: UUID, textSearched: String?): Flux<PartialUserReaderDto> {
-		return service.searchUsers(textSearched)
-			.map { partialUserReaderMapper.toDto(it, locale) }
+	override fun searchUsers(projectId: UUID, textSearched: String?): Flux<PartialUserReaderDto> {
+		return service.searchUsers(textSearched).map(partialUserReaderMapper::toDto)
 	}
 
-	override fun getAssignableProjectProfileRoles(
-		currentUser: CurrentUserModel,
-		locale: Locale,
-		projectId: UUID
-	): Flux<LabelDto> {
-		return service.getAssignableProjectRoles(currentUser, projectId)
-			.map { projectProfileRoleReaderMapper.toDto(it, locale) }
+	override fun getAssignableProjectProfileRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<LabelDto> {
+		return service.getAssignableProjectRoles(currentUser, projectId).map(projectProfileRoleReaderMapper::toDto)
 	}
 
 	override fun createProjectProfiles(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		profiles: ProjectProfilesWriterDto
 	): Mono<ResponseEntity<CreatedProjectProfilesReaderDto>> {
-		return service.createProjectProfiles(
-			currentUser,
-			projectId,
-			profiles.userIds!!,
-			profilesWriterMapper.toModels(profiles, projectId)
-		)
-			.map { createdProjectProfilesReaderMapper.toDto(it, locale) }
-			.map { ResponseEntity.status(if (it.notCreatedUserIds.isEmpty()) OK else MULTI_STATUS).body(it) }
+		val profileModels = profilesWriterMapper.toModels(profiles, projectId)
+
+		return service.createProjectProfiles(currentUser, projectId, profiles.userIds!!, profileModels)
+			.map(createdProjectProfilesReaderMapper::toDto)
+			.map {
+				val status = if (it.notCreatedUserIds.isEmpty()) OK else MULTI_STATUS
+				ResponseEntity.status(status).body(it)
+			}
 	}
 
 	override fun updateProjectProfile(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		profile: ProjectProfileWriterDto,
 	): Mono<ProjectProfileReaderDto> {
-		return service.updateProjectProfileById(currentUser, projectId, id, writerMapper.toModel(profile, projectId))
-			.map { readerMapper.toDto(it, locale) }
+		val profileModel = writerMapper.toModel(profile, projectId)
+		return service.updateProjectProfileById(currentUser, projectId, id, profileModel).map(readerMapper::toDto)
 	}
 
 	override fun blockProjectProfileById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 	): Mono<ProjectProfileReaderDto> {
-		return service.blockProjectProfileById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.blockProjectProfileById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun unblockProjectProfileById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 	): Mono<ProjectProfileReaderDto> {
-		return service.unblockProjectProfileById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.unblockProjectProfileById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
-	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return service.deleteProjectProfileById(currentUser, projectId, id)
 	}
 }

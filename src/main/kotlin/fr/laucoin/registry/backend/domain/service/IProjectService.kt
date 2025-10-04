@@ -34,6 +34,6 @@ interface IProjectService {
 	fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel>
 	fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
 	fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
-	fun deleteProjectById(id: UUID): Mono<Void>
+	fun deleteProjectById(id: UUID): Mono<Unit>
 	fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

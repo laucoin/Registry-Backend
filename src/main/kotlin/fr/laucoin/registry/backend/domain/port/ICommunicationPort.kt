@@ -55,5 +55,5 @@ interface ICommunicationPort {
 
 	fun create(element: CommunicationModel): Mono<CommunicationModel>
 	fun update(element: CommunicationModel): Mono<CommunicationModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

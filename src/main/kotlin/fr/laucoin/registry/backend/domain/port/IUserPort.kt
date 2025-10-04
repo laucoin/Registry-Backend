@@ -21,5 +21,5 @@ interface IUserPort {
 	fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: UserModel): Mono<UserModel>
 	fun update(element: UserModel): Mono<UserModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

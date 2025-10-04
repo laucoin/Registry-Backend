@@ -45,7 +45,6 @@ import java.time.LocalDate
 import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
@@ -84,8 +83,7 @@ class ActivityControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects/{projectId}/activities"
-		private val locale = Locale.ENGLISH
+		private const val BASE_URL = "/api/v1/projects/{projectId}/activities"
 
 		@JvmStatic
 		fun `Should findActivities prepare param, call service and finally cast the result`(): Stream<Arguments> {
@@ -278,7 +276,7 @@ class ActivityControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ActivityModel()))
 		whenever(service.findActivitiesPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ActivityReaderDto())),
 		)
 
@@ -307,7 +305,7 @@ class ActivityControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findActivitiesPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page, locale)
+		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -358,7 +356,7 @@ class ActivityControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.findActivityById(any(), any(), anyOrNull())).thenReturn(Mono.just(ActivityModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ActivityReaderDto())
 
 		// Act
 		val result = webClient
@@ -371,7 +369,7 @@ class ActivityControllerTest: TestContext() {
 		result.body<ActivityReaderDto>(OK)
 
 		verify(service).findActivityById(projectId, uuid, visibilitySearched = null)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(movementReaderMapper)
 	}
@@ -404,7 +402,7 @@ class ActivityControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
 		whenever(service.findActivityMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(movementReaderMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(movementReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
 
@@ -435,7 +433,7 @@ class ActivityControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findActivityMovementsPage(projectId, uuid, pageable, searchParams)
-		verify(movementReaderMapper).toDtoPage(page, locale)
+		verify(movementReaderMapper).toDtoPage(page)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -484,7 +482,7 @@ class ActivityControllerTest: TestContext() {
 		val activity = ActivityWriterDto(name = "Activity 1")
 
 		whenever(service.createActivity(any(), any())).thenReturn(Mono.just(ActivityModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ActivityReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ActivityModel())
 
 		// Act
@@ -499,7 +497,7 @@ class ActivityControllerTest: TestContext() {
 		result.body<ActivityReaderDto>(OK)
 
 		verify(service).createActivity(any(), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(activity, projectId)
 		verifyNoInteractions(movementReaderMapper)
 	}
@@ -535,7 +533,7 @@ class ActivityControllerTest: TestContext() {
 		val activity = ActivityWriterDto(name = "Activity 1")
 
 		whenever(service.updateActivityById(any(), any(), any(), any())).thenReturn(Mono.just(ActivityModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ActivityReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ActivityModel())
 
 		// Act
@@ -550,7 +548,7 @@ class ActivityControllerTest: TestContext() {
 		result.body<ActivityReaderDto>(OK)
 
 		verify(service).updateActivityById(any(), eq(projectId), eq(uuid), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verify(writerMapper).toModel(activity, projectId)
 	}
@@ -587,7 +585,7 @@ class ActivityControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.disableActivityById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ActivityModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ActivityReaderDto())
 
 		// Act
 		val result = webClient
@@ -600,7 +598,7 @@ class ActivityControllerTest: TestContext() {
 		result.body<ActivityReaderDto>(OK)
 
 		verify(service).disableActivityById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -611,7 +609,7 @@ class ActivityControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.enableActivityById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ActivityModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ActivityReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ActivityReaderDto())
 
 		// Act
 		val result = webClient
@@ -624,7 +622,7 @@ class ActivityControllerTest: TestContext() {
 		result.body<ActivityReaderDto>(OK)
 
 		verify(service).enableActivityById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}

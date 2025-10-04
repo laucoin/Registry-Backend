@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.Objects
 import org.springframework.stereotype.Component
 
@@ -21,26 +20,22 @@ import org.springframework.stereotype.Component
 class PresenceStatusReaderDtoMapper(
 	private val translateService: ITranslateService,
 ): GenericDurationReaderDtoMapper(translateService) {
-	fun toDto(
-		model: PresenceStatusEnum,
-		locale: Locale,
-	): LabelDto {
+	fun toDto(model: PresenceStatusEnum): LabelDto {
 		return LabelDto(
 			model.name,
-			translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model", locale = locale),
+			translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model"),
 		)
 	}
 
 	fun toDto(
 		model: PresenceStatusEnum,
-		locale: Locale,
 		lastMovement: ZonedDateTime?,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): LabelDto {
 		return LabelDto(
 			model.name,
-			extractLabelDuration(model, lastMovement, startAvailability, endAvailability, locale),
+			extractLabelDuration(model, lastMovement, startAvailability, endAvailability),
 		)
 	}
 
@@ -49,7 +44,6 @@ class PresenceStatusReaderDtoMapper(
 		lastMovement: ZonedDateTime?,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
-		locale: Locale
 	): String {
 		val now = CustomDateTimeModel.now()
 		return when {
@@ -58,8 +52,7 @@ class PresenceStatusReaderDtoMapper(
 
 				translateService.getMessage(
 					code = "$PRESENCE_STATUS_DURATION_PREFIX$model",
-					args = arrayOf(formatDuration(interval, locale)),
-					locale = locale,
+					args = arrayOf(formatDuration(interval)),
 				)
 			}
 
@@ -73,8 +66,7 @@ class PresenceStatusReaderDtoMapper(
 
 				translateService.getMessage(
 					code = "${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE",
-					args = arrayOf(formatDuration(interval, locale)),
-					locale = locale,
+					args = arrayOf(formatDuration(interval)),
 				)
 			}
 
@@ -87,19 +79,15 @@ class PresenceStatusReaderDtoMapper(
 
 				translateService.getMessage(
 					code = "${PRESENCE_STATUS_DURATION_PREFIX}LEFT",
-					args = arrayOf(formatDuration(interval, locale)),
-					locale = locale,
+					args = arrayOf(formatDuration(interval)),
 				)
 			}
 
 			Objects.isNull(lastMovement) -> {
-				translateService.getMessage(
-					code = "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET",
-					locale = locale
-				)
+				translateService.getMessage(code = "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET")
 			}
 
-			else -> translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model", locale = locale)
+			else -> translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model")
 		}
 	}
 }

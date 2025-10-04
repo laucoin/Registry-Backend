@@ -50,7 +50,6 @@ import java.time.LocalDate
 import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Test
@@ -95,7 +94,7 @@ class ParticipantControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects/{projectId}/participants"
+		private const val BASE_URL = "/api/v1/projects/{projectId}/participants"
 
 		@JvmStatic
 		fun `Should findParticipants return 200`(): Stream<Arguments> = Stream.of(
@@ -215,7 +214,7 @@ class ParticipantControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
 		whenever(service.findParticipantsPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ParticipantReaderDto())),
 		)
 
@@ -244,7 +243,7 @@ class ParticipantControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findParticipantsPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page, Locale.ENGLISH)
+		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -288,7 +287,7 @@ class ParticipantControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.findParticipantById(any(), any(), anyOrNull())).thenReturn(Mono.just(ParticipantModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
 		val result = webClient
@@ -300,7 +299,7 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.body<ParticipantReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -335,7 +334,7 @@ class ParticipantControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
 		whenever(service.findParticipantMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(movementReaderMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(movementReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
 
@@ -363,7 +362,7 @@ class ParticipantControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findParticipantMovementsPage(projectId, uuid, pageable, searchParams)
-		verify(movementReaderMapper).toDtoPage(page, Locale.ENGLISH)
+		verify(movementReaderMapper).toDtoPage(page)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
@@ -413,7 +412,7 @@ class ParticipantControllerTest: TestContext() {
 		val searched = "John"
 		val user = UserModel()
 		whenever(service.searchUsersByText(any(), anyOrNull())).thenReturn(Flux.just(user))
-		whenever(partialUserReaderMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
+		whenever(partialUserReaderMapper.toDto(any())).thenReturn(PartialUserReaderDto())
 
 		// Act
 		val result = webClient
@@ -430,7 +429,7 @@ class ParticipantControllerTest: TestContext() {
 		verify(service).searchUsersByText(projectId, searched)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(groupReaderMapper)
-		verify(partialUserReaderMapper).toDto(any(), any())
+		verify(partialUserReaderMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -440,7 +439,7 @@ class ParticipantControllerTest: TestContext() {
 		val searched = "Group"
 		val group = GroupModel()
 		whenever(service.searchGroupsByText(any(), anyOrNull())).thenReturn(Flux.just(group))
-		whenever(groupReaderMapper.toDto(any(), any())).thenReturn(GroupReaderDto())
+		whenever(groupReaderMapper.toDto(any())).thenReturn(GroupReaderDto())
 
 		// Act
 		val result = webClient
@@ -456,7 +455,7 @@ class ParticipantControllerTest: TestContext() {
 
 		verify(service).searchGroupsByText(projectId, searched)
 		verifyNoInteractions(readerMapper)
-		verify(groupReaderMapper).toDto(any(), any())
+		verify(groupReaderMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -467,7 +466,7 @@ class ParticipantControllerTest: TestContext() {
 		val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
 		whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
 		val result = webClient
@@ -480,7 +479,7 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.body<ParticipantReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verify(writerMapper).toModel(participant, projectId)
 		verify(service).createParticipant(any(), any())
@@ -498,7 +497,7 @@ class ParticipantControllerTest: TestContext() {
 		)
 		whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
 		val result = webClient
@@ -511,7 +510,7 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.body<ParticipantReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verify(writerMapper).toModel(participant, projectId)
 		verify(service).createParticipant(any(), any())
@@ -550,7 +549,7 @@ class ParticipantControllerTest: TestContext() {
 
 		whenever(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
 		val result = webClient
@@ -563,7 +562,7 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.body<ParticipantReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verify(writerMapper).toModel(participant, projectId)
 		verify(service).updateParticipantById(any(), eq(projectId), eq(uuid), any())
@@ -608,7 +607,7 @@ class ParticipantControllerTest: TestContext() {
 				eq(uuid)
 			)
 		).thenReturn(Mono.just(ParticipantModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
 		val result = webClient
@@ -620,7 +619,7 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.body<ParticipantReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verify(service).disableParticipantById(any(), eq(projectId), eq(uuid))
@@ -638,7 +637,7 @@ class ParticipantControllerTest: TestContext() {
 				eq(uuid)
 			)
 		).thenReturn(Mono.just(ParticipantModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
 		val result = webClient
@@ -650,7 +649,7 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.body<ParticipantReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verify(service).enableParticipantById(any(), eq(projectId), eq(uuid))

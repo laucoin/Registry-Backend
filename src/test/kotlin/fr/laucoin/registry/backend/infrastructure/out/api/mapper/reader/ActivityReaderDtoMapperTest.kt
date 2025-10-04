@@ -11,7 +11,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.activityId
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.time.Duration
@@ -76,8 +75,8 @@ class ActivityReaderDtoMapperTest {
 
 	@BeforeEach
 	fun setup() {
-		whenever(availabilityMapper.toDto(any(), any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
-		whenever(projectMapper.toDto(any(), any())).thenReturn(dtoProject)
+		whenever(availabilityMapper.toDto(any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(projectMapper.toDto(any())).thenReturn(dtoProject)
 	}
 
 	@ParameterizedTest
@@ -89,15 +88,15 @@ class ActivityReaderDtoMapperTest {
 		expectedProjectCast: Int,
 	) {
 		// Act
-		val result = mapper.toDto(model, Locale.getDefault())
+		val result = mapper.toDto(model)
 
 		// Assert
 		assertEquals(dto, result)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
 
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -113,15 +112,15 @@ class ActivityReaderDtoMapperTest {
 		val dtos = listOf(dto)
 
 		// Act
-		val result = mapper.toDtoList(models, Locale.getDefault())
+		val result = mapper.toDtoList(models)
 
 		// Assert
 		assertEquals(dtos, result)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
 
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -150,14 +149,14 @@ class ActivityReaderDtoMapperTest {
 		)
 
 		// Act
-		val result = mapper.toDtoPage(modelPage, Locale.getDefault())
+		val result = mapper.toDtoPage(modelPage)
 
 		// Assert
 		assertEquals(dtoPage, result)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
 
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 }

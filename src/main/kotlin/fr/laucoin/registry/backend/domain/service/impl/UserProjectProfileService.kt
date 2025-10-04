@@ -132,7 +132,7 @@ class UserProjectProfileService(
 			.`as`(transactionalOperator::transactional)
 	}
 
-	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {
+	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
 			.flatMap {
 				validateNotLastProjectRoleLevel0(

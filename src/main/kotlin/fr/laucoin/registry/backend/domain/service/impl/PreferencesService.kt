@@ -22,7 +22,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 class PreferencesService(
 	private val port: IPreferencesPort,
 	private val projectProfilePort: IProjectProfilePort,
-	@param:Value("\${registry.information.locale.supported}")
+	@param:Value($$"${registry.information.locale.supported}")
 	private val supportedLocales: List<String>,
 ): IPreferencesService, GenericService() {
 	private companion object {

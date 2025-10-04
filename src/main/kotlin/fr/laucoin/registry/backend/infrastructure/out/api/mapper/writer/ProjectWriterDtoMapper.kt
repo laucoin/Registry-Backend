@@ -12,8 +12,8 @@ class ProjectWriterDtoMapper(
 	override fun toModel(dto: ProjectWriterDto): ProjectModel {
 		return ProjectModel().apply {
 			name = dto.name
-			begin = Optional.ofNullable(dto.begin).map { customDateTimeMapper.toModel(it) }.orElse(null)
-			end = Optional.ofNullable(dto.end).map { customDateTimeMapper.toModel(it) }.orElse(null)
+			begin = Optional.ofNullable(dto.begin).map(customDateTimeMapper::toModel).orElse(null)
+			end = Optional.ofNullable(dto.end).map(customDateTimeMapper::toModel).orElse(null)
 			options = dto.options
 		}
 	}

@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import java.util.Locale
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -24,18 +23,17 @@ class ProjectOptionReaderDtoMapperTest {
 		// Arrange
 		val option: ProjectOptionEnum = COMMUNICATION
 		val label = "translated"
-		whenever(translateService.getMessage(any(), any(), anyOrNull(), anyOrNull())).thenReturn(label)
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn(label)
 
 		// Act
-		val result = mapper.toDto(option, Locale.getDefault())
+		val result = mapper.toDto(option)
 
 		// Assert
-		verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$COMMUNICATION", Locale.getDefault())
+		verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$COMMUNICATION")
 		verify(translateService).getMessage(
 			"${PROJECT_OPTION_FORM_ASK_PREFIX}$COMMUNICATION",
-			Locale.getDefault()
 		)
-		verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$ACTIVITY", Locale.getDefault())
+		verify(translateService).getMessage("${PROJECT_OPTION_NAME_PREFIX}$ACTIVITY")
 
 		assertEquals(option, result.value)
 		assertEquals(label, result.label)

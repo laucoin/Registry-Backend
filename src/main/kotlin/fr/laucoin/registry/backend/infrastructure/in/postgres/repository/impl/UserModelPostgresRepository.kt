@@ -74,10 +74,19 @@ class UserModelPostgresRepository(
 		return repository.findUserIdsOlderThanLastLogin(dateThreshold)
 	}
 
-	override fun create(element: UserModel): Mono<UserModel> = save(element)
-	override fun update(element: UserModel): Mono<UserModel> = save(element)
-	private fun save(element: UserModel): Mono<UserModel> =
-		repository.save(mapper.toEntity(element)).map(mapper::toModel)
+	override fun create(element: UserModel): Mono<UserModel> {
+		return save(element)
+	}
 
-	override fun deleteById(id: UUID): Mono<Void> = repository.deleteById(id)
+	override fun update(element: UserModel): Mono<UserModel> {
+		return save(element)
+	}
+
+	private fun save(element: UserModel): Mono<UserModel> {
+		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+	}
+
+	override fun deleteById(id: UUID): Mono<Unit> {
+		return repository.deleteById(id).thenReturn(Unit)
+	}
 }

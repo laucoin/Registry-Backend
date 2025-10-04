@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
-import java.util.Locale
 import java.util.Objects
 import java.util.Optional
 import org.springframework.stereotype.Component
@@ -19,32 +18,33 @@ class ProjectProfileReaderDtoMapper(
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val partialUserMapper: PartialUserReaderDtoMapper,
 ): IGenericReaderDtoMapper<ProjectProfileModel, ProjectProfileReaderDto> {
-	override fun toDto(model: ProjectProfileModel, locale: Locale): ProjectProfileReaderDto {
+	override fun toDto(model: ProjectProfileModel): ProjectProfileReaderDto {
 		return ProjectProfileReaderDto(
-			user = Optional.ofNullable(model.user).map { partialUserMapper.toDto(it, locale) }.orElse(null),
+			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
 			role = Optional.ofNullable(model.role).map {
 				LabelDto(
 					it,
-					translateService.getMessage(code = "$PROJECT_PROFILE_ROLE_PREFIX$it", locale = locale),
+					translateService.getMessage(code = "$PROJECT_PROFILE_ROLE_PREFIX$it"),
 				)
 			}.orElse(null),
 			availabilityStatus = Optional.ofNullable(model.availabilityStatus)
-				.map { availabilityStatusMapper.toDto(it, locale, model.startAccess, model.endAccess) }.orElse(null),
-			status = buildStatus(model, locale),
+				.map { availabilityStatusMapper.toDto(it, model.startAccess, model.endAccess) }
+				.orElse(null),
+			status = buildStatus(model),
 			startAccess = model.startAccess,
 			endAccess = model.endAccess,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
+			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}
 	}
 
-	private fun buildStatus(model: ProjectProfileModel, locale: Locale): LabelDto? {
+	private fun buildStatus(model: ProjectProfileModel): LabelDto? {
 		val originalStatus =
-			translateService.getMessage(code = "$PROJECT_PROFILE_STATUS_PREFIX${model.status}", locale = locale)
+			translateService.getMessage(code = "$PROJECT_PROFILE_STATUS_PREFIX${model.status}")
 		if (!model.visible) {
 			return LabelDto(
 				BLOCKED.name,
@@ -52,9 +52,8 @@ class ProjectProfileReaderDtoMapper(
 					translateService.getMessage(
 						code = "$PROJECT_PROFILE_STATUS_PREFIX${BLOCKED}_WITH_STATUS",
 						args = arrayOf(originalStatus),
-						locale = locale,
 					)
-				}.orElse(translateService.getMessage(code = "$PROJECT_PROFILE_STATUS_PREFIX$BLOCKED", locale = locale))
+				}.orElse(translateService.getMessage(code = "$PROJECT_PROFILE_STATUS_PREFIX$BLOCKED"))
 			)
 		}
 

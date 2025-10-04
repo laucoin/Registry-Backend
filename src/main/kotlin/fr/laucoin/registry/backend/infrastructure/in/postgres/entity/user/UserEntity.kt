@@ -38,7 +38,5 @@ open class UserEntity(
 	var lastLogin: ZonedDateTime? = null,
 	@Column(USER_PURGED)
 	var purged: Boolean? = null,
-): GenericEntity() {
-
-}
+): GenericEntity()
 

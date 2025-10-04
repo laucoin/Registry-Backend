@@ -14,7 +14,8 @@ layout:
 
 # 🔐 Authentication
 
-Authentication management is delegated to the Organization authentication system, which must be configured when a new Organization is created.
+Authentication management is delegated to the Organization authentication system, which must be configured when a new
+Organization is created.
 
 ## Flow
 

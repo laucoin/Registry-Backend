@@ -10,7 +10,6 @@ import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import java.time.Duration
 import java.time.LocalTime
-import java.util.Locale
 import java.util.Objects
 import org.springframework.stereotype.Component
 
@@ -18,25 +17,21 @@ import org.springframework.stereotype.Component
 class AvailabilityStatusReaderDtoMapper(
 	private val translateService: ITranslateService,
 ): GenericDurationReaderDtoMapper(translateService) {
-	fun toDto(
-		model: AvailabilityStatusEnum,
-		locale: Locale,
-	): LabelDto {
+	fun toDto(model: AvailabilityStatusEnum): LabelDto {
 		return LabelDto(
 			model.name,
-			translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model", locale = locale),
+			translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model"),
 		)
 	}
 
 	fun toDto(
 		model: AvailabilityStatusEnum,
-		locale: Locale,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): LabelDto {
 		return LabelDto(
 			model.name,
-			extractLabelDuration(model, startAvailability, endAvailability, locale),
+			extractLabelDuration(model, startAvailability, endAvailability),
 		)
 	}
 
@@ -44,7 +39,6 @@ class AvailabilityStatusReaderDtoMapper(
 		model: AvailabilityStatusEnum,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
-		locale: Locale
 	): String {
 		val now = CustomDateTimeModel.now()
 		return when {
@@ -57,8 +51,7 @@ class AvailabilityStatusReaderDtoMapper(
 
 				translateService.getMessage(
 					code = "$AVAILABILITY_STATUS_DURATION_PREFIX$model",
-					args = arrayOf(formatDuration(interval, locale)),
-					locale = locale,
+					args = arrayOf(formatDuration(interval)),
 				)
 			}
 
@@ -72,8 +65,7 @@ class AvailabilityStatusReaderDtoMapper(
 
 				translateService.getMessage(
 					code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NOT_YET",
-					args = arrayOf(formatDuration(interval, locale)),
-					locale = locale,
+					args = arrayOf(formatDuration(interval)),
 				)
 			}
 
@@ -86,12 +78,11 @@ class AvailabilityStatusReaderDtoMapper(
 
 				translateService.getMessage(
 					code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NO_MORE",
-					args = arrayOf(formatDuration(interval, locale)),
-					locale = locale,
+					args = arrayOf(formatDuration(interval)),
 				)
 			}
 
-			else -> translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model", locale = locale)
+			else -> translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model")
 		}
 	}
 }

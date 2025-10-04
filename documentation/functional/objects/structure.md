@@ -31,7 +31,8 @@ Cf. [Glossary](../../../../../../Perso/registry-documentation/glossary.md)
 * **Web site**\
   The web site is the site url for the information detail.&#x20;
 * **Parent**\
-  Structures can be recursive, i.e. one structure can contain another, etc. Concerning the role management, a User inherit from his
+  Structures can be recursive, i.e. one structure can contain another, etc. Concerning the role management, a User
+  inherit from his
   first parent Roles.
 
 ## Features

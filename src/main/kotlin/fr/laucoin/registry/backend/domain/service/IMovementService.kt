@@ -92,6 +92,6 @@ interface IMovementService {
 
 	fun disableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel>
 	fun enableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel>
-	fun deleteMovementById(projectId: UUID, id: UUID): Mono<Void>
+	fun deleteMovementById(projectId: UUID, id: UUID): Mono<Unit>
 	fun purgeMovementsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

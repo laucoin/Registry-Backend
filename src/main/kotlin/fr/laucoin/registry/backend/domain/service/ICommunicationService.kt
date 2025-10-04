@@ -38,7 +38,7 @@ interface ICommunicationService {
 
 	fun disableCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<CommunicationModel>
 	fun enableCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<CommunicationModel>
-	fun deleteCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+	fun deleteCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit>
 	fun purgeOrphanCommunications(
 		movementsToExclude: List<UUID>,
 		alertsToExclude: List<UUID>,

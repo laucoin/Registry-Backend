@@ -18,8 +18,8 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Scheduled job management", description = "API for Scheduled job management")
-@RequestMapping("/api/purge")
-interface IPurgeController {
+@RequestMapping("/api/v1/purge")
+interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge users",
 		description = "Purge users if necessary",

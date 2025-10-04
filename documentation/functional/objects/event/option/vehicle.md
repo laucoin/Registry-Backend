@@ -56,7 +56,8 @@ If the Event has the Vehicle Option.
 * I can delete a Vehicle
 
 {% hint style="info" %}
-Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to this context.
+Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to
+this context.
 {% endhint %}
 
 ### As the Frontend

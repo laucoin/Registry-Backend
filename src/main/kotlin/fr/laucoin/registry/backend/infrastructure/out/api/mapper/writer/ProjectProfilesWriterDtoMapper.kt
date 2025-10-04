@@ -14,8 +14,8 @@ class ProjectProfilesWriterDtoMapper(private val customDateTimeMapper: CustomDat
 		return dto.userIds!!.map { userId ->
 			ProjectProfileModel().apply {
 				role = dto.role
-				startAccess = Optional.ofNullable(dto.startAccess).map { customDateTimeMapper.toModel(it) }.orElse(null)
-				endAccess = Optional.ofNullable(dto.endAccess).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				startAccess = Optional.ofNullable(dto.startAccess).map(customDateTimeMapper::toModel).orElse(null)
+				endAccess = Optional.ofNullable(dto.endAccess).map(customDateTimeMapper::toModel).orElse(null)
 				project = ProjectModel().apply { id = projectId }
 				user = UserModel().apply { id = userId }
 			}

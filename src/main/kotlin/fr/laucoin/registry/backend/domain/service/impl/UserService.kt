@@ -187,7 +187,7 @@ class UserService(
 			}
 	}
 
-	override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {
+	override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		val allowedRoles = roleService.getAssignableUserRoles(currentUser)
 		return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
 			.validateNotCurrentUser(currentUser, USER_DELETE_CURRENT_USER)

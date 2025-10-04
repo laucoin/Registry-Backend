@@ -97,7 +97,7 @@ class ActivityService(
 			.updateActivity(currentUser)
 	}
 
-	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findActivityById(projectId, id, visibilitySearched = null)
 			.validateHasNoMovementLinked(ACTIVITY_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }

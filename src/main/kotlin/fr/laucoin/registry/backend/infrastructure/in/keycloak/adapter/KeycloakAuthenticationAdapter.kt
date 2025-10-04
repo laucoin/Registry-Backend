@@ -21,11 +21,11 @@ import reactor.core.publisher.Mono
 @Service
 class KeycloakAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,
-	@param:Value("\${external.keycloak.base-url}/realms/\${external.keycloak.realm}")
+	@param:Value($$"${external.keycloak.base-url}/realms/${external.keycloak.realm}")
 	private val baseUri: String,
-	@param:Value("\${external.keycloak.client-id}")
+	@param:Value($$"${external.keycloak.client-id}")
 	private val clientId: String,
-	@param:Value("\${external.keycloak.client-secret}")
+	@param:Value($$"${external.keycloak.client-secret}")
 	private val clientSecret: String,
 ): IAuthenticationPort {
 	private val http: WebClient = WebClient.create(baseUri)

@@ -93,7 +93,8 @@ graph TD
 * I cannot create or edit a Profile with End access date and time before or equal Start access date and time
 
 {% hint style="info" %}
-Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to this context.\
+Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to
+this context.\
 
 That's why: "I can create several profiles at once to avoid unpleasant gestures"
 {% endhint %}

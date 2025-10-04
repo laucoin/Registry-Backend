@@ -21,7 +21,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
 ### Properties
 
 * **Name**\
-  This is the Ticketing displayed name (if empty, event name). The name is the human identifier for the Ticketing. It must not be
+  This is the Ticketing displayed name (if empty, event name). The name is the human identifier for the Ticketing. It
+  must not be
   unique but it's recommended to create the most explicit name.
 * **Description**\
   The description of the event for the participant
@@ -30,7 +31,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
 * **End date and time**\
   This is the Event end date and time access (by default, it's the event end date and time).
 * **Public**\
-  In the organization options, you can declare list of public to receive (example: Scouts et Guides de France received multiple age
+  In the organization options, you can declare list of public to receive (example: Scouts et Guides de France received
+  multiple age
   range like 14-17 years old)
 * **Individual or Group**\
   Note: if you want to open registration for both you just need to create two ticketing.
@@ -57,7 +59,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
 * I can delete a Ticketing
 
 {% hint style="info" %}
-Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to this context.
+Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to
+this context.
 {% endhint %}
 
 ## Constraint

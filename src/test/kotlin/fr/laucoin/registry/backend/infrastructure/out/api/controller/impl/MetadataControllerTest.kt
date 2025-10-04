@@ -37,13 +37,13 @@ class MetadataControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/metadata"
+		private const val BASE_URL = "/api/v1/metadata"
 	}
 
 	@Test
 	fun `Should getProjectProfileStatus return 200`() {
 		// Arrange
-		whenever(profileStatusReaderMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+		whenever(profileStatusReaderMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
 		val result = webClient
@@ -55,14 +55,14 @@ class MetadataControllerTest: TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 		verifyNoInteractions(movementTypeReaderMapper)
-		verify(profileStatusReaderMapper, atLeastOnce()).toDto(any(), any())
+		verify(profileStatusReaderMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(presenceStatusMapper)
 	}
 
 	@Test
 	fun `Should getPresenceStatus return 200`() {
 		// Arrange
-		whenever(presenceStatusMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+		whenever(presenceStatusMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
 		val result = webClient
@@ -75,13 +75,13 @@ class MetadataControllerTest: TestContext() {
 		result.body<List<*>>(OK)
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(profileStatusReaderMapper)
-		verify(presenceStatusMapper, atLeastOnce()).toDto(any(), any())
+		verify(presenceStatusMapper, atLeastOnce()).toDto(any())
 	}
 
 	@Test
 	fun `Should getAvailabilitiesStatus return 200`() {
 		// Arrange
-		whenever(availabilityStatusMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+		whenever(availabilityStatusMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
 		val result = webClient
@@ -94,13 +94,13 @@ class MetadataControllerTest: TestContext() {
 		result.body<List<*>>(OK)
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(profileStatusReaderMapper)
-		verify(availabilityStatusMapper, atLeastOnce()).toDto(any(), any())
+		verify(availabilityStatusMapper, atLeastOnce()).toDto(any())
 	}
 
 	@Test
 	fun `Should getMovementsTypes return 200`() {
 		// Arrange
-		whenever(movementTypeReaderMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+		whenever(movementTypeReaderMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
 		val result = webClient
@@ -111,7 +111,7 @@ class MetadataControllerTest: TestContext() {
 
 		// Assert
 		result.body<List<*>>(OK)
-		verify(movementTypeReaderMapper, atLeastOnce()).toDto(any(), any())
+		verify(movementTypeReaderMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(profileStatusReaderMapper)
 		verifyNoInteractions(presenceStatusMapper)
 	}

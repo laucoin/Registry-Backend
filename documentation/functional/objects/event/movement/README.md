@@ -46,7 +46,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
     * By Registration (if it is a group Registration)
 * I can create a Movement
     * I would see scheduled Movement to facilitate the field completion
-    * I would see a warning message if I try to create an entry for an already present Participant, Guest or Vehicle (the reverse is
+    * I would see a warning message if I try to create an entry for an already present Participant, Guest or Vehicle (
+      the reverse is
       true).
     * I would see a warning message if I try to use a Vehicle with no initial odometer value
 * I can schedule a Movement

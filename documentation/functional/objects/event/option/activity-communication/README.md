@@ -40,7 +40,8 @@ If the Event has the Activity Communication Option.
 ### As a User
 
 * I can consult the Activity Communications (with search, sort, etc.)
-* I can see a timer with the timer since the last communication (if defined in the [Activity](../activity.md#properties))
+* I can see a timer with the timer since the last communication (if defined in
+  the [Activity](../activity.md#properties))
 * I can create easily create an Activity Communication for Activity in progress.
 * I can create an Activity Communication
 * I can edit an Activity Communication

@@ -1,163 +1,163 @@
 {
-    "tagFormat": "${version}",
-    "repositoryUrl": "https://gitlab.com/laucoin/keycloak-theme.git",
-    "branches": [
-        {
-            "name": "main"
-        }
-    ],
-    "plugins": [
-        [
-            "@semantic-release/commit-analyzer",
-            {
-                "preset": "conventionalcommits",
-                "releaseRules": [
-                    {
-                        "breaking": true,
-                        "release": "major"
-                    },
-                    {
-                        "revert": true,
-                        "release": "minor"
-                    },
-                    {
-                        "type": "BREAKING_CHANGE",
-                        "release": "major"
-                    },
-                    {
-                        "type": "build",
-                        "release": "minor"
-                    },
-                    {
-                        "type": "chore",
-                        "release": "minor"
-                    },
-                    {
-                        "type": "feat",
-                        "release": "minor"
-                    },
-                    {
-                        "type": "perf",
-                        "release": "minor"
-                    },
-                    {
-                        "type": "refactor",
-                        "release": "minor"
-                    },
-                    {
-                        "type": "revert",
-                        "release": "minor"
-                    },
-                    {
-                        "type": "style",
-                        "release": "minor"
-                    },
-                    {
-                        "type": "ci",
-                        "release": "patch"
-                    },
-                    {
-                        "type": "docs",
-                        "release": "patch"
-                    },
-                    {
-                        "type": "fix",
-                        "release": "patch"
-                    },
-                    {
-                        "type": "test",
-                        "release": "patch"
-                    }
-                ]
-            }
-        ],
-        [
-            "@semantic-release/release-notes-generator",
-            {
-                "preset": "conventionalcommits",
-                "presetConfig": {
-                    "types": [
-                        {
-                            "type": "BREAKING_CHANGE",
-                            "section": "💥 Breaking changes",
-                            "hidden": false
-                        },
-                        {
-                            "type": "build",
-                            "section": "👷 Automation",
-                            "hidden": true
-                        },
-                        {
-                            "type": "chore",
-                            "section": "📦️ Other",
-                            "hidden": false
-                        },
-                        {
-                            "type": "feat",
-                            "section": "🚀 Features",
-                            "hidden": false
-                        },
-                        {
-                            "type": "perf",
-                            "section": "🏎️ Improvements",
-                            "hidden": false
-                        },
-                        {
-                            "type": "refactor",
-                            "section": "🧹 Improvements",
-                            "hidden": false
-                        },
-                        {
-                            "type": "revert",
-                            "section": "⏪ Retore",
-                            "hidden": false
-                        },
-                        {
-                            "type": "style",
-                            "section": "💄 Improvements",
-                            "hidden": false
-                        },
-                        {
-                            "type": "ci",
-                            "section": "👷 Automation",
-                            "hidden": false
-                        },
-                        {
-                            "type": "docs",
-                            "section": "📝 Documentation",
-                            "hidden": false
-                        },
-                        {
-                            "type": "fix",
-                            "section": "🐛 Bug Fixes",
-                            "hidden": false
-                        },
-                        {
-                            "type": "test",
-                            "section": "🧪 Tests",
-                            "hidden": false
-                        }
-                    ]
-                }
-            }
-        ],
-        "@semantic-release/changelog",
-        [
-            "@semantic-release/git",
-            {
-                "assets": [
-                    "CHANGELOG.md",
-                    "package.json"
-                ],
-                "message": "build(release): ${nextRelease.version}\n\n${nextRelease.notes}[skip ci]"
-            }
-        ],
-        "@semantic-release/gitlab",
-        [
-            "@semantic-release/exec",
-            {
-                "prepareCmd": "echo version=${nextRelease.version} > version.properties"
-            }
+  "tagFormat": "${version}",
+  "repositoryUrl": "https://gitlab.com/laucoin/keycloak-theme.git",
+  "branches": [
+    {
+      "name": "main"
+    }
+  ],
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          {
+            "breaking": true,
+            "release": "major"
+          },
+          {
+            "revert": true,
+            "release": "minor"
+          },
+          {
+            "type": "BREAKING_CHANGE",
+            "release": "major"
+          },
+          {
+            "type": "build",
+            "release": "minor"
+          },
+          {
+            "type": "chore",
+            "release": "minor"
+          },
+          {
+            "type": "feat",
+            "release": "minor"
+          },
+          {
+            "type": "perf",
+            "release": "minor"
+          },
+          {
+            "type": "refactor",
+            "release": "minor"
+          },
+          {
+            "type": "revert",
+            "release": "minor"
+          },
+          {
+            "type": "style",
+            "release": "minor"
+          },
+          {
+            "type": "ci",
+            "release": "patch"
+          },
+          {
+            "type": "docs",
+            "release": "patch"
+          },
+          {
+            "type": "fix",
+            "release": "patch"
+          },
+          {
+            "type": "test",
+            "release": "patch"
+          }
         ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits",
+        "presetConfig": {
+          "types": [
+            {
+              "type": "BREAKING_CHANGE",
+              "section": "💥 Breaking changes",
+              "hidden": false
+            },
+            {
+              "type": "build",
+              "section": "👷 Automation",
+              "hidden": true
+            },
+            {
+              "type": "chore",
+              "section": "📦️ Other",
+              "hidden": false
+            },
+            {
+              "type": "feat",
+              "section": "🚀 Features",
+              "hidden": false
+            },
+            {
+              "type": "perf",
+              "section": "🏎️ Improvements",
+              "hidden": false
+            },
+            {
+              "type": "refactor",
+              "section": "🧹 Improvements",
+              "hidden": false
+            },
+            {
+              "type": "revert",
+              "section": "⏪ Retore",
+              "hidden": false
+            },
+            {
+              "type": "style",
+              "section": "💄 Improvements",
+              "hidden": false
+            },
+            {
+              "type": "ci",
+              "section": "👷 Automation",
+              "hidden": false
+            },
+            {
+              "type": "docs",
+              "section": "📝 Documentation",
+              "hidden": false
+            },
+            {
+              "type": "fix",
+              "section": "🐛 Bug Fixes",
+              "hidden": false
+            },
+            {
+              "type": "test",
+              "section": "🧪 Tests",
+              "hidden": false
+            }
+          ]
+        }
+      }
+    ],
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "CHANGELOG.md",
+          "package.json"
+        ],
+        "message": "build(release): ${nextRelease.version}\n\n${nextRelease.notes}[skip ci]"
+      }
+    ],
+    "@semantic-release/gitlab",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "echo version=${nextRelease.version} > version.properties"
+      }
     ]
+  ]
 }

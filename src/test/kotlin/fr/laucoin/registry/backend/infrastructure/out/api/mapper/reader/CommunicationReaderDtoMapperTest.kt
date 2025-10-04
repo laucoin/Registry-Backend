@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementRea
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.communicationId
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -73,9 +72,9 @@ class CommunicationReaderDtoMapperTest {
 
 	@BeforeEach
 	fun setup() {
-		whenever(movementMapper.toDto(any(), any())).thenReturn(dtoMovement)
-		whenever(alertMapper.toDto(any(), any())).thenReturn(dtoAlert)
-		whenever(projectMapper.toDto(any(), any())).thenReturn(dtoProject)
+		whenever(movementMapper.toDto(any())).thenReturn(dtoMovement)
+		whenever(alertMapper.toDto(any())).thenReturn(dtoAlert)
+		whenever(projectMapper.toDto(any())).thenReturn(dtoProject)
 	}
 
 	@ParameterizedTest
@@ -88,16 +87,16 @@ class CommunicationReaderDtoMapperTest {
 		expectedProjectCast: Int,
 	) {
 		// Act
-		val result = mapper.toDto(model, Locale.getDefault())
+		val result = mapper.toDto(model)
 
 		// Assert
 		assertEquals(dto, result)
 
 		verify(movementMapper, times(expectedMovementCast))
-			.toDto(model.movement ?: MovementModel(), Locale.getDefault())
+			.toDto(model.movement ?: MovementModel())
 
-		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel(), Locale.getDefault())
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -114,16 +113,16 @@ class CommunicationReaderDtoMapperTest {
 		val dtos = listOf(dto)
 
 		// Act
-		val result = mapper.toDtoList(models, Locale.getDefault())
+		val result = mapper.toDtoList(models)
 
 		// Assert
 		assertEquals(dtos, result)
 
 		verify(movementMapper, times(expectedMovementCast))
-			.toDto(model.movement ?: MovementModel(), Locale.getDefault())
+			.toDto(model.movement ?: MovementModel())
 
-		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel(), Locale.getDefault())
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -153,15 +152,15 @@ class CommunicationReaderDtoMapperTest {
 		)
 
 		// Act
-		val result = mapper.toDtoPage(modelPage, Locale.getDefault())
+		val result = mapper.toDtoPage(modelPage)
 
 		// Assert
 		assertEquals(dtoPage, result)
 
 		verify(movementMapper, times(expectedMovementCast))
-			.toDto(model.movement ?: MovementModel(), Locale.getDefault())
+			.toDto(model.movement ?: MovementModel())
 
-		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel(), Locale.getDefault())
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 }

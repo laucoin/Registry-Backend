@@ -21,18 +21,15 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.Participant
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
-import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -41,30 +38,21 @@ import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Participants management", description = "API for Participants-related operations")
-@RequestMapping("/api/projects/{projectId}/participants")
-interface IParticipantController {
+@RequestMapping("/api/v1/projects/{projectId}/participants")
+interface IParticipantV1Controller {
 	@Operation(
 		summary = "Find Participants",
 		description = "Find or get paginated Participants",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping
 	fun findParticipants(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
 		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -83,36 +71,20 @@ interface IParticipantController {
 	@Operation(
 		summary = "Find Participants",
 		description = "Find or get paginated Participants",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/birthday")
 	fun findBirthdays(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 	): Flux<ParticipantReaderDto>
 
 	@Operation(
 		summary = "Find Participant",
 		description = "Find Participant by ID",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/{id}")
 	fun findParticipantById(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ParticipantReaderDto>
@@ -120,18 +92,10 @@ interface IParticipantController {
 	@Operation(
 		summary = "Search Users",
 		description = "Search Users to link to a Participant",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
 	@GetMapping("/search/users")
 	fun searchUsers(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@RequestParam textSearched: String?,
 	): Flux<PartialUserReaderDto>
@@ -139,18 +103,10 @@ interface IParticipantController {
 	@Operation(
 		summary = "Search Groups",
 		description = "Search Groups to add Participant in it",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
 	@GetMapping("/search/groups")
 	fun searchGroups(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@RequestParam textSearched: String?
 	): Flux<GroupWithoutMemberReaderDto>
@@ -158,19 +114,11 @@ interface IParticipantController {
 	@Operation(
 		summary = "Find Participant Movements",
 		description = "Find or get paginated participant Movements",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')")
 	@GetMapping("/{id}/movements")
 	fun findParticipantMovements(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
@@ -191,19 +139,11 @@ interface IParticipantController {
 	@Operation(
 		summary = "Create Participant",
 		description = "Create Participant linked to the Project",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_C')")
 	@PostMapping
 	fun createParticipant(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@RequestBody @Valid participant: ParticipantWriterDto,
 	): Mono<ParticipantReaderDto>
@@ -211,20 +151,12 @@ interface IParticipantController {
 	@Operation(
 		summary = "Update Participant",
 		description = "Update Participant",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@PatchMapping("/{id}")
 	fun updateParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		timeZone: TimeZone,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@RequestBody @Valid participant: ParticipantWriterDto,
@@ -233,19 +165,11 @@ interface IParticipantController {
 	@Operation(
 		summary = "Disable Participant",
 		description = "Disable Participant, it will not visible anymore in the Project",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@PatchMapping("/{id}/disable")
 	fun disableParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ParticipantReaderDto>
@@ -253,19 +177,11 @@ interface IParticipantController {
 	@Operation(
 		summary = "Enable Participant",
 		description = "Enable Participant, obviously it will be visible again in the Project",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@PatchMapping("/{id}/enable")
 	fun enableParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ParticipantReaderDto>
@@ -273,13 +189,6 @@ interface IParticipantController {
 	@Operation(
 		summary = "Delete Participant",
 		description = "Delete all Participant data.",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_D')")
 	@DeleteMapping("/{id}")
@@ -287,5 +196,5 @@ interface IParticipantController {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-	): Mono<Void>
+	): Mono<Unit>
 }

@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupReader
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import java.time.LocalDate
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -75,20 +74,19 @@ class ParticipantReaderDtoMapperTest {
 		expectedUserCast: Int,
 	) {
 		// Arrange
-		whenever(partialUserMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
-		whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
-		whenever(groupMapper.toDtoList(any(), any())).thenReturn(listOf(GroupReaderDto()))
+		whenever(partialUserMapper.toDto(any())).thenReturn(PartialUserReaderDto())
+		whenever(projectMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(groupMapper.toDtoList(any())).thenReturn(listOf(GroupReaderDto()))
 
 		// Act
-		val result = mapper.toDto(participant, Locale.getDefault())
+		val result = mapper.toDto(participant)
 
 		// Assert
-		verify(partialUserMapper, times(expectedUserCast)).toDto(participant.user ?: UserModel(), Locale.getDefault())
+		verify(partialUserMapper, times(expectedUserCast)).toDto(participant.user ?: UserModel())
 		verify(projectMapper, times(expectedProjectCast)).toDto(
 			participant.project ?: ProjectModel(),
-			Locale.getDefault()
 		)
-		verify(groupMapper, times(2)).toDtoList(participant.groups, Locale.getDefault())
+		verify(groupMapper, times(2)).toDtoList(participant.groups)
 
 		assertEquals(participant.id, result.id)
 		assertEquals(participant.firstName, result.firstName)

@@ -29,7 +29,8 @@ Cf. [Glossary](../../../../../../../../../../Perso/registry-documentation/glossa
 
 If the Event has the Smoke Report Option.
 
-Refer the [Activity Communication features](../#features), because Smoke Report is closely linked to an Activity Communication.
+Refer the [Activity Communication features](../#features), because Smoke Report is closely linked to an Activity
+Communication.
 
 It is important to specify questions about fire in the front side
 

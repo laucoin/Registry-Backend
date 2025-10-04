@@ -56,5 +56,5 @@ interface IProjectProfilePort {
 	fun saveAll(profiles: List<ProjectProfileModel>): Flux<ProjectProfileModel>
 	fun create(element: ProjectProfileModel): Mono<ProjectProfileModel>
 	fun update(element: ProjectProfileModel): Mono<ProjectProfileModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

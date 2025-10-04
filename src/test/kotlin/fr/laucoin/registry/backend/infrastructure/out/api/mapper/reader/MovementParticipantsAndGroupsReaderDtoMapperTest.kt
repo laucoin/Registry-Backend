@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import java.util.Locale
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -22,10 +21,10 @@ class MovementParticipantsAndGroupsReaderDtoMapperTest {
 		)
 
 		// Act
-		mapper.toDto(content, Locale.getDefault())
+		mapper.toDto(content)
 
 		// Assert
-		verify(participantMapper).toDtoList(content.first, Locale.getDefault())
-		verify(groupsMapper).toDtoList(content.second, Locale.getDefault())
+		verify(participantMapper).toDtoList(content.first)
+		verify(groupsMapper).toDtoList(content.second)
 	}
 }

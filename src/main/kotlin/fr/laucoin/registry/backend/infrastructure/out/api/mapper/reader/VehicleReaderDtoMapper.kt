@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.VehicleReaderDto
-import java.util.Locale
 import java.util.Optional
 import org.springframework.stereotype.Component
 
@@ -11,7 +10,7 @@ class VehicleReaderDtoMapper(
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val statusMapper: PresenceStatusReaderDtoMapper,
 ): IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
-	override fun toDto(model: VehicleModel, locale: Locale): VehicleReaderDto {
+	override fun toDto(model: VehicleModel): VehicleReaderDto {
 		return VehicleReaderDto(
 			licensePlate = model.licensePlate,
 			brand = model.brand,
@@ -19,7 +18,6 @@ class VehicleReaderDtoMapper(
 			status = Optional.ofNullable(model.status).map {
 				statusMapper.toDto(
 					it,
-					locale,
 					model.lastMovement,
 					model.startAvailability,
 					model.endAvailability,
@@ -29,7 +27,7 @@ class VehicleReaderDtoMapper(
 			endAvailability = model.endAvailability,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
+			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

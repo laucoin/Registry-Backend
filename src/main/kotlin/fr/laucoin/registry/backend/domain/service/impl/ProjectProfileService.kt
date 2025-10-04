@@ -35,7 +35,7 @@ class ProjectProfileService(
 	private val port: IProjectProfilePort,
 	private val roleService: IRoleService,
 	private val userPort: IUserPort,
-	@param:Value("\${registry.feature.profile.searched.max-user-result}")
+	@param:Value($$"${registry.feature.profile.searched.max-user-result}")
 	private val maxUserResult: Int,
 ): IProjectProfileService, GenericProfileService(port) {
 	override fun findProjectProfilesPage(
@@ -152,7 +152,7 @@ class ProjectProfileService(
 			.updateProjectProfile(currentUser)
 	}
 
-	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findProjectProfileById(projectId, id, visibilitySearched = null)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR)
 			.flatMap { port.deleteById(id) }

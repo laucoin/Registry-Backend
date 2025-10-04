@@ -27,7 +27,7 @@ class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
 	}
 
 	private fun mapDuration(duration: String?): Duration? {
-		return Optional.ofNullable(duration).map { Duration.parse(it) }.orElse(null)
+		return Optional.ofNullable(duration).map(Duration::parse).orElse(null)
 	}
 
 	private fun mapAllowedParticipants(entity: ActivityEntity): NumericRangeModel? {
@@ -40,7 +40,7 @@ class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
 		return ActivityEntity().apply {
 			name = model.name
 			description = model.description
-			duration = Optional.ofNullable(model.duration).map { it.toString() }.orElse(null)
+			duration = Optional.ofNullable(model.duration).map(Duration::toString).orElse(null)
 			minAllowedParticipants = model.allowedParticipants?.lower
 			maxAllowedParticipants = model.allowedParticipants?.upper
 			startAvailabilityDate = model.startAvailability?.date

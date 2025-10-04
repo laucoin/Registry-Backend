@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.VehicleReaderDto
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -45,18 +44,17 @@ class MovementContentReaderDtoMapperTest {
 		expectedVehicleCast: Int,
 	) {
 		// Arrange
-		whenever(participantMapper.toDto(any(), any())).thenReturn(ParticipantReaderDto())
-		whenever(vehicleMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+		whenever(participantMapper.toDto(any())).thenReturn(ParticipantReaderDto())
+		whenever(vehicleMapper.toDto(any())).thenReturn(VehicleReaderDto())
 
 		// Act
-		val result = mapper.toDto(content, Locale.getDefault())
+		val result = mapper.toDto(content)
 
 		// Assert
 		assertEquals(content.poolName, result.poolName)
 		verify(participantMapper, times(expectedParticipantCast)).toDto(
 			content.participant ?: ParticipantModel(),
-			Locale.getDefault()
 		)
-		verify(vehicleMapper, times(expectedVehicleCast)).toDto(content.vehicle ?: VehicleModel(), Locale.getDefault())
+		verify(vehicleMapper, times(expectedVehicleCast)).toDto(content.vehicle ?: VehicleModel())
 	}
 }

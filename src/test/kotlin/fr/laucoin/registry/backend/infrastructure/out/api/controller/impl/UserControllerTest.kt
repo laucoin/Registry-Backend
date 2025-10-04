@@ -57,7 +57,7 @@ class UserControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/users"
+		private const val BASE_URL = "/api/v1/users"
 
 		@JvmStatic
 		fun `Should findUsers return 200`(): Stream<Arguments> = Stream.of(
@@ -104,7 +104,7 @@ class UserControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(UserModel()))
 		whenever(service.findUsersPage(any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(UserReaderDto())),
 		)
 
@@ -131,7 +131,7 @@ class UserControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findUsersPage(pageable, searchParams)
-		verify(readerMapper).toDtoPage(any(), any())
+		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(userRoleReaderMapper)
 	}
 
@@ -172,7 +172,7 @@ class UserControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.findUserById(any(), anyOrNull())).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(UserReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
 		val result = webClient
@@ -183,7 +183,7 @@ class UserControllerTest: TestContext() {
 
 		// Assert
 		result.body<UserReaderDto>(OK)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).findUserById(uuid, visibilitySearched = null)
 	}
@@ -192,7 +192,7 @@ class UserControllerTest: TestContext() {
 	fun `Should getAssignableUserRoles return 200`() {
 		// Arrange
 		whenever(service.assignableUserRoles(any())).thenReturn(Flux.just("USER_ROLE"))
-		whenever(userRoleReaderMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+		whenever(userRoleReaderMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
 		val result = webClient
@@ -206,7 +206,7 @@ class UserControllerTest: TestContext() {
 
 		verify(service).assignableUserRoles(any())
 		verifyNoInteractions(readerMapper)
-		verify(userRoleReaderMapper).toDto(any(), any())
+		verify(userRoleReaderMapper).toDto(any())
 	}
 
 	@ParameterizedTest
@@ -218,7 +218,7 @@ class UserControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 		val queryParams = if (Objects.nonNull(role)) listOf(Pair("role", role)) else emptyList()
 		whenever(service.updateUserRoleById(any(), any(), anyOrNull())).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(UserReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
 		val result = webClient
@@ -230,7 +230,7 @@ class UserControllerTest: TestContext() {
 		// Assert
 		result.body<UserReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).updateUserRoleById(any(), eq(uuid), eq(role))
 	}
@@ -240,7 +240,7 @@ class UserControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.blockUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(UserReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
 		val result = webClient
@@ -252,7 +252,7 @@ class UserControllerTest: TestContext() {
 		// Assert
 		result.body<UserReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).blockUserById(any(), eq(uuid))
 	}
@@ -262,7 +262,7 @@ class UserControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.unblockUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(UserReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
 		val result = webClient
@@ -274,7 +274,7 @@ class UserControllerTest: TestContext() {
 		// Assert
 		result.body<UserReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).unblockUserById(any(), eq(uuid))
 	}
@@ -284,7 +284,7 @@ class UserControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.impersonateUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(UserReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
 		val result = webClient
@@ -296,7 +296,7 @@ class UserControllerTest: TestContext() {
 		// Assert
 		result.body<UserReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).impersonateUserById(any(), eq(uuid))
 	}
@@ -305,7 +305,7 @@ class UserControllerTest: TestContext() {
 	fun `Should impersonateCurrentUser return 200`() {
 		// Arrange
 		whenever(service.impersonateUserById(any(), any())).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(UserReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
 		val result = webClient
@@ -317,7 +317,7 @@ class UserControllerTest: TestContext() {
 		// Assert
 		result.body<UserReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).impersonateUserById(any(), any())
 	}

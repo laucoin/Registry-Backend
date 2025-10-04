@@ -1,8 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import java.util.Locale
-import java.util.Locale.ENGLISH
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -14,6 +12,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.context.MessageSource
+import org.springframework.context.i18n.LocaleContextHolder
 
 class TranslateServiceTest {
 	private val messagesSource: MessageSource = mock()
@@ -22,25 +21,17 @@ class TranslateServiceTest {
 
 	private companion object {
 		@JvmStatic
-		fun `Should getMessage return the translation`(): Stream<Arguments> = Stream.of(
-			Arguments.of("code", ENGLISH, arrayOf("arg1", "arg2"), "default message", "default message"),
-			Arguments.of("code", ENGLISH, arrayOf("arg1", "arg2"), null, "code"),
-			Arguments.of("code", ENGLISH, null, null, "code"),
-		)
-
-		@JvmStatic
-		fun `Should getError return the translation`(): Stream<Arguments> = Stream.of(
-			Arguments.of("code", ENGLISH, arrayOf("arg1", "arg2"), "default message", "default message"),
-			Arguments.of("code", ENGLISH, arrayOf("arg1", "arg2"), null, "code"),
-			Arguments.of("code", ENGLISH, null, null, "code"),
+		fun translationData(): Stream<Arguments> = Stream.of(
+			Arguments.of("code", arrayOf("arg1", "arg2"), "default message", "default message"),
+			Arguments.of("code", arrayOf("arg1", "arg2"), null, "code"),
+			Arguments.of("code", null, null, "code"),
 		)
 	}
 
 	@ParameterizedTest
-	@MethodSource
+	@MethodSource("translationData")
 	fun `Should getMessage return the translation`(
 		code: String,
-		locale: Locale,
 		args: Array<Any>?,
 		default: String?,
 		expected: String,
@@ -49,19 +40,18 @@ class TranslateServiceTest {
 		whenever(messagesSource.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn("translated")
 
 		// Act
-		val result = service.getMessage(code, locale, args, default)
+		val result = service.getMessage(code, args, default)
 
 		// Assert
 		assertEquals("translated", result)
 
-		verify(messagesSource).getMessage(code, args, expected, locale)
+		verify(messagesSource).getMessage(code, args, expected, LocaleContextHolder.getLocale())
 	}
 
 	@ParameterizedTest
-	@MethodSource
+	@MethodSource("translationData")
 	fun `Should getError return the translation`(
 		code: String,
-		locale: Locale,
 		args: Array<Any>?,
 		default: String?,
 		expected: String,
@@ -70,11 +60,11 @@ class TranslateServiceTest {
 		whenever(errorsSource.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn("translated")
 
 		// Act
-		val result = service.getError(code, locale, args, default)
+		val result = service.getError(code, args, default)
 
 		// Assert
 		assertEquals("translated", result)
 
-		verify(errorsSource).getMessage(code, args, expected, locale)
+		verify(errorsSource).getMessage(code, args, expected, LocaleContextHolder.getLocale())
 	}
 }

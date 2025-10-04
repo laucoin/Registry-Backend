@@ -19,7 +19,7 @@ class ParticipantMovementWriterDtoMapper(
 			type = dto.type
 			reason = dto.reason
 			activity = Optional.ofNullable(dto.activityId).map { ActivityModel().apply { id = it } }.orElse(null)
-			content = dto.content!!.map { contentMapper.toModel(it) }
+			content = dto.content!!.map(contentMapper::toModel)
 			project = ProjectModel().apply { id = projectId }
 		}
 	}

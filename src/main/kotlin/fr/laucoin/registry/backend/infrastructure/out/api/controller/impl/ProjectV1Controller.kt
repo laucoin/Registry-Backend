@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IProjectController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IProjectV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectWriterDto
@@ -16,7 +16,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectO
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ProjectWriterDtoMapper
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.web.bind.annotation.RestController
@@ -24,15 +23,14 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
-class ProjectController(
+class ProjectV1Controller(
 	private val service: IProjectService,
 	private val readerMapper: ProjectReaderDtoMapper,
 	private val optionsReaderMapper: ProjectOptionsReaderDtoMapper,
 	private val writerMapper: ProjectWriterDtoMapper,
-): IProjectController {
+): IProjectV1Controller {
 	override fun findProjects(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		pageNumber: Int,
 		pageSize: Int,
 		textSearched: String?,
@@ -41,58 +39,44 @@ class ProjectController(
 		dateTimeSearched: ZonedDateTime?,
 	): Mono<PageModel<ProjectReaderDto>> {
 		if (!currentUser.hasAuthority(REGISTRY_PROJECT_R) && !withProfile) {
-			throw RegistryException(
-				status = FORBIDDEN,
-				code = NOT_ENOUGH_PERMISSION,
-			)
+			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
-		return service.findProjectsPage(
-			currentUser,
-			PageableModel(pageNumber * pageSize, pageSize),
-			withProfile,
-			ProjectSearchParamModel(textSearched, visibilitySearched, dateTimeSearched),
-		).map { readerMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = ProjectSearchParamModel(textSearched, visibilitySearched, dateTimeSearched)
+
+		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams).map(readerMapper::toDtoPage)
 	}
 
-	override fun findProjectById(locale: Locale, id: UUID): Mono<ProjectReaderDto> {
-		return service.findProjectById(id, visibilitySearched = null)
-			.map { readerMapper.toDto(it, locale) }
+	override fun findProjectById(id: UUID): Mono<ProjectReaderDto> {
+		return service.findProjectById(id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
-	override fun getAvailableProjectOptions(locale: Locale): Flux<ProjectOptionsReaderDto> {
-		return service.availableProjectOptions()
-			.map { optionsReaderMapper.toDto(it, locale) }
+	override fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto> {
+		return service.availableProjectOptions().map(optionsReaderMapper::toDto)
 	}
 
-	override fun createProject(
-		currentUser: CurrentUserModel,
-		locale: Locale,
-		project: ProjectWriterDto
-	): Mono<ProjectReaderDto> {
-		return service.createProject(currentUser, writerMapper.toModel(project))
-			.map { readerMapper.toDto(it, locale) }
+	override fun createProject(currentUser: CurrentUserModel, project: ProjectWriterDto): Mono<ProjectReaderDto> {
+		val projectModel = writerMapper.toModel(project)
+		return service.createProject(currentUser, projectModel).map(readerMapper::toDto)
 	}
 
 	override fun updateProjectById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		id: UUID,
-		project: ProjectWriterDto
+		project: ProjectWriterDto,
 	): Mono<ProjectReaderDto> {
-		return service.updateProjectById(currentUser, id, writerMapper.toModel(project))
-			.map { readerMapper.toDto(it, locale) }
+		val projectModel = writerMapper.toModel(project)
+		return service.updateProjectById(currentUser, id, projectModel).map(readerMapper::toDto)
 	}
 
-	override fun disableProjectById(currentUser: CurrentUserModel, locale: Locale, id: UUID): Mono<ProjectReaderDto> {
-		return service.disableProjectById(currentUser, id)
-			.map { readerMapper.toDto(it, locale) }
+	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectReaderDto> {
+		return service.disableProjectById(currentUser, id).map(readerMapper::toDto)
 	}
 
-	override fun enableProjectById(currentUser: CurrentUserModel, locale: Locale, id: UUID): Mono<ProjectReaderDto> {
-		return service.enableProjectById(currentUser, id)
-			.map { readerMapper.toDto(it, locale) }
+	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectReaderDto> {
+		return service.enableProjectById(currentUser, id).map(readerMapper::toDto)
 	}
 
-	override fun deleteProjectById(id: UUID): Mono<Void> = service.deleteProjectById(id)
+	override fun deleteProjectById(id: UUID): Mono<Unit> = service.deleteProjectById(id)
 }
