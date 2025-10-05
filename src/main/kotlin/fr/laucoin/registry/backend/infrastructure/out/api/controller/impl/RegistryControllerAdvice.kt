@@ -10,7 +10,6 @@ import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IRegistryControllerAdvice
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
-import java.util.Locale
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -35,11 +34,7 @@ class RegistryControllerAdvice(
 
 	override fun handleWebExchangeBindException(exception: WebExchangeBindException): Mono<ResponseEntity<ErrorDto>> {
 		val error = exception.allErrors.first()
-		return buildError(
-			status = BAD_REQUEST,
-			code = error.defaultMessage!!,
-			args = error.arguments ?: emptyArray(),
-		)
+		return buildError(status = BAD_REQUEST, code = error.defaultMessage!!, args = error.arguments ?: emptyArray())
 	}
 
 	override fun handleServerWebInputException(exception: ServerWebInputException): Mono<ResponseEntity<ErrorDto>> {
@@ -60,10 +55,7 @@ class RegistryControllerAdvice(
 	}
 
 	override fun handleHandlerAuthorizationDeniedException(exception: AuthorizationDeniedException): Mono<ResponseEntity<ErrorDto>> {
-		return buildError(
-			status = FORBIDDEN,
-			code = NOT_ENOUGH_PERMISSION,
-		)
+		return buildError(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 	}
 
 	override fun handleResponseStatusException(exception: ResponseStatusException): Mono<ResponseEntity<ErrorDto>> {
@@ -74,40 +66,29 @@ class RegistryControllerAdvice(
 	}
 
 	override fun handleException(exception: Exception): Mono<ResponseEntity<ErrorDto>> {
-		log.error("An unexpected error occurred", exception)
-		return buildError(
-			status = INTERNAL_SERVER_ERROR,
-			code = "500",
-		)
+		return buildError(status = INTERNAL_SERVER_ERROR, code = "500", exception = exception)
 	}
 
 	private fun buildError(
 		status: HttpStatus,
 		code: String,
 		args: Array<Any>? = null,
+		exception: Exception? = null
 	): Mono<ResponseEntity<ErrorDto>> {
-		return Mono.deferContextual {
-			val locale = it.get(Locale::class.java)
-			val body = ErrorDto(
-				statusCode = status.value(),
-				statusName = status.name,
-				code = code,
-				title = translateService.getMessage(
-					code = "$ERROR_TITLE_PREFIX${status.value()}",
-					locale = locale,
-				),
-				message = translateService.getMessage(
-					code = "$ERROR_MESSAGE_PREFIX$code",
-					args = args,
-					default = translateService.getMessage(
-						code = "$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR",
-						locale = locale,
-					),
-					locale = locale
-				),
-			)
-
-			Mono.just(ResponseEntity.status(status).body(body))
+		if (status.is5xxServerError) {
+			log.error("An error (${status.value()}) occurred with code $code", *args.orEmpty(), exception)
+		} else {
+			log.info("Return a status ${status.value()} with code $code", *args.orEmpty())
 		}
+
+		val title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}")
+		val message = translateService.getMessage(
+			code = "$ERROR_MESSAGE_PREFIX$code",
+			args = args,
+			default = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR"),
+		)
+
+		val body = ErrorDto(status.value(), status.name, code, title, message)
+		return Mono.just(ResponseEntity.status(status).body(body))
 	}
 }

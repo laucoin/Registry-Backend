@@ -6,11 +6,10 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IUserProjectProfileController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IUserProjectProfileV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectProfileReaderDtoMapper
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
@@ -19,10 +18,9 @@ import reactor.core.publisher.Mono
 class UserProjectProfileController(
 	private val service: IUserProjectProfileService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
-): IUserProjectProfileController {
+): IUserProjectProfileV1Controller {
 	override fun findUserProjectProfiles(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		pageNumber: Int,
 		pageSize: Int,
 		textSearched: String?,
@@ -30,36 +28,31 @@ class UserProjectProfileController(
 		statusSearched: ProfileStatusEnum?,
 		dateTimeSearched: ZonedDateTime?,
 	): Mono<PageModel<ProjectProfileReaderDto>> {
-		return service.findProjectProfilesPage(
-			currentUser.id!!,
-			PageableModel(pageNumber * pageSize, pageSize),
-			ProjectProfileSearchParamModel(textSearched, availabilitySearched, statusSearched, dateTimeSearched),
-		).map { readerMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = ProjectProfileSearchParamModel(
+			textSearched, availabilitySearched, statusSearched, dateTimeSearched
+		)
+
+		return service.findProjectProfilesPage(currentUser.id!!, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun manageUserProjectProfileAcceptance(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		id: UUID,
 		accepted: Boolean,
 	): Mono<ProjectProfileReaderDto> {
-		return service.updateUserProjectProfileStatusById(
-			currentUser,
-			id,
-			if (accepted) ProfileStatusEnum.ACCEPTED else ProfileStatusEnum.REJECTED
-		).map { readerMapper.toDto(it, locale) }
+		val status = if (accepted) ProfileStatusEnum.ACCEPTED else ProfileStatusEnum.REJECTED
+		return service.updateUserProjectProfileStatusById(currentUser, id, status).map(readerMapper::toDto)
 	}
 
 	override fun createSupportProjectProfile(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID
 	): Mono<ProjectProfileReaderDto> {
-		return service.createSupportProjectProfile(currentUser, projectId)
-			.map { readerMapper.toDto(it, locale) }
+		return service.createSupportProjectProfile(currentUser, projectId).map(readerMapper::toDto)
 	}
 
-	override fun deleteUserProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Void> {
+	override fun deleteUserProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return service.deleteUserProjectProfileById(currentUser, id)
 	}
 }

@@ -31,7 +31,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
@@ -67,8 +66,7 @@ class CommunicationControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects/{projectId}/communications"
-		private val locale = Locale.ENGLISH
+		private const val BASE_URL = "/api/v1/projects/{projectId}/communications"
 
 		@JvmStatic
 		fun `Should findCommunications prepare param, call service and finally cast the result`(): Stream<Arguments> {
@@ -191,7 +189,7 @@ class CommunicationControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
 		whenever(service.findCommunicationPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(CommunicationReaderDto())),
 		)
 
@@ -223,7 +221,7 @@ class CommunicationControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findCommunicationPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page, locale)
+		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -275,7 +273,7 @@ class CommunicationControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.findCommunicationById(any(), any(), anyOrNull())).thenReturn(Mono.just(CommunicationModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(CommunicationReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 
 		// Act
 		val result = webClient
@@ -291,7 +289,7 @@ class CommunicationControllerTest: TestContext() {
 		result.body<CommunicationReaderDto>(OK)
 
 		verify(service).findCommunicationById(projectId, uuid, visibilitySearched = null)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -302,7 +300,7 @@ class CommunicationControllerTest: TestContext() {
 			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
 
 		whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(CommunicationReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
 
 		// Act
@@ -320,7 +318,7 @@ class CommunicationControllerTest: TestContext() {
 		result.body<CommunicationReaderDto>(OK)
 
 		verify(service).createCommunication(any(), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any(), eq(projectId))
 	}
 
@@ -362,7 +360,7 @@ class CommunicationControllerTest: TestContext() {
 				any()
 			)
 		).thenReturn(Mono.just(CommunicationModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(CommunicationReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
 
 		// Act
@@ -380,7 +378,7 @@ class CommunicationControllerTest: TestContext() {
 		result.body<CommunicationReaderDto>(OK)
 
 		verify(service).updateCommunicationById(any(), eq(projectId), eq(uuid), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any(), eq(projectId))
 	}
 
@@ -419,7 +417,7 @@ class CommunicationControllerTest: TestContext() {
 				CommunicationModel()
 			)
 		)
-		whenever(readerMapper.toDto(any(), any())).thenReturn(CommunicationReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 
 		// Act
 		val result = webClient
@@ -435,7 +433,7 @@ class CommunicationControllerTest: TestContext() {
 		result.body<CommunicationReaderDto>(OK)
 
 		verify(service).disableCommunicationById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -449,7 +447,7 @@ class CommunicationControllerTest: TestContext() {
 				CommunicationModel()
 			)
 		)
-		whenever(readerMapper.toDto(any(), any())).thenReturn(CommunicationReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 
 		// Act
 		val result = webClient
@@ -465,7 +463,7 @@ class CommunicationControllerTest: TestContext() {
 		result.body<CommunicationReaderDto>(OK)
 
 		verify(service).enableCommunicationById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 

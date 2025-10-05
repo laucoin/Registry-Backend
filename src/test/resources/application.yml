@@ -74,7 +74,6 @@ registry:
         last-name: "family_name"
   server:
     logging-level: DEBUG
-    prefix: /api
 
 spring:
   application:

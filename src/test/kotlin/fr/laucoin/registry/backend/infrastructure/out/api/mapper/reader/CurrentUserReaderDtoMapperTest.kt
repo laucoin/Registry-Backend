@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PreferenceR
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import java.time.LocalDate
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -87,8 +86,8 @@ class CurrentUserReaderDtoMapperTest {
 
 	@BeforeEach
 	fun setup() {
-		whenever(translateService.getMessage(any(), any(), anyOrNull(), anyOrNull())).thenReturn(TRANSLATED)
-		whenever(preferenceMapper.toDto(any(), any())).thenReturn(preferenceDto)
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn(TRANSLATED)
+		whenever(preferenceMapper.toDto(any())).thenReturn(preferenceDto)
 	}
 
 	@ParameterizedTest
@@ -100,16 +99,16 @@ class CurrentUserReaderDtoMapperTest {
 		expectedPreferencesCast: Int,
 	) {
 		// Act
-		val result = mapper.toDto(model, Locale.getDefault())
+		val result = mapper.toDto(model)
 
 		// Assert
 		assertEquals(dto, result)
 
 		verify(translateService, times(expectedRoleTranslation))
-			.getMessage("${USER_ROLE_PREFIX}ROLE", Locale.getDefault())
+			.getMessage("${USER_ROLE_PREFIX}ROLE")
 
 		verify(preferenceMapper, times(expectedPreferencesCast))
-			.toDto(model.preferences ?: PreferencesModel(), Locale.getDefault())
+			.toDto(model.preferences ?: PreferencesModel())
 	}
 
 	@ParameterizedTest
@@ -125,16 +124,16 @@ class CurrentUserReaderDtoMapperTest {
 		val dtos = listOf(dto)
 
 		// Act
-		val result = mapper.toDtoList(models, Locale.getDefault())
+		val result = mapper.toDtoList(models)
 
 		// Assert
 		assertEquals(dtos, result)
 
 		verify(translateService, times(expectedRoleTranslation))
-			.getMessage("${USER_ROLE_PREFIX}ROLE", Locale.getDefault())
+			.getMessage("${USER_ROLE_PREFIX}ROLE")
 
 		verify(preferenceMapper, times(expectedPreferencesCast))
-			.toDto(model.preferences ?: PreferencesModel(), Locale.getDefault())
+			.toDto(model.preferences ?: PreferencesModel())
 	}
 
 	@ParameterizedTest
@@ -163,15 +162,15 @@ class CurrentUserReaderDtoMapperTest {
 		)
 
 		// Act
-		val result = mapper.toDtoPage(modelPage, Locale.getDefault())
+		val result = mapper.toDtoPage(modelPage)
 
 		// Assert
 		assertEquals(dtoPage, result)
 
 		verify(translateService, times(expectedRoleTranslation))
-			.getMessage("${USER_ROLE_PREFIX}ROLE", Locale.getDefault())
+			.getMessage("${USER_ROLE_PREFIX}ROLE")
 
 		verify(preferenceMapper, times(expectedPreferencesCast))
-			.toDto(model.preferences ?: PreferencesModel(), Locale.getDefault())
+			.toDto(model.preferences ?: PreferencesModel())
 	}
 }

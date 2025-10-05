@@ -5,16 +5,15 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReasonsReaderDto
-import java.util.Locale
 import org.springframework.stereotype.Component
 
 @Component
 class MovementReasonReaderDtoMapper(
 	private val translateService: ITranslateService,
 ): IGenericReaderDtoMapper<MovementReasonEnum, MovementReasonsReaderDto> {
-	override fun toDto(model: MovementReasonEnum, locale: Locale): MovementReasonsReaderDto {
+	override fun toDto(model: MovementReasonEnum): MovementReasonsReaderDto {
 		return MovementReasonsReaderDto(
-			label = translateService.getMessage(code = "$MOVEMENT_REASON_PREFIX$model", locale = locale),
+			label = translateService.getMessage(code = "$MOVEMENT_REASON_PREFIX$model"),
 			value = model.name,
 			type = model.type,
 			kind = MovementReasonKindEnum.REASON,

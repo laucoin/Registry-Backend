@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
-import java.util.Locale
 import java.util.stream.Stream
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -43,15 +42,14 @@ class PreferenceReaderDtoMapperTest {
 		expectedProfileCast: Int,
 	) {
 		// Arrange
-		whenever(profileMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
+		whenever(profileMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
-		mapper.toDto(preferences, Locale.getDefault())
+		mapper.toDto(preferences)
 
 		// Assert
 		verify(profileMapper, times(expectedProfileCast)).toDto(
 			preferences.selectedProfile ?: ProjectProfileModel(),
-			Locale.getDefault(),
 		)
 	}
 }

@@ -161,7 +161,7 @@ class ProjectService(
 			.updateProject(currentUser)
 	}
 
-	override fun deleteProjectById(id: UUID): Mono<Void> {
+	override fun deleteProjectById(id: UUID): Mono<Unit> {
 		return findProjectById(id, visibilitySearched = null)
 			.flatMap { port.deleteById(id) }
 	}

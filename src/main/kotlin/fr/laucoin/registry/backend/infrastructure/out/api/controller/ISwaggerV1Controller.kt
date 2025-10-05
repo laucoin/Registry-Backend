@@ -4,7 +4,7 @@ import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.web.bind.annotation.GetMapping
 import reactor.core.publisher.Mono
 
-interface ISwaggerController {
+fun interface ISwaggerV1Controller {
 	@GetMapping
-	fun redirect(response: ServerHttpResponse): Mono<Void>
+	fun redirect(response: ServerHttpResponse): Mono<Unit>
 }

@@ -10,7 +10,6 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
-import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -111,16 +110,16 @@ class ProjectProfileReaderDtoMapperTest {
 		expectedUserCast: Int,
 	) {
 		// Arrange
-		whenever(translateService.getMessage(any(), any(), anyOrNull(), anyOrNull())).thenReturn("translated")
-		whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
-		whenever(partialUserMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn("translated")
+		whenever(projectMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(partialUserMapper.toDto(any())).thenReturn(PartialUserReaderDto())
 
 		// Act
-		val result = mapper.toDto(profile, Locale.getDefault())
+		val result = mapper.toDto(profile)
 
 		// Assert
-		verify(projectMapper, times(expectedProjectCast)).toDto(profile.project ?: ProjectModel(), Locale.getDefault())
-		verify(partialUserMapper, times(expectedUserCast)).toDto(profile.user ?: UserModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(profile.project ?: ProjectModel())
+		verify(partialUserMapper, times(expectedUserCast)).toDto(profile.user ?: UserModel())
 
 		assertEquals(profile.id, result.id)
 		assertEquals(profile.role, result.role?.value)

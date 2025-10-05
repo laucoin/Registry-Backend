@@ -98,7 +98,7 @@ class VehicleService(
 			.updateVehicle(currentUser)
 	}
 
-	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findVehicleById(projectId, id, visibilitySearched = null)
 			.validateHasNoMovementLinked(VEHICLE_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }

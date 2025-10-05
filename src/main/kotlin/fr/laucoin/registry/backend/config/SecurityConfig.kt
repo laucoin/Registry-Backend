@@ -41,11 +41,11 @@ class SecurityConfig(
 	private val tokenConverter: TokenConverterService,
 	private val authorizationErrorHandler: AuthorizationErrorHandler,
 	private val headersHandler: HeadersHandler,
-	@param:Value("\${external.cors.urls}")
+	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
-	@param:Value("\${registry.feature.documentation.enabled:false}")
+	@param:Value($$"${registry.feature.documentation.enabled:false}")
 	private val documentationEnabled: Boolean,
-	@param:Value("\${registry.feature.observability.enabled:false}")
+	@param:Value($$"${registry.feature.observability.enabled:false}")
 	private val observabilityEnabled: Boolean,
 ) {
 
@@ -74,8 +74,8 @@ class SecurityConfig(
 		if (observabilityEnabled) {
 			it.pathMatchers(GET, "/actuator/**").permitAll()
 		}
-		it.pathMatchers(GET, "/api/authentication/login/uri", "/api/authentication/logout/uri").permitAll()
-		it.pathMatchers(POST, "/api/authentication/token", "/api/authentication/token/refresh").permitAll()
+		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
+		it.pathMatchers(POST, "/api/*/authentication/token", "/api/*/authentication/token/refresh").permitAll()
 		it.anyExchange().authenticated()
 	}
 

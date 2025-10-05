@@ -16,11 +16,11 @@ class GroupWriterDtoMapper(
 		return GroupModel().apply {
 			name = dto.name!!
 			startAvailability =
-				Optional.ofNullable(dto.startAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
-				Optional.ofNullable(dto.endAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
-				Optional.ofNullable(dto.endAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			members = dto.members!!.map { ParticipantModel().apply { id = it } }
 			project = ProjectModel().apply { id = projectId }
 		}

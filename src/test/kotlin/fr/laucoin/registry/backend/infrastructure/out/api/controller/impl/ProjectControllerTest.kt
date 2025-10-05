@@ -78,7 +78,7 @@ class ProjectControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects"
+		private const val BASE_URL = "/api/v1/projects"
 
 		@JvmStatic
 		fun `Should findProjects return 200`(): Stream<Arguments> = Stream.of(
@@ -168,7 +168,7 @@ class ProjectControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ProjectModel()))
 		whenever(service.findProjectsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectReaderDto())),
 		)
 
@@ -202,7 +202,7 @@ class ProjectControllerTest: TestContext() {
 			expectedWithProfile,
 			searchParams
 		)
-		verify(readerMapper).toDtoPage(any(), any())
+		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -271,7 +271,7 @@ class ProjectControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
 
 		// Act
 		val result = webClient
@@ -284,7 +284,7 @@ class ProjectControllerTest: TestContext() {
 		result.body<ProjectReaderDto>(OK)
 
 		verify(service).findProjectById(uuid, visibilitySearched = null)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -293,7 +293,7 @@ class ProjectControllerTest: TestContext() {
 	fun `Should getAvailableProjectOptions return 200`() {
 		// Arrange
 		whenever(service.availableProjectOptions()).thenReturn(Flux.just(COMMUNICATION))
-		whenever(optionsReaderMapper.toDto(any(), any())).thenReturn(
+		whenever(optionsReaderMapper.toDto(any())).thenReturn(
 			ProjectOptionsReaderDto(
 				ACTIVITY,
 				"label",
@@ -314,7 +314,7 @@ class ProjectControllerTest: TestContext() {
 
 		verify(service).availableProjectOptions()
 		verifyNoInteractions(readerMapper)
-		verify(optionsReaderMapper).toDto(any(), any())
+		verify(optionsReaderMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -329,7 +329,7 @@ class ProjectControllerTest: TestContext() {
 		)
 		whenever(service.createProject(any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
 
 		// Act
 		val result = webClient
@@ -343,7 +343,7 @@ class ProjectControllerTest: TestContext() {
 		result.body<ProjectReaderDto>(OK)
 
 		verify(service).createProject(any(), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any())
 	}
 
@@ -382,7 +382,7 @@ class ProjectControllerTest: TestContext() {
 
 		whenever(service.updateProjectById(any(), any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
 
 		// Act
 		val result = webClient
@@ -396,7 +396,7 @@ class ProjectControllerTest: TestContext() {
 		result.body<ProjectReaderDto>(OK)
 
 		verify(service).updateProjectById(any(), eq(projectId), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any())
 	}
 
@@ -427,7 +427,7 @@ class ProjectControllerTest: TestContext() {
 	fun `Should disableProjectById return 200`() {
 		// Arrange
 		whenever(service.disableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
 
 		// Act
 		val result = webClient
@@ -440,7 +440,7 @@ class ProjectControllerTest: TestContext() {
 		result.body<ProjectReaderDto>(OK)
 
 		verify(service).disableProjectById(any(), eq(projectId))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -448,7 +448,7 @@ class ProjectControllerTest: TestContext() {
 	fun `Should enableProjectById return 200`() {
 		// Arrange
 		whenever(service.enableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
 
 		// Act
 		val result = webClient
@@ -461,7 +461,7 @@ class ProjectControllerTest: TestContext() {
 		result.body<ProjectReaderDto>(OK)
 
 		verify(service).enableProjectById(any(), eq(projectId))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}

@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -52,22 +51,22 @@ class VehicleReaderDtoMapperTest {
 		expectedProjectCast: Int,
 	) {
 		// Arrange
-		whenever(presenceStatusMapper.toDto(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+		whenever(presenceStatusMapper.toDto(any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
 			LabelDto(
 				"translated",
 				"translated"
 			)
 		)
-		whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
+		whenever(projectMapper.toDto(any())).thenReturn(ProjectReaderDto())
 
 		// Act
-		val result = mapper.toDto(vehicle, Locale.getDefault())
+		val result = mapper.toDto(vehicle)
 
 		// Assert
 		verify(presenceStatusMapper, times(expectedTranslation)).toDto(
-			any(), any(), anyOrNull(), anyOrNull(), anyOrNull()
+			any(), anyOrNull(), anyOrNull(), anyOrNull()
 		)
-		verify(projectMapper, times(expectedProjectCast)).toDto(vehicle.project ?: ProjectModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(vehicle.project ?: ProjectModel())
 
 		assertEquals(vehicle.id, result.id)
 		assertEquals(vehicle.licensePlate, result.licensePlate)

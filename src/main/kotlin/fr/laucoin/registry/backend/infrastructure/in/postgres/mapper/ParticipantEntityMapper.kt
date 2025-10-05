@@ -30,7 +30,7 @@ class ParticipantEntityMapper(
 			lastName = entity.lastName
 			birthday = entity.birthday
 			type = entity.type
-			groups = gson.fromJson<List<GroupModel>?>(entity.groups, groupListType).filter { Objects.nonNull(it.id) }
+			groups = extractGroups(entity.groups)
 			availableGroups = groups.filter { buildPresentGroupIds(entity.availableGroups).contains(it.id) }
 			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
 			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
@@ -41,9 +41,17 @@ class ParticipantEntityMapper(
 		}.fillWithProjectAndEntity(entity)
 	}
 
+	private fun extractGroups(groups: String?): List<GroupModel> {
+		return Optional.ofNullable(groups).map { g ->
+			val groupList = gson.fromJson<List<GroupModel>?>(g, groupListType) ?: emptyList()
+			groupList.filter { Objects.nonNull(it.id) }
+		}.orElse(emptyList())
+	}
+
 	private fun buildPresentGroupIds(availableGroups: String?): List<UUID> {
 		return Optional.ofNullable(availableGroups).map { g ->
-			gson.fromJson<List<UUID>?>(g, uuidListType).filter { Objects.nonNull(it) }
+			val groupIds = gson.fromJson<List<UUID>?>(g, uuidListType) ?: emptyList()
+			groupIds.filter { Objects.nonNull(it) }
 		}.orElse(emptyList())
 	}
 

@@ -40,7 +40,8 @@ There is 2 types of users (but no functional difference)
 * **Theme**\
   Registry should be available is light and dark mode, we store the User preference.
 * **Driver license**\
-  Used for Participant. If the participant want to drive vehicle. An Organization can require a driver contract. The driver license is
+  Used for Participant. If the participant want to drive vehicle. An Organization can require a driver contract. The
+  driver license is
   the path of the (encoded) contract. This contract may include the user's driver license copy.
 * **Opt-in consent**\
   That a list of consent related to opt-in
@@ -87,11 +88,13 @@ graph TD
 * I can update my theme, driver license and opt-in consent (other field is not updatable).
 * I cannot login if my User is blocked.
 
-> If you delete a User, it will delete it and all related information in the database but he still can login. If you want to prevent a
+> If you delete a User, it will delete it and all related information in the database but he still can login. If you
+> want to prevent a
 > User connection, you should block him.
 
 ### As an Organization
 
-* The new Users are not created in the Registry application. A User is considered as a new one when Registry has not past connection
+* The new Users are not created in the Registry application. A User is considered as a new one when Registry has not
+  past connection
   for him.
 * The deleted Users are delete in Registry by not in the authentication provider.

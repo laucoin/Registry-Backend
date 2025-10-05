@@ -24,22 +24,22 @@ import org.springframework.context.annotation.Configuration
 @ConditionalOnProperty(value = ["registry.feature.documentation.enabled"], havingValue = "true", matchIfMissing = false)
 @OpenAPIDefinition(
 	info = Info(
-		title = "\${registry.information.name}",
-		description = "\${registry.information.description}",
+		title = $$"${registry.information.name}",
+		description = $$"${registry.information.description}",
 		contact = Contact(
-			name = "\${registry.information.support.name}",
-			email = "\${registry.information.support.email}",
-			url = "\${registry.information.support.url}"
+			name = $$"${registry.information.support.name}",
+			email = $$"${registry.information.support.email}",
+			url = $$"${registry.information.support.url}"
 		)
 	)
 )
 class SwaggerConfig(
-	@param:Value("\${registry.security.oauth2.url:}/auth")
-	private val authUrl: String?,
-	@param:Value("\${registry.security.oauth2.url:}/token")
-	private val tokenUrl: String?,
-	@param:Value("\${registry.server.prefix:''}")
-	private val apiPrefix: String,
+	@param:Value($$"${registry.security.oauth2.url:}/auth")
+	private val configAuthUrl: String?,
+	@param:Value($$"${registry.security.oauth2.url:}/token")
+	private val configTokenUrl: String?,
+	@param:Value($$"${registry.server.prefix:''}")
+	private val configApiPrefix: String,
 ) {
 	private companion object {
 		private const val CLIENT_NAME = "OAuth2"
@@ -48,7 +48,7 @@ class SwaggerConfig(
 	@Bean
 	fun openApi(): OpenAPI {
 		val openAPI = OpenAPI()
-		if (Objects.nonNull(authUrl) && Objects.nonNull(tokenUrl)) {
+		if (Objects.nonNull(configAuthUrl) && Objects.nonNull(configTokenUrl)) {
 			openAPI.components(
 				Components()
 					.addSecuritySchemes(
@@ -59,9 +59,9 @@ class SwaggerConfig(
 								OAuthFlows()
 									.implicit(
 										OAuthFlow().apply {
-											authorizationUrl = authUrl
-											refreshUrl = tokenUrl
-											tokenUrl = tokenUrl
+											authorizationUrl = configAuthUrl
+											refreshUrl = configTokenUrl
+											tokenUrl = configTokenUrl
 										}
 									)
 							)
@@ -74,7 +74,9 @@ class SwaggerConfig(
 	@Bean
 	fun customOpenApi(): OpenApiCustomizer {
 		return OpenApiCustomizer { openApi: OpenAPI ->
-			openApi.paths.entries.removeIf { entry: Map.Entry<String, PathItem?> -> !entry.key.startsWith(apiPrefix) }
+			openApi.paths.entries.removeIf { entry: Map.Entry<String, PathItem?> ->
+				!entry.key.startsWith(configApiPrefix)
+			}
 		}
 	}
 

@@ -97,7 +97,7 @@ class ProjectModelPostgresRepository(
 		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
 	}
 
-	override fun deleteById(id: UUID): Mono<Void> {
-		return repository.deleteById(id)
+	override fun deleteById(id: UUID): Mono<Unit> {
+		return repository.deleteById(id).thenReturn(Unit)
 	}
 }

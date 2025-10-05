@@ -155,9 +155,9 @@ class ParticipantModelPostgresRepository(
 		else repository.saveAll(guests.map(mapper::toEntity)).map(mapper::toModel)
 	}
 
-	override fun deleteAll(ids: List<UUID>): Mono<Void> {
+	override fun deleteAll(ids: List<UUID>): Mono<Unit> {
 		return if (ids.isEmpty()) Mono.empty()
-		else repository.deleteAllById(ids)
+		else repository.deleteAllById(ids).thenReturn(Unit)
 	}
 
 	override fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID> {
@@ -210,7 +210,7 @@ class ParticipantModelPostgresRepository(
 		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
 	}
 
-	override fun deleteById(id: UUID): Mono<Void> {
-		return repository.deleteById(id)
+	override fun deleteById(id: UUID): Mono<Unit> {
+		return repository.deleteById(id).thenReturn(Unit)
 	}
 }

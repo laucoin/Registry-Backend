@@ -38,6 +38,6 @@ interface IActivityService {
 
 	fun disableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel>
 	fun enableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel>
-	fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void>
+	fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit>
 	fun purgeActivitiesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

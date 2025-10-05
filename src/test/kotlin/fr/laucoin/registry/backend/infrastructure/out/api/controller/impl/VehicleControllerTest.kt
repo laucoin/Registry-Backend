@@ -45,7 +45,6 @@ import java.time.LocalDate
 import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Test
@@ -83,8 +82,7 @@ class VehicleControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects/{projectId}/vehicles"
-		private val locale = Locale.ENGLISH
+		private const val BASE_URL = "/api/v1/projects/{projectId}/vehicles"
 
 		@JvmStatic
 		fun `Should findVehicles prepare param, call service and finally cast the result`(): Stream<Arguments> {
@@ -260,7 +258,7 @@ class VehicleControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(VehicleModel()))
 		whenever(service.findVehiclesPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(VehicleReaderDto())),
 		)
 
@@ -289,7 +287,7 @@ class VehicleControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findVehiclesPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page, locale)
+		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -331,7 +329,7 @@ class VehicleControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.findVehicleById(any(), any(), anyOrNull())).thenReturn(Mono.just(VehicleModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 
 		// Act
 		val result = webClient
@@ -344,7 +342,7 @@ class VehicleControllerTest: TestContext() {
 		result.body<VehicleReaderDto>(OK)
 
 		verify(service).findVehicleById(projectId, uuid, visibilitySearched = null)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(movementReaderMapper)
 	}
@@ -377,7 +375,7 @@ class VehicleControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
 		whenever(service.findVehicleMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(movementReaderMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(movementReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
 
@@ -408,7 +406,7 @@ class VehicleControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findVehicleMovementsPage(projectId, uuid, pageable, searchParams)
-		verify(movementReaderMapper).toDtoPage(page, locale)
+		verify(movementReaderMapper).toDtoPage(page)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -457,7 +455,7 @@ class VehicleControllerTest: TestContext() {
 		val vehicle = VehicleWriterDto(licensePlate = "AB-123-CD", brand = "Toyota", model = "Hilux")
 
 		whenever(service.createVehicle(any(), any())).thenReturn(Mono.just(VehicleModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(VehicleModel())
 
 		// Act
@@ -472,7 +470,7 @@ class VehicleControllerTest: TestContext() {
 		result.body<VehicleReaderDto>(OK)
 
 		verify(service).createVehicle(any(), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(vehicle, projectId)
 		verifyNoInteractions(movementReaderMapper)
 	}
@@ -508,7 +506,7 @@ class VehicleControllerTest: TestContext() {
 		val vehicle = VehicleWriterDto(licensePlate = "AB-123-CD", brand = "Toyota", model = "Hilux")
 
 		whenever(service.updateVehicleById(any(), any(), any(), any())).thenReturn(Mono.just(VehicleModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(VehicleModel())
 
 		// Act
@@ -523,7 +521,7 @@ class VehicleControllerTest: TestContext() {
 		result.body<VehicleReaderDto>(OK)
 
 		verify(service).updateVehicleById(any(), eq(projectId), eq(uuid), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verify(writerMapper).toModel(vehicle, projectId)
 	}
@@ -560,7 +558,7 @@ class VehicleControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.disableVehicleById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 
 		// Act
 		val result = webClient
@@ -573,7 +571,7 @@ class VehicleControllerTest: TestContext() {
 		result.body<VehicleReaderDto>(OK)
 
 		verify(service).disableVehicleById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -584,7 +582,7 @@ class VehicleControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.enableVehicleById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 
 		// Act
 		val result = webClient
@@ -597,7 +595,7 @@ class VehicleControllerTest: TestContext() {
 		result.body<VehicleReaderDto>(OK)
 
 		verify(service).enableVehicleById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}

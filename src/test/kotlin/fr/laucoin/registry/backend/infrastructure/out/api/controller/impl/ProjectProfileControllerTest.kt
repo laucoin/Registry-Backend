@@ -99,7 +99,7 @@ class ProjectProfileControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects/{projectId}/profiles"
+		private const val BASE_URL = "/api/v1/projects/{projectId}/profiles"
 
 		@JvmStatic
 		fun `Should findProjectProfiles return 200`(): Stream<Arguments> = Stream.of(
@@ -203,7 +203,7 @@ class ProjectProfileControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
 		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
 		)
 
@@ -232,7 +232,7 @@ class ProjectProfileControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findProjectProfilesPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(any(), any())
+		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
@@ -281,7 +281,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -294,7 +294,7 @@ class ProjectProfileControllerTest: TestContext() {
 		result.body<ProjectProfileReaderDto>(OK)
 
 		verify(service).findProjectProfileById(projectId, uuid, visibilitySearched = null)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
@@ -309,7 +309,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val user = UserModel()
 
 		whenever(service.searchUsers(anyOrNull())).thenReturn(Flux.just(user))
-		whenever(partialUserReaderMapper.toDto(any(), any())).thenReturn(PartialUserReaderDto())
+		whenever(partialUserReaderMapper.toDto(any())).thenReturn(PartialUserReaderDto())
 
 		// Act
 		val result = webClient
@@ -325,7 +325,7 @@ class ProjectProfileControllerTest: TestContext() {
 
 		verify(service).searchUsers(searched)
 		verifyNoInteractions(readerMapper)
-		verify(partialUserReaderMapper).toDto(any(), any())
+		verify(partialUserReaderMapper).toDto(any())
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -336,7 +336,7 @@ class ProjectProfileControllerTest: TestContext() {
 	fun `Should getAssignableProjectProfileRoles return 200`() {
 		// Arrange
 		whenever(service.getAssignableProjectRoles(any(), any())).thenReturn(Flux.just("role"))
-		whenever(projectProfileRoleReaderMapper.toDto(any(), any())).thenReturn(LabelDto("value", "label"))
+		whenever(projectProfileRoleReaderMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
 		val result = webClient
@@ -350,7 +350,7 @@ class ProjectProfileControllerTest: TestContext() {
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
-		verify(projectProfileRoleReaderMapper).toDto(any(), any())
+		verify(projectProfileRoleReaderMapper).toDto(any())
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
@@ -366,7 +366,7 @@ class ProjectProfileControllerTest: TestContext() {
 			Mono.just(Pair(listOf(UUID.randomUUID()), emptyList()))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
-		whenever(createdProjectProfilesReaderMapper.toDto(any(), any())).thenReturn(
+		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
 			CreatedProjectProfilesReaderDto(
 				emptyList(),
 				emptyList()
@@ -389,7 +389,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verify(profilesWriterMapper).toModels(profiles, projectId)
-		verify(createdProjectProfilesReaderMapper).toDto(any(), any())
+		verify(createdProjectProfilesReaderMapper).toDto(any())
 		verify(service).createProjectProfiles(
 			any(),
 			eq(projectId),
@@ -416,7 +416,7 @@ class ProjectProfileControllerTest: TestContext() {
 			Mono.just(Pair(listOf(uuid2), listOf(uuid)))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
-		whenever(createdProjectProfilesReaderMapper.toDto(any(), any())).thenReturn(
+		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
 			CreatedProjectProfilesReaderDto(
 				listOf(uuid2),
 				listOf(uuid)
@@ -491,7 +491,7 @@ class ProjectProfileControllerTest: TestContext() {
 			)
 		).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -503,7 +503,7 @@ class ProjectProfileControllerTest: TestContext() {
 
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
@@ -550,7 +550,7 @@ class ProjectProfileControllerTest: TestContext() {
 				ProjectProfileModel()
 			)
 		)
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -561,7 +561,7 @@ class ProjectProfileControllerTest: TestContext() {
 
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
@@ -580,7 +580,7 @@ class ProjectProfileControllerTest: TestContext() {
 				ProjectProfileModel()
 			)
 		)
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -591,7 +591,7 @@ class ProjectProfileControllerTest: TestContext() {
 
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)

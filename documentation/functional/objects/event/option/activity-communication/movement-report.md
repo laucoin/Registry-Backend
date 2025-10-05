@@ -35,7 +35,8 @@ Cf. [Glossary](../../../../../../../../../Perso/registry-documentation/glossary.
 
 If the Event has the Movement Report Option.
 
-Refer the [Activity Communication features](./#features), because Movement Report is closely linked to an Activity Communication.
+Refer the [Activity Communication features](./#features), because Movement Report is closely linked to an Activity
+Communication.
 
 ### As a User
 

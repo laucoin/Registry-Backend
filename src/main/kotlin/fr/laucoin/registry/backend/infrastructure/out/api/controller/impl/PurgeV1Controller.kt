@@ -11,7 +11,7 @@ import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IPurgeController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IPurgeV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectContentPurgeReaderDto
 import java.time.Instant
@@ -27,30 +27,30 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
-class PurgeController(
+class PurgeV1Controller(
 	private val userService: IUserService,
-	@param:Value("\${registry.feature.purge.users.months-threshold:}")
+	@param:Value($$"${registry.feature.purge.users.months-threshold:}")
 	private val userPurgeMonthThreshold: Long?,
 	private val projectService: IProjectService,
-	@param:Value("\${registry.feature.purge.projects.months-threshold:}")
+	@param:Value($$"${registry.feature.purge.projects.months-threshold:}")
 	private val projectPurgeMonthThreshold: Long?,
 	private val movementService: IMovementService,
 	private val alertService: IAlertService,
 	private val communicationService: ICommunicationService,
-	@param:Value("\${registry.feature.purge.projects.content.months-threshold:}")
+	@param:Value($$"${registry.feature.purge.projects.content.months-threshold:}")
 	private val projectContentPurgeMonthThreshold: Long?,
 	private val activityService: IActivityService,
 	private val vehicleService: IVehicleService,
 	private val participantService: IParticipantService,
 	private val groupService: IGroupService,
-	@param:Value("\${registry.feature.purge.projects.configuration.months-threshold:}")
+	@param:Value($$"${registry.feature.purge.projects.configuration.months-threshold:}")
 	private val projectConfigurationPurgeMonthThreshold: Long?,
-): IPurgeController {
+): IPurgeV1Controller {
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
 		return launchPurgeUsers(dateThreshold, dryRun)
 	}
 
-	@Scheduled(cron = "\${registry.feature.purge.users.cron}")
+	@Scheduled(cron = $$"${registry.feature.purge.users.cron}")
 	fun scheduledUsersPurge() {
 		launchPurgeUsers(dateThreshold = null, dryRun = false).subscribe()
 	}
@@ -64,7 +64,7 @@ class PurgeController(
 		return launchPurgeProjects(dateThreshold, dryRun)
 	}
 
-	@Scheduled(cron = "\${registry.feature.purge.projects.cron}")
+	@Scheduled(cron = $$"${registry.feature.purge.projects.cron}")
 	fun scheduledProjectsPurge() {
 		launchPurgeProjects(dateThreshold = null, dryRun = false).subscribe()
 	}
@@ -81,7 +81,7 @@ class PurgeController(
 		return launchPurgeProjectsContents(dateThreshold, dryRun)
 	}
 
-	@Scheduled(cron = "\${registry.feature.purge.projects.content.cron}")
+	@Scheduled(cron = $$"${registry.feature.purge.projects.content.cron}")
 	fun scheduledProjectsContentsPurge() {
 		launchPurgeProjectsContents(dateThreshold = null, dryRun = false).subscribe()
 	}
@@ -91,19 +91,13 @@ class PurgeController(
 		dryRun: Boolean
 	): Mono<ProjectContentPurgeReaderDto> {
 		val deleteOlderThan = buildDateThreshold(projectContentPurgeMonthThreshold, dateThreshold)
-		return Mono.zip(
-			movementService.purgeMovementsIfNecessary(deleteOlderThan, dryRun).collectList(),
-			alertService.purgeAlertsIfNecessary(deleteOlderThan, dryRun).collectList(),
-		).flatMap { movementAndAlertIds ->
-			communicationService.purgeOrphanCommunications(movementAndAlertIds.t1, movementAndAlertIds.t2, dryRun)
+		val purgeMovement = movementService.purgeMovementsIfNecessary(deleteOlderThan, dryRun).collectList()
+		val purgeAlert = alertService.purgeAlertsIfNecessary(deleteOlderThan, dryRun).collectList()
+
+		return Mono.zip(purgeMovement, purgeAlert).flatMap { mvAltIds ->
+			communicationService.purgeOrphanCommunications(mvAltIds.t1, mvAltIds.t2, dryRun)
 				.collectList()
-				.map {
-					ProjectContentPurgeReaderDto(
-						movementAndAlertIds.t1,
-						movementAndAlertIds.t2,
-						it,
-					)
-				}
+				.map { ProjectContentPurgeReaderDto(mvAltIds.t1, mvAltIds.t2, it) }
 		}
 	}
 
@@ -114,7 +108,7 @@ class PurgeController(
 		return launchPurgeProjectsConfigurations(dateThreshold, dryRun)
 	}
 
-	@Scheduled(cron = "\${registry.feature.purge.projects.configuration.cron}")
+	@Scheduled(cron = $$"${registry.feature.purge.projects.configuration.cron}")
 	fun scheduledProjectsConfigurationsPurge() {
 		launchPurgeProjectsConfigurations(dateThreshold = null, dryRun = false).subscribe()
 	}
@@ -124,19 +118,14 @@ class PurgeController(
 		dryRun: Boolean
 	): Mono<ProjectConfigurationPurgeReaderDto> {
 		val deleteOlderThan = buildDateThreshold(projectConfigurationPurgeMonthThreshold, dateThreshold)
-		return Mono.zip(
-			vehicleService.purgeVehiclesIfNecessary(deleteOlderThan, dryRun).collectList(),
-			participantService.purgeParticipantsIfNecessary(deleteOlderThan, dryRun).collectList(),
-			activityService.purgeActivitiesIfNecessary(deleteOlderThan, dryRun).collectList(),
-		).flatMap { vehicleParticipantAndActivityIds ->
-			groupService.purgeEmptyGroups(vehicleParticipantAndActivityIds.t2, dryRun).collectList()
+		val purgeVehicle = vehicleService.purgeVehiclesIfNecessary(deleteOlderThan, dryRun).collectList()
+		val purgeParticipant = participantService.purgeParticipantsIfNecessary(deleteOlderThan, dryRun).collectList()
+		val purgeActivity = activityService.purgeActivitiesIfNecessary(deleteOlderThan, dryRun).collectList()
+
+		return Mono.zip(purgeVehicle, purgeParticipant, purgeActivity).flatMap { vclPptAvtIds ->
+			groupService.purgeEmptyGroups(vclPptAvtIds.t2, dryRun).collectList()
 				.map {
-					ProjectConfigurationPurgeReaderDto(
-						vehicleParticipantAndActivityIds.t1,
-						vehicleParticipantAndActivityIds.t2,
-						vehicleParticipantAndActivityIds.t3,
-						it
-					)
+					ProjectConfigurationPurgeReaderDto(vclPptAvtIds.t1, vclPptAvtIds.t2, vclPptAvtIds.t3, it)
 				}
 		}
 	}

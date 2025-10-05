@@ -110,7 +110,7 @@ class MovementControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects/{projectId}/movements"
+		private const val BASE_URL = "/api/v1/projects/{projectId}/movements"
 
 		@JvmStatic
 		fun `Should findMovements return 200`(): Stream<Arguments> = Stream.of(
@@ -236,7 +236,7 @@ class MovementControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
 		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
 
@@ -265,7 +265,7 @@ class MovementControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findMovementsPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(any(), any())
+		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -316,7 +316,7 @@ class MovementControllerTest: TestContext() {
 				)
 			)
 		)
-		whenever(readerContentMapper.toDto(any(), any())).thenReturn(MovementContentReaderDto())
+		whenever(readerContentMapper.toDto(any())).thenReturn(MovementContentReaderDto())
 
 		// Act
 		val result = webClient
@@ -330,7 +330,7 @@ class MovementControllerTest: TestContext() {
 
 		verify(service).findMovementsContent(projectId, listOf(uuid))
 		verifyNoInteractions(readerMapper)
-		verify(readerContentMapper).toDto(any(), any())
+		verify(readerContentMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -345,7 +345,7 @@ class MovementControllerTest: TestContext() {
 				anyOrNull()
 			)
 		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 		// Act
 		val result = webClient
@@ -358,7 +358,7 @@ class MovementControllerTest: TestContext() {
 		result.body<MovementReaderDto>(OK)
 
 		verify(service).findMovementById(projectId, uuid, visibilitySearched = null)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -372,7 +372,7 @@ class MovementControllerTest: TestContext() {
 		val contentTypeSearched = REGISTERED
 		whenever(service.searchActivitiesByText(any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
 		whenever(service.searchReasonsByText(any(), any())).thenReturn(Flux.just(OTHER))
-		whenever(activityReasonReaderMapper.toDto(any(), any())).thenReturn(
+		whenever(activityReasonReaderMapper.toDto(any())).thenReturn(
 			MovementReasonsReaderDto(
 				value = "value",
 				label = "label",
@@ -380,7 +380,7 @@ class MovementControllerTest: TestContext() {
 				type = IN,
 			)
 		)
-		whenever(reasonReaderMapper.toDto(any(), any())).thenReturn(
+		whenever(reasonReaderMapper.toDto(any())).thenReturn(
 			MovementReasonsReaderDto(
 				value = "value",
 				label = "label",
@@ -415,8 +415,8 @@ class MovementControllerTest: TestContext() {
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verifyNoInteractions(vehicleReaderMapper)
-		verify(activityReasonReaderMapper).toDto(any(), any())
-		verify(reasonReaderMapper, atLeastOnce()).toDto(any(), any())
+		verify(activityReasonReaderMapper).toDto(any())
+		verify(reasonReaderMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -433,7 +433,7 @@ class MovementControllerTest: TestContext() {
 				)
 			)
 		)
-		whenever(movementParticipantsAndGroupsReaderMapper.toDto(any(), any())).thenReturn(
+		whenever(movementParticipantsAndGroupsReaderMapper.toDto(any())).thenReturn(
 			MovementParticipantsAndGroupsReaderDto(
 				emptyList(),
 				emptyList(),
@@ -459,7 +459,7 @@ class MovementControllerTest: TestContext() {
 		verify(service).searchParticipantsAndGroupsByText(projectId, typeSearched, searched)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementTypeReaderMapper)
-		verify(movementParticipantsAndGroupsReaderMapper).toDto(any(), any())
+		verify(movementParticipantsAndGroupsReaderMapper).toDto(any())
 		verifyNoInteractions(vehicleReaderMapper)
 		verifyNoInteractions(activityReasonReaderMapper)
 		verifyNoInteractions(reasonReaderMapper)
@@ -471,7 +471,7 @@ class MovementControllerTest: TestContext() {
 		// Arrange
 		val searched = "text"
 		whenever(service.searchVehiclesByText(any(), anyOrNull())).thenReturn(Flux.just(VehicleModel()))
-		whenever(vehicleReaderMapper.toDto(any(), any())).thenReturn(VehicleReaderDto())
+		whenever(vehicleReaderMapper.toDto(any())).thenReturn(VehicleReaderDto())
 
 		// Act
 		val result = webClient
@@ -490,7 +490,7 @@ class MovementControllerTest: TestContext() {
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
-		verify(vehicleReaderMapper).toDto(any(), any())
+		verify(vehicleReaderMapper).toDto(any())
 		verifyNoInteractions(activityReasonReaderMapper)
 		verifyNoInteractions(reasonReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -515,7 +515,7 @@ class MovementControllerTest: TestContext() {
 			)
 		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 		// Act
 		val result = webClient
@@ -529,7 +529,7 @@ class MovementControllerTest: TestContext() {
 		result.body<MovementReaderDto>(OK)
 
 		verify(service).createMovement(any(), any(), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verify(writerMapper).toModel(any(), eq(projectId))
@@ -582,7 +582,7 @@ class MovementControllerTest: TestContext() {
 			)
 		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 		// Act
 		val result = webClient
@@ -595,7 +595,7 @@ class MovementControllerTest: TestContext() {
 		// Assert
 		result.body<MovementReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verify(writerMapper).toModel(any(), eq(projectId))
@@ -641,7 +641,7 @@ class MovementControllerTest: TestContext() {
 				eq(uuid)
 			)
 		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 		// Act
 		val result = webClient
@@ -654,7 +654,7 @@ class MovementControllerTest: TestContext() {
 		result.body<MovementReaderDto>(OK)
 
 		verify(service).disableMovementById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -672,7 +672,7 @@ class MovementControllerTest: TestContext() {
 				eq(uuid)
 			)
 		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 
 		// Act
@@ -686,7 +686,7 @@ class MovementControllerTest: TestContext() {
 		result.body<MovementReaderDto>(OK)
 
 		verify(service).enableMovementById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verifyNoInteractions(writerMapper)

@@ -6,8 +6,8 @@ import org.springframework.scheduling.annotation.EnableScheduling
 
 @EnableScheduling
 @SpringBootApplication
-class RegistryBackendApplication
+class RegistryBackend
 
 fun main(args: Array<String>) {
-	runApplication<RegistryBackendApplication>(*args)
+	runApplication<RegistryBackend>(*args)
 }

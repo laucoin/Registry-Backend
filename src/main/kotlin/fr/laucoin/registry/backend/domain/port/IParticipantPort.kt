@@ -32,9 +32,9 @@ interface IParticipantPort {
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
 	fun updateAllEndAvailability(ids: List<UUID>, endAvailability: CustomDateTimeModel): Flux<ParticipantModel>
 	fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel>
-	fun deleteAll(ids: List<UUID>): Mono<Void>
+	fun deleteAll(ids: List<UUID>): Mono<Unit>
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: ParticipantModel): Mono<ParticipantModel>
 	fun update(element: ParticipantModel): Mono<ParticipantModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

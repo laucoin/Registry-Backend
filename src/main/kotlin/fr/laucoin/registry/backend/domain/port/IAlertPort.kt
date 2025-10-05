@@ -21,5 +21,5 @@ interface IAlertPort {
 	fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: AlertModel): Mono<AlertModel>
 	fun update(element: AlertModel): Mono<AlertModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

@@ -27,5 +27,5 @@ interface IProjectPort {
 	fun findProjectsEligibleForPurge(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: ProjectModel): Mono<ProjectModel>
 	fun update(element: ProjectModel): Mono<ProjectModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

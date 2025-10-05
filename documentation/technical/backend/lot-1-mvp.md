@@ -16,7 +16,9 @@ layout:
 
 ## Organization
 
-Is Registry take a commercial way, it could be interessant to create mono instance to reduce exploitation cost. But for the moment, we will create multi-instance backend but create an organization configuration level To make a futur evolution easier.
+Is Registry take a commercial way, it could be interessant to create mono instance to reduce exploitation cost. But for
+the moment, we will create multi-instance backend but create an organization configuration level To make a futur
+evolution easier.
 
 An example of organization configuration:
 
@@ -136,11 +138,7 @@ classDiagram
 
 ## Profile
 
-
-
 ## Event
-
-
 
 ## Participant
 

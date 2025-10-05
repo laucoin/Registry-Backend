@@ -21,7 +21,7 @@ class ActivityWriterDtoMapper(
 			name = dto.name
 			description = dto.description
 			duration = try {
-				Optional.ofNullable(dto.duration).map { Duration.parse(it) }.orElse(null)
+				Optional.ofNullable(dto.duration).map(Duration::parse).orElse(null)
 			} catch (e: Exception) {
 				throw RegistryException(
 					status = BAD_REQUEST,
@@ -29,11 +29,11 @@ class ActivityWriterDtoMapper(
 				)
 			}
 			allowedParticipants =
-				Optional.ofNullable(dto.allowedParticipants).map { numericRangeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.allowedParticipants).map(numericRangeMapper::toModel).orElse(null)
 			startAvailability =
-				Optional.ofNullable(dto.startAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
-				Optional.ofNullable(dto.endAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			project = ProjectModel().apply { id = projectId }
 		}
 	}

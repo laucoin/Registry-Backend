@@ -179,7 +179,7 @@ class AlertService(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID
-	): Mono<Void> {
+	): Mono<Unit> {
 		return findAlertById(projectId, id, visibilitySearched = null)
 			.validateHasNoCommunicationLinked(ALERT_DELETE_HAS_COMMUNICATION)
 			.flatMap { port.deleteById(it.id!!) }

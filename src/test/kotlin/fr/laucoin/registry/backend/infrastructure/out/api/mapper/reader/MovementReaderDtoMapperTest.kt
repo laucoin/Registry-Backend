@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_TYPE_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
@@ -11,7 +10,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -46,7 +44,7 @@ class MovementReaderDtoMapperTest {
 				Arguments.of(MovementModel(contentType = REGISTERED), 0, 0, 0),
 				Arguments.of(
 					MovementModel(contentType = REGISTERED).apply {
-						type = MovementTypeEnum.IN
+						type = IN
 						activity = ActivityModel()
 						project = ProjectModel()
 						content = emptyList()
@@ -68,8 +66,8 @@ class MovementReaderDtoMapperTest {
 		expectedProjectCast: Int,
 	) {
 		// Arrange
-		whenever(translateService.getMessage(any(), any(), anyOrNull(), anyOrNull())).thenReturn("translated")
-		whenever(activityReasonMapper.toDto(any(), any())).thenReturn(
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn("translated")
+		whenever(activityReasonMapper.toDto(any())).thenReturn(
 			MovementReasonsReaderDto(
 				value = "value",
 				label = "label",
@@ -77,22 +75,20 @@ class MovementReaderDtoMapperTest {
 				type = IN,
 			)
 		)
-		whenever(projectMapper.toDto(any(), any())).thenReturn(ProjectReaderDto())
-		whenever(movementContentMapper.toDtoList(any(), any())).thenReturn(emptyList())
+		whenever(projectMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(movementContentMapper.toDtoList(any())).thenReturn(emptyList())
 
 		// Act
-		val result = mapper.toDto(movement, Locale.getDefault())
+		val result = mapper.toDto(movement)
 
 		// Assert
 		verify(translateService, times(expectedTranslation)).getMessage(
 			code = "$MOVEMENT_TYPE_PREFIX${movement.type}",
-			locale = Locale.getDefault(),
 		)
-		verify(movementContentMapper).toDtoList(movement.content, Locale.getDefault())
-		verify(projectMapper, times(expectedProjectCast)).toDto(movement.project ?: ProjectModel(), Locale.getDefault())
+		verify(movementContentMapper).toDtoList(movement.content)
+		verify(projectMapper, times(expectedProjectCast)).toDto(movement.project ?: ProjectModel())
 		verify(activityReasonMapper, times(expectedActivityCast)).toDto(
 			movement.activity ?: ActivityModel(),
-			Locale.getDefault()
 		)
 
 		assertEquals(movement.id, result.id)

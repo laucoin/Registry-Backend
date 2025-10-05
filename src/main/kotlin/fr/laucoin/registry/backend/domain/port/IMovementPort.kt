@@ -73,5 +73,5 @@ interface IMovementPort {
 	fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: MovementModel): Mono<MovementModel>
 	fun update(element: MovementModel): Mono<MovementModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

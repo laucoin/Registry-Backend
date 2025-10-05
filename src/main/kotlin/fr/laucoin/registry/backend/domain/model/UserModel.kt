@@ -22,7 +22,7 @@ open class UserModel(
 	var purged: Boolean = false,
 ): GenericModel() {
 	fun personalDataChanged(email: String, firstName: String?, lastName: String?): Boolean =
-		this.email != email || this.firstName != firstName || this.lastName != lastName || this.birthday != birthday
+		this.email != email || this.firstName != firstName || this.lastName != lastName
 
 	fun impersonate() {
 		this.firstName = generateRandomString()

@@ -31,7 +31,8 @@ Cf. [Glossary](../../../../../../Perso/registry-documentation/glossary.md)
 
 ### As a User
 
-* When I create an Address (with an Event) and it match with a Fire Risk zone, I can see the today and tomorrow Fire Risk on the
+* When I create an Address (with an Event) and it match with a Fire Risk zone, I can see the today and tomorrow Fire
+  Risk on the
   related Event home screen.
 * I can fetch Fire Risk
 * I can refresh Fire Risk

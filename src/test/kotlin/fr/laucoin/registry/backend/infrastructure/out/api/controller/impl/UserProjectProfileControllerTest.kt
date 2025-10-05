@@ -21,7 +21,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Test
@@ -50,7 +49,7 @@ class UserProjectProfileControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/users/profiles"
+		private const val BASE_URL = "/api/v1/users/profiles"
 
 		@JvmStatic
 		fun `Should findUserProjectProfiles return 200`(): Stream<Arguments> = Stream.of(
@@ -97,7 +96,7 @@ class UserProjectProfileControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
 		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
 		)
 
@@ -126,14 +125,14 @@ class UserProjectProfileControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findProjectProfilesPage(currentUser().id!!, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page, Locale.ENGLISH)
+		verify(readerMapper).toDtoPage(page)
 	}
 
 	@Test
 	fun `Should createSupportProjectProfile return 200`() {
 		// Arrange
 		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -144,7 +143,7 @@ class UserProjectProfileControllerTest: TestContext() {
 
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(service).createSupportProjectProfile(any(), eq(projectId))
 	}
 
@@ -158,7 +157,7 @@ class UserProjectProfileControllerTest: TestContext() {
 				ProjectProfileModel()
 			)
 		)
-		whenever(readerMapper.toDto(any(), any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -170,7 +169,7 @@ class UserProjectProfileControllerTest: TestContext() {
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
 
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(service).updateUserProjectProfileStatusById(any(), eq(uuid), eq(if (accepted) ACCEPTED else REJECTED))
 	}
 

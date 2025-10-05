@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.time.LocalDate
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -63,15 +62,14 @@ class UserReaderDtoMapperTest {
 		expectedRoleTranslation: Int,
 	) {
 		// Arrange
-		whenever(translateService.getMessage(any(), any(), anyOrNull(), anyOrNull())).thenReturn("Administrator")
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn("Administrator")
 
 		// Act
-		val result = mapper.toDto(user, Locale.getDefault())
+		val result = mapper.toDto(user)
 
 		// Assert
 		verify(translateService, times(expectedRoleTranslation)).getMessage(
 			"${USER_ROLE_PREFIX}ADMIN",
-			Locale.getDefault()
 		)
 
 		assertEquals(user.id, result.id)

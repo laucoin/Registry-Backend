@@ -22,5 +22,5 @@ interface IActivityPort {
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: ActivityModel): Mono<ActivityModel>
 	fun update(element: ActivityModel): Mono<ActivityModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

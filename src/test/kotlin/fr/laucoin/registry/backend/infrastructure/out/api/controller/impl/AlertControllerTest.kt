@@ -41,7 +41,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
@@ -83,8 +82,7 @@ class AlertControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/projects/{projectId}/alerts"
-		private val locale = Locale.ENGLISH
+		private const val BASE_URL = "/api/v1/projects/{projectId}/alerts"
 
 		@JvmStatic
 		fun `Should findAlerts prepare param, call service and finally cast the result`(): Stream<Arguments> {
@@ -304,7 +302,7 @@ class AlertControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(AlertModel()))
 		whenever(service.findAlertsPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(AlertReaderDto())),
 		)
 
@@ -334,7 +332,7 @@ class AlertControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findAlertsPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page, locale)
+		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -388,7 +386,7 @@ class AlertControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(Mono.just(AlertModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(AlertReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 
 		// Act
 		val result = webClient
@@ -401,7 +399,7 @@ class AlertControllerTest: TestContext() {
 		result.body<AlertReaderDto>(OK)
 
 		verify(service).findAlertById(projectId, uuid, visibilitySearched = null)
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(communicationReaderMapper)
 	}
@@ -434,7 +432,7 @@ class AlertControllerTest: TestContext() {
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
 		whenever(service.findAlertCommunicationsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(communicationReaderMapper.toDtoPage(any(), any())).thenReturn(
+		whenever(communicationReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(CommunicationReaderDto())),
 		)
 
@@ -465,7 +463,7 @@ class AlertControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findAlertCommunicationsPage(projectId, uuid, pageable, searchParams)
-		verify(communicationReaderMapper).toDtoPage(page, locale)
+		verify(communicationReaderMapper).toDtoPage(page)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -519,7 +517,7 @@ class AlertControllerTest: TestContext() {
 		)
 
 		whenever(service.createAlert(any(), any())).thenReturn(Mono.just(AlertModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(AlertReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 		whenever(creationWriterMapper.toModel(any(), any())).thenReturn(AlertModel())
 
 		// Act
@@ -534,7 +532,7 @@ class AlertControllerTest: TestContext() {
 		result.body<AlertReaderDto>(OK)
 
 		verify(service).createAlert(any(), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verify(creationWriterMapper).toModel(any(), eq(projectId))
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(communicationReaderMapper)
@@ -572,7 +570,7 @@ class AlertControllerTest: TestContext() {
 		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(), status = IN_PROGRESS)
 
 		whenever(service.updateAlertById(any(), any(), any(), any())).thenReturn(Mono.just(AlertModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(AlertReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(AlertModel())
 
 		// Act
@@ -587,7 +585,7 @@ class AlertControllerTest: TestContext() {
 		result.body<AlertReaderDto>(OK)
 
 		verify(service).updateAlertById(any(), eq(projectId), eq(uuid), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
 		verify(writerMapper).toModel(any(), eq(projectId))
@@ -626,7 +624,7 @@ class AlertControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.updateAlertStatusById(any(), any(), any(), any())).thenReturn(Mono.just(AlertModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(AlertReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 
 		// Act
 		val result = webClient
@@ -645,7 +643,7 @@ class AlertControllerTest: TestContext() {
 		result.body<AlertReaderDto>(OK)
 
 		verify(service).updateAlertStatusById(any(), eq(projectId), eq(uuid), any())
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
 		verifyNoInteractions(writerMapper)
@@ -657,7 +655,7 @@ class AlertControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.disableAlertById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(AlertModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(AlertReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 
 		// Act
 		val result = webClient
@@ -670,7 +668,7 @@ class AlertControllerTest: TestContext() {
 		result.body<AlertReaderDto>(OK)
 
 		verify(service).disableAlertById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(creationWriterMapper)
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -682,7 +680,7 @@ class AlertControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		whenever(service.enableAlertById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(AlertModel()))
-		whenever(readerMapper.toDto(any(), any())).thenReturn(AlertReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 
 		// Act
 		val result = webClient
@@ -695,7 +693,7 @@ class AlertControllerTest: TestContext() {
 		result.body<AlertReaderDto>(OK)
 
 		verify(service).enableAlertById(any(), eq(projectId), eq(uuid))
-		verify(readerMapper).toDto(any(), any())
+		verify(readerMapper).toDto(any())
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
 		verifyNoInteractions(writerMapper)

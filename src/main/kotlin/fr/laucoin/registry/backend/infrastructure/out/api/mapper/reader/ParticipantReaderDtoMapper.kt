@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import java.time.LocalDate
-import java.util.Locale
 import java.util.Optional
 import org.springframework.stereotype.Component
 
@@ -16,33 +15,25 @@ class ParticipantReaderDtoMapper(
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val groupMapper: GroupWithoutMemberReaderDtoMapper,
 ): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
-	override fun toDto(model: ParticipantModel, locale: Locale): ParticipantReaderDto {
+	override fun toDto(model: ParticipantModel): ParticipantReaderDto {
 		return ParticipantReaderDto(
 			firstName = model.firstName,
 			lastName = model.lastName,
 			birthday = model.birthday,
-			type = Optional.ofNullable(model.type).map { typeMapper.toDto(it, locale) }.orElse(null),
+			type = Optional.ofNullable(model.type).map(typeMapper::toDto).orElse(null),
 			major = isMajor(model.birthday),
-			groups = groupMapper.toDtoList(model.groups, locale),
-			availableGroups = groupMapper.toDtoList(model.availableGroups, locale),
+			groups = groupMapper.toDtoList(model.groups),
+			availableGroups = groupMapper.toDtoList(model.availableGroups),
 			status = Optional.ofNullable(model.status)
-				.map {
-					statusMapper.toDto(
-						it,
-						locale,
-						model.lastMovement,
-						model.startAvailability,
-						model.endAvailability
-					)
-				}
+				.map { statusMapper.toDto(it, model.lastMovement, model.startAvailability, model.endAvailability) }
 				.orElse(null),
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
-			user = Optional.ofNullable(model.user).map { partialUserMapper.toDto(it, locale) }.orElse(null),
+			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
 			purged = model.purged,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map { projectMapper.toDto(it, locale) }.orElse(null)
+			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

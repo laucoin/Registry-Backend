@@ -21,7 +21,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
 ### Properties
 
 * **Name**\
-  The name is the human identifier for the Group. It must not be unique but it's recommended to create the most explicit name.
+  The name is the human identifier for the Group. It must not be unique but it's recommended to create the most explicit
+  name.
 * **Hidden**\
   A Group can be hide and restore.
 
@@ -39,7 +40,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
 * I can delete a Group
 
 {% hint style="info" %}
-Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to this context.
+Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to
+this context.
 {% endhint %}
 
 ## Constraints

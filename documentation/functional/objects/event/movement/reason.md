@@ -21,7 +21,8 @@ Cf. [Glossary](../../../../../../../../Perso/registry-documentation/glossary.md)
 ### Properties
 
 * **Name**\
-  The name is the human identifier for the Reason. It must not be unique but it's recommended to create the most explicit name.
+  The name is the human identifier for the Reason. It must not be unique but it's recommended to create the most
+  explicit name.
 * **Require Activity**\
   You can force activity selection in the departure or arrival form depending the reason.
 * **Target**\

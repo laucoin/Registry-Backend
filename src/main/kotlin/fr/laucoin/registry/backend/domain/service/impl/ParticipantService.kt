@@ -48,9 +48,9 @@ class ParticipantService(
 	private val userPort: IUserPort,
 	private val movementPort: IMovementPort,
 	private val groupPort: IGroupPort,
-	@param:Value("\${registry.feature.participant.searched.max-user-result}")
+	@param:Value($$"${registry.feature.participant.searched.max-user-result}")
 	private val maxUserResult: Int,
-	@param:Value("\${registry.feature.participant.searched.max-group-result}")
+	@param:Value($$"${registry.feature.participant.searched.max-group-result}")
 	private val maxGroupResult: Int,
 ): IParticipantService, GenericService() {
 	override fun findParticipantsPage(
@@ -243,7 +243,7 @@ class ParticipantService(
 			.updateParticipant(currentUser)
 	}
 
-	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findParticipantById(projectId, id, visibilitySearched = null)
 			.validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
 			.validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)

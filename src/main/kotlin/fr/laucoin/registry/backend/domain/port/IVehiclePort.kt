@@ -23,5 +23,5 @@ interface IVehiclePort {
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: VehicleModel): Mono<VehicleModel>
 	fun update(element: VehicleModel): Mono<VehicleModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

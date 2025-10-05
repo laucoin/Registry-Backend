@@ -17,9 +17,9 @@ class VehicleWriterDtoMapper(
 			brand = dto.brand
 			model = dto.model
 			startAvailability =
-				Optional.ofNullable(dto.startAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
-				Optional.ofNullable(dto.endAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			project = ProjectModel().apply { id = projectId }
 		}
 	}

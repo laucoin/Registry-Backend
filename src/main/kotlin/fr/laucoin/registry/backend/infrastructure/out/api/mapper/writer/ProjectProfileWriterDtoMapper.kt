@@ -14,8 +14,8 @@ class ProjectProfileWriterDtoMapper(
 	override fun toModel(dto: ProjectProfileWriterDto, projectId: UUID): ProjectProfileModel {
 		return ProjectProfileModel().apply {
 			role = dto.role
-			startAccess = Optional.ofNullable(dto.startAccess).map { customDateTimeMapper.toModel(it) }.orElse(null)
-			endAccess = Optional.ofNullable(dto.endAccess).map { customDateTimeMapper.toModel(it) }.orElse(null)
+			startAccess = Optional.ofNullable(dto.startAccess).map(customDateTimeMapper::toModel).orElse(null)
+			endAccess = Optional.ofNullable(dto.endAccess).map(customDateTimeMapper::toModel).orElse(null)
 			project = ProjectModel().apply { id = projectId }
 		}
 	}

@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CreatedProjectProfilesReaderDto
-import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -35,7 +34,7 @@ class CreatedProjectProfilesReaderDtoMapperTest {
 		model: Pair<List<UUID>, List<UUID>>, dto: CreatedProjectProfilesReaderDto
 	) {
 		// Act
-		val result = mapper.toDto(model, Locale.getDefault())
+		val result = mapper.toDto(model)
 
 		// Assert
 		assertEquals(dto, result)
@@ -51,7 +50,7 @@ class CreatedProjectProfilesReaderDtoMapperTest {
 		val dtos = listOf(dto)
 
 		// Act
-		val result = mapper.toDtoList(models, Locale.getDefault())
+		val result = mapper.toDtoList(models)
 
 		// Assert
 		assertEquals(dtos, result)
@@ -80,7 +79,7 @@ class CreatedProjectProfilesReaderDtoMapperTest {
 		)
 
 		// Act
-		val result = mapper.toDtoPage(modelPage, Locale.getDefault())
+		val result = mapper.toDtoPage(modelPage)
 
 		// Assert
 		assertEquals(dtoPage, result)

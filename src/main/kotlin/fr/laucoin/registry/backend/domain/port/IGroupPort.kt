@@ -36,5 +36,5 @@ interface IGroupPort {
 	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
 	fun create(element: GroupModel): Mono<GroupModel>
 	fun update(element: GroupModel): Mono<GroupModel>
-	fun deleteById(id: UUID): Mono<Void>
+	fun deleteById(id: UUID): Mono<Unit>
 }

@@ -61,7 +61,8 @@ Note a Participant (and only one by Event) can be link to an User.
 * I can impersonate a Participant or Guest
 
 {% hint style="info" %}
-Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to this context.
+Bear in mind that this type of data is often created all at once (or at least a lot at once). The UX must be geared to
+this context.
 {% endhint %}
 
 ### As the Backend

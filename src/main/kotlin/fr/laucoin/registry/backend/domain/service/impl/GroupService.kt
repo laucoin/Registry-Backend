@@ -34,7 +34,7 @@ class GroupService(
 	private val projectService: IProjectService,
 	private val port: IGroupPort,
 	private val participantPort: IParticipantPort,
-	@param:Value("\${registry.feature.group.searched.max-participant-result}")
+	@param:Value($$"${registry.feature.group.searched.max-participant-result}")
 	private val maxParticipantResult: Int,
 ): IGroupService, GenericService() {
 	override fun findGroupsPage(
@@ -251,7 +251,7 @@ class GroupService(
 			.updateGroup(currentUser)
 	}
 
-	override fun deleteGroupById(projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteGroupById(projectId: UUID, id: UUID): Mono<Unit> {
 		return findGroupById(
 			projectId,
 			id,

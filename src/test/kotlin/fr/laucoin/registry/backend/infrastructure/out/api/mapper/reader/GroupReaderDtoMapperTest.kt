@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupReader
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.groupId
-import java.util.Locale
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -81,9 +80,9 @@ class GroupReaderDtoMapperTest {
 
 	@BeforeEach
 	fun setup() {
-		whenever(memberMapper.toDtoList(any(), any())).thenReturn(listOf(participantDto))
-		whenever(availabilityMapper.toDto(any(), any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
-		whenever(projectMapper.toDto(any(), any())).thenReturn(dtoProject)
+		whenever(memberMapper.toDtoList(any())).thenReturn(listOf(participantDto))
+		whenever(availabilityMapper.toDto(any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(projectMapper.toDto(any())).thenReturn(dtoProject)
 	}
 
 	@ParameterizedTest
@@ -95,16 +94,16 @@ class GroupReaderDtoMapperTest {
 		expectedProjectCast: Int,
 	) {
 		// Act
-		val result = mapper.toDto(model, Locale.getDefault())
+		val result = mapper.toDto(model)
 
 		// Assert
 		assertEquals(dto, result)
 
-		verify(memberMapper).toDtoList(model.members, Locale.getDefault())
+		verify(memberMapper).toDtoList(model.members)
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
 
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -120,16 +119,16 @@ class GroupReaderDtoMapperTest {
 		val dtos = listOf(dto)
 
 		// Act
-		val result = mapper.toDtoList(models, Locale.getDefault())
+		val result = mapper.toDtoList(models)
 
 		// Assert
 		assertEquals(dtos, result)
 
-		verify(memberMapper).toDtoList(model.members, Locale.getDefault())
+		verify(memberMapper).toDtoList(model.members)
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
 
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -158,15 +157,15 @@ class GroupReaderDtoMapperTest {
 		)
 
 		// Act
-		val result = mapper.toDtoPage(modelPage, Locale.getDefault())
+		val result = mapper.toDtoPage(modelPage)
 
 		// Assert
 		assertEquals(dtoPage, result)
 
-		verify(memberMapper).toDtoList(model.members, Locale.getDefault())
+		verify(memberMapper).toDtoList(model.members)
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, Locale.getDefault(), model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
 
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel(), Locale.getDefault())
+		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 }

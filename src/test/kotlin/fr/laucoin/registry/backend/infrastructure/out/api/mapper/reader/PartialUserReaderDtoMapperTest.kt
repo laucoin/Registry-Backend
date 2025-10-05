@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.UserModel
-import java.util.Locale
 import java.util.UUID
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
@@ -20,7 +19,7 @@ class PartialUserReaderDtoMapperTest {
 		}
 
 		// Act
-		val result = mapper.toDto(user, Locale.getDefault())
+		val result = mapper.toDto(user)
 
 		// Assert
 		assertEquals(user.id, result.id)

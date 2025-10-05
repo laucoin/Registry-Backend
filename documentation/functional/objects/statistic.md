@@ -36,12 +36,13 @@ I can consult the following Statistics over time at different levels (all my pro
 * Number of Movements
 * Number of Guest
 * Number of Report
-  * Smoke Report
-  * Movement Report
-  * All
+    * Smoke Report
+    * Movement Report
+    * All
 
 ## Constraints
 
 * Kilometers of a Vehicle should be considered only if the initial and final value are not null.
 * If a Vehicle has no data, a message should be displayed to inform User the data is not representative.
-* The duration of an unfinished Movement will be limited to the duration of the event to minimize the impact on statistics.
+* The duration of an unfinished Movement will be limited to the duration of the event to minimize the impact on
+  statistics.

@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IVehicleService
-import fr.laucoin.registry.backend.infrastructure.out.api.controller.IVehicleController
+import fr.laucoin.registry.backend.infrastructure.out.api.controller.IVehicleV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.VehicleWriterDto
@@ -16,20 +16,18 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.Movement
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.VehicleWriterDtoMapper
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
 @RestController
-class VehicleController(
+class VehicleV1Controller(
 	private val service: IVehicleService,
 	private val readerMapper: VehicleReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: VehicleWriterDtoMapper,
-): IVehicleController {
+): IVehicleV1Controller {
 	override fun findVehicles(
-		locale: Locale,
 		projectId: UUID,
 		pageNumber: Int,
 		pageSize: Int,
@@ -38,21 +36,20 @@ class VehicleController(
 		statusSearched: PresenceStatusEnum?,
 		dateTimeSearched: ZonedDateTime?,
 	): Mono<PageModel<VehicleReaderDto>> {
-		return service.findVehiclesPage(
-			projectId,
-			PageableModel(pageNumber * pageSize, pageSize),
-			VehicleSearchParamModel(textSearched, visibilitySearched, statusSearched, dateTimeSearched),
-		).map { readerMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = VehicleSearchParamModel(
+			textSearched, visibilitySearched, statusSearched, dateTimeSearched
+		)
+
+		return service.findVehiclesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
-	override fun findVehicleById(locale: Locale, projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
-		return service.findVehicleById(projectId, id, visibilitySearched = null)
-			.map { readerMapper.toDto(it, locale) }
+	override fun findVehicleById(projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
+		return service.findVehicleById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
 	override fun findVehicleMovements(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		pageNumber: Int,
@@ -63,62 +60,55 @@ class VehicleController(
 		startDateTimeSearched: ZonedDateTime?,
 		endDateTimeSearched: ZonedDateTime?
 	): Mono<PageModel<MovementReaderDto>> {
-		return service.findVehicleMovementsPage(
-			projectId,
-			id,
-			PageableModel(pageNumber * pageSize, pageSize),
-			MovementSearchParamModel(
-				visibilitySearched,
-				linkedToActivity,
-				typeSearched,
-				startDateTimeSearched,
-				endDateTimeSearched
-			),
-		).map { movementReaderMapper.toDtoPage(it, locale) }
+		val pageable = PageableModel(pageNumber * pageSize, pageSize)
+		val searchParams = MovementSearchParamModel(
+			visibilitySearched,
+			linkedToActivity,
+			typeSearched,
+			startDateTimeSearched,
+			endDateTimeSearched
+		)
+
+		return service.findVehicleMovementsPage(projectId, id, pageable, searchParams)
+			.map(movementReaderMapper::toDtoPage)
 	}
 
 	override fun createVehicle(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		vehicle: VehicleWriterDto
 	): Mono<VehicleReaderDto> {
-		return service.createVehicle(currentUser, writerMapper.toModel(vehicle, projectId))
-			.map { readerMapper.toDto(it, locale) }
+		val vehicleModel = writerMapper.toModel(vehicle, projectId)
+		return service.createVehicle(currentUser, vehicleModel).map(readerMapper::toDto)
 	}
 
 	override fun updateVehicleById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 		vehicle: VehicleWriterDto,
 	): Mono<VehicleReaderDto> {
-		return service.updateVehicleById(currentUser, projectId, id, writerMapper.toModel(vehicle, projectId))
-			.map { readerMapper.toDto(it, locale) }
+		val vehicleModel = writerMapper.toModel(vehicle, projectId)
+		return service.updateVehicleById(currentUser, projectId, id, vehicleModel).map(readerMapper::toDto)
 	}
 
 	override fun disableVehicleById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 	): Mono<VehicleReaderDto> {
-		return service.disableVehicleById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.disableVehicleById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun enableVehicleById(
 		currentUser: CurrentUserModel,
-		locale: Locale,
 		projectId: UUID,
 		id: UUID,
 	): Mono<VehicleReaderDto> {
-		return service.enableVehicleById(currentUser, projectId, id)
-			.map { readerMapper.toDto(it, locale) }
+		return service.enableVehicleById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
-	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return service.deleteVehicleById(currentUser, projectId, id)
 	}
 }

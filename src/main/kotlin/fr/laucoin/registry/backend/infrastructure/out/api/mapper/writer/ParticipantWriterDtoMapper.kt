@@ -21,9 +21,9 @@ class ParticipantWriterDtoMapper(
 			birthday = dto.birthday
 			type = REGISTERED
 			startAvailability =
-				Optional.ofNullable(dto.startAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
-				Optional.ofNullable(dto.endAvailability).map { customDateTimeMapper.toModel(it) }.orElse(null)
+				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			user = Optional.ofNullable(dto.userId).map { UserModel().apply { id = it } }.orElse(null)
 			groups =
 				Optional.ofNullable(dto.groupIds).map { groups -> groups.map { GroupModel().apply { id = it } } }

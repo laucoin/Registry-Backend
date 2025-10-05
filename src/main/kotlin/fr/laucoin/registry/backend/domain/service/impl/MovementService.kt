@@ -83,13 +83,13 @@ class MovementService(
 	private val communicationPort: ICommunicationPort,
 	private val groupPort: IGroupPort,
 	private val transactionalOperator: TransactionalOperator,
-	@param:Value("\${registry.feature.movement.searched.max-participant-result}")
+	@param:Value($$"${registry.feature.movement.searched.max-participant-result}")
 	private val maxParticipantResult: Int,
-	@param:Value("\${registry.feature.movement.searched.max-group-result}")
+	@param:Value($$"${registry.feature.movement.searched.max-group-result}")
 	private val maxGroupResult: Int,
-	@param:Value("\${registry.feature.movement.searched.max-vehicle-result}")
+	@param:Value($$"${registry.feature.movement.searched.max-vehicle-result}")
 	private val maxVehicleResult: Int,
-	@param:Value("\${registry.feature.movement.searched.max-activity-result}")
+	@param:Value($$"${registry.feature.movement.searched.max-activity-result}")
 	private val maxActivityResult: Int,
 ): IMovementService, GenericService() {
 	override fun findMovementsPage(
@@ -614,7 +614,7 @@ class MovementService(
 			.updateMovement(currentUser)
 	}
 
-	override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Void> {
+	override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Unit> {
 		return findMovementById(projectId, id, visibilitySearched = null)
 			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_DELETED)
 			.flatMap { port.deleteById(id) }

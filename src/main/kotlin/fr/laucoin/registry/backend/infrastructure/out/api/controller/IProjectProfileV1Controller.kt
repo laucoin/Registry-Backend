@@ -18,18 +18,14 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProf
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectProfilesWriterDto
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import java.time.ZonedDateTime
-import java.util.Locale
 import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
-import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -39,30 +35,21 @@ import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Tag(name = "Project's Profiles management", description = "API for Project's Profiles-related operations")
-@RequestMapping("/api/projects/{projectId}/profiles")
-interface IProjectProfileController {
+@RequestMapping("/api/v1/projects/{projectId}/profiles")
+interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Find Project's Profiles",
 		description = "Find or get paginated Project's Profiles",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@GetMapping
 	fun findProjectProfiles(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
 		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -79,18 +66,10 @@ interface IProjectProfileController {
 	@Operation(
 		summary = "Find Project's Profile",
 		description = "Find Project's Profile by ID",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@GetMapping("/{id}")
 	fun findProjectProfileById(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ProjectProfileReaderDto>
@@ -98,18 +77,10 @@ interface IProjectProfileController {
 	@Operation(
 		summary = "Search Users",
 		description = "Search Users to invite to an Project",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
 	@GetMapping("/search/users")
 	fun searchUsers(
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@RequestParam textSearched: String?,
 	): Flux<PartialUserReaderDto>
@@ -117,38 +88,22 @@ interface IProjectProfileController {
 	@Operation(
 		summary = "Get assignable Roles",
 		description = "Get all the roles you are allowed to assign",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
 	@GetMapping("/roles")
 	fun getAssignableProjectProfileRoles(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 	): Flux<LabelDto>
 
 	@Operation(
 		summary = "Create Project's Profiles",
 		description = "Create Project's Profiles (multiple Users)",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_C')")
 	@PostMapping
 	fun createProjectProfiles(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@RequestBody @Valid profiles: ProjectProfilesWriterDto,
 	): Mono<ResponseEntity<CreatedProjectProfilesReaderDto>>
@@ -156,19 +111,11 @@ interface IProjectProfileController {
 	@Operation(
 		summary = "Update Project's Profile",
 		description = "Update Project's Profile",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@PatchMapping("/{id}")
 	fun updateProjectProfile(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@RequestBody @Valid profile: ProjectProfileWriterDto,
@@ -177,19 +124,11 @@ interface IProjectProfileController {
 	@Operation(
 		summary = "Block Project's Profile",
 		description = "Prproject a User from using it",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@PatchMapping("/{id}/block")
 	fun blockProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ProjectProfileReaderDto>
@@ -197,19 +136,11 @@ interface IProjectProfileController {
 	@Operation(
 		summary = "Unblock Project's Profile",
 		description = "Re-authorize a User to use it",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@PatchMapping("/{id}/unblock")
 	fun unblockProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestHeader(ACCEPT_LANGUAGE) locale: Locale,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ProjectProfileReaderDto>
@@ -217,13 +148,6 @@ interface IProjectProfileController {
 	@Operation(
 		summary = "Delete Project's Profile",
 		description = "Delete Project's Profile",
-		parameters = [
-			Parameter(
-				name = ACCEPT_LANGUAGE,
-				description = "Locale, used for metadata and error translation.",
-				`in` = HEADER
-			),
-		],
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_D')")
 	@DeleteMapping("/{id}")
@@ -231,5 +155,5 @@ interface IProjectProfileController {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID
-	): Mono<Void>
+	): Mono<Unit>
 }

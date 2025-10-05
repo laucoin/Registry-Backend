@@ -16,7 +16,9 @@ layout:
 
 ## Technologies
 
-In addition to functional needs, this project exists to help me progress technically, and as part of this, it must use technology that interests me, although there's always better. Beyond that, let's keep in mind that this is a project developed in my spare time, and I don't have the time to relearn everything about other technologies.
+In addition to functional needs, this project exists to help me progress technically, and as part of this, it must use
+technology that interests me, although there's always better. Beyond that, let's keep in mind that this is a project
+developed in my spare time, and I don't have the time to relearn everything about other technologies.
 
 The backend will based on
 
@@ -28,9 +30,13 @@ The backend will based on
 
 ### Definition
 
-Hexagonal architecture, also known as port and adapter architecture, is a style of software architecture that aims to create flexible, scalable software systems. It was introduced by Alistair Cockburn, an expert in software development methodologies.
+Hexagonal architecture, also known as port and adapter architecture, is a style of software architecture that aims to
+create flexible, scalable software systems. It was introduced by Alistair Cockburn, an expert in software development
+methodologies.
 
-The main idea behind hexagonal architecture is to separate the core business of the application (the domain) from implementation details such as frameworks, databases, user interfaces and so on. It uses a hexagon-shaped structure to represent the different parts of the system.
+The main idea behind hexagonal architecture is to separate the core business of the application (the domain) from
+implementation details such as frameworks, databases, user interfaces and so on. It uses a hexagon-shaped structure to
+represent the different parts of the system.
 
 ```mermaid
 mindmap
@@ -49,7 +55,8 @@ mindmap
         ::icon(fa fa-bus)
 ```
 
-{% embed url="https://medium.com/@faroukymedia/de-la-th%C3%A9orie-%C3%A0-la-pratique-spring-boot-architecture-hexagonale-et-ddd-pour-des-applications-f1110d83bced" %}
+{% embed
+url="https://medium.com/@faroukymedia/de-la-th%C3%A9orie-%C3%A0-la-pratique-spring-boot-architecture-hexagonale-et-ddd-pour-des-applications-f1110d83bced" %}
 Hexagonal defintion source
 {% endembed %}
 

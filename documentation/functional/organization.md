@@ -26,9 +26,11 @@ The organization registration imply multiple configuration.&#x20;
 
 An organization has multiple possibilities for authentication configuration.&#x20;
 
-* Use Registry's authentication provider (Keycloak). It mean, the user should create a new realm and client via registry.
+* Use Registry's authentication provider (Keycloak). It mean, the user should create a new realm and client via
+  registry.
 * Use his authentication provider.
-* Use Both. It mean, you can create a new realm and client. Moreover you register and an external authentication provider.
+* Use Both. It mean, you can create a new realm and client. Moreover you register and an external authentication
+  provider.
 
 ### Option
 
@@ -42,7 +44,8 @@ Each Organization need to specify its Registry's support contact.
 
 ### Roles
 
-All Organization must defined at least 1 role for the Event. It is highly recommended to create more of them, especially for user
+All Organization must defined at least 1 role for the Event. It is highly recommended to create more of them, especially
+for user
 management and granularity.
 
 > If a Permission is not assigned to a Role, It mean the feature is disable (because no one can do it).

@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import java.util.Locale
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -66,15 +65,14 @@ class ProjectReaderDtoMapperTest {
 		expectedTranslation: Int,
 	) {
 		// Arrange
-		whenever(translateService.getMessage(any(), any(), anyOrNull(), anyOrNull())).thenReturn("translated")
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn("translated")
 
 		// Act
-		val result = mapper.toDto(project, Locale.getDefault())
+		val result = mapper.toDto(project)
 
 		// Assert
 		verify(translateService, times(expectedTranslation)).getMessage(
 			code = "${PROJECT_OPTION_NAME_PREFIX}VEHICLE",
-			locale = Locale.getDefault()
 		)
 
 		assertEquals(project.id, result.id)

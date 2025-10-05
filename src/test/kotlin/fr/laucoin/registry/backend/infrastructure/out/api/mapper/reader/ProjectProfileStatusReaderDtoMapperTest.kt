@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_PROFILE_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import java.util.Locale
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -21,13 +20,13 @@ class ProjectProfileStatusReaderDtoMapperTest {
 		// Arrange
 		val status = ACCEPTED
 		val translated = "translated"
-		whenever(translateService.getMessage(any(), any(), anyOrNull(), anyOrNull())).thenReturn(translated)
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn(translated)
 
 		// Act
-		val result = mapper.toDto(status, Locale.getDefault())
+		val result = mapper.toDto(status)
 
 		// Assert
-		verify(translateService).getMessage("${PROJECT_PROFILE_STATUS_PREFIX}$status", Locale.getDefault())
+		verify(translateService).getMessage("${PROJECT_PROFILE_STATUS_PREFIX}$status")
 
 		assertEquals(status.name, result.value)
 		assertEquals(translated, result.label)
