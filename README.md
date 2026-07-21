@@ -39,7 +39,7 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 4. Enjoy the following commands 🎉
 
 > If you can to run it directly without dev container, you can check the [prerequisites](#prerequisites) section
-> and [compose.yml](.devcontainer/compose.yml) file to run required dependencies.
+> and [compose.yml](local-dev/compose.yml) file to run required dependencies.
 
 ##### JAVA_OPTS
 
