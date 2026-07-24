@@ -33,7 +33,7 @@ jobs:
           java-version: "25"
 
       - name: Set up Gradle (dependency + build cache)
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       # `build` runs the full test suite AND assembles build/libs/registry-backend.jar.
       - name: Run tests & build
