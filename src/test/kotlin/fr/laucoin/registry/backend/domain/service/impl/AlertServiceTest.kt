@@ -37,7 +37,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
@@ -183,7 +183,7 @@ class AlertServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ALERT_STATUS_IS_NOT_UPDATABLE, result.code)
 
 		verify(projectService).validateDateTime(
@@ -220,7 +220,7 @@ class AlertServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME, result.code)
 
 		verify(port).findById(projectId, alertId, visibilitySearched = null)
@@ -301,7 +301,7 @@ class AlertServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ALERT_DELETE_HAS_COMMUNICATION, result.message)
 
 		verify(port).findById(projectId, alertId, visibilitySearched = null)

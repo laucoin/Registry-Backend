@@ -124,7 +124,7 @@ class VehicleService(
 		port.update(it.apply { update(currentUser) })
 	}
 
-	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String) = flatMap { vehicleToUpdate ->
+	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { vehicleToUpdate ->
 		movementPort.countAllByVehicleId(
 			vehicleToUpdate.project!!.id!!,
 			vehicleToUpdate.id!!,

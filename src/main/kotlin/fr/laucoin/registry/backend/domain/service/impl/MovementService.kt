@@ -59,7 +59,7 @@ import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
@@ -421,7 +421,7 @@ class MovementService(
 				.handle { it, handle ->
 					if (it > 0L) handle.error(
 						RegistryException(
-							UNPROCESSABLE_ENTITY,
+							UNPROCESSABLE_CONTENT,
 							MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME,
 							arrayListOf(it)
 						)
@@ -511,7 +511,7 @@ class MovementService(
 
 					it.any { p -> !p.birthday.isMajor() && driverIds.contains(p.id) } -> handle.error(
 						RegistryException(
-							UNPROCESSABLE_ENTITY,
+							UNPROCESSABLE_CONTENT,
 							MOVEMENT_DRIVERS_NOT_MAJOR,
 						)
 					)
@@ -563,21 +563,21 @@ class MovementService(
 			when {
 				it.type !== newMovement.type -> handle.error(
 					RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						MOVEMENT_UPDATE_CHANGE_TYPE,
 					)
 				)
 
 				it.contentType !== newMovement.contentType -> handle.error(
 					RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE,
 					)
 				)
 
 				it.atLeastOldGuestIfGuestsEntrance(newMovement) -> handle.error(
 					RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						MOVEMENT_REMOVE_GUEST_CONTENT,
 					)
 				)
@@ -591,7 +591,7 @@ class MovementService(
 			when {
 				it.isLastParticipantMovement() -> handle.error(
 					RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						errorMessage,
 					)
 				)

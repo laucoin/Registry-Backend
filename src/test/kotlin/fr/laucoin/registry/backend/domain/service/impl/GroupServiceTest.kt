@@ -42,7 +42,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -338,7 +338,7 @@ class GroupServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(GROUP_MEMBERS_ALREADY_ADDED, result.message)
 		verify(port).findByIdWithContent(
 			projectId,

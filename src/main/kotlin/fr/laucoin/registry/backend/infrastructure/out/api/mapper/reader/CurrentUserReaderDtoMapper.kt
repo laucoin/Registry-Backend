@@ -16,7 +16,7 @@ class CurrentUserReaderDtoMapper(
 ): IGenericReaderDtoMapper<CurrentUserModel, CurrentUserReaderDto> {
 	override fun toDto(model: CurrentUserModel): CurrentUserReaderDto {
 		return CurrentUserReaderDto(
-			authorities = model.authorities.map(GrantedAuthority::getAuthority),
+			authorities = model.authorities.mapNotNull(GrantedAuthority::getAuthority),
 			preferences = Optional.ofNullable(model.preferences).map(preferenceMapper::toDto).orElse(null),
 			firstName = model.firstName,
 			lastName = model.lastName,

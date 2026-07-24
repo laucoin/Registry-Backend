@@ -52,11 +52,11 @@ class TokenConverterServiceTest {
 	)
 
 	private val jwt = mock<Jwt>()
-	private val claims = mapOf(
+	private val claims: Map<String, Any> = mapOf(
 		USER_ID_KEY to userOidcId.toString(),
-		EMAIL_KEY to currentUser().email,
-		FIRST_NAME_KEY to currentUser().firstName,
-		LAST_NAME_KEY to currentUser().lastName,
+		EMAIL_KEY to currentUser().email!!,
+		FIRST_NAME_KEY to currentUser().firstName!!,
+		LAST_NAME_KEY to currentUser().lastName!!,
 	)
 
 	private companion object {

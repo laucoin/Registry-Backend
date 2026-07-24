@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.GroupEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IGroupContentEntityRepository
@@ -60,7 +59,7 @@ class GroupModelPostgresRepository(
 	): Flux<Pair<UUID, List<ParticipantModel>>> {
 		return if (groupIds.isEmpty()) Flux.empty()
 		else contentRepository.findAllByGroupIds(projectId, groupIds, visibilitySearched, availabilitySearched)
-			.groupBy(GroupContentEntity::groupId)
+			.groupBy { it.groupId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
 			}
@@ -97,7 +96,7 @@ class GroupModelPostgresRepository(
 		return Mono.zip(
 			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
 			findContent(projectId, listOf(id), memberVisibilitySearched, memberAvailabilitySearched).collectList()
-				.handle { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
+				.handle<List<ParticipantModel>> { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
 		).map {
 			it.t1.members = it.t2
 			it.t1

@@ -24,17 +24,14 @@ class PermissionServiceTest {
 
 		@JvmStatic
 		fun `Should hasPermission check permission`(): Stream<Arguments> = Stream.of(
-			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), true, uuid, RIGHT_ROLE, true),
-			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), true, uuid.toString(), RIGHT_ROLE, true),
-			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), true, CurrentUserModel(), RIGHT_ROLE, false),
-			Arguments.of(arrayOf("${uuid}_$WRONG_ROLE"), true, uuid, RIGHT_ROLE, false),
-			Arguments.of(emptyArray<String>(), false, uuid, RIGHT_ROLE, false),
-			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), true, "", RIGHT_ROLE, false),
-			Arguments.of(emptyArray<String>(), false, "", RIGHT_ROLE, false),
-			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), true, uuid, null, false),
-			Arguments.of(emptyArray<String>(), false, uuid, null, false),
-			Arguments.of(emptyArray<String>(), false, "", null, false),
-			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), true, uuid, CurrentUserModel(), false),
+			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), uuid, RIGHT_ROLE, true),
+			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), uuid.toString(), RIGHT_ROLE, true),
+			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), CurrentUserModel(), RIGHT_ROLE, false),
+			Arguments.of(arrayOf("${uuid}_$WRONG_ROLE"), uuid, RIGHT_ROLE, false),
+			Arguments.of(emptyArray<String>(), uuid, RIGHT_ROLE, false),
+			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), "", RIGHT_ROLE, false),
+			Arguments.of(emptyArray<String>(), "", RIGHT_ROLE, false),
+			Arguments.of(arrayOf("${uuid}_$RIGHT_ROLE"), uuid, CurrentUserModel(), false),
 		)
 	}
 
@@ -42,16 +39,15 @@ class PermissionServiceTest {
 	@MethodSource
 	fun `Should hasPermission check permission`(
 		permissions: Array<String>,
-		hasAuthentication: Boolean,
 		target: Any?,
-		wantedPermission: Any?,
+		wantedPermission: Any,
 		expectedAccess: Boolean,
 	) {
 		// Arrange
 		val authentication = authenticate(*permissions)
 
 		// Act
-		val result = service.hasPermission(if (hasAuthentication) authentication else null, target, wantedPermission)
+		val result = service.hasPermission(authentication, target, wantedPermission)
 
 		// Assert
 		assertEquals(expectedAccess, result)
@@ -62,7 +58,7 @@ class PermissionServiceTest {
 	fun `Should hasPermission throw not implemented exception`() {
 		// Act
 		val result = assertThrows(RegistryException::class.java) {
-			service.hasPermission(null, null, null, null)
+			service.hasPermission(authenticate(), uuid, "", "")
 		}
 
 		// Assert

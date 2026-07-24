@@ -38,7 +38,7 @@ import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -224,21 +224,21 @@ class CommunicationService(
 
 					it.dateTime.isAfter(communication.dateTime) -> handle.error(
 						RegistryException(
-							UNPROCESSABLE_ENTITY,
+							UNPROCESSABLE_CONTENT,
 							COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION,
 						)
 					)
 
 					it.contentType !== REGISTERED -> handle.error(
 						RegistryException(
-							UNPROCESSABLE_ENTITY,
+							UNPROCESSABLE_CONTENT,
 							COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED,
 						)
 					)
 
 					it.type !== OUT -> handle.error(
 						RegistryException(
-							UNPROCESSABLE_ENTITY,
+							UNPROCESSABLE_CONTENT,
 							COMMUNICATION_MOVEMENT_TYPE_NOT_OUT,
 						)
 					)
@@ -288,14 +288,14 @@ class CommunicationService(
 
 						it.dateTime.isAfter(communication.dateTime) -> handle.error(
 							RegistryException(
-								UNPROCESSABLE_ENTITY,
+								UNPROCESSABLE_CONTENT,
 								COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION,
 							)
 						)
 
 						it.status !== AlertStatusEnum.IN_PROGRESS -> handle.error(
 							RegistryException(
-								UNPROCESSABLE_ENTITY,
+								UNPROCESSABLE_CONTENT,
 								COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION,
 							)
 						)

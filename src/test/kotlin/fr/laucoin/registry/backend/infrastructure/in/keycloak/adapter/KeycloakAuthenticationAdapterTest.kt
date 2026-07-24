@@ -25,7 +25,9 @@ class KeycloakAuthenticationAdapterTest {
 	private val mapper: AuthenticationTokenEntityMapper = spy()
 	private val adapter: KeycloakAuthenticationAdapter = KeycloakAuthenticationAdapter(
 		mapper,
-		baseUri = "/",
+		authorizationUri = "authorizationUri",
+		tokenUri = "tokenUri",
+		endSessionUri = "endSessionUri",
 		clientId = "clientId",
 		clientSecret = "clientSecret",
 	)
@@ -34,7 +36,9 @@ class KeycloakAuthenticationAdapterTest {
 	fun setUp() {
 		mockWebServer.start()
 		setField(adapter, "http", WebClient.create())
-		setField(adapter, "baseUri", mockWebServer.url("/").toString())
+		setField(adapter, "authorizationUri", mockWebServer.url("/protocol/openid-connect/auth").toString())
+		setField(adapter, "tokenUri", mockWebServer.url("/protocol/openid-connect/token").toString())
+		setField(adapter, "endSessionUri", mockWebServer.url("/protocol/openid-connect/logout").toString())
 	}
 
 	@AfterEach
@@ -47,7 +51,7 @@ class KeycloakAuthenticationAdapterTest {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val expected =
-			"${mockWebServer.url("/")}/protocol/openid-connect/auth?response_type=code&client_id=clientId&redirect_uri=redirectUri"
+			"${mockWebServer.url("/protocol/openid-connect/auth")}?response_type=code&client_id=clientId&redirect_uri=redirectUri"
 
 		// Act
 		val result = adapter.getLoginUri(redirectUri)
@@ -61,7 +65,7 @@ class KeycloakAuthenticationAdapterTest {
 	fun `Should getLogoutUri return built logout url`() {
 		// Arrange
 		val redirectUri = "redirectUri"
-		val expected = "${mockWebServer.url("/")}/protocol/openid-connect/logout?redirect_uri=redirectUri"
+		val expected = "${mockWebServer.url("/protocol/openid-connect/logout")}?redirect_uri=redirectUri"
 
 		// Act
 		val result = adapter.getLogoutUri(redirectUri)

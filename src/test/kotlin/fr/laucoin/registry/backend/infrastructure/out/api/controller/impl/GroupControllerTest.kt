@@ -210,7 +210,7 @@ class GroupControllerTest: TestContext() {
 					),
 				)
 			)
-			.header(ACCEPT_LANGUAGE, requestedLocale)
+			.headers { headers -> requestedLocale?.let { headers.add(ACCEPT_LANGUAGE, it) } }
 			.exchange()
 
 		// Assert
@@ -300,7 +300,7 @@ class GroupControllerTest: TestContext() {
 					),
 				)
 			)
-			.header(ACCEPT_LANGUAGE, requestedLocale)
+			.headers { headers -> requestedLocale?.let { headers.add(ACCEPT_LANGUAGE, it) } }
 			.exchange()
 
 		// Assert

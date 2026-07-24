@@ -40,6 +40,9 @@ out/
 ### VS Code ###
 .vscode/
 
+### Claude Code (local-only, thin skills referencing .github/prompts) ###
+.claude/
+
 # System Files
 .DS_Store
 Thumbs.db

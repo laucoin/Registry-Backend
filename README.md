@@ -49,13 +49,15 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dregistry.datasource.database=<database-name> # For example: postgres
 -Dregistry.datasource.username=<database-username> # For example: postgres
 -Dregistry.datasource.password=<database-username> # For example: postgres
--Dexternal.keycloak.base-url=<oidc-provider-base-url> # For example: http://localhost:8080 (With http(s)://)
--Dexternal.keycloak.realm=<oidc-provider-realm> # For example: laucoin
--Dexternal.keycloak.client-id=<oidc-provider-client-id> # For example: registry
--Dexternal.keycloak.client-secret=<oidc-provider-client-secret> # For example: XXXX
--Dexternal.keycloak.swagger.client-id=<oidc-provider-client-id> # For example: registry
+-Dexternal.oidc.jwks-uri=<oidc-jwks-uri> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/certs
+-Dexternal.oidc.authorization-uri=<oidc-authorization-endpoint> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/auth
+-Dexternal.oidc.token-uri=<oidc-token-endpoint> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/token
+-Dexternal.oidc.end-session-uri=<oidc-end-session-endpoint> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/logout
+-Dexternal.oidc.client-id=<oidc-provider-client-id> # For example: registry
+-Dexternal.oidc.client-secret=<oidc-provider-client-secret> # For example: XXXX
+-Dexternal.oidc.swagger.client-id=<oidc-provider-client-id> # For example: registry
 -Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
--Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the keycloak instance)
+-Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the identity provider instance)
 -Dregistry.feature.documentation.enabled=false # true only for development
 -Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
 ```

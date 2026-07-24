@@ -1,0 +1,117 @@
+name: Registry retention policy
+description: >-
+  GHCR-SPECIFIC. Keeps the last N release images (x.y.z) plus the latest hotfix
+  image (x.y.z-hotfix-n) attached to each of those kept releases, and deletes
+  everything older. When migrating to Harbor, replace this action with a call to
+  Harbor's tag-retention API / rules — the calling workflows stay unchanged.
+
+inputs:
+  package-name:
+    description: GHCR package (container) name, e.g. registry-backend
+    required: true
+  owner:
+    description: Package owner (user or org login)
+    required: true
+  keep-releases:
+    description: How many of the most recent x.y.z releases to keep
+    required: false
+    default: "5"
+  token:
+    description: PAT with read:packages and delete:packages
+    required: true
+  dry-run:
+    description: If "true", only log what would be deleted
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Apply retention policy
+      uses: actions/github-script@v7
+      env:
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        OWNER: ${{ inputs.owner }}
+        KEEP_RELEASES: ${{ inputs.keep-releases }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const packageName = process.env.PACKAGE_NAME;
+          const owner = process.env.OWNER;
+          const keepReleases = parseInt(process.env.KEEP_RELEASES, 10);
+          const dryRun = process.env.DRY_RUN === 'true';
+
+          const RELEASE_RE = /^\d+\.\d+\.\d+$/;
+          const HOTFIX_RE = /^(\d+\.\d+\.\d+)-hotfix-(\d+)$/;
+          const PROTECTED_TAGS = new Set(['main', 'latest']);
+
+          // GHCR containers owned by a user. For an organization, swap these two
+          // calls for the *ForOrg equivalents and pass `org` instead of `username`.
+          const versions = await github.paginate(
+            github.rest.packages.getAllPackageVersionsForPackageOwnedByUser,
+            { package_type: 'container', package_name: packageName, username: owner, per_page: 100 }
+          );
+
+          const cmpSemverDesc = (a, b) => {
+            const pa = a.split('.').map(Number);
+            const pb = b.split('.').map(Number);
+            return (pb[0]-pa[0]) || (pb[1]-pa[1]) || (pb[2]-pa[2]);
+          };
+
+          const releases = [];              // { tag, id }
+          const hotfixes = [];              // { base, num, tag, id }
+          const tagsById = new Map();       // id -> string[]
+
+          for (const v of versions) {
+            const tags = v.metadata?.container?.tags ?? [];
+            tagsById.set(v.id, tags);
+            for (const t of tags) {
+              if (RELEASE_RE.test(t)) releases.push({ tag: t, id: v.id });
+              const m = HOTFIX_RE.exec(t);
+              if (m) hotfixes.push({ base: m[1], num: parseInt(m[2], 10), tag: t, id: v.id });
+            }
+          }
+
+          releases.sort((a, b) => cmpSemverDesc(a.tag, b.tag));
+          const keptReleases = releases.slice(0, keepReleases);
+          const keptBases = new Set(keptReleases.map(r => r.tag));
+
+          const toDelete = new Set();
+
+          // 1) Release images beyond the newest N.
+          for (const r of releases.slice(keepReleases)) toDelete.add(r.id);
+
+          // 2) Latest hotfix per kept release survives; the rest go.
+          const latestHotfix = new Map(); // base -> {num, id}
+          for (const h of hotfixes) {
+            if (!keptBases.has(h.base)) continue;
+            const cur = latestHotfix.get(h.base);
+            if (!cur || h.num > cur.num) latestHotfix.set(h.base, h);
+          }
+          for (const h of hotfixes) {
+            if (!keptBases.has(h.base)) { toDelete.add(h.id); continue; }  // hotfix of an evicted release
+            if (latestHotfix.get(h.base).id !== h.id) toDelete.add(h.id);  // superseded hotfix
+          }
+
+          // Never delete a version that also carries a protected tag (main/latest).
+          for (const id of [...toDelete]) {
+            const tags = tagsById.get(id) ?? [];
+            if (tags.some(t => PROTECTED_TAGS.has(t))) {
+              core.info(`Skipping ${id} (protected tag present: ${tags.join(', ')})`);
+              toDelete.delete(id);
+            }
+          }
+
+          core.info(`Releases found: ${releases.map(r => r.tag).join(', ') || '(none)'}`);
+          core.info(`Keeping releases: ${[...keptBases].join(', ') || '(none)'}`);
+          core.info(`Versions to delete: ${toDelete.size}`);
+
+          for (const id of toDelete) {
+            const label = (tagsById.get(id) ?? []).join(', ');
+            if (dryRun) { core.info(`[dry-run] would delete version ${id} [${label}]`); continue; }
+            core.info(`Deleting version ${id} [${label}]`);
+            await github.rest.packages.deletePackageVersionForUser({
+              package_type: 'container', package_name: packageName, username: owner, package_version_id: id,
+            });
+          }

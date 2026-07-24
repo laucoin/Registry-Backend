@@ -1,0 +1,48 @@
+name: Hotfix
+
+# Hotfixes are fully isolated from Semantic Release. You branch off an existing
+# release tag, commit the fix, and push a tag like 1.0.0-hotfix-1. That tag push
+# — and nothing else — drives this workflow.
+on:
+  push:
+    tags:
+      - "*-hotfix-*"
+
+env:
+  REGISTRY: ${{ vars.REGISTRY }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+
+jobs:
+  hotfix-image:
+    name: Build & push hotfix image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      # version.properties is written into the build context; the Dockerfile's
+      # build stage reads it, so the jar embeds the hotfix version.
+      - name: Pin build to the hotfix version
+        run: echo "version=${{ github.ref_name }}" > version.properties
+      # Tag == the exact hotfix tag name, e.g. 1.0.0-hotfix-1.
+      - uses: ./.github/actions/docker-publish
+        with:
+          registry: ${{ env.REGISTRY }}
+          image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tag: ${{ github.ref_name }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+  retention:
+    name: Apply retention policy
+    runs-on: ubuntu-latest
+    needs: hotfix-image
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/registry-retention
+        with:
+          package-name: ${{ env.IMAGE_NAME }}
+          owner: ${{ github.repository_owner }}
+          keep-releases: "5"
+          token: ${{ secrets.GHCR_PAT }}

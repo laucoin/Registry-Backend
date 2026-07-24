@@ -21,7 +21,7 @@ import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
@@ -65,7 +65,7 @@ class ProjectService(
 					log.warn("Failed to editing, date {} is out of project range [{}, {}]", dateTime, it.begin, it.end)
 					handle.error(
 						RegistryException(
-							status = UNPROCESSABLE_ENTITY,
+							status = UNPROCESSABLE_CONTENT,
 							code = errorCode,
 							args = arrayListOf(dateTime.toString(), it.begin.toString(), it.end.toString()),
 						)
@@ -92,7 +92,7 @@ class ProjectService(
 					)
 					handle.error(
 						RegistryException(
-							status = UNPROCESSABLE_ENTITY,
+							status = UNPROCESSABLE_CONTENT,
 							code = errorCode,
 							args = arrayListOf(
 								start.toString(),

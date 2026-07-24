@@ -29,7 +29,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -204,7 +204,7 @@ class ActivityServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ACTIVITY_DELETE_HAS_MOVEMENT, result.message)
 
 		verify(port).findById(projectId, activityId, visibilitySearched = null)

@@ -51,7 +51,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -348,7 +348,7 @@ class ParticipantServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER, result.message)
 
 		verify(projectService).validateDateTimes(
@@ -473,7 +473,7 @@ class ParticipantServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(result.status, UNPROCESSABLE_ENTITY)
+		assertEquals(result.status, UNPROCESSABLE_CONTENT)
 		assertEquals(result.code, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME)
 		assertEquals(result.args, arrayListOf(movementCountOutOfRange))
 

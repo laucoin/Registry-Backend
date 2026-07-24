@@ -78,7 +78,7 @@ object WebTestClientExt {
 		return formattedQueryParams
 	}
 
-	inline fun <reified T> ResponseSpec.body(status: HttpStatus): T? {
+	inline fun <reified T : Any> ResponseSpec.body(status: HttpStatus): T? {
 		val responseType = object: ParameterizedTypeReference<T>() {}
 
 		return expectStatus().isEqualTo(status.value())

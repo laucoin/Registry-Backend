@@ -18,7 +18,7 @@ import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.time.LocalDate
 import java.util.UUID
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -123,7 +123,7 @@ class ActivityService(
 		port.update(it.apply { update(currentUser) })
 	}
 
-	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String) = flatMap { activityToUpdate ->
+	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->
 		movementPort.countAllByActivityId(
 			activityToUpdate.project!!.id!!,
 			activityToUpdate.id!!,
@@ -131,7 +131,7 @@ class ActivityService(
 		).handle { it, handle ->
 			if (it > 0) {
 				log.warn("The activity {} already linked to movement(s)", activityToUpdate.id)
-				handle.error(RegistryException(UNPROCESSABLE_ENTITY, error))
+				handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
 			} else handle.next(activityToUpdate)
 		}
 	}

@@ -88,7 +88,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
@@ -167,7 +167,7 @@ class MovementServiceTest {
 			),
 			Arguments.of(
 				Flux.just(commonParticipant().apply { birthday = LocalDate.now() }),
-				UNPROCESSABLE_ENTITY,
+				UNPROCESSABLE_CONTENT,
 				MOVEMENT_DRIVERS_NOT_MAJOR,
 			),
 		)
@@ -845,7 +845,7 @@ class MovementServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(expectedCode, result.code)
 
 		verify(port).findById(projectId, movementId, visibilitySearched = null)
@@ -864,7 +864,7 @@ class MovementServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_UPDATED, result.code)
 
 		verify(port).findById(projectId, movementId, visibilitySearched = null)
@@ -989,7 +989,7 @@ class MovementServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME, result.code)
 		assertEquals(arrayListOf(conflictCommunication), result.args)
 
@@ -1026,7 +1026,7 @@ class MovementServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_DISABLED, result.code)
 
 		verify(port).findById(projectId, movementId, visibilitySearched = true)
@@ -1061,7 +1061,7 @@ class MovementServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_ENABLED, result.code)
 
 		verify(port).findById(projectId, movementId, visibilitySearched = false)
@@ -1096,7 +1096,7 @@ class MovementServiceTest {
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_DELETED, result.code)
 
 		verify(port).findById(projectId, movementId, visibilitySearched = null)

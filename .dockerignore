@@ -1,0 +1,12 @@
+# The multi-stage build compiles from source (COPY . .), so keep the source but
+# drop everything the Gradle build doesn't need, to shrink the build context.
+.git
+.github
+.gradle
+.kotlin
+build
+local-dev
+*.md
+.idea
+.vscode
+.DS_Store

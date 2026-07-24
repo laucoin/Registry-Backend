@@ -86,7 +86,7 @@ class RoleService(
 
 	override fun getProjectIdsFromCurrentUserProfiles(currentUser: CurrentUserModel): List<UUID> {
 		return currentUser.authorities
-			.mapNotNull { uuidRegex.find(it.authority)?.value }
+			.mapNotNull { it.authority?.let { authority -> uuidRegex.find(authority)?.value } }
 			.map { UUID.fromString(it) }.distinct()
 	}
 
