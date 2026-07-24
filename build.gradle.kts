@@ -4,33 +4,37 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 plugins {
-	kotlin("jvm") version "2.2.0"
-	kotlin("plugin.spring") version "2.2.0"
+	kotlin("jvm") version "2.4.10"
+	kotlin("plugin.spring") version "2.4.10"
 	id("org.springframework.boot") version "3.5.6"
 	id("io.spring.dependency-management") version "1.1.7"
-	id("org.jetbrains.kotlinx.kover") version "0.9.2"
+	id("org.jetbrains.kotlinx.kover") version "0.9.9"
 }
 
 group = "fr.laucoin.registry"
 
-val versionFile = rootProject.file("version.properties")
-val versionProperties = Properties().apply { load(versionFile.inputStream()) }
-version = versionProperties.getProperty("version")
+val versionProperties = Properties().apply {
+	rootProject.file("version.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 
 // External libraries 📚
-val apacheTextVersion = "1.14.0"
-val swaggerVersion = "2.8.9"
+val apacheTextVersion = "1.15.0"
+val swaggerVersion = "2.8.17"
 
 // Testing 🧪
-val mockWebServer = "5.1.0"
-val testArch = "1.4.1"
-val mockitoKotlinVersion = "6.0.0"
-val testContainerVersion = "1.21.3"
+val mockWebServer = "5.4.0"
+val testArch = "1.4.2"
+val mockitoKotlinVersion = "6.3.0"
+val testContainerVersion = "2.0.5"
 
 kotlin {
-	jvmToolchain(21)
+	jvmToolchain(25)
 	compilerOptions {
-		freeCompilerArgs.addAll(listOf("-Xjsr305=strict"))
+		freeCompilerArgs.addAll(
+			"-Xjsr305=strict",
+			"-opt-in=kotlin.RequiresOptIn"
+		)
 	}
 }
 
@@ -79,22 +83,20 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks {
-	withType<Test> {
-		useJUnitPlatform()
-		maxParallelForks = Runtime.getRuntime().availableProcessors()
-		testLogging {
-			events = setOf(FAILED, SKIPPED)
-			exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
-			showStandardStreams = false
-		}
-		finalizedBy(koverVerify, koverHtmlReport)
+tasks.withType<Test>().configureEach {
+	useJUnitPlatform()
+	maxParallelForks = Runtime.getRuntime().availableProcessors()
+	testLogging {
+		events = setOf(FAILED, SKIPPED)
+		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+		showStandardStreams = false
 	}
+	finalizedBy(tasks.named("koverVerify"), tasks.named("koverHtmlReport"))
+}
 
-	withType<BootJar> {
-		val targetName: String? by project
-		archiveFileName.set(targetName ?: "registry-backend.jar")
-		isPreserveFileTimestamps = false
-		isReproducibleFileOrder = true
-	}
+tasks.withType<BootJar>().configureEach {
+	val targetName: String? by project
+	archiveFileName.set(targetName ?: "registry-backend.jar")
+	isPreserveFileTimestamps = false
+	isReproducibleFileOrder = true
 }

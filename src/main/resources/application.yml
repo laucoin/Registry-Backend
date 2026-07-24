@@ -19,7 +19,7 @@ registry:
     support:
       name: Luc AUCOIN
       email: luc.aucoin1998@gmail.com
-      url: https://laucoin.fr
+      url: https://doc.laucoin.fr/registry/
   feature:
     observability:
       enabled: true
@@ -102,6 +102,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: ${registry.feature.documentation.enabled:false}
+    use-root-path: true
     oauth:
       client-id: ${external.keycloak.swagger.client-id}
 

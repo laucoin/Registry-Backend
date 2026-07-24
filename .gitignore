@@ -1,12 +1,13 @@
 HELP.md
 .gradle
+.kotlin/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 *.log
-.devcontainer/workspace
-.devcontainer/postgres/data
+local-dev/postgres/data
+.env
 
 ### STS ###
 .apt_generated

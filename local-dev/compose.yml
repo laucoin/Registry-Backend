@@ -1,0 +1,80 @@
+services:
+  registry-postgresql:
+    image: docker.io/library/postgres:18-alpine
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    environment:
+      POSTGRES_MULTIPLE_DATABASES: ${PG_AUTHENTIK_DB},${PG_REGISTRY_DB}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASS}
+    volumes:
+      - ./postgres/scripts:/docker-entrypoint-initdb.d
+      - ./postgres/data:/var/lib/postgresql
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
+      test:
+        - CMD-SHELL
+        - pg_isready -d ${PG_AUTHENTIK_DB} -U ${PG_AUTHENTIK_DB}
+
+  registry-authentik-server:
+    image: ghcr.io/goauthentik/server:2026.5
+    restart: unless-stopped
+    ports:
+      - 9000:9000
+      - 9443:9443
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: registry-postgresql
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_AUTHENTIK_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_AUTHENTIK_DB}
+      AUTHENTIK_SECRET_KEY: ${AU_SECRET_KEY}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AU_EMAIL}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AU_PASS}
+    user: root
+    command: server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./authentik/templates:/templates
+      - ./authentik/blueprints:/blueprints/custom
+    depends_on:
+      registry-postgresql:
+        condition: service_healthy
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
+      test:
+        - CMD-SHELL
+        - curl -f ${AU_SITE_URL} || exit 1
+
+  registry-authentik-worker:
+    image: ghcr.io/goauthentik/server:2026.5
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: registry-postgresql
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_AUTHENTIK_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_AUTHENTIK_DB}
+      AUTHENTIK_SECRET_KEY: ${AU_SECRET_KEY}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AU_EMAIL}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AU_PASS}
+    user: root
+    command: worker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./authentik/templates:/templates
+      - ./authentik/blueprints:/blueprints/custom
+    depends_on:
+      registry-postgresql:
+        condition: service_healthy
