@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementContentEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.MovementEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IMovementContentEntityRepository
@@ -88,7 +87,7 @@ class MovementModelPostgresRepository(
 	override fun findContent(projectId: UUID, movementIds: List<UUID>): Flux<Pair<UUID, List<MovementContentModel>>> {
 		return if (movementIds.isEmpty()) Flux.empty()
 		else contentRepository.findAllByMovementIds(projectId, movementIds)
-			.groupBy(MovementContentEntity::movementId)
+			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
 			}
@@ -100,7 +99,7 @@ class MovementModelPostgresRepository(
 	): Flux<Pair<UUID, List<MovementContentModel>>> {
 		return if (movementIds.isEmpty()) Flux.empty()
 		else contentRepository.findCurrentByMovementIds(projectId, movementIds)
-			.groupBy(MovementContentEntity::movementId)
+			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
 			}
@@ -270,7 +269,7 @@ class MovementModelPostgresRepository(
 		return Mono.zip(
 			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
 			findContent(projectId, listOf(id)).collectList()
-				.handle { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
+				.handle<List<MovementContentModel>> { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
 		).map {
 			it.t1.content = it.t2
 			it.t1

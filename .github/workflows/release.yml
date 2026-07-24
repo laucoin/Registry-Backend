@@ -1,0 +1,107 @@
+name: Release
+
+# Runs on every merge to main. main is the DEV baseline; tests are intentionally
+# NOT run here (branch protection "Require branches to be up to date before
+# merging" guarantees the PR pipeline already validated this exact tree).
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ${{ vars.REGISTRY }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+
+jobs:
+  dev-image:
+    name: Build & push DEV (main) image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      # The Dockerfile is a self-contained multi-stage build (compiles the jar
+      # in its build stage), so no Gradle setup is needed here.
+      - uses: ./.github/actions/docker-publish
+        with:
+          registry: ${{ env.REGISTRY }}
+          image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tag: main
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+  release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.semantic.outputs.new_release_published }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0          # semantic-release needs full history + tags
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Semantic Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v6
+        with:
+          semantic_version: "24"
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/git
+            @semantic-release/exec
+            conventional-changelog-conventionalcommits
+        env:
+          # Must be able to push the CHANGELOG/version.properties bump to the
+          # protected main branch (GITHUB_TOKEN cannot bypass branch protection).
+          # Use a PAT or GitHub App token allowed to bypass. Falls back to the
+          # default token if the secret is unset.
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  release-image:
+    name: Build & push release (x.y.z) image
+    runs-on: ubuntu-latest
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main             # pick up the version.properties bump just pushed
+      # version.properties is written into the build context; the Dockerfile's
+      # build stage reads it, so the jar embeds the released version.
+      - name: Pin build to released version
+        run: echo "version=${{ needs.release.outputs.version }}" > version.properties
+      - uses: ./.github/actions/docker-publish
+        with:
+          registry: ${{ env.REGISTRY }}
+          image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tag: ${{ needs.release.outputs.version }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+  retention:
+    name: Apply retention policy
+    runs-on: ubuntu-latest
+    needs: release-image
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/registry-retention
+        with:
+          package-name: ${{ env.IMAGE_NAME }}
+          owner: ${{ github.repository_owner }}
+          keep-releases: "5"
+          token: ${{ secrets.GHCR_PAT }}

@@ -1,11 +1,13 @@
 external:
   cors:
     urls: https://test.frontend.com
-  keycloak:
-    base-url: https://test.oidc.com
+  oidc:
+    jwks-uri: https://test.oidc.com/jwks
+    authorization-uri: https://test.oidc.com/authorize
+    token-uri: https://test.oidc.com/token
+    end-session-uri: https://test.oidc.com/logout
     client-id: client-test
     client-secret: secret-test
-    realm: test
     swagger:
       client-id: client-swagger
       client-secret: client-swagger-secret
@@ -62,11 +64,12 @@ registry:
   security:
     default-role: "USER"
     oauth2:
-      base-url: ${external.keycloak.base-url}
-      realm: ${external.keycloak.realm}
-      client-id: ${external.keycloak.client-id}
-      client-secret: ${external.keycloak.client-secret}
-      url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
+      jwks-uri: ${external.oidc.jwks-uri}
+      authorization-uri: ${external.oidc.authorization-uri}
+      token-uri: ${external.oidc.token-uri}
+      end-session-uri: ${external.oidc.end-session-uri}
+      client-id: ${external.oidc.client-id}
+      client-secret: ${external.oidc.client-secret}
       claims:
         user-id: "sub"
         email: "email"
@@ -89,14 +92,18 @@ spring:
     web-application-type: reactive
     banner-mode: off
   r2dbc:
-    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    url: r2dbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
+    pool:
+      enabled: true
+      initial-size: 1
+      max-size: 4
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${registry.security.oauth2.url}/certs
+          jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
   api-docs:

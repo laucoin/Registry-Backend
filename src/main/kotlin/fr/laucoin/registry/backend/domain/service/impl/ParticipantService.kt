@@ -36,7 +36,7 @@ import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -136,7 +136,7 @@ class ParticipantService(
 			.handle { it, handle ->
 				if (it.isNotEmpty()) {
 					val exception = RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER,
 						arrayListOf("${it.first().firstName} ${it.first().lastName}")
 					)
@@ -300,7 +300,7 @@ class ParticipantService(
 				)
 				handle.error(
 					RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						PARTICIPANT_OUT_OF_MOVEMENT_DATETIME,
 						arrayListOf(it),
 					)
@@ -329,7 +329,7 @@ class ParticipantService(
 				)
 				handle.error(
 					RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						PARTICIPANT_OUT_OF_MOVEMENT_DATETIME,
 						arrayListOf(it),
 					)
@@ -338,7 +338,7 @@ class ParticipantService(
 		}
 	}
 
-	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String) = flatMap { participantToUpdate ->
+	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
 		movementPort.countAllByParticipantId(
 			participantToUpdate.project!!.id!!,
 			participantToUpdate.id!!,
@@ -351,7 +351,7 @@ class ParticipantService(
 		}
 	}
 
-	private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String) = flatMap { participantToUpdate ->
+	private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
 		if (participantToUpdate.groups.isEmpty()) {
 			return@flatMap Mono.just(participantToUpdate)
 		}

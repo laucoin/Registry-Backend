@@ -65,7 +65,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -141,19 +141,19 @@ class CommunicationServiceTest {
 				Arguments.of(
 					commonCommunication().apply { dateTime = past; movement = commonMovement() },
 					commonMovement().apply { dateTime = now },
-					UNPROCESSABLE_ENTITY,
+					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION,
 				),
 				Arguments.of(
 					commonCommunication().apply { dateTime = now; movement = commonMovement() },
 					commonMovement().apply { dateTime = past; contentType = GUEST },
-					UNPROCESSABLE_ENTITY,
+					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED,
 				),
 				Arguments.of(
 					commonCommunication().apply { dateTime = now; movement = commonMovement() },
 					commonMovement().apply { dateTime = past; type = IN },
-					UNPROCESSABLE_ENTITY,
+					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_MOVEMENT_TYPE_NOT_OUT,
 				),
 			)
@@ -185,7 +185,7 @@ class CommunicationServiceTest {
 					currentUserWithRight,
 					commonAlert().apply { dateTime = now },
 					1,
-					UNPROCESSABLE_ENTITY,
+					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION,
 				),
 				Arguments.of(
@@ -193,7 +193,7 @@ class CommunicationServiceTest {
 					currentUserWithRight,
 					commonAlert().apply { dateTime = now; status = CANCELED },
 					1,
-					UNPROCESSABLE_ENTITY,
+					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION,
 				),
 				Arguments.of(

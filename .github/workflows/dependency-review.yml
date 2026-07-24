@@ -1,0 +1,22 @@
+name: Dependency Review
+
+# Scans the dependency changes introduced by a PR and fails if any pull in a
+# known vulnerability (or a disallowed license). Requires the Dependency Graph
+# to be enabled (Settings → Code security).
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write # post the summary comment
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

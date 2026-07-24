@@ -225,7 +225,7 @@ class ProjectProfileControllerTest: TestContext() {
 					),
 				)
 			)
-			.header(ACCEPT_LANGUAGE, requestedLocale)
+			.headers { headers -> requestedLocale?.let { headers.add(ACCEPT_LANGUAGE, it) } }
 			.exchange()
 
 		// Assert

@@ -21,33 +21,32 @@ import reactor.core.publisher.Mono
 @Service
 class KeycloakAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,
-	@param:Value($$"${external.keycloak.base-url}/realms/${external.keycloak.realm}")
-	private val baseUri: String,
-	@param:Value($$"${external.keycloak.client-id}")
+	@param:Value($$"${external.oidc.authorization-uri}")
+	private val authorizationUri: String,
+	@param:Value($$"${external.oidc.token-uri}")
+	private val tokenUri: String,
+	@param:Value($$"${external.oidc.end-session-uri}")
+	private val endSessionUri: String,
+	@param:Value($$"${external.oidc.client-id}")
 	private val clientId: String,
-	@param:Value($$"${external.keycloak.client-secret}")
+	@param:Value($$"${external.oidc.client-secret}")
 	private val clientSecret: String,
 ): IAuthenticationPort {
-	private val http: WebClient = WebClient.create(baseUri)
+	private val http: WebClient = WebClient.create()
 
 	private companion object {
-		private const val BASE_PATH = "/protocol/openid-connect"
-		private const val AUTHENTICATION_PATH = "$BASE_PATH/auth"
-		private const val TOKEN_PATH = "$BASE_PATH/token"
-		private const val LOGOUT_PATH = "$BASE_PATH/logout"
-
 		private const val RESPONSE_TYPE = "code"
 	}
 
 	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
 		return AuthenticationUriModel(
-			uri = "$baseUri$AUTHENTICATION_PATH?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=$redirectUri"
+			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=$redirectUri"
 		)
 	}
 
 	override fun getLogoutUri(redirectUri: String): AuthenticationUriModel {
 		return AuthenticationUriModel(
-			uri = "$baseUri$LOGOUT_PATH?redirect_uri=$redirectUri"
+			uri = "$endSessionUri?redirect_uri=$redirectUri"
 		)
 	}
 
@@ -69,7 +68,7 @@ class KeycloakAuthenticationAdapter(
 	}
 
 	private fun fetchToken(body: FormInserter<String>, errorMessage: String): Mono<TokenModel> {
-		return http.post().uri("$baseUri$TOKEN_PATH")
+		return http.post().uri(tokenUri)
 			.body(
 				body
 					.with("client_id", clientId)

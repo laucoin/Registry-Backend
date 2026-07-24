@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 object ReactiveExt {
-	fun <T> Mono<T>.notFoundIfEmpty(identifier: Any): Mono<T> {
+	fun <T : Any> Mono<T>.notFoundIfEmpty(identifier: Any): Mono<T> {
 		return switchIfEmpty {
 			LoggerFactory.getLogger(this::class.java).warn(
 				"Not data found with the given identifier ({}) and the current user permissions",

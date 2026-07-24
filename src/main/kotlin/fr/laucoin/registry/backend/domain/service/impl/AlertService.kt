@@ -23,7 +23,7 @@ import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.time.LocalDate
 import java.util.UUID
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
@@ -98,7 +98,7 @@ class AlertService(
 			.handle { it, handle ->
 				if (it.status !== IN_PROGRESS) {
 					log.warn("Only {} alert can be update", IN_PROGRESS)
-					handle.error(RegistryException(UNPROCESSABLE_ENTITY, ALERT_STATUS_IS_NOT_UPDATABLE))
+					handle.error(RegistryException(UNPROCESSABLE_CONTENT, ALERT_STATUS_IS_NOT_UPDATABLE))
 				} else handle.next(it)
 			}
 			.validateAlertDateWithLinkedCommunications(alert)
@@ -141,7 +141,7 @@ class AlertService(
 			).handle { it, handle ->
 				if (it > 0L) {
 					val exception = RegistryException(
-						UNPROCESSABLE_ENTITY,
+						UNPROCESSABLE_CONTENT,
 						ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME,
 						arrayListOf(it)
 					)
@@ -201,7 +201,7 @@ class AlertService(
 			}
 	}
 
-	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String) = flatMap { oldAlert ->
+	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
 		communicationPort.countAllByAlertId(
 			oldAlert.project!!.id!!,
 			oldAlert.id!!,
@@ -209,7 +209,7 @@ class AlertService(
 		).handle { it, handle ->
 			if (it > 0) {
 				log.warn("The alert {} already linked to communication(s)", oldAlert.id)
-				handle.error(RegistryException(UNPROCESSABLE_ENTITY, error))
+				handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
 			} else handle.next(oldAlert)
 		}
 	}

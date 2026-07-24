@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.ICommunicationEntityRepository
 import java.util.UUID
@@ -53,7 +52,7 @@ class CommunicationPostgresRepository(
 	): Flux<Pair<UUID, List<CommunicationModel>>> {
 		return if (movementIds.isEmpty()) Flux.empty()
 		else repository.findAllByMovementIdsWithLimit(projectId, movementIds, visibilitySearched, limit)
-			.groupBy(CommunicationEntity::movementId)
+			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
 			}
@@ -90,7 +89,7 @@ class CommunicationPostgresRepository(
 	): Flux<Pair<UUID, List<CommunicationModel>>> {
 		return if (alertIds.isEmpty()) Flux.empty()
 		else repository.findAllByAlertIdsWithLimit(projectId, alertIds, visibilitySearched, limit)
-			.groupBy(CommunicationEntity::movementId)
+			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
 			}

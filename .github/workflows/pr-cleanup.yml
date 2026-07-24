@@ -1,0 +1,59 @@
+name: PR Cleanup
+
+# When a PR is closed (merged or not), delete the throwaway branch image so the
+# registry doesn't accumulate one image per feature branch.
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+env:
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+
+jobs:
+  delete-branch-image:
+    name: Delete branch image from registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute branch image tag
+        id: tag
+        run: |
+          echo "value=$(echo '${{ github.head_ref }}' \
+            | sed 's/[^a-zA-Z0-9._-]/-/g' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      # GHCR-SPECIFIC: deleting package versions requires a PAT with delete:packages
+      # (the built-in GITHUB_TOKEN cannot delete packages). Swap for the Harbor
+      # artifact-delete API when migrating.
+      - name: Delete image tagged with the branch name
+        uses: actions/github-script@v9
+        env:
+          PACKAGE_NAME: ${{ env.IMAGE_NAME }}
+          OWNER: ${{ github.repository_owner }}
+          BRANCH_TAG: ${{ steps.tag.outputs.value }}
+        with:
+          github-token: ${{ secrets.GHCR_PAT }}
+          script: |
+            const packageName = process.env.PACKAGE_NAME;
+            const owner = process.env.OWNER;
+            const branchTag = process.env.BRANCH_TAG;
+
+            const versions = await github.paginate(
+              github.rest.packages.getAllPackageVersionsForPackageOwnedByUser,
+              { package_type: 'container', package_name: packageName, username: owner, per_page: 100 }
+            );
+
+            const match = versions.find(v =>
+              (v.metadata?.container?.tags ?? []).includes(branchTag));
+
+            if (!match) {
+              core.info(`No image tagged "${branchTag}" — nothing to delete.`);
+              return;
+            }
+
+            core.info(`Deleting version ${match.id} tagged "${branchTag}".`);
+            await github.rest.packages.deletePackageVersionForUser({
+              package_type: 'container',
+              package_name: packageName,
+              username: owner,
+              package_version_id: match.id,
+            });

@@ -34,9 +34,9 @@ import java.util.*
     )
 )
 class SwaggerConfig(
-    @param:Value($$"${registry.security.oauth2.url:}/auth")
+    @param:Value($$"${registry.security.oauth2.authorization-uri:}")
     private val configAuthUrl: String?,
-    @param:Value($$"${registry.security.oauth2.url:}/token")
+    @param:Value($$"${registry.security.oauth2.token-uri:}")
     private val configTokenUrl: String?,
     @param:Value($$"${registry.server.prefix:''}")
     private val configApiPrefix: String,

@@ -59,11 +59,12 @@ registry:
   security:
     default-role: USER
     oauth2:
-      base-url: ${external.keycloak.base-url}
-      realm: ${external.keycloak.realm}
-      client-id: ${external.keycloak.client-id}
-      client-secret: ${external.keycloak.client-secret}
-      url: ${registry.security.oauth2.base-url}/realms/${registry.security.oauth2.realm}/protocol/openid-connect
+      jwks-uri: ${external.oidc.jwks-uri}
+      authorization-uri: ${external.oidc.authorization-uri}
+      token-uri: ${external.oidc.token-uri}
+      end-session-uri: ${external.oidc.end-session-uri}
+      client-id: ${external.oidc.client-id}
+      client-secret: ${external.oidc.client-secret}
       claims:
         user-id: sub
         email: email
@@ -93,7 +94,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${registry.security.oauth2.url}/certs
+          jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
   api-docs:
@@ -104,7 +105,7 @@ springdoc:
     enabled: ${registry.feature.documentation.enabled:false}
     use-root-path: true
     oauth:
-      client-id: ${external.keycloak.swagger.client-id}
+      client-id: ${external.oidc.swagger.client-id}
 
 management:
   endpoints:

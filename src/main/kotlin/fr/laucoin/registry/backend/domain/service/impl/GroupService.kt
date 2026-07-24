@@ -24,7 +24,7 @@ import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
+import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -152,7 +152,7 @@ class GroupService(
 				if (it.second.isEmpty()) {
 					handle.error(
 						RegistryException(
-							UNPROCESSABLE_ENTITY,
+							UNPROCESSABLE_CONTENT,
 							GROUP_MEMBERS_ALREADY_ADDED,
 						)
 					)

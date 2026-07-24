@@ -1,6 +1,6 @@
 {
   "tagFormat": "${version}",
-  "repositoryUrl": "https://gitlab.com/laucoin/keycloak-theme.git",
+  "repositoryUrl": "https://github.com/laucoin/Registry-Backend.git",
   "branches": [
     {
       "name": "main"
@@ -143,21 +143,21 @@
     ],
     "@semantic-release/changelog",
     [
-      "@semantic-release/git",
-      {
-        "assets": [
-          "CHANGELOG.md",
-          "package.json"
-        ],
-        "message": "build(release): ${nextRelease.version}\n\n${nextRelease.notes}[skip ci]"
-      }
-    ],
-    "@semantic-release/gitlab",
-    [
       "@semantic-release/exec",
       {
         "prepareCmd": "echo version=${nextRelease.version} > version.properties"
       }
-    ]
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "CHANGELOG.md",
+          "version.properties"
+        ],
+        "message": "build(release): ${nextRelease.version}\n\n${nextRelease.notes}[skip ci]"
+      }
+    ],
+    "@semantic-release/github"
   ]
 }

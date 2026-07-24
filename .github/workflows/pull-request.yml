@@ -1,0 +1,56 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+# One in-flight run per PR; a new push cancels the previous build.
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ${{ vars.REGISTRY }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+
+jobs:
+  verify:
+    name: Test, build & publish branch image
+    runs-on: ubuntu-latest
+    # Fork PRs cannot read registry secrets — only build internal-branch PRs.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle (dependency + build cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      # `build` runs the full test suite AND assembles build/libs/registry-backend.jar.
+      - name: Run tests & build
+        run: ./gradlew build
+
+      - name: Compute branch image tag
+        id: tag
+        run: |
+          echo "value=$(echo '${{ github.head_ref }}' \
+            | sed 's/[^a-zA-Z0-9._-]/-/g' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      # Tag == branch name, so every rebuild overwrites the previous PR image.
+      - name: Build & push branch image
+        uses: ./.github/actions/docker-publish
+        with:
+          registry: ${{ env.REGISTRY }}
+          image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tag: ${{ steps.tag.outputs.value }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}

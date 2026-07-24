@@ -164,7 +164,7 @@ class ProjectProfileService(
 
 	private fun Mono<ProjectProfileModel>.validateRole(
 		currentUser: CurrentUserModel, projectId: UUID, profile: ProjectProfileModel
-	) = flatMap { profileToUpdate ->
+	): Mono<ProjectProfileModel> = flatMap { profileToUpdate ->
 		port.findProjectProfileByProjectAndUserId(
 			projectId,
 			currentUser.id!!,

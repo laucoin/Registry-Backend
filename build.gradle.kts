@@ -6,7 +6,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 plugins {
 	kotlin("jvm") version "2.4.10"
 	kotlin("plugin.spring") version "2.4.10"
-	id("org.springframework.boot") version "3.5.6"
+	id("org.springframework.boot") version "4.1.0"
 	id("io.spring.dependency-management") version "1.1.7"
 	id("org.jetbrains.kotlinx.kover") version "0.9.9"
 }
@@ -20,7 +20,7 @@ version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 
 // External libraries 📚
 val apacheTextVersion = "1.15.0"
-val swaggerVersion = "2.8.17"
+val swaggerVersion = "3.0.3"
 
 // Testing 🧪
 val mockWebServer = "5.4.0"
@@ -51,7 +51,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 
 	// Kotlin ♥️
-	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+	implementation("tools.jackson.module:jackson-module-kotlin")
 	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 
@@ -66,6 +66,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.apache.commons:commons-text:$apacheTextVersion")
+	implementation("org.springframework.boot:spring-boot-flyway")
 	implementation("org.flywaydb:flyway-core")
 	implementation("org.flywaydb:flyway-database-postgresql")
 	runtimeOnly("org.postgresql:postgresql")
@@ -73,6 +74,7 @@ dependencies {
 
 	// Test 🧪
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.boot:spring-boot-webtestclient")
 	testImplementation("io.projectreactor:reactor-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testImplementation("com.squareup.okhttp3:mockwebserver:$mockWebServer")

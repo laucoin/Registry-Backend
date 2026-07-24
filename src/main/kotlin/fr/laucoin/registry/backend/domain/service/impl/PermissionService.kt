@@ -13,10 +13,10 @@ import org.springframework.security.core.Authentication
 class PermissionService: PermissionEvaluator {
 	private val log = LoggerFactory.getLogger(this::class.java)
 
-	override fun hasPermission(authentication: Authentication?, targetObject: Any?, permission: Any?): Boolean {
-		val idAsString = when (targetObject) {
-			is UUID -> targetObject.toString()
-			is String -> targetObject
+	override fun hasPermission(authentication: Authentication, targetDomainObject: Any?, permission: Any): Boolean {
+		val idAsString = when (targetDomainObject) {
+			is UUID -> targetDomainObject.toString()
+			is String -> targetDomainObject
 			else -> return false
 		}
 
@@ -24,27 +24,24 @@ class PermissionService: PermissionEvaluator {
 	}
 
 	override fun hasPermission(
-		authentication: Authentication?,
-		targetId: Serializable?,
-		targetType: String?,
-		permission: Any?
+		authentication: Authentication,
+		targetId: Serializable,
+		targetType: String,
+		permission: Any
 	): Boolean {
 		val exception = RegistryException(
 			status = NOT_IMPLEMENTED,
 			code = NOT_IMPLEMENTED_YET,
 		)
 		log.error(
-			"Prefer to use `hasPermission(authentication: Authentication?, targetObject: Any?, permission: Any?)`",
+			"Prefer to use `hasPermission(authentication: Authentication, targetDomainObject: Any?, permission: Any)`",
 			exception,
 		)
 		throw exception
 	}
 
 	private fun hasPrivilege(authentication: Authentication?, targetId: String, permission: Any?): Boolean {
-		if (Objects.isNull(authentication) || targetId.isBlank() || permission !is String) {
-			return false
-		}
-
-		return authentication!!.authorities.any { it.authority == "${targetId}_$permission" }
-	}
+		val invalidData = Objects.isNull(authentication) || targetId.isBlank() || permission !is String
+        return !invalidData && authentication!!.authorities.any { it.authority == "${targetId}_$permission" }
+    }
 }

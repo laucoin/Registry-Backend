@@ -1,5 +1,8 @@
+# syntax=docker/dockerfile:1
+
+# ---- Build stage -------------------------------------------------------
 # Use an appropriate base image that has Java and Gradle installed
-FROM gradle:9.1.0-jdk21-alpine AS build
+FROM gradle:9.6.1-jdk25-alpine AS build
 
 # Set the working directory inside the container
 ENV APP_HOME=/usr/app
@@ -9,11 +12,15 @@ WORKDIR $APP_HOME
 # Copy the application source code to the container
 COPY . .
 
-# Build the application using Gradle
-RUN gradle build -x test -PtargetName="$APP_ARTIFACT_NAME"
+# Build the application using Gradle. The BuildKit cache mount keeps the Gradle
+# dependency + build cache warm across image builds (persists on a stable
+# builder; see the CI caching note in the README/PR description).
+RUN --mount=type=cache,target=/home/gradle/.gradle \
+    gradle build -x test -PtargetName="$APP_ARTIFACT_NAME"
 
+# ---- Runtime stage (distroless) ---------------------------------------
 # Use distroless image for the final stage
-FROM gcr.io/distroless/java21-debian12:nonroot
+FROM gcr.io/distroless/java25-debian13:nonroot
 
 # Switch to a non-root user for security
 USER nonroot
