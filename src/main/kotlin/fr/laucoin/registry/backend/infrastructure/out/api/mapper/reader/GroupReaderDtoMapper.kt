@@ -2,15 +2,15 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupReaderDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class GroupReaderDtoMapper(
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val participantMapper: ParticipantReaderDtoMapper,
-): IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
+) : IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
 	override fun toDto(model: GroupModel): GroupReaderDto {
 		return GroupReaderDto(
 			members = participantMapper.toDtoList(model.members),

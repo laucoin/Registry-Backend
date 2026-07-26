@@ -10,9 +10,6 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -22,6 +19,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class ProjectProfileReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()

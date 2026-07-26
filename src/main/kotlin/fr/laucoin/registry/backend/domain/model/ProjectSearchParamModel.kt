@@ -12,7 +12,7 @@ data class ProjectSearchParamModel(
 		textSearched: String? = null,
 		visibilitySearched: Boolean? = null,
 		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, dateTimeSearched) {
+	) : this(visibilitySearched, dateTimeSearched) {
 		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
 	}
 }

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
@@ -11,6 +12,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_U
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AddedGroupMembersReaderDto
@@ -24,8 +27,6 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotEmpty
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.ResponseEntity
@@ -41,6 +42,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Tag(name = "Participant's groups management", description = "API for Group-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/groups")
@@ -50,6 +53,7 @@ interface IGroupV1Controller {
 		description = "Find or get paginated Groups",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
 	fun findGroups(
 		@PathVariable projectId: UUID,
@@ -70,6 +74,7 @@ interface IGroupV1Controller {
 		description = "Find or get paginated Group Members by Group ID",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/{id}/members")
 	fun findGroupMembersByGroupId(
 		@PathVariable projectId: UUID,
@@ -104,6 +109,7 @@ interface IGroupV1Controller {
 		description = "Search Participants to add in a Group",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/participants")
 	fun searchParticipants(
 		@PathVariable projectId: UUID,
@@ -153,6 +159,7 @@ interface IGroupV1Controller {
 		description = "Remove member from an existing Group",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}/members/{memberId}")
 	fun removeMemberFromGroupById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -166,6 +173,7 @@ interface IGroupV1Controller {
 		description = "Disable Group, it will not visible anymore in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/disable")
 	fun disableGroupById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -178,6 +186,7 @@ interface IGroupV1Controller {
 		description = "Enable Group, obviously it will be visible again in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/enable")
 	fun enableGroupById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -190,6 +199,7 @@ interface IGroupV1Controller {
 		description = "Delete all Group data.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
 	fun deleteGroupById(@PathVariable projectId: UUID, @PathVariable id: UUID): Mono<Unit>
 }

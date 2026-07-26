@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.entity.KeycloakT
 import org.springframework.stereotype.Component
 
 @Component
-class AuthenticationTokenEntityMapper: IEntityMapper<TokenModel, KeycloakTokenEntity> {
+class AuthenticationTokenEntityMapper : IEntityMapper<TokenModel, KeycloakTokenEntity> {
 	override fun toModel(entity: KeycloakTokenEntity): TokenModel {
 		return TokenModel(
 			accessToken = entity.accessToken,

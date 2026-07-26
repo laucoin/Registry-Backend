@@ -7,15 +7,15 @@ import fr.laucoin.registry.backend.infrastructure.`in`.IEntityReaderMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementContentEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleEntity
+import org.springframework.stereotype.Component
 import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
 
 @Component
 class MovementContentEntityMapper(
 	private val participantEntityMapper: ParticipantEntityMapper,
 	private val vehicleEntityMapper: VehicleEntityMapper
-): IEntityReaderMapper<MovementContentModel, MovementContentEntity> {
+) : IEntityReaderMapper<MovementContentModel, MovementContentEntity> {
 	override fun toModel(entity: MovementContentEntity): MovementContentModel {
 		return MovementContentModel(
 			id = entity.id,

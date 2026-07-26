@@ -6,10 +6,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.ModelExt.userOidcId
-import java.net.URI
-import java.util.Objects
-import java.util.function.Function
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
@@ -24,6 +20,10 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.util.Objects
+import java.util.function.Function
+import kotlin.test.assertNotNull
 
 object WebTestClientExt {
 	private const val FIRST_NAME = "John"
@@ -79,7 +79,7 @@ object WebTestClientExt {
 	}
 
 	inline fun <reified T : Any> ResponseSpec.body(status: HttpStatus): T? {
-		val responseType = object: ParameterizedTypeReference<T>() {}
+		val responseType = object : ParameterizedTypeReference<T>() {}
 
 		return expectStatus().isEqualTo(status.value())
 			.expectBody(responseType)
@@ -92,8 +92,16 @@ object WebTestClientExt {
 		assertEquals(expectedStatus.value(), error?.get(ErrorDto::statusCode.name))
 		assertEquals(expectedStatus.name, error?.get(ErrorDto::statusName.name))
 		assertEquals(expectedCode, error?.get(ErrorDto::code.name))
-		assertNotNull(error?.get(ErrorDto::title.name))
-		assertNotNull(error?.get(ErrorDto::message.name))
+		assertResolved(error?.get(ErrorDto::title.name))
+		assertResolved(error?.get(ErrorDto::message.name))
 		return this
+	}
+
+	/**
+	 * A translation that failed to resolve leaks its raw bundle key ("error.…").
+	 */
+	private fun assertResolved(text: Any?) {
+		assertNotNull(text)
+		check(!text.toString().startsWith("error.")) { "Unresolved translation key leaked to the client: $text" }
 	}
 }

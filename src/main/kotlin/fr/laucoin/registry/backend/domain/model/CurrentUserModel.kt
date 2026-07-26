@@ -1,16 +1,16 @@
 package fr.laucoin.registry.backend.domain.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import java.util.UUID
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
+import java.util.UUID
 
 data class CurrentUserModel(
 	private var authorities: MutableCollection<GrantedAuthority> = mutableListOf(),
 	var preferences: PreferencesModel? = null,
-): UserModel(), UserDetails {
-	constructor(user: UserModel): this() {
+) : UserModel(), UserDetails {
+	constructor(user: UserModel) : this() {
 		id = user.id
 		oidcId = user.oidcId
 		type = user.type
@@ -20,7 +20,6 @@ data class CurrentUserModel(
 		role = user.role
 		birthday = user.birthday
 		lastLogin = user.lastLogin
-		purged = user.purged
 		visible = user.visible
 		creation = user.creation
 		lastEdition = user.lastEdition

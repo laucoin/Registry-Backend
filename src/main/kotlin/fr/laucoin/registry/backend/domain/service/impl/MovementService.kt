@@ -17,6 +17,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
@@ -42,6 +43,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
@@ -54,9 +56,6 @@ import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.time.LocalDate
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
@@ -72,6 +71,9 @@ import reactor.kotlin.core.util.function.component3
 import reactor.kotlin.core.util.function.component4
 import reactor.kotlin.core.util.function.component5
 import reactor.util.function.Tuple2
+import java.time.LocalDate
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class MovementService(
@@ -91,21 +93,23 @@ class MovementService(
 	private val maxVehicleResult: Int,
 	@param:Value($$"${registry.feature.movement.searched.max-activity-result}")
 	private val maxActivityResult: Int,
-): IMovementService, GenericService() {
+) : IMovementService, GenericService() {
 	override fun findMovementsPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
+		sort: List<SortModel<MovementSortFieldEnum>>,
 	): Mono<PageModel<MovementModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sort)
 	}
 
 	override fun findCurrentMovementsPage(
 		projectId: UUID,
 		pageable: PageableModel,
-		searchParams: MovementSearchParamModel
+		searchParams: MovementSearchParamModel,
+		sort: List<SortModel<MovementSortFieldEnum>>,
 	): Mono<PageModel<MovementModel>> {
-		return port.findCurrentPage(projectId, pageable, searchParams)
+		return port.findCurrentPage(projectId, pageable, searchParams, sort)
 	}
 
 	override fun findMovementsContent(
@@ -125,6 +129,10 @@ class MovementService(
 	override fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {
 		return port.findById(projectId, id, visibilitySearched)
 			.notFoundIfEmpty(id)
+	}
+
+	override fun findOngoingActivities(projectId: UUID, limit: Int): Flux<MovementModel> {
+		return port.findOngoingActivities(projectId, limit)
 	}
 
 	override fun searchParticipantsAndGroupsByText(

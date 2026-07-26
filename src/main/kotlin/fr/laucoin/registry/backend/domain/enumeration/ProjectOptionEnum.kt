@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.domain.enumeration
 
-enum class ProjectOptionEnum: IProjectOptionEnum {
+enum class ProjectOptionEnum : IProjectOptionEnum {
 	VEHICLE {
 		override val requiredOptions = emptyList<ProjectOptionEnum>()
 	},

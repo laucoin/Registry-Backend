@@ -3,10 +3,13 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.PROFILE_ROLE_UPDATE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -20,14 +23,13 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -36,6 +38,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -44,19 +47,49 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
+import java.util.stream.Stream
 
 class ProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
 	private val profileService: IUserProjectProfileService = mock()
 	private val roleService: IRoleService = mock()
 	private val userPort: IUserPort = mock()
+	private val userService: IUserService = mock()
 	private val maxUser: Int = 1
-	private val service = ProjectProfileService(profileService, port, roleService, userPort, maxUser)
+
+	private val transactionalOperator: TransactionalOperator = mock<TransactionalOperator>().also { operator ->
+		whenever(operator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+	}
+
+	private val auditService: IAuditService = mock<IAuditService>().also { audit ->
+		whenever(audit.audit(any<Mono<Any>>(), any(), any(), anyOrNull()))
+			.thenAnswer { it.getArgument<Mono<Any>>(0) }
+	}
+	private val service = ProjectProfileService(
+		profileService, port, roleService, userPort, userService, transactionalOperator, auditService, maxUser
+	)
+
+	private fun projectProfileTemplate() = ProjectProfileModel().apply {
+		role = PROJECT_ROLE
+		project = ProjectModel().apply { id = projectId }
+	}
+
+	private fun stubCallerAssignableRoles(vararg roles: String) {
+		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), any())).thenReturn(
+			Mono.just(ProjectProfileModel().apply { role = PROJECT_ROLE })
+		)
+		whenever(roleService.getAssignableProjectRoles(any())).thenReturn(roles.toList())
+	}
 
 	private companion object {
+		private const val PROJECT_ROLE = "PROJECT_ROLE"
+
 		@JvmStatic
 		fun `Should createProjectProfiles call port findUserIdsWithProjectProfile and saveAll`(): Stream<Arguments> {
 			val uuid1 = UUID.randomUUID()
@@ -74,13 +107,15 @@ class ProjectProfileServiceTest {
 					"INITIAL_ROLE_PROJECT",
 					"UPDATED_ROLE_PROJECT",
 					"UPDATED_ROLE_PROJECT",
-					PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
+					PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER,
+					"INITIAL_ROLE_PROJECT"
 				),
 				Arguments.of(
 					"INITIAL_ROLE_PROJECT",
 					"UPDATED_ROLE_PROJECT",
 					"INITIAL_ROLE_PROJECT",
-					PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
+					PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER,
+					"UPDATED_ROLE_PROJECT"
 				),
 			)
 		}
@@ -216,9 +251,8 @@ class ProjectProfileServiceTest {
 		expectedCreatedUserIds: List<UUID>,
 	) {
 		// Arrange
-		val profiles =
-			wantedProfileForUserIds.map { ProjectProfileModel().apply { user = UserModel().apply { id = it } } }
-		val expectedProfiles = profiles.filter { expectedCreatedUserIds.contains(it.user?.id) }
+		val template = projectProfileTemplate()
+		stubCallerAssignableRoles(PROJECT_ROLE)
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(),
@@ -229,10 +263,12 @@ class ProjectProfileServiceTest {
 				anyOrNull()
 			)
 		).thenReturn(Flux.just(*userIdWithExistingProfile.toTypedArray()))
-		whenever(port.saveAll(any())).thenReturn(Flux.just(*expectedProfiles.toTypedArray()))
+		whenever(port.saveAll(any())).thenAnswer { Flux.fromIterable(it.getArgument<List<ProjectProfileModel>>(0)) }
 
 		// Act
-		val result = service.createProjectProfiles(currentUser(), projectId, wantedProfileForUserIds, profiles).block()
+		val result = service.createProjectProfiles(
+			currentUser(), projectId, wantedProfileForUserIds, emptyList(), template
+		).block()
 
 		// Assert
 		assertEquals(expectedCreatedUserIds, result?.first)
@@ -245,7 +281,69 @@ class ProjectProfileServiceTest {
 			startDateTimeSearched = null,
 			endDateTimeSearched = null,
 		)
-		verify(port).saveAll(expectedProfiles)
+		val captor = argumentCaptor<List<ProjectProfileModel>>()
+		verify(port).saveAll(captor.capture())
+		assertEquals(expectedCreatedUserIds, captor.firstValue.map { it.user?.id })
+		captor.firstValue.forEach {
+			assertEquals(INVITED, it.status)
+			assertEquals(PROJECT_ROLE, it.role)
+			assertEquals(projectId, it.project?.id)
+		}
+	}
+
+	@Test
+	fun `Should createProjectProfiles invite by email creating an email-only user then a profile`() {
+		// Arrange
+		val invitedUserId = UUID.randomUUID()
+		val template = projectProfileTemplate()
+		stubCallerAssignableRoles(PROJECT_ROLE)
+		whenever(userService.findOrCreateInvitedUser(any(), any()))
+			.thenReturn(Mono.just(UserModel().apply { id = invitedUserId }))
+		whenever(
+			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
+			)
+		).thenReturn(Flux.empty())
+		whenever(port.saveAll(any())).thenAnswer { Flux.fromIterable(it.getArgument<List<ProjectProfileModel>>(0)) }
+
+		// Act
+		val result = service.createProjectProfiles(
+			currentUser(), projectId, emptyList(), listOf("invited@test.com"), template
+		).block()
+
+		// Assert
+		assertEquals(listOf(invitedUserId), result?.first)
+		verify(userService).findOrCreateInvitedUser(eq("invited@test.com"), eq(currentUser()))
+		val captor = argumentCaptor<List<ProjectProfileModel>>()
+		verify(port).saveAll(captor.capture())
+		assertEquals(listOf(invitedUserId), captor.firstValue.map { it.user?.id })
+		assertEquals(listOf(projectId), captor.firstValue.map { it.project?.id })
+	}
+
+	@Test
+	fun `Should createProjectProfiles combine existing userIds and invited emails`() {
+		// Arrange
+		val existingUserId = UUID.randomUUID()
+		val invitedUserId = UUID.randomUUID()
+		val template = projectProfileTemplate()
+		stubCallerAssignableRoles(PROJECT_ROLE)
+		whenever(userService.findOrCreateInvitedUser(any(), any()))
+			.thenReturn(Mono.just(UserModel().apply { id = invitedUserId }))
+		whenever(
+			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
+			)
+		).thenReturn(Flux.empty())
+		whenever(port.saveAll(any())).thenAnswer { Flux.fromIterable(it.getArgument<List<ProjectProfileModel>>(0)) }
+
+		// Act
+		val result = service.createProjectProfiles(
+			currentUser(), projectId, listOf(existingUserId), listOf("invited@test.com"), template
+		).block()
+
+		// Assert
+		assertEquals(listOf(existingUserId, invitedUserId), result?.first)
+		verify(userService).findOrCreateInvitedUser(eq("invited@test.com"), eq(currentUser()))
 	}
 
 	@Test
@@ -253,12 +351,13 @@ class ProjectProfileServiceTest {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val users = listOf(uuid)
-		val profile = ProjectProfileModel().apply {
-			user = UserModel().apply { id = uuid }
+		val template = ProjectProfileModel().apply {
+			role = PROJECT_ROLE
 			startAccess = CustomDateTimeModel(LocalDate.EPOCH)
 			endAccess = CustomDateTimeModel(LocalDate.EPOCH)
+			project = ProjectModel().apply { id = projectId }
 		}
-		val profiles = listOf(profile)
+		stubCallerAssignableRoles(PROJECT_ROLE)
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(),
@@ -272,7 +371,7 @@ class ProjectProfileServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createProjectProfiles(currentUser(), projectId, users, profiles).block()
+			service.createProjectProfiles(currentUser(), projectId, users, emptyList(), template).block()
 		}) as RegistryException
 
 		// Assert
@@ -286,6 +385,54 @@ class ProjectProfileServiceTest {
 			startDateTimeSearched = any(),
 			endDateTimeSearched = any(),
 		)
+		verify(port, never()).saveAll(any())
+	}
+
+	@Test
+	fun `Should createProjectProfiles throw because user is not allowed to assign that role`() {
+		// Arrange
+		val template = projectProfileTemplate().apply { role = "PROJECT_ADMINISTRATOR" }
+		stubCallerAssignableRoles(PROJECT_ROLE)
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createProjectProfiles(
+				currentUser(), projectId, emptyList(), listOf("invited@test.com"), template
+			).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER, result.message)
+		assertEquals(listOf("PROJECT_ADMINISTRATOR"), result.args)
+		verify(port).findProjectProfileByProjectAndUserId(
+			projectId,
+			currentUser().id!!,
+			ProjectProfileSearchParamModel(
+				visibilitySearched = true,
+				availabilitySearched = true,
+				statusSearched = listOf(ACCEPTED),
+			),
+		)
+		verify(userService, never()).findOrCreateInvitedUser(any(), any())
+		verify(port, never()).saveAll(any())
+	}
+
+	@Test
+	fun `Should createProjectProfiles create nothing when the user has no active profile on the project`() {
+		// Arrange
+		val template = projectProfileTemplate()
+		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = service.createProjectProfiles(
+			currentUser(), projectId, emptyList(), listOf("invited@test.com"), template
+		).block()
+
+		// Assert
+		assertEquals(null, result)
+		verify(roleService, never()).getAssignableProjectRoles(any())
+		verify(userService, never()).findOrCreateInvitedUser(any(), any())
 		verify(port, never()).saveAll(any())
 	}
 
@@ -361,6 +508,7 @@ class ProjectProfileServiceTest {
 		)
 		verify(roleService).getAssignableProjectRoles(currentUserProfile)
 		verify(port).update(profile)
+		verify(auditService).audit(any<Mono<ProjectProfileModel>>(), any(), eq(PROFILE_ROLE_UPDATE), eq(uuid))
 	}
 
 	@Test
@@ -415,6 +563,7 @@ class ProjectProfileServiceTest {
 		profileUpdatedRole: String,
 		allowedRoleString: String,
 		expectedErrorMessage: String,
+		expectedRejectedRole: String,
 	) {
 		// Arrange
 		val uuid = UUID.randomUUID()
@@ -460,6 +609,7 @@ class ProjectProfileServiceTest {
 		// Assert
 		assertEquals(FORBIDDEN, result.status)
 		assertEquals(expectedErrorMessage, result.message)
+		assertEquals(listOf(expectedRejectedRole), result.args)
 		verify(port).findById(projectId, uuid, visibilitySearched = null)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			projectId,
@@ -563,5 +713,58 @@ class ProjectProfileServiceTest {
 			PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR,
 		)
 		verify(port).deleteById(uuid)
+	}
+
+	/**
+	 * The member list refuses to act on the caller's own profile even when the project has
+	 * other administrators — the last-administrator guard passes here, so it is not what
+	 * protects the caller.
+	 */
+	@Test
+	fun `Should blockProjectProfileById refuse the profile of the current user`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val profile = ProjectProfileModel().apply {
+			user = UserModel().apply { id = currentUser().id }
+			project = ProjectModel().apply { id = projectId }
+			visible = true
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any()))
+			.thenReturn(Mono.just(profile))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.blockProjectProfileById(currentUser(), projectId, uuid).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(PROJECT_PROFILE_BLOCK_CURRENT_USER, result.message)
+		verify(port, never()).update(any())
+	}
+
+	@Test
+	fun `Should deleteProjectProfileById refuse the profile of the current user`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val profile = ProjectProfileModel().apply {
+			user = UserModel().apply { id = currentUser().id }
+			project = ProjectModel().apply { id = projectId }
+			visible = true
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any()))
+			.thenReturn(Mono.just(profile))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.deleteProjectProfileById(currentUser(), projectId, uuid).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(PROJECT_PROFILE_DELETE_CURRENT_USER, result.message)
+		verify(port, never()).deleteById(any())
 	}
 }

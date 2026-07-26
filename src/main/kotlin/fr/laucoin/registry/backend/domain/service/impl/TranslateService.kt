@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 class TranslateService(
 	private val messagesSource: MessageSource,
 	private val errorsSource: MessageSource,
-): ITranslateService {
+) : ITranslateService {
 	override fun getMessage(
 		code: String,
 		args: Array<Any>?,

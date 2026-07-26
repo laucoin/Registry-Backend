@@ -8,4 +8,4 @@ data class PreferencesModel(
 	var theme: ThemeEnum = ThemeEnum.SYSTEM,
 	var language: String? = null,
 	var selectedProfile: ProjectProfileModel? = null
-): GenericModel()
+) : GenericModel()

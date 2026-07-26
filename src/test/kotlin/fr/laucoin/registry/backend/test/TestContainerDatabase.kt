@@ -6,7 +6,7 @@ import org.springframework.context.ConfigurableApplicationContext
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 
-class TestContainerDatabase: ApplicationContextInitializer<ConfigurableApplicationContext> {
+class TestContainerDatabase : ApplicationContextInitializer<ConfigurableApplicationContext> {
 	private companion object {
 		private const val CONFIG_PREFIX = "registry.datasource."
 

@@ -6,4 +6,4 @@ data class RegistryException(
 	val status: HttpStatus,
 	val code: String,
 	val args: ArrayList<Any?>? = null,
-): Exception(code)
+) : Exception(code)

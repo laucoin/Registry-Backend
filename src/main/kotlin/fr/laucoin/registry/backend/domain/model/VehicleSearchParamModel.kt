@@ -18,7 +18,7 @@ data class VehicleSearchParamModel(
 		visibilitySearched: Boolean? = null,
 		statusSearched: PresenceStatusEnum? = null,
 		dateTimeSearched: ZonedDateTime?,
-	): this(
+	) : this(
 		visibilitySearched = visibilitySearched,
 		availabilitySearched = statusSearched.isAvailable(),
 		presenceSearched = statusSearched.isPresent(),

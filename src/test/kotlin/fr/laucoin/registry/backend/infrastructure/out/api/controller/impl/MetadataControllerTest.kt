@@ -20,7 +20,7 @@ import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 
-class MetadataControllerTest: TestContext() {
+class MetadataControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var movementTypeReaderMapper: MovementTypeReaderDtoMapper
 

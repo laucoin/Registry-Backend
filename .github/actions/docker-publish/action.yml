@@ -33,6 +33,13 @@ inputs:
     description: Whether to push the built image
     required: false
     default: "true"
+  load:
+    description: >-
+      Load the built image into the local Docker daemon (single-platform only).
+      Used to build once, scan the local image, then push in a second call that
+      hits the layer cache — so a vulnerable image is never published.
+    required: false
+    default: "false"
   build-args:
     description: Newline-delimited build args passed to docker build
     required: false
@@ -57,6 +64,7 @@ runs:
         context: ${{ inputs.context }}
         file: ${{ inputs.file }}
         push: ${{ inputs.push }}
+        load: ${{ inputs.load }}
         tags: ${{ inputs.image }}:${{ inputs.tag }}
         build-args: ${{ inputs.build-args }}
         # Layer cache stored in the GitHub Actions cache, scoped per image so the

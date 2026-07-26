@@ -12,7 +12,7 @@ data class GroupModel(
 	var insideMembersCount: Long? = null,
 	var outsideMembersCount: Long? = null,
 	var members: List<ParticipantModel> = emptyList(),
-): GenericProjectModel() {
+) : GenericProjectModel() {
 	fun getNewMembers(group: GroupModel): List<ParticipantModel> {
 		val currentParticipants = members.mapNotNull { it.id }
 		return group.members

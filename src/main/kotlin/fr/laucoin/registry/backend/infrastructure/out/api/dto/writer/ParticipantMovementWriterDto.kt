@@ -33,5 +33,5 @@ data class ParticipantMovementWriterDto(
 		override var participantId: UUID? = null,
 		var vehicleId: UUID? = null,
 		var poolName: String? = null,
-	): MovementContentWriterDto(participantId = participantId)
+	) : MovementContentWriterDto(participantId = participantId)
 }

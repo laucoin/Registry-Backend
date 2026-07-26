@@ -3,9 +3,9 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
+import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.util.Optional
-import org.springframework.stereotype.Component
 
 @Component
 class ParticipantReaderDtoMapper(
@@ -14,7 +14,7 @@ class ParticipantReaderDtoMapper(
 	private val statusMapper: PresenceStatusReaderDtoMapper,
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val groupMapper: GroupWithoutMemberReaderDtoMapper,
-): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
+) : IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
 	override fun toDto(model: ParticipantModel): ParticipantReaderDto {
 		return ParticipantReaderDto(
 			firstName = model.firstName,
@@ -30,7 +30,6 @@ class ParticipantReaderDtoMapper(
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
 			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
-			purged = model.purged,
 		).apply {
 			id = model.id
 			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)

@@ -1,6 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.MEMBERSHIP_REVOKE
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.MEMBERSHIP_STATUS_UPDATE
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.MEMBERSHIP_SUPPORT_ACCESS
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -17,15 +20,17 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.OffsetTime
-import java.util.Objects
-import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class UserProjectProfileService(
@@ -33,7 +38,8 @@ class UserProjectProfileService(
 	private val roleService: IRoleService,
 	private val preferencesPort: IPreferencesPort,
 	private val transactionalOperator: TransactionalOperator,
-): IUserProjectProfileService, GenericProfileService(port) {
+	private val auditService: IAuditService,
+) : IUserProjectProfileService, GenericProfileService(port) {
 	override fun findProjectProfilesPage(
 		userId: UUID,
 		pageable: PageableModel,
@@ -43,7 +49,19 @@ class UserProjectProfileService(
 			.findProjectProfilesPageByUserId(userId, pageable, searchParams)
 	}
 
-	override fun <T: GenericModel> validateNotLastProjectRoleLevel0(
+	/**
+	 * "invitations I sent" for the home dashboard: profiles the caller
+	 * created for others, still pending or answered since the given cutoff.
+	 */
+	override fun findSentInvitationsPage(
+		currentUser: CurrentUserModel,
+		pageable: PageableModel,
+		since: ZonedDateTime,
+	): Mono<PageModel<ProjectProfileModel>> {
+		return port.findSentInvitationsPageByCreatorId(currentUser.id!!, pageable, since)
+	}
+
+	override fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,
 		projectId: UUID?,
 		result: T,
@@ -83,7 +101,7 @@ class UserProjectProfileService(
 		id: UUID,
 		status: ProfileStatusEnum
 	): Mono<ProjectProfileModel> {
-		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
+		val updated = port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
 			.filter { it.status == INVITED }
 			.notFoundIfEmpty(id)
 			.flatMap { profile ->
@@ -91,6 +109,7 @@ class UserProjectProfileService(
 				profile.update(currentUser)
 				port.update(profile)
 			}
+		return auditService.audit(updated, currentUser, MEMBERSHIP_STATUS_UPDATE, id)
 	}
 
 	private fun Mono<ProjectProfileModel>.updateSelectedProfile(currentUser: CurrentUserModel): Mono<ProjectProfileModel> =
@@ -120,7 +139,7 @@ class UserProjectProfileService(
 			create(currentUser)
 		}
 
-		return validateNoProfileConflict(
+		val granted = validateNoProfileConflict(
 			projectId,
 			listOf(currentUser.id!!),
 			profileId = null,
@@ -130,10 +149,12 @@ class UserProjectProfileService(
 			.flatMap { port.create(profile) }
 			.updateSelectedProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
+		return auditService.audit(granted, currentUser, MEMBERSHIP_SUPPORT_ACCESS, projectId)
 	}
 
 	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
-		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+		val revoked = port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+			.notFoundIfEmpty(id)
 			.flatMap {
 				validateNotLastProjectRoleLevel0(
 					it.user!!.id!!,
@@ -143,5 +164,20 @@ class UserProjectProfileService(
 				)
 			}
 			.flatMap { port.deleteById(id) }
+		return auditService.audit(revoked, currentUser, MEMBERSHIP_REVOKE, id)
+	}
+
+	/**
+	 * Star/unstar the caller's own membership (pins the project on the
+	 * home dashboard). Toggling flips the flag on the profile the caller owns.
+	 */
+	override fun toggleFavorite(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+			.notFoundIfEmpty(id)
+			.flatMap { profile ->
+				profile.favorite = !profile.favorite
+				profile.update(currentUser)
+				port.update(profile)
+			}
 	}
 }

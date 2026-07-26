@@ -17,8 +17,6 @@ import fr.laucoin.registry.backend.test.ModelExt.activityId
 import fr.laucoin.registry.backend.test.ModelExt.commonActivity
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -33,6 +31,8 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 class ActivityServiceTest {
 	private val port: IActivityPort = mock()
@@ -45,14 +45,14 @@ class ActivityServiceTest {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ActivitySearchParamModel()
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findActivitiesPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test

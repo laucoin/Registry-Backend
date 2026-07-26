@@ -35,12 +35,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -60,8 +54,14 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
 
-class ProjectControllerTest: TestContext() {
+class ProjectControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IProjectService
 
@@ -167,7 +167,7 @@ class ProjectControllerTest: TestContext() {
 			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ProjectModel()))
-		whenever(service.findProjectsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findProjectsPage(any(), any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectReaderDto())),
 		)
@@ -200,7 +200,8 @@ class ProjectControllerTest: TestContext() {
 			currentUser(*authorities.toTypedArray()),
 			pageable,
 			expectedWithProfile,
-			searchParams
+			searchParams,
+			emptyList()
 		)
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(optionsReaderMapper)
@@ -469,7 +470,7 @@ class ProjectControllerTest: TestContext() {
 	@Test
 	fun `Should deleteProjectById return 200`() {
 		// Arrange
-		whenever(service.deleteProjectById(any())).thenReturn(Mono.empty())
+		whenever(service.deleteProjectById(any(), any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
@@ -481,7 +482,7 @@ class ProjectControllerTest: TestContext() {
 		// Assert
 		result.body<Void>(OK)
 
-		verify(service).deleteProjectById(eq(projectId))
+		verify(service).deleteProjectById(any(), eq(projectId))
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)

@@ -8,11 +8,11 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.G
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_OPTIONS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_TIME
+import org.springframework.data.annotation.ReadOnlyProperty
+import org.springframework.data.relational.core.mapping.Column
 import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.UUID
-import org.springframework.data.annotation.ReadOnlyProperty
-import org.springframework.data.relational.core.mapping.Column
 
 abstract class GenericProjectEntity(
 	@Column(LINKED_PROJECT_ID)
@@ -35,4 +35,4 @@ abstract class GenericProjectEntity(
 	@ReadOnlyProperty
 	@Column(LINKED_PROJECT_OPTIONS)
 	var projectOptions: List<ProjectOptionEnum>? = null,
-): GenericEntity()
+) : GenericEntity()

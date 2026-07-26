@@ -23,9 +23,6 @@ import fr.laucoin.registry.backend.test.ModelExt.commonAlert
 import fr.laucoin.registry.backend.test.ModelExt.commonCommunication
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
@@ -42,6 +39,9 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.UUID
 
 class AlertServiceTest {
 	private val port: IAlertPort = mock()
@@ -62,14 +62,14 @@ class AlertServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = AlertSearchParamModel()
 
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findAlertsPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test

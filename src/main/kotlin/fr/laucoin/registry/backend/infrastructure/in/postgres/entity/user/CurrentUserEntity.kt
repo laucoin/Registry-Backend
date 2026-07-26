@@ -20,11 +20,11 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preferenc
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preference.PreferenceFields.PREFERENCE_SELECTED_PROFILE_STATUS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preference.PreferenceFields.PREFERENCE_THEME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.PREFERENCE_ID
+import org.springframework.data.annotation.ReadOnlyProperty
+import org.springframework.data.relational.core.mapping.Column
 import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.UUID
-import org.springframework.data.annotation.ReadOnlyProperty
-import org.springframework.data.relational.core.mapping.Column
 
 data class CurrentUserEntity(
 	@ReadOnlyProperty
@@ -78,5 +78,5 @@ data class CurrentUserEntity(
 	@ReadOnlyProperty
 	@Column(PREFERENCE_SELECTED_PROFILE_PROJECT_OPTIONS)
 	var preferenceSelectedProfileProjectOptions: List<ProjectOptionEnum>? = null,
-): UserEntity()
+) : UserEntity()
 

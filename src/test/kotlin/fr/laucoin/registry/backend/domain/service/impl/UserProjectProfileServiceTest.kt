@@ -15,6 +15,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.commonProject
@@ -24,11 +25,9 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -47,14 +46,23 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
 class UserProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
 	private val roleService: IRoleService = mock()
 	private val preferencesPort: IPreferencesPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
+
+	private val auditService: IAuditService = mock<IAuditService>().also { audit ->
+		whenever(audit.audit(any<Mono<Any>>(), any(), any(), anyOrNull()))
+			.thenAnswer { it.getArgument<Mono<Any>>(0) }
+	}
 	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, roleService, preferencesPort, transactionalOperator
+		port, roleService, preferencesPort, transactionalOperator, auditService
 	)
 
 	private companion object {
@@ -103,6 +111,21 @@ class UserProjectProfileServiceTest {
 
 		// Assert
 		verify(port).findProjectProfilesPageByUserId(projectId, pageable, params)
+	}
+
+	@Test
+	fun `Should findSentInvitationsPage call port findSentInvitationsPageByCreatorId with the caller and cutoff`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val since = ZonedDateTime.now().minusDays(2)
+		whenever(port.findSentInvitationsPageByCreatorId(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
+
+		// Act
+		service.findSentInvitationsPage(currentUser(), pageable, since).block()
+
+		// Assert
+		verify(port).findSentInvitationsPageByCreatorId(currentUser().id!!, pageable, since)
 	}
 
 	@ParameterizedTest
@@ -279,6 +302,37 @@ class UserProjectProfileServiceTest {
 	}
 
 	@Test
+	fun `Should toggleFavorite flip the favorite flag on the caller's own profile`() {
+		// Arrange
+		val profile = commonProjectProfile().apply { favorite = false }
+		whenever(port.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+		whenever(port.update(any())).thenAnswer { Mono.just(it.getArgument(0)) }
+
+		// Act
+		service.toggleFavorite(currentUser(), projectProfileId).block()
+
+		// Assert
+		assertTrue(profile.favorite)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = null)
+		verify(port).update(any())
+	}
+
+	@Test
+	fun `Should toggleFavorite throw NOT_FOUND when the caller has no such profile`() {
+		// Arrange
+		whenever(port.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.toggleFavorite(currentUser(), projectProfileId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		verify(port, never()).update(any())
+	}
+
+	@Test
 	fun `Should updateUserProjectProfileStatusById throw RegistryException`() {
 		// Arrange
 		val profile = commonProjectProfile().apply { status = ACCEPTED }
@@ -315,5 +369,24 @@ class UserProjectProfileServiceTest {
 		// Assert
 		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = null)
 		verify(port).deleteById(projectProfileId)
+	}
+
+	@Test
+	fun `Should deleteUserProjectProfileById throw NOT_FOUND when the caller has no such profile`() {
+		// Arrange
+		whenever(port.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.deleteUserProjectProfileById(currentUser(), projectProfileId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
+		assertEquals(projectProfileId.toString(), result.args?.first())
+
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = null)
+		verify(port, never()).deleteById(any())
 	}
 }

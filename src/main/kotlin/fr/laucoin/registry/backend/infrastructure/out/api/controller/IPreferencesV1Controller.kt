@@ -6,13 +6,13 @@ import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
-import java.util.UUID
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 @Tag(name = "User's Preferences management", description = "API for User's Preferences-related operations")
 @RequestMapping("/api/v1/users/preferences")

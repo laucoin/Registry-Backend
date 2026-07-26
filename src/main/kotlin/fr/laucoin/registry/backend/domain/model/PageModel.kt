@@ -12,7 +12,7 @@ data class PageModel<T>(
 	var content: List<T> = emptyList(),
 	val lastRefresh: ZonedDateTime = now()
 ) {
-	constructor(pageable: PageableModel, totalElements: Long, pageContent: List<T>): this(
+	constructor(pageable: PageableModel, totalElements: Long, pageContent: List<T>) : this(
 		pageNumber = pageable.offset / pageable.limit,
 		pageSize = pageable.limit,
 		totalPages = ceil(totalElements.toDouble() / pageable.limit.toDouble()).toInt(),

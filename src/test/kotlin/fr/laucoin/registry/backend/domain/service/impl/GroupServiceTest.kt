@@ -25,8 +25,6 @@ import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -46,6 +44,8 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
+import java.util.stream.Stream
 
 class GroupServiceTest {
 	private val projectService: IProjectService = mock()
@@ -58,11 +58,9 @@ class GroupServiceTest {
 		private const val MAX_PARTICIPANTS = 1
 
 		@JvmStatic
-		fun `Should createGroup check date, members and throw because a member is not visible or purged`(): Stream<Arguments> {
+		fun `Should createGroup check date, members and throw because a member is not visible`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(commonParticipant().apply { visible = false; purged = false; type = REGISTERED }),
-				Arguments.of(commonParticipant().apply { purged = true; type = REGISTERED }),
-				Arguments.of(commonParticipant().apply { visible = false; purged = true; type = REGISTERED }),
+				Arguments.of(commonParticipant().apply { visible = false; type = REGISTERED }),
 			)
 		}
 
@@ -85,14 +83,14 @@ class GroupServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = GroupSearchParamModel()
 
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findGroupsPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test
@@ -179,7 +177,7 @@ class GroupServiceTest {
 	@Test
 	fun `Should createGroup check date, members and call port create`() {
 		// Arrange
-		val participant = commonParticipant().apply { purged = false; type = REGISTERED }
+		val participant = commonParticipant().apply { type = REGISTERED }
 		val group = commonGroup().apply { members = listOf(participant) }
 
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
@@ -223,7 +221,7 @@ class GroupServiceTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should createGroup check date, members and throw because a member is not visible or purged`(participant: ParticipantModel) {
+	fun `Should createGroup check date, members and throw because a member is not visible`(participant: ParticipantModel) {
 		// Arrange
 		val group = commonGroup().apply { members = listOf(commonParticipant()) }
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
@@ -261,7 +259,7 @@ class GroupServiceTest {
 			members = updatedParticipantIds.map { commonParticipant().apply { id = it } }
 		}
 		val newParticipants = newParticipantIds.map {
-			commonParticipant().apply { id = it; purged = false; type = REGISTERED }
+			commonParticipant().apply { id = it; type = REGISTERED }
 		}
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(projectId))
@@ -296,7 +294,7 @@ class GroupServiceTest {
 			members = previousParticipantIds.map { commonParticipant().apply { id = it } }
 		}
 		val newParticipants = newParticipantIds.map {
-			commonParticipant().apply { id = it; purged = false; type = REGISTERED }
+			commonParticipant().apply { id = it; type = REGISTERED }
 		}
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(group))

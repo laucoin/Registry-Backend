@@ -11,21 +11,22 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndModel
+import org.springframework.stereotype.Component
 import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.Optional
-import org.springframework.stereotype.Component
 
 @Component
 class MovementEntityMapper(
 	private val activityMapper: ActivityEntityMapper
-): IEntityMapper<MovementModel, MovementEntity> {
+) : IEntityMapper<MovementModel, MovementEntity> {
 	override fun toModel(entity: MovementEntity): MovementModel {
 		return MovementModel(contentType = determineContentType(entity)).apply {
 			dateTime = entity.dateTime ?: ZonedDateTime.now()
 			type = entity.type
 			reason = entity.reason
 			activity = mapActivity(entity)
+			lastCommunicationAt = entity.lastCommunicationAt
 		}.fillWithProjectAndEntity(entity)
 	}
 

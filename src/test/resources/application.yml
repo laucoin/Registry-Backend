@@ -61,6 +61,9 @@ registry:
       users:
         cron: 0 0 1 * * *
         months-threshold: 12
+      light-users:
+        cron: 0 0 3 * * *
+        months-threshold: 1
   security:
     default-role: "USER"
     oauth2:
@@ -73,6 +76,7 @@ registry:
       claims:
         user-id: "sub"
         email: "email"
+        email-verified: "email_verified"
         first-name: "given_name"
         last-name: "family_name"
   server:

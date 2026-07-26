@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 @Component
 class ParticipantTypeReaderDtoMapper(
 	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<ParticipantTypeEnum, LabelDto> {
+) : IGenericReaderDtoMapper<ParticipantTypeEnum, LabelDto> {
 	override fun toDto(model: ParticipantTypeEnum): LabelDto {
 		return LabelDto(
 			model.name,

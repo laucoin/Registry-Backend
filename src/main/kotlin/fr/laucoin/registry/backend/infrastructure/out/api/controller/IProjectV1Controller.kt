@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -9,6 +10,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_METADATA_R
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectOptionsReaderDto
@@ -20,8 +23,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
@@ -36,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Tag(name = "Projects management", description = "API for Projects-related operations")
 @RequestMapping("/api/v1/projects")
@@ -44,6 +47,7 @@ interface IProjectV1Controller {
 		summary = "Find Projects",
 		description = "Find or get paginated Projects",
 	)
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
 	fun findProjects(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -104,6 +108,7 @@ interface IProjectV1Controller {
 		description = "Disable Project access, obviously the related profile is no accessible anymore.",
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/disable")
 	fun disableProjectById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -115,6 +120,7 @@ interface IProjectV1Controller {
 		description = "Enable Project, obviously the profiles concerned are accessible again.",
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/enable")
 	fun enableProjectById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -126,6 +132,10 @@ interface IProjectV1Controller {
 		description = "Delete all Project data.",
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
-	fun deleteProjectById(@PathVariable id: UUID): Mono<Unit>
+	fun deleteProjectById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable id: UUID,
+	): Mono<Unit>
 }

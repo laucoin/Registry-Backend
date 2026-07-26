@@ -12,12 +12,12 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMoveme
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantMovementWriterDto
 import fr.laucoin.registry.backend.test.ModelExt.activityId
 import jakarta.validation.ConstraintValidatorContext
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
+import java.util.stream.Stream
 
 class MovementReasonValidatorTest {
 	private val movementReasonValidator = MovementReasonValidator()

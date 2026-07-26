@@ -7,13 +7,13 @@ import fr.laucoin.registry.backend.infrastructure.`in`.IEntityReaderMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preference.PreferencesEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.CurrentUserEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithEntity
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class CurrentUserEntityMapper(
 	private val preferencesEntityMapper: PreferencesEntityMapper
-): IEntityReaderMapper<CurrentUserModel, CurrentUserEntity> {
+) : IEntityReaderMapper<CurrentUserModel, CurrentUserEntity> {
 	override fun toModel(entity: CurrentUserEntity): CurrentUserModel {
 		return CurrentUserModel().apply {
 			oidcId = entity.oidcId
@@ -24,7 +24,6 @@ class CurrentUserEntityMapper(
 			role = entity.role
 			birthday = entity.birthday
 			lastLogin = entity.lastLogin
-			purged = entity.purged ?: purged
 			preferences = mapPreferencesEntity(entity)
 		}.fillWithEntity(entity)
 	}

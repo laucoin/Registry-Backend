@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 @Component
 class UserRoleReaderDtoMapper(
 	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<String, LabelDto> {
+) : IGenericReaderDtoMapper<String, LabelDto> {
 	override fun toDto(model: String): LabelDto {
 		return LabelDto(
 			model,

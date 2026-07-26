@@ -3,8 +3,6 @@ package fr.laucoin.registry.backend.domain.extension
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -13,6 +11,8 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
+import java.util.UUID
+import java.util.stream.Stream
 
 class ReactiveExtTest {
 

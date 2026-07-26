@@ -1,15 +1,17 @@
 package fr.laucoin.registry.backend.domain.port
 
+import fr.laucoin.registry.backend.domain.enumeration.MovementSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import java.time.LocalDate
-import java.util.UUID
+import fr.laucoin.registry.backend.domain.model.SortModel
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 interface IMovementPort {
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
@@ -17,12 +19,14 @@ interface IMovementPort {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
+		sort: List<SortModel<MovementSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<MovementModel>>
 
 	fun findCurrentPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
+		sort: List<SortModel<MovementSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<MovementModel>>
 
 	fun findContent(
@@ -61,6 +65,8 @@ interface IMovementPort {
 		projectId: UUID,
 		searchParams: ActivitySearchParamModel,
 	): Flux<MovementModel>
+
+	fun findOngoingActivities(projectId: UUID, limit: Int): Flux<MovementModel>
 
 	fun countAllByParticipantId(
 		projectId: UUID,

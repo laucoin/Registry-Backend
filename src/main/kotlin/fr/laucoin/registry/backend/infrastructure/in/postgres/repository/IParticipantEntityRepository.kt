@@ -14,10 +14,13 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_ID
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.ARRIVING_TODAY_JOIN
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.ARRIVING_TODAY_NOT_PRESENT_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.DEPARTING_TODAY_JOIN
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.DEPARTING_TODAY_PRESENT_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.GROUPS_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.LAST_MOVEMENT_JOIN
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.NOT_PURGED_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_AVAILABILITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_MAJOR_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_PRESENCE_CLAUSE
@@ -28,6 +31,8 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.SELECT_LINKED_USER
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.SELECT_PARTICIPANT_SEARCH
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.USER_JOIN
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.WITH_ARRIVING_TODAY
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.WITH_DEPARTING_TODAY
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
@@ -38,24 +43,24 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Repository
-interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity, UUID> {
+interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
@@ -78,7 +83,7 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT COUNT(t.$ID)
         FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN $GROUPS_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
         """
 	)
 	fun countAll(
@@ -98,7 +103,7 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $GROUP_CONTENT_TABLE ON t.id = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID AND $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID = :groupId
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
@@ -123,7 +128,7 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         SELECT COUNT(t.$ID)
         FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN $GROUPS_JOIN
         INNER JOIN $GROUP_CONTENT_TABLE ON t.id = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID AND $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID = :groupId
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
         """
 	)
 	fun countAllByGroupId(
@@ -142,17 +147,42 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
 		"""
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND t.$PARTICIPANT_BIRTHDAY = CURRENT_DATE AND $VISIBLE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND t.$PARTICIPANT_BIRTHDAY = CURRENT_DATE AND $VISIBLE_CLAUSE
+        LIMIT :limit
         """
 	)
-	fun findAllWithBirthday(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantEntity>
+	fun findAllWithBirthday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity>
+
+	@Query(
+		"""
+        WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_ARRIVING_TODAY
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN $ARRIVING_TODAY_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ARRIVING_TODAY_NOT_PRESENT_CLAUSE
+        ORDER BY t.$PARTICIPANT_LAST_NAME
+        LIMIT :limit
+        """
+	)
+	fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity>
+
+	@Query(
+		"""
+        WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_DEPARTING_TODAY
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN $DEPARTING_TODAY_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $DEPARTING_TODAY_PRESENT_CLAUSE
+        ORDER BY t.$PARTICIPANT_LAST_NAME
+        LIMIT :limit
+        """
+	)
+	fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity>
 
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         """
 	)
 	fun findAllByIds(
@@ -167,7 +197,7 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND t.$PARTICIPANT_USER_ID = :userId
+        WHERE $PROJECT_CLAUSE AND t.$PARTICIPANT_USER_ID = :userId
         """
 	)
 	fun findByUserId(projectId: UUID, userId: UUID, dateTimeSearched: ZonedDateTime?): Flux<ParticipantEntity>
@@ -177,7 +207,7 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
         LIMIT :limit
         """
@@ -199,7 +229,7 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)
 	fun findById(

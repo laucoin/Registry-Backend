@@ -14,16 +14,17 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_LAST_COMMUNICATION_AT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
+import org.springframework.data.annotation.ReadOnlyProperty
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDate
 import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
-import org.springframework.data.annotation.ReadOnlyProperty
-import org.springframework.data.relational.core.mapping.Column
-import org.springframework.data.relational.core.mapping.Table
 
 @Table(MOVEMENT_TABLE)
 data class MovementEntity(
@@ -64,4 +65,8 @@ data class MovementEntity(
 	@ReadOnlyProperty
 	@Column(MOVEMENT_ACTIVITY_END_AVAILABILITY_TIME)
 	var activityEndAvailabilityTime: OffsetTime? = null,
-): GenericProjectEntity()
+
+	@ReadOnlyProperty
+	@Column(MOVEMENT_LAST_COMMUNICATION_AT)
+	var lastCommunicationAt: ZonedDateTime? = null,
+) : GenericProjectEntity()

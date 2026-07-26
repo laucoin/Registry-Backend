@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.ROLE_COUNT
-import java.util.UUID
 import org.springframework.data.relational.core.mapping.Column
+import java.util.UUID
 
 data class ProjectProfileRoleCountEntity(
 	@Column(LINKED_PROJECT_ID)

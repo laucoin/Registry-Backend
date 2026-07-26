@@ -12,4 +12,4 @@ data class ActivityReaderDto(
 	var allowedParticipants: NumericRangeModel? = null,
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,
-): GenericProjectReaderDto()
+) : GenericProjectReaderDto()

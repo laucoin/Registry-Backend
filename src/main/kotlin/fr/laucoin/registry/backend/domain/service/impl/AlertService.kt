@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DELETE_HAS_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_STATUS_IS_NOT_UPDATABLE
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -16,18 +17,19 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.time.LocalDate
-import java.util.UUID
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class AlertService(
@@ -35,13 +37,14 @@ class AlertService(
 	private val port: IAlertPort,
 	private val communicationPort: ICommunicationPort,
 	private val transactionalOperator: TransactionalOperator,
-): IAlertService, GenericService() {
+) : IAlertService, GenericService() {
 	override fun findAlertsPage(
 		projectId: UUID,
 		pageable: PageableModel,
-		searchParams: AlertSearchParamModel
+		searchParams: AlertSearchParamModel,
+		sort: List<SortModel<AlertSortFieldEnum>>,
 	): Mono<PageModel<AlertModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sort)
 	}
 
 	override fun findAlertById(
@@ -201,16 +204,17 @@ class AlertService(
 			}
 	}
 
-	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
-		communicationPort.countAllByAlertId(
-			oldAlert.project!!.id!!,
-			oldAlert.id!!,
-			CommunicationSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The alert {} already linked to communication(s)", oldAlert.id)
-				handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
-			} else handle.next(oldAlert)
+	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> =
+		flatMap { oldAlert ->
+			communicationPort.countAllByAlertId(
+				oldAlert.project!!.id!!,
+				oldAlert.id!!,
+				CommunicationSearchParamModel(),
+			).handle { it, handle ->
+				if (it > 0) {
+					log.warn("The alert {} already linked to communication(s)", oldAlert.id)
+					handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
+				} else handle.next(oldAlert)
+			}
 		}
-	}
 }

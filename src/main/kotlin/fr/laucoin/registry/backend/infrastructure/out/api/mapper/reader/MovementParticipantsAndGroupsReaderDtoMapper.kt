@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 class MovementParticipantsAndGroupsReaderDtoMapper(
 	private val participantReaderMapper: ParticipantReaderDtoMapper,
 	private val groupReaderMapper: GroupReaderDtoMapper,
-): IGenericReaderDtoMapper<Pair<List<ParticipantModel>, List<GroupModel>>, MovementParticipantsAndGroupsReaderDto> {
+) : IGenericReaderDtoMapper<Pair<List<ParticipantModel>, List<GroupModel>>, MovementParticipantsAndGroupsReaderDto> {
 	override fun toDto(model: Pair<List<ParticipantModel>, List<GroupModel>>): MovementParticipantsAndGroupsReaderDto {
 		return MovementParticipantsAndGroupsReaderDto(
 			participants = participantReaderMapper.toDtoList(model.first),

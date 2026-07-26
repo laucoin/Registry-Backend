@@ -8,4 +8,4 @@ data class AlertModel(
 	var dateTime: ZonedDateTime = ZonedDateTime.now(),
 	var status: AlertStatusEnum? = null,
 	var communications: List<CommunicationModel>? = null,
-): GenericProjectModel()
+) : GenericProjectModel()

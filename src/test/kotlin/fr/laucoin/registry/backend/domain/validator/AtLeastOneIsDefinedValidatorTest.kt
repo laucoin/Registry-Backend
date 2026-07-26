@@ -2,13 +2,13 @@ package fr.laucoin.registry.backend.domain.validator
 
 import fr.laucoin.registry.backend.domain.annotation.AtLeastOneIsDefined
 import jakarta.validation.ConstraintValidatorContext
-import java.util.stream.Stream
 import org.apache.logging.log4j.util.Strings.EMPTY
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
+import java.util.stream.Stream
 
 class AtLeastOneIsDefinedValidatorTest {
 	private val atLeastOneIsDefinedValidator = AtLeastOneIsDefinedValidator()

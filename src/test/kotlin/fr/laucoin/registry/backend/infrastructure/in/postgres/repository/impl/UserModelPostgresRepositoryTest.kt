@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
@@ -9,9 +11,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.UserEntit
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IUserEntityRepository
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -26,8 +25,14 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.LocalDate
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class UserModelPostgresRepositoryTest: TestContext() {
+class UserModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IUserEntityRepository
 
@@ -151,6 +156,68 @@ class UserModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findByEmail call repository findByEmail`() {
+		// Act
+		val result = repository.findByEmail("administrator@sgdf.fr", visibilitySearched = null).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(1, result.size)
+		assertEquals(currentUser().id, result.first().id)
+		verify(postgresRepository).findByEmail("administrator@sgdf.fr", visibilitySearched = null)
+		verify(currentUserMapper, atLeastOnce()).toModel(any())
+	}
+
+	@Test
+	fun `Should update persist oidc id when linking an invited user`() {
+		// Arrange
+		val invited = UserModel().apply {
+			email = "link-test@sgdf.fr"
+			firstName = "Link"
+			lastName = "Test"
+			create(currentUser())
+		}
+		val created = repository.create(invited).block()
+		assertNotNull(created)
+		assertNull(created.oidcId)
+		val newOidcId = UUID.randomUUID()
+
+		// Act
+		created.oidcId = newOidcId
+		repository.update(created).block()
+
+		// Assert
+		val linked = repository.findByOidcId(newOidcId, visibilitySearched = null).block()
+		assertNotNull(linked)
+		assertEquals(newOidcId, linked.oidcId)
+		assertEquals(created.id, linked.id)
+
+		repository.deleteById(created.id!!).block()
+	}
+
+	@Test
+	fun `Should findLightUserIdsOlderThanCreation return unlinked non-service users only`() {
+		// Arrange
+		val light = UserModel().apply {
+			email = "stale-invite@sgdf.fr"
+			create(currentUser())
+		}
+		val created = repository.create(light).block()
+		assertNotNull(created)
+		val threshold = LocalDate.now().plusDays(1)
+
+		// Act
+		val ids = repository.findLightUserIdsOlderThanCreation(threshold).collectList().block()
+
+		// Assert
+		assertNotNull(ids)
+		assertTrue(ids.contains(created.id))
+		assertFalse(ids.contains(currentUser().id))
+
+		repository.deleteById(created.id!!).block()
+	}
+
+	@Test
 	fun `Should findByRoleLevel call repository findByRoleLevel and admin`() {
 		// Arrange
 		val level = 0
@@ -174,6 +241,42 @@ class UserModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
+	}
+
+	@Test
+	fun `Should findPage execute the sorted query and order by lastLogin then lastName descending`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = UserSearchParamModel()
+		val sort = listOf(
+			SortModel(UserSortFieldEnum.LAST_LOGIN),
+			SortModel(UserSortFieldEnum.LAST_NAME, descending = true),
+		)
+
+		// Act
+		val result = repository.findPage(pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(5, result.totalElements)
+		assertEquals(listOf("SMITH", "PINA", "NIELSEN", "DOE", "BRADFORD"), result.content.map { it.lastName })
+	}
+
+	@Test
+	fun `Should findPage combine the visibility filter with the sorted query`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = UserSearchParamModel(textSearched = null, visibilitySearched = true)
+		val sort = listOf(SortModel(UserSortFieldEnum.LAST_NAME))
+
+		// Act
+		val result = repository.findPage(pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(4, result.totalElements)
+		assertTrue(result.content.all { it.visible })
+		assertEquals(listOf("BRADFORD", "DOE", "PINA", "SMITH"), result.content.map { it.lastName })
 	}
 
 	@Nested

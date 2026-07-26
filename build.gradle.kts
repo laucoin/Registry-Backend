@@ -1,7 +1,7 @@
-import java.util.Properties
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 import org.springframework.boot.gradle.tasks.bundling.BootJar
+import java.util.Properties
 
 plugins {
 	kotlin("jvm") version "2.4.10"
@@ -21,6 +21,7 @@ version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 // External libraries 📚
 val apacheTextVersion = "1.15.0"
 val swaggerVersion = "3.0.3"
+val bucket4jVersion = "8.10.1"
 
 // Testing 🧪
 val mockWebServer = "5.4.0"
@@ -57,12 +58,16 @@ dependencies {
 
 	// Monitoring & Observability 👀
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	// Prometheus *exposition format* only (ADR 026) — the metrics store is
+	// VictoriaMetrics, which scrapes /actuator/prometheus. Keep this registry.
 	implementation("io.micrometer:micrometer-registry-prometheus")
 
 	// Documentation 📚
 	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
 	// Data 💾
+	implementation("com.github.ben-manes.caffeine:caffeine") // ADR 018 — in-process reference/count caching
+	implementation("com.bucket4j:bucket4j-core:$bucket4jVersion") // ADR 019 — non-blocking rate limiting, Caffeine-keyed
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.apache.commons:commons-text:$apacheTextVersion")
@@ -97,7 +102,7 @@ tasks.withType<Test>().configureEach {
 }
 
 tasks.withType<BootJar>().configureEach {
-	val targetName: String? by project
+	val targetName = project.findProperty("targetName") as String?
 	archiveFileName.set(targetName ?: "registry-backend.jar")
 	isPreserveFileTimestamps = false
 	isReproducibleFileOrder = true

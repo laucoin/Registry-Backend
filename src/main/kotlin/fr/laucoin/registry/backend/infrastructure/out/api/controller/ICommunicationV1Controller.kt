@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -9,6 +10,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AlertReaderDto
@@ -20,8 +23,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
@@ -36,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Tag(name = "Communications management", description = "API for Communications-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/communications")
@@ -45,6 +48,7 @@ interface ICommunicationV1Controller {
 		description = "Find or get paginated Communications",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
 	fun findCommunications(
 		@PathVariable projectId: UUID,
@@ -77,6 +81,7 @@ interface ICommunicationV1Controller {
 		description = "Search Movements with an activity to link a Communication",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/movements")
 	fun searchActivities(
 		@PathVariable projectId: UUID,
@@ -88,6 +93,7 @@ interface ICommunicationV1Controller {
 		description = "Search Alerts to link a Communication",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/alerts")
 	fun searchAlerts(
 		@PathVariable projectId: UUID,
@@ -124,6 +130,7 @@ interface ICommunicationV1Controller {
 		description = "Disable Communication, it will not visible anymore in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/disable")
 	fun disableCommunicationById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -136,6 +143,7 @@ interface ICommunicationV1Controller {
 		description = "Enable Communication, obviously it will be visible again in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/enable")
 	fun enableCommunicationById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -148,6 +156,7 @@ interface ICommunicationV1Controller {
 		description = "Delete all Communication data.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
 	fun deleteCommunicationById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

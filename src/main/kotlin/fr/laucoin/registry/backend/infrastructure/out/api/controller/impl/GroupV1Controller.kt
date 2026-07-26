@@ -19,14 +19,14 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.GroupRea
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.GroupWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class GroupV1Controller(
@@ -36,7 +36,7 @@ class GroupV1Controller(
 	private val participantReaderMapper: ParticipantReaderDtoMapper,
 	private val addedGroupMembersReaderMapper: AddedGroupMembersReaderDtoMapper,
 	private val writerMapper: GroupWriterDtoMapper,
-): IGroupV1Controller {
+) : IGroupV1Controller {
 	override fun findGroups(
 		projectId: UUID,
 		pageNumber: Int,

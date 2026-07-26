@@ -13,5 +13,4 @@ data class CurrentUserReaderDto(
 	var role: LabelDto? = null,
 	var birthday: LocalDate? = null,
 	var lastLogin: ZonedDateTime? = null,
-	var purged: Boolean,
-): GenericReaderDto()
+) : GenericReaderDto()

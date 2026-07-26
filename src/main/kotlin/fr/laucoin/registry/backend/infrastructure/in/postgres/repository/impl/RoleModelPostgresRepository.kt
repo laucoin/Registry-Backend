@@ -11,7 +11,7 @@ import reactor.core.publisher.Flux
 class RoleModelPostgresRepository(
 	private val repository: IRoleEntityRepository,
 	private val mapper: RoleEntityMapper,
-): IRolePort {
+) : IRolePort {
 	override fun findUserRoles(): Flux<RoleModel> {
 		return repository.findUserRoles().map(mapper::toModel)
 	}

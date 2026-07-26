@@ -5,12 +5,12 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import jakarta.validation.ConstraintValidatorContext
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
+import java.util.stream.Stream
 
 class ProfileAcceptOrRejectValidatorTest {
 	private val acceptanceValidator = ProfileAcceptOrRejectValidator()

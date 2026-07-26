@@ -17,7 +17,7 @@ data class MovementSearchParamModel(
 		typeSearched: MovementTypeEnum? = null,
 		startDateTimeSearched: ZonedDateTime? = null,
 		endDateTimeSearched: ZonedDateTime? = null,
-	): this(
+	) : this(
 		visibilitySearched,
 		linkedToActivity,
 		if (Objects.nonNull(typeSearched)) listOf(typeSearched!!) else MovementTypeEnum.entries.toList(),
@@ -25,5 +25,5 @@ data class MovementSearchParamModel(
 		endDateTimeSearched,
 	)
 
-	constructor(): this(null, null, MovementTypeEnum.entries.toList(), null, null)
+	constructor() : this(null, null, MovementTypeEnum.entries.toList(), null, null)
 }

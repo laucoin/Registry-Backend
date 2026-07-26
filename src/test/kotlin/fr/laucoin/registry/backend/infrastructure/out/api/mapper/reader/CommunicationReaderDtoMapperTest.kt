@@ -12,9 +12,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.Communicati
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.communicationId
-import java.time.ZonedDateTime
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -24,6 +21,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.ZonedDateTime
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class CommunicationReaderDtoMapperTest {
 	private val projectMapper: ProjectReaderDtoMapper = mock()

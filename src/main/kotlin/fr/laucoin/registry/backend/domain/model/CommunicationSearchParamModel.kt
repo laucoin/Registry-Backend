@@ -14,7 +14,7 @@ data class CommunicationSearchParamModel(
 		visibilitySearched: Boolean? = null,
 		startDateTimeSearched: ZonedDateTime? = null,
 		endDateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, startDateTimeSearched, endDateTimeSearched) {
+	) : this(visibilitySearched, startDateTimeSearched, endDateTimeSearched) {
 		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
 	}
 }

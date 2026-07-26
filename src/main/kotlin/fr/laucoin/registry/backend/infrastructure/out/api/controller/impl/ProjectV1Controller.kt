@@ -15,12 +15,12 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectWrit
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ProjectWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class ProjectV1Controller(
@@ -28,7 +28,7 @@ class ProjectV1Controller(
 	private val readerMapper: ProjectReaderDtoMapper,
 	private val optionsReaderMapper: ProjectOptionsReaderDtoMapper,
 	private val writerMapper: ProjectWriterDtoMapper,
-): IProjectV1Controller {
+) : IProjectV1Controller {
 	override fun findProjects(
 		currentUser: CurrentUserModel,
 		pageNumber: Int,
@@ -78,5 +78,6 @@ class ProjectV1Controller(
 		return service.enableProjectById(currentUser, id).map(readerMapper::toDto)
 	}
 
-	override fun deleteProjectById(id: UUID): Mono<Unit> = service.deleteProjectById(id)
+	override fun deleteProjectById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> =
+		service.deleteProjectById(currentUser, id)
 }

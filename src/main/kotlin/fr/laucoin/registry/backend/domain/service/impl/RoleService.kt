@@ -9,32 +9,61 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.port.IRolePort
 import fr.laucoin.registry.backend.domain.service.IRoleService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.util.Objects
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 @Service
 class RoleService(
 	private val port: IRolePort,
 	@param:Value($$"${registry.security.default-role}")
 	private val defaultUserRole: String,
-): ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
+) : ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
 	private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
-	private val userRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
-	private val projectRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
+	/**
+	 * ADR 018 — the RBAC map is the in-memory reference cache. Its consumers
+	 * (the synchronous PermissionEvaluator on the authorization hot path) cannot
+	 * suspend on a reactive lookup, so freshness comes from a scheduled reactive
+	 * refresh instead of per-read caching: role/permission changes now propagate
+	 * within the refresh interval instead of requiring a restart. The maps are
+	 * immutable snapshots swapped atomically (@Volatile), so readers never see a
+	 * partially-built map.
+	 */
+	@Volatile
+	private var userRoles: Map<String, Pair<Int, List<String>>> = emptyMap()
+
+	@Volatile
+	private var projectRoles: Map<String, Pair<Int, List<String>>> = emptyMap()
 
 	override fun onApplicationEvent(event: ContextRefreshedEvent) {
+		refreshRoles()
+	}
+
+	@Scheduled(
+		initialDelayString = $$"${registry.performance.roles-max-age-seconds:600}",
+		fixedDelayString = $$"${registry.performance.roles-max-age-seconds:600}",
+		timeUnit = TimeUnit.SECONDS,
+	)
+	fun refreshRoles() {
 		port.findUserRoles()
-			.doOnNext { userRoles[it.role] = Pair(it.level, it.permissions) }
-			.subscribe()
+			.collectMap({ it.role }, { Pair(it.level, it.permissions) })
+			.subscribe(
+				{ userRoles = it },
+				{ log.error("User roles refresh failed, keeping the previous snapshot", it) },
+			)
 
 		port.findProjectRoles()
-			.doOnNext { projectRoles[it.role] = Pair(it.level, it.permissions) }
-			.subscribe()
+			.collectMap({ it.role }, { Pair(it.level, it.permissions) })
+			.subscribe(
+				{ projectRoles = it },
+				{ log.error("Project roles refresh failed, keeping the previous snapshot", it) },
+			)
 	}
 
 	override fun getLevelByUserRole(role: String?): Int? = userRoles[role]?.first
@@ -98,7 +127,7 @@ class RoleService(
 		return findAssignableRoles(profile.role, projectRoles)
 	}
 
-	private fun findAssignableRoles(role: String?, roles: HashMap<String, Pair<Int, List<String>>>): List<String> {
+	private fun findAssignableRoles(role: String?, roles: Map<String, Pair<Int, List<String>>>): List<String> {
 		val roleLevel: Int? = roles[role]?.first
 		if (Objects.isNull(roleLevel)) {
 			return emptyList()

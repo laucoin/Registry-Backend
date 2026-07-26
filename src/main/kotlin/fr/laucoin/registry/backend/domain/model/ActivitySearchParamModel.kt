@@ -14,7 +14,7 @@ data class ActivitySearchParamModel(
 		visibilitySearched: Boolean? = null,
 		availabilitySearched: Boolean? = null,
 		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, availabilitySearched, dateTimeSearched) {
+	) : this(visibilitySearched, availabilitySearched, dateTimeSearched) {
 		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
 	}
 }

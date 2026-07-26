@@ -23,15 +23,16 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communica
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_TYPE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_ON_BEHALF_OF_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericProjectEntity
+import org.springframework.data.annotation.ReadOnlyProperty
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDate
 import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
-import org.springframework.data.annotation.ReadOnlyProperty
-import org.springframework.data.relational.core.mapping.Column
-import org.springframework.data.relational.core.mapping.Table
 
 @Table(COMMUNICATION_TABLE)
 data class CommunicationEntity(
@@ -39,6 +40,8 @@ data class CommunicationEntity(
 	var dateTime: ZonedDateTime? = null,
 	@Column(COMMUNICATION_MESSAGE)
 	var message: String? = null,
+	@Column(COMMUNICATION_ON_BEHALF_OF_MOVEMENT)
+	var onBehalfOfMovement: Boolean? = null,
 
 	@Column(COMMUNICATION_MOVEMENT_ID)
 	var movementId: UUID? = null,
@@ -94,4 +97,4 @@ data class CommunicationEntity(
 	@ReadOnlyProperty
 	@Column(COMMUNICATION_ALERT_STATUS)
 	var alertStatus: AlertStatusEnum? = null,
-): GenericProjectEntity()
+) : GenericProjectEntity()

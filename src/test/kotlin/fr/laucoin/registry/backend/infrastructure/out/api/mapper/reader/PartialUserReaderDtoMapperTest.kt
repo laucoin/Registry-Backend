@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.UserModel
+import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
-import org.junit.jupiter.api.Test
 
 class PartialUserReaderDtoMapperTest {
 	private val mapper: PartialUserReaderDtoMapper = PartialUserReaderDtoMapper()

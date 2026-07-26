@@ -4,15 +4,18 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.isInRange
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.OffsetTime
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.stream.Stream
 
 class DateExtTest {
 	private companion object {
@@ -150,5 +153,30 @@ class DateExtTest {
 
 		// Assert
 		assertEquals(expected, result)
+	}
+
+	/**
+	 * A date-only challenger must stay date-only: the comparison defaults
+	 * missing times to the OffsetTime MIN/MAX sentinels internally, and if it
+	 * leaked them back the persisted availability time became 00:00:00+18
+	 * (out of Postgres's offset range) → BadSqlGrammar on insert. The shared
+	 * MIN/MAX sentinels must also stay untouched.
+	 */
+	@Test
+	fun `Should isInRange not mutate its inputs (no time leaks in)`() {
+		// Arrange
+		val challenger = CustomDateTimeModel(LocalDate.of(2025, 9, 21))
+		val start = CustomDateTimeModel(LocalDate.of(2025, 9, 1))
+		val end = CustomDateTimeModel(LocalDate.of(2025, 9, 30))
+
+		// Act
+		challenger.isInRange(start, end)
+
+		// Assert
+		assertNull(challenger.time)
+		assertNull(start.time)
+		assertNull(end.time)
+		assertEquals(OffsetTime.MIN, CustomDateTimeModel.MIN.time)
+		assertEquals(OffsetTime.MAX, CustomDateTimeModel.MAX.time)
 	}
 }

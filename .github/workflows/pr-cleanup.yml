@@ -4,8 +4,8 @@ name: PR Cleanup
 # registry doesn't accumulate one image per feature branch.
 on:
   pull_request:
-    branches: [main]
-    types: [closed]
+    branches: [ main ]
+    types: [ closed ]
 
 env:
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}

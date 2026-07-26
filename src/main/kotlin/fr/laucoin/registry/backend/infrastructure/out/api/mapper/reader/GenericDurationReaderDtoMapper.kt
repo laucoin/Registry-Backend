@@ -7,13 +7,13 @@ import java.time.Duration
 abstract class GenericDurationReaderDtoMapper(
 	private val translateService: ITranslateService,
 ) {
+	/**
+	 * Sub-minute durations are deliberately fuzzy ("a few seconds"): exact
+	 * seconds would push clients to re-render every second.
+	 */
 	fun formatDuration(duration: Duration): String {
 		return when {
-			duration.seconds == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}second")
-			duration.seconds < 60 -> translateService.getMessage(
-				code = "${DURATION_PREFIX}seconds",
-				args = arrayOf(duration.seconds),
-			)
+			duration.seconds < 60 -> translateService.getMessage(code = "${DURATION_PREFIX}seconds")
 
 			duration.toMinutes() == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}minute")
 

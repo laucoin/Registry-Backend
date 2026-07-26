@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.Generi
 import org.springframework.stereotype.Component
 
 @Component
-class GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
+class GroupEntityMapper : IEntityMapper<GroupModel, GroupEntity> {
 	override fun toModel(entity: GroupEntity): GroupModel {
 		return GroupModel().apply {
 			name = entity.name

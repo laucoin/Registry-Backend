@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -17,8 +16,9 @@ import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
+import java.util.UUID
 
-class PreferencesControllerTest: TestContext() {
+class PreferencesControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IPreferencesService
 

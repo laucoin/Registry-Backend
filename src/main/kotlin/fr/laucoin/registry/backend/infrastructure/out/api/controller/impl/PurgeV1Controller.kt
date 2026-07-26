@@ -14,23 +14,25 @@ import fr.laucoin.registry.backend.domain.service.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IPurgeV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectContentPurgeReaderDto
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Objects
+import java.util.UUID
 
 @RestController
 class PurgeV1Controller(
 	private val userService: IUserService,
 	@param:Value($$"${registry.feature.purge.users.months-threshold:}")
 	private val userPurgeMonthThreshold: Long?,
+	@param:Value($$"${registry.feature.purge.light-users.months-threshold:}")
+	private val lightUserPurgeMonthThreshold: Long?,
 	private val projectService: IProjectService,
 	@param:Value($$"${registry.feature.purge.projects.months-threshold:}")
 	private val projectPurgeMonthThreshold: Long?,
@@ -45,7 +47,7 @@ class PurgeV1Controller(
 	private val groupService: IGroupService,
 	@param:Value($$"${registry.feature.purge.projects.configuration.months-threshold:}")
 	private val projectConfigurationPurgeMonthThreshold: Long?,
-): IPurgeV1Controller {
+) : IPurgeV1Controller {
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
 		return launchPurgeUsers(dateThreshold, dryRun)
 	}
@@ -58,6 +60,20 @@ class PurgeV1Controller(
 	private fun launchPurgeUsers(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
 		val deleteOlderThan = buildDateThreshold(userPurgeMonthThreshold, dateThreshold)
 		return userService.purgeUsersIfNecessary(deleteOlderThan, dryRun)
+	}
+
+	override fun purgeLightUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
+		return launchPurgeLightUsers(dateThreshold, dryRun)
+	}
+
+	@Scheduled(cron = $$"${registry.feature.purge.light-users.cron}")
+	fun scheduledLightUsersPurge() {
+		launchPurgeLightUsers(dateThreshold = null, dryRun = false).subscribe()
+	}
+
+	private fun launchPurgeLightUsers(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
+		val deleteOlderThan = buildDateThreshold(lightUserPurgeMonthThreshold, dateThreshold)
+		return userService.purgeLightUsersIfNecessary(deleteOlderThan, dryRun)
 	}
 
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {

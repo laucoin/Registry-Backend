@@ -8,15 +8,14 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.User
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_OIDC_ID
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TYPE
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
-import org.springframework.data.relational.core.mapping.Column
-import org.springframework.data.relational.core.mapping.Table
 
 @Table(USER_TABLE)
 open class UserEntity(
@@ -36,7 +35,5 @@ open class UserEntity(
 	var birthday: LocalDate? = null,
 	@Column(USER_LAST_LOGIN)
 	var lastLogin: ZonedDateTime? = null,
-	@Column(USER_PURGED)
-	var purged: Boolean? = null,
-): GenericEntity()
+) : GenericEntity()
 

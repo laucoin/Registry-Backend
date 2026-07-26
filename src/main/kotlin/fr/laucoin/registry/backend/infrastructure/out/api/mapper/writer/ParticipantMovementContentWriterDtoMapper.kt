@@ -4,11 +4,11 @@ import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentMod
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantMovementWriterDto.ParticipantMovementContentWriterDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
-class ParticipantMovementContentWriterDtoMapper:
+class ParticipantMovementContentWriterDtoMapper :
 	IGenericWriterDtoMapper<MovementContentModel, ParticipantMovementContentWriterDto> {
 	override fun toModel(dto: ParticipantMovementContentWriterDto): MovementContentModel {
 		return MovementContentModel().apply {

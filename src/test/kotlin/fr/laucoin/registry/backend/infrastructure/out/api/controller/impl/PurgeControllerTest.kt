@@ -17,7 +17,6 @@ import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
@@ -28,8 +27,9 @@ import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
+import java.util.UUID
 
-class PurgeControllerTest: TestContext() {
+class PurgeControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var userService: IUserService
 
@@ -89,6 +89,41 @@ class PurgeControllerTest: TestContext() {
 		result.body<List<*>>(OK)
 
 		verify(userService).purgeUsersIfNecessary(any(), any())
+		verifyNoInteractions(projectService)
+		verifyNoInteractions(movementService)
+		verifyNoInteractions(alertService)
+		verifyNoInteractions(communicationService)
+		verifyNoInteractions(activityService)
+		verifyNoInteractions(vehicleService)
+		verifyNoInteractions(participantService)
+		verifyNoInteractions(groupService)
+	}
+
+	@Test
+	fun `Should purgeLightUsersIfNecessary should return 200`() {
+		// Arrange
+		whenever(userService.purgeLightUsersIfNecessary(any(), any())).thenReturn(Flux.empty())
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_JOB_C)
+			.post()
+			.uri(
+				uriBuilder(
+					"$BASE_URL/light-users",
+					listOf(projectId),
+					listOf(
+						Pair("dateThreshold", "2023-01-01"),
+						Pair("dryRun", true),
+					),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+
+		verify(userService).purgeLightUsersIfNecessary(any(), any())
 		verifyNoInteractions(projectService)
 		verifyNoInteractions(movementService)
 		verifyNoInteractions(alertService)

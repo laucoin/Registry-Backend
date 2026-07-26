@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 @Component
 class MovementActivityReasonReaderDtoMapper(
 	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<ActivityModel, MovementReasonsReaderDto> {
+) : IGenericReaderDtoMapper<ActivityModel, MovementReasonsReaderDto> {
 	override fun toDto(model: ActivityModel): MovementReasonsReaderDto {
 		return MovementReasonsReaderDto(
 			label = "${model.name} (${translateService.getMessage(code = "$MOVEMENT_REASON_PREFIX$ACTIVITY")})",

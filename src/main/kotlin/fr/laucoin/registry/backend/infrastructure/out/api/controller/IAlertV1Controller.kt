@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -10,6 +11,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AlertReaderDto
@@ -21,8 +24,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
@@ -36,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Tag(name = "Alerts management", description = "API for Alerts-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/alerts")
@@ -45,6 +48,7 @@ interface IAlertV1Controller {
 		description = "Find or get paginated Alerts",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
 	fun findAlerts(
 		@PathVariable projectId: UUID,
@@ -78,6 +82,7 @@ interface IAlertV1Controller {
 		description = "Find or get paginated alert communications",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_COMMUNICATION_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/{id}/communications")
 	fun findAlertCommunications(
 		@PathVariable projectId: UUID,
@@ -138,6 +143,7 @@ interface IAlertV1Controller {
 		description = "Disable Alert, it will not visible anymore in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/disable")
 	fun disableAlertById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -150,6 +156,7 @@ interface IAlertV1Controller {
 		description = "Enable Alert, obviously it will be visible again in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/enable")
 	fun enableAlertById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -162,6 +169,7 @@ interface IAlertV1Controller {
 		description = "Delete all Alert data.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
 	fun deleteAlertById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

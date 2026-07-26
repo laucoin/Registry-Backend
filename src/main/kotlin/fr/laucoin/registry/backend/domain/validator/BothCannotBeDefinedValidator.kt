@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.extension.ListExt.isNullOrEmpty
 import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 
-class BothCannotBeDefinedValidator: GenericValidator<BothCannotBeDefined, Any>() {
+class BothCannotBeDefinedValidator : GenericValidator<BothCannotBeDefined, Any>() {
 	private lateinit var firstField: String
 	private lateinit var secondField: String
 

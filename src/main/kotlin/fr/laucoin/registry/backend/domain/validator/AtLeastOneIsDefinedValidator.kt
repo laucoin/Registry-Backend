@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.extension.ListExt.isNotEmpty
 import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 
-class AtLeastOneIsDefinedValidator: GenericValidator<AtLeastOneIsDefined, Any>() {
+class AtLeastOneIsDefinedValidator : GenericValidator<AtLeastOneIsDefined, Any>() {
 	private lateinit var firstField: String
 	private lateinit var secondField: String
 

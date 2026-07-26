@@ -4,11 +4,11 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto.GuestWriterDto
-import java.util.UUID
 import org.springframework.stereotype.Component
+import java.util.UUID
 
 @Component
-class GuestWriterDtoMapper: IGenericProjectWriterDtoMapper<ParticipantModel, GuestWriterDto> {
+class GuestWriterDtoMapper : IGenericProjectWriterDtoMapper<ParticipantModel, GuestWriterDto> {
 	override fun toModel(dto: GuestWriterDto, projectId: UUID): ParticipantModel {
 		return ParticipantModel().apply {
 			id = dto.id

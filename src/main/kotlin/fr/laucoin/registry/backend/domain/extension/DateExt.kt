@@ -52,14 +52,21 @@ object DateExt {
 		} ?: false
 	}
 
+	/**
+	 * Works on COPIES: this comparison defaults missing times to the
+	 * OffsetTime MIN/MAX sentinels, and mutating the caller's models (or the
+	 * shared MIN/MAX singletons) would leak those out-of-Postgres-range
+	 * offsets into what gets persisted (a null availability time became
+	 * `00:00:00+18` on insert → BadSqlGrammar). Copies keep it side-effect free.
+	 */
 	fun CustomDateTimeModel?.isInRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {
-		val realStart = (start ?: CustomDateTimeModel.MIN)
+		val realStart = (start ?: CustomDateTimeModel.MIN).copy()
 		if (Objects.isNull(realStart.time)) realStart.time = OffsetTime.MIN
-		val realEnd = (end ?: CustomDateTimeModel.MAX)
+		val realEnd = (end ?: CustomDateTimeModel.MAX).copy()
 		if (Objects.isNull(realEnd.time)) realEnd.time = OffsetTime.MAX
-		val realChallengerForStart = this ?: realStart
+		val realChallengerForStart = (this ?: realStart).copy()
 		if (Objects.isNull(realChallengerForStart.time)) realChallengerForStart.time = realStart.time
-		val realChallengerForEnd = this ?: realEnd
+		val realChallengerForEnd = (this ?: realEnd).copy()
 		if (Objects.isNull(realChallengerForEnd.time)) realChallengerForEnd.time = realEnd.time
 
 		val isEqualStart =

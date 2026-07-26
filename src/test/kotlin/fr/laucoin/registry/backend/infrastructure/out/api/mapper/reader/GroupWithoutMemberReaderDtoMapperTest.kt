@@ -11,8 +11,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.groupId
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -23,6 +21,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class GroupWithoutMemberReaderDtoMapperTest {
 	private val projectMapper: ProjectReaderDtoMapper = mock()

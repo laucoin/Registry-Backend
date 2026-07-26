@@ -5,8 +5,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PRO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
@@ -19,6 +17,8 @@ import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.Exceptions
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class KeycloakAuthenticationAdapterTest {
 	private val mockWebServer: MockWebServer = MockWebServer()

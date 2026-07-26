@@ -52,11 +52,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -77,8 +72,13 @@ import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUA
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuples
+import java.time.ZonedDateTime
+import java.time.ZonedDateTime.now
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
 
-class MovementControllerTest: TestContext() {
+class MovementControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IMovementService
 
@@ -235,7 +235,7 @@ class MovementControllerTest: TestContext() {
 			endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
-		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
@@ -264,7 +264,7 @@ class MovementControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findMovementsPage(projectId, pageable, searchParams)
+		verify(service).findMovementsPage(projectId, pageable, searchParams, emptyList())
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)

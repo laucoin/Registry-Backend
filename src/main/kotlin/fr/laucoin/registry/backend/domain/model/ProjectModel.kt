@@ -10,7 +10,7 @@ data class ProjectModel(
 	var begin: CustomDateTimeModel? = null,
 	var end: CustomDateTimeModel? = null,
 	var options: List<ProjectOptionEnum>? = emptyList(),
-): GenericModel() {
+) : GenericModel() {
 	fun isNotInRange(dateTime: CustomDateTimeModel?): Boolean {
 		return dateTime.isInRange(begin, end).not()
 	}

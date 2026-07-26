@@ -11,12 +11,12 @@ import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class PreferencesService(
@@ -24,7 +24,7 @@ class PreferencesService(
 	private val projectProfilePort: IProjectProfilePort,
 	@param:Value($$"${registry.information.locale.supported}")
 	private val supportedLocales: List<String>,
-): IPreferencesService, GenericService() {
+) : IPreferencesService, GenericService() {
 	private companion object {
 		private val SEARCH_ACTIVE = ProjectProfileSearchParamModel(
 			visibilitySearched = true,

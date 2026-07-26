@@ -11,7 +11,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.G
 import java.util.Objects
 
 object GenericExt {
-	fun <M: GenericProjectModel, E: GenericProjectEntity> M.fillWithProjectAndEntity(entity: E): M {
+	fun <M : GenericProjectModel, E : GenericProjectEntity> M.fillWithProjectAndEntity(entity: E): M {
 		project = if (Objects.isNull(entity.projectName)) null
 		else ProjectModel().apply {
 			id = entity.projectId
@@ -28,7 +28,7 @@ object GenericExt {
 		return this
 	}
 
-	fun <M: GenericModel, E: GenericEntity> M.fillWithEntity(entity: E): M {
+	fun <M : GenericModel, E : GenericEntity> M.fillWithEntity(entity: E): M {
 		id = entity.id
 		visible = entity.visible ?: visible
 
@@ -57,7 +57,7 @@ object GenericExt {
 		return this
 	}
 
-	fun <M: GenericProjectModel, E: GenericProjectEntity> E.fillWithProjectAndModel(model: M): E {
+	fun <M : GenericProjectModel, E : GenericProjectEntity> E.fillWithProjectAndModel(model: M): E {
 		projectId = model.project?.id
 
 		fillWithModel(model)
@@ -65,7 +65,7 @@ object GenericExt {
 		return this
 	}
 
-	fun <M: GenericModel, E: GenericEntity> E.fillWithModel(model: M): E {
+	fun <M : GenericModel, E : GenericEntity> E.fillWithModel(model: M): E {
 		id = model.id
 		visible = model.visible
 

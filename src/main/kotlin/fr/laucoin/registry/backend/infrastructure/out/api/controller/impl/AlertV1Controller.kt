@@ -16,10 +16,10 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AlertRea
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.AlertWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class AlertV1Controller(
@@ -28,7 +28,7 @@ class AlertV1Controller(
 	private val communicationReaderMapper: CommunicationReaderDtoMapper,
 	private val writerMapper: AlertWriterDtoMapper,
 	private val creationWriterMapper: AlertCreationWriterDtoMapper,
-): IAlertV1Controller {
+) : IAlertV1Controller {
 	override fun findAlerts(
 		projectId: UUID,
 		pageNumber: Int,

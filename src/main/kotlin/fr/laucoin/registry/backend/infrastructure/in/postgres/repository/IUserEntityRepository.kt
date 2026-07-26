@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.User
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TYPE
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserQueries.NOT_PURGED_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserQueries.NOT_SERVICE_ACCOUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserQueries.PREFERENCES_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserQueries.SELECT_PREFERENCES
@@ -23,20 +22,20 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.LocalDate
-import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 @Repository
-interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
+interface IUserEntityRepository : ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
@@ -46,7 +45,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT COUNT(t.$ID) FROM $USER_TABLE t
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
         """
 	)
 	fun countAll(textSearched: String?, visibilitySearched: Boolean?): Mono<Long>
@@ -54,7 +53,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit
         """
@@ -64,7 +63,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND t.$ID = :id AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)
 	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserEntity>
@@ -72,7 +71,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND t.$USER_TYPE = 'SERVICE_ACCOUNT'
+        WHERE t.$USER_TYPE = 'SERVICE_ACCOUNT'
         """
 	)
 	fun findServiceAccount(): Mono<CurrentUserEntity>
@@ -99,11 +98,18 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 		"""
         SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $USER_ROLE_TABLE ur ON t.$USER_ROLE = ur.$ENTITY_ROLE_NAME AND ur.$ROLE_LEVEL = :roleLevel
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $VISIBLE_CLAUSE
         """
 	)
 	fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserEntity>
 
 	@Query("SELECT t.$ID FROM $USER_TABLE t WHERE t.last_login::DATE < :dateThreshold AND $NOT_SERVICE_ACCOUNT")
 	fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
+
+	/**
+	 * Light users are email-only invitations never linked to an identity (oidc_id IS NULL,
+	 * so also never logged in). They are purged by creation age, not last-login.
+	 */
+	@Query("SELECT t.$ID FROM $USER_TABLE t WHERE t.$USER_OIDC_ID IS NULL AND t.created_date::DATE < :dateThreshold AND $NOT_SERVICE_ACCOUNT")
+	fun findLightUserIdsOlderThanCreation(dateThreshold: LocalDate): Flux<UUID>
 }

@@ -9,19 +9,20 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communica
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndModel
+import org.springframework.stereotype.Component
 import java.time.ZonedDateTime
 import java.util.Optional
-import org.springframework.stereotype.Component
 
 @Component
 class CommunicationEntityMapper(
 	private val movementMapper: MovementEntityMapper,
 	private val alertMapper: AlertEntityMapper,
-): IEntityMapper<CommunicationModel, CommunicationEntity> {
+) : IEntityMapper<CommunicationModel, CommunicationEntity> {
 	override fun toModel(entity: CommunicationEntity): CommunicationModel {
 		return CommunicationModel().apply {
 			dateTime = entity.dateTime ?: ZonedDateTime.now()
 			message = entity.message
+			onBehalfOfMovement = entity.onBehalfOfMovement ?: false
 			movement = mapMovement(entity)
 			alert = mapAlert(entity)
 		}.fillWithProjectAndEntity(entity)
@@ -63,6 +64,7 @@ class CommunicationEntityMapper(
 		return CommunicationEntity().apply {
 			dateTime = model.dateTime
 			message = model.message
+			onBehalfOfMovement = model.onBehalfOfMovement
 			movementId = model.movement?.id
 			alertId = model.alert?.id
 		}.fillWithProjectAndModel(model)

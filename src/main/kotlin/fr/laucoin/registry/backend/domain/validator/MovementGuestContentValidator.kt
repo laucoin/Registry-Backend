@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.extension.ListExt.isNullOrEmpty
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto
 import jakarta.validation.ConstraintValidatorContext
 
-class MovementGuestContentValidator: GenericValidator<MovementGuestContent, GuestMovementWriterDto>() {
+class MovementGuestContentValidator : GenericValidator<MovementGuestContent, GuestMovementWriterDto>() {
 	override fun isValid(value: GuestMovementWriterDto, context: ConstraintValidatorContext): Boolean {
 		return if (value.type === IN) {
 			value.content.isNullOrEmpty() && value.guests.isNotEmpty()

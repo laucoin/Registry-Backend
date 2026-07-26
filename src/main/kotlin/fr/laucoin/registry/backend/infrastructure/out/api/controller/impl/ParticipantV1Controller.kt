@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_COLLECTION_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -23,13 +24,13 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.Movement
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ParticipantWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.TimeZone
-import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.TimeZone
+import java.util.UUID
 
 @RestController
 class ParticipantV1Controller(
@@ -39,7 +40,7 @@ class ParticipantV1Controller(
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
 	private val writerMapper: ParticipantWriterDtoMapper,
-): IParticipantV1Controller {
+) : IParticipantV1Controller {
 	override fun findParticipants(
 		projectId: UUID,
 		pageNumber: Int,
@@ -67,7 +68,7 @@ class ParticipantV1Controller(
 	override fun findBirthdays(
 		projectId: UUID
 	): Flux<ParticipantReaderDto> {
-		return service.findBirthdays(projectId).map(readerMapper::toDto)
+		return service.findBirthdays(projectId, DEFAULT_COLLECTION_LIMIT).map(readerMapper::toDto)
 	}
 
 	override fun findParticipantById(projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {

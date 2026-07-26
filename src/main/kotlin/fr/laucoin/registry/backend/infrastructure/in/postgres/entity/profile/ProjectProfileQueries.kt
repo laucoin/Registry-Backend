@@ -1,9 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile
 
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.CREATOR_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_END_ACCESS_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_END_ACCESS_TIME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_FAVORITE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_START_ACCESS_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_START_ACCESS_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_STATUS
@@ -12,13 +15,11 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.P
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_EMAIL
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
 
@@ -28,8 +29,7 @@ object ProjectProfileQueries {
         $LINKED_USER_TABLE.$USER_FIRST_NAME AS $PROJECT_PROFILE_USER_FIRST_NAME,
         $LINKED_USER_TABLE.$USER_LAST_NAME AS $PROJECT_PROFILE_USER_LAST_NAME,
         $LINKED_USER_TABLE.$USER_EMAIL AS $PROJECT_PROFILE_USER_EMAIL,
-        $LINKED_USER_TABLE.$USER_LAST_LOGIN AS $PROJECT_PROFILE_USER_LAST_LOGIN,
-        $LINKED_USER_TABLE.$USER_PURGED AS $PROJECT_PROFILE_USER_PURGED
+        $LINKED_USER_TABLE.$USER_LAST_LOGIN AS $PROJECT_PROFILE_USER_LAST_LOGIN
     """
 	const val JOIN_USER =
 		"INNER JOIN $USER_TABLE $LINKED_USER_TABLE ON t.$PROJECT_PROFILE_USER_ID = $LINKED_USER_TABLE.$ID AND $LINKED_USER_TABLE.$VISIBLE IS TRUE"
@@ -66,6 +66,27 @@ object ProjectProfileQueries {
 
 	const val PROJECT_PROFILE_STATUS_CLAUSE = """
         (t.$PROJECT_PROFILE_STATUS IN (:statusSearched))
+    """
+
+	const val PROJECT_PROFILE_FAVORITE_CLAUSE = """
+        (:favoriteSearched IS NULL OR t.$PROJECT_PROFILE_FAVORITE = :favoriteSearched)
+    """
+
+	/**
+	 * "invitations I sent": profiles the caller created for OTHER users
+	 * (excludes their own membership / support profile), that are still pending or
+	 * were answered within the recency window (`:since` = now − configured days).
+	 */
+	const val SENT_INVITATION_CLAUSE = """
+        (
+            t.$CREATOR_ID = :creatorId
+            AND t.$PROJECT_PROFILE_USER_ID <> :creatorId
+            AND t.$VISIBLE IS TRUE
+            AND (
+                t.$PROJECT_PROFILE_STATUS = 'INVITED'
+                OR (t.$PROJECT_PROFILE_STATUS IN ('ACCEPTED', 'REJECTED') AND t.$LAST_MODIFIER_DATE >= :since)
+            )
+        )
     """
 
 	const val DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE = """

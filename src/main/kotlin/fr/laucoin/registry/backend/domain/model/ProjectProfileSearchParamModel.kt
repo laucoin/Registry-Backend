@@ -13,12 +13,14 @@ data class ProjectProfileSearchParamModel(
 ) {
 	var textSearched: String? = null
 
+	var favoriteSearched: Boolean? = null
+
 	constructor(
 		textSearched: String? = null,
 		availabilitySearched: Boolean? = null,
 		statusSearched: ProfileStatusEnum? = null,
 		dateTimeSearched: ZonedDateTime? = null,
-	): this(
+	) : this(
 		if (statusSearched === BLOCKED) false else null,
 		availabilitySearched,
 		if (Objects.nonNull(statusSearched) && statusSearched!! != BLOCKED) listOf(statusSearched) else ProfileStatusEnum.entries.toList(),

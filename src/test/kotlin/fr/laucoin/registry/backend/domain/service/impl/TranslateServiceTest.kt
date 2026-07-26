@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -13,6 +12,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.context.MessageSource
 import org.springframework.context.i18n.LocaleContextHolder
+import java.util.stream.Stream
 
 class TranslateServiceTest {
 	private val messagesSource: MessageSource = mock()

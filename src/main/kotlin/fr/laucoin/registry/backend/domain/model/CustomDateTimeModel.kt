@@ -17,7 +17,7 @@ data class CustomDateTimeModel(
 	var date: LocalDate,
 	var time: OffsetTime? = null,
 ) {
-	constructor(dateTime: ZonedDateTime): this(dateTime.toLocalDate(), dateTime.toOffsetDateTime().toOffsetTime())
+	constructor(dateTime: ZonedDateTime) : this(dateTime.toLocalDate(), dateTime.toOffsetDateTime().toOffsetTime())
 
 	companion object {
 		val MIN = CustomDateTimeModel(OffsetDateTime.MIN.toZonedDateTime())
@@ -52,12 +52,14 @@ data class CustomDateTimeModel(
 		}
 	}
 
+	/**
+	 * Postgres only supports a range of -14 to +14 hours for offsets
+	 * (OffsetTime.MIN/MAX are outside this range (e.g., -18 hours)).
+	 */
 	@JsonIgnore
 	private fun clampOffsetTimeToPostgresRange(time: OffsetTime): OffsetTime {
 		val offsetSeconds = time.offset.totalSeconds
 
-		// Postgres only supports a range of -14 to +14 hours for offsets
-		// (OffsetTime.MIN/MAX are outside this range (e.g., -18 hours))
 		val minOffsetSeconds = ZoneOffset.ofHours(-14).totalSeconds
 		val maxOffsetSeconds = ZoneOffset.ofHours(14).totalSeconds
 

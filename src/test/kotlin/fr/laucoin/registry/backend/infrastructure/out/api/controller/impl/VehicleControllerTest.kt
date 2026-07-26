@@ -41,12 +41,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -64,8 +58,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
 
-class VehicleControllerTest: TestContext() {
+class VehicleControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IVehicleService
 
@@ -257,7 +257,7 @@ class VehicleControllerTest: TestContext() {
 			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(VehicleModel()))
-		whenever(service.findVehiclesPage(any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findVehiclesPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(VehicleReaderDto())),
 		)
@@ -286,7 +286,7 @@ class VehicleControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findVehiclesPage(projectId, pageable, searchParams)
+		verify(service).findVehiclesPage(projectId, pageable, searchParams, emptyList())
 		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)

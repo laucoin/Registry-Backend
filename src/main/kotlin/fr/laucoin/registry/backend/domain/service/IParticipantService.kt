@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -8,20 +9,24 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import java.time.LocalDate
-import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 interface IParticipantService {
 	fun findParticipantsPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
+		sort: List<SortModel<ParticipantSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ParticipantModel>>
 
-	fun findBirthdays(projectId: UUID): Flux<ParticipantModel>
+	fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantModel>
+	fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
+	fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
 
 	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
 	fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>

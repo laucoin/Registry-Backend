@@ -1,9 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IActivityEntityRepository
@@ -11,10 +13,6 @@ import fr.laucoin.registry.backend.test.ModelExt.activityId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -33,8 +31,13 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class ActivityModelPostgresRepositoryTest: TestContext() {
+class ActivityModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IActivityEntityRepository
 
@@ -167,6 +170,48 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage execute the sorted query and order by duration then name descending`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val params = ActivitySearchParamModel()
+		val sort = listOf(
+			SortModel(ActivitySortFieldEnum.DURATION),
+			SortModel(ActivitySortFieldEnum.NAME, descending = true),
+		)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(15, result.totalElements)
+		assertEquals(15, result.content.size)
+		val expectedOrder = result.content
+			.sortedWith(compareBy<ActivityModel> { it.duration!!.toIsoString() }.thenByDescending { it.name })
+			.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	@Test
+	fun `Should findPage combine the visibility filter with the sorted query`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val params = ActivitySearchParamModel(textSearched = null, visibilitySearched = true)
+		val sort = listOf(SortModel(ActivitySortFieldEnum.NAME))
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(14, result.totalElements)
+		assertEquals(14, result.content.size)
+		assertTrue(result.content.all { it.visible })
+		val expectedOrder = result.content.sortedBy { it.name }.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
 	}
 
 	@Nested

@@ -5,12 +5,12 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PA
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
+import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.Objects
-import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
-class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
+class StartBeforeEndValidator : GenericValidator<StartBeforeEnd, Any>() {
 	private lateinit var startField: String
 	private lateinit var endField: String
 

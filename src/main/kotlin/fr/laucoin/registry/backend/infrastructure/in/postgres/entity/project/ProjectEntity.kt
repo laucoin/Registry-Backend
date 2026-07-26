@@ -9,10 +9,10 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.P
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_OPTIONS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_TABLE
-import java.time.LocalDate
-import java.time.OffsetTime
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.LocalDate
+import java.time.OffsetTime
 
 @Table(PROJECT_TABLE)
 data class ProjectEntity(
@@ -28,4 +28,4 @@ data class ProjectEntity(
 	var endTime: OffsetTime? = null,
 	@Column(PROJECT_OPTIONS)
 	var options: List<ProjectOptionEnum>? = null,
-): GenericEntity()
+) : GenericEntity()

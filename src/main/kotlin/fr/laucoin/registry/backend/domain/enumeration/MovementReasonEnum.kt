@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 
-enum class MovementReasonEnum: IMovementReasonEnum {
+enum class MovementReasonEnum : IMovementReasonEnum {
 	EMERGENCY {
 		override val type = IN
 		override val participantType = GUEST

@@ -13,12 +13,12 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_MODEL
-import java.time.LocalDate
-import java.util.UUID
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.LocalDate
+import java.util.UUID
 
 @Table(MOVEMENT_CONTENT_TABLE)
 data class MovementContentEntity(

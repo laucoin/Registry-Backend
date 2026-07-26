@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.Generi
 import org.springframework.stereotype.Component
 
 @Component
-class VehicleEntityMapper: IEntityMapper<VehicleModel, VehicleEntity> {
+class VehicleEntityMapper : IEntityMapper<VehicleModel, VehicleEntity> {
 	override fun toModel(entity: VehicleEntity): VehicleModel {
 		return VehicleModel().apply {
 			licensePlate = entity.licensePlate

@@ -1,0 +1,49 @@
+# ADR 019 §6 — supply-chain scanning. Complements the existing pipelines:
+# CodeQL (SAST, codeql.yml) and dependency-review (SCA on PRs). This adds
+# secret scanning (gitleaks) and vulnerability scanning over the repository
+# and lockfiles (trivy), failing on high-severity findings.
+# Container IMAGE scanning is wired into the build pipelines (release.yml /
+# hotfix.yml): each image is built locally, trivy-scanned (HIGH/CRITICAL block),
+# and only then pushed — so a vulnerable image is never published. This workflow
+# keeps the repo/lockfile (fs) + secret gates on PRs and the weekly schedule.
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  vulnerabilities:
+    name: Repository vulnerability scan (trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'

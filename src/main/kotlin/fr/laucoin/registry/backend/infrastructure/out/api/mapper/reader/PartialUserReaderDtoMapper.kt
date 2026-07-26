@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUser
 import org.springframework.stereotype.Component
 
 @Component
-class PartialUserReaderDtoMapper: IGenericReaderDtoMapper<UserModel, PartialUserReaderDto> {
+class PartialUserReaderDtoMapper : IGenericReaderDtoMapper<UserModel, PartialUserReaderDto> {
 	override fun toDto(model: UserModel): PartialUserReaderDto {
 		return PartialUserReaderDto(
 			id = model.id,

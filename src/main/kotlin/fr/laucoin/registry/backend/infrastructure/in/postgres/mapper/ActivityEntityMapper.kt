@@ -7,13 +7,13 @@ import fr.laucoin.registry.backend.infrastructure.`in`.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndModel
+import org.springframework.stereotype.Component
 import java.util.Objects
 import java.util.Optional
 import kotlin.time.Duration
-import org.springframework.stereotype.Component
 
 @Component
-class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
+class ActivityEntityMapper : IEntityMapper<ActivityModel, ActivityEntity> {
 	override fun toModel(entity: ActivityEntity): ActivityModel {
 		return ActivityModel().apply {
 			name = entity.name

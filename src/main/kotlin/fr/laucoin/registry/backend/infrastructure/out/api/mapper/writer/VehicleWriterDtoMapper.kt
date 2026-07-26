@@ -3,14 +3,14 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.VehicleWriterDto
+import org.springframework.stereotype.Component
 import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
 
 @Component
 class VehicleWriterDtoMapper(
 	private val customDateTimeMapper: CustomDateTimeWriterDtoMapper,
-): IGenericProjectWriterDtoMapper<VehicleModel, VehicleWriterDto> {
+) : IGenericProjectWriterDtoMapper<VehicleModel, VehicleWriterDto> {
 	override fun toModel(dto: VehicleWriterDto, projectId: UUID): VehicleModel {
 		return VehicleModel().apply {
 			licensePlate = dto.licensePlate?.uppercase()

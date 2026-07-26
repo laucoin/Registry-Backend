@@ -4,9 +4,10 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIV
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.USER_DELETE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -15,6 +16,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
@@ -22,11 +24,9 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.User
 import fr.laucoin.registry.backend.test.ModelExt.commonUser
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -35,6 +35,8 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -51,6 +53,10 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
 class UserServiceTest {
 	private val port: IUserPort = mock()
@@ -58,8 +64,13 @@ class UserServiceTest {
 	private val userProjectProfileService: IUserProjectProfileService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
+
+	private val auditService: IAuditService = mock<IAuditService>().also { audit ->
+		whenever(audit.audit(any<Mono<Any>>(), any(), any(), anyOrNull()))
+			.thenAnswer { it.getArgument<Mono<Any>>(0) }
+	}
 	private val service = UserService(
-		port, preferencesService, userProjectProfileService, transactionalOperator, roleService
+		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, auditService
 	)
 
 	private val serviceAccountId = UUID.randomUUID()
@@ -82,9 +93,18 @@ class UserServiceTest {
 			Arguments.of(null, null, 0),
 		)
 
+		/**
+		 * The last two last-administrator cases pair the user under update with a level-0 user
+		 * carrying an equal but NOT identical UUID instance, which is the shape the running
+		 * application produces: the two models come from separate queries, so the identity the
+		 * other cases share is an artefact of the fixture. Keep them — an identity comparison in
+		 * the guard passes every same-instance case and still lets the last administrator be
+		 * demoted in production.
+		 */
 		@JvmStatic
 		fun `Should updateUserRoleById throw RegistryException`(): Stream<Arguments> {
 			val uuid = UUID.randomUUID()
+			val sameUuidDistinctInstance = UUID.fromString(uuid.toString())
 			return Stream.of(
 				Arguments.of(
 					1,
@@ -130,6 +150,28 @@ class UserServiceTest {
 					0,
 					1,
 				),
+				Arguments.of(
+					0,
+					listOf(USER_ROLE),
+					USER_ROLE,
+					UserModel().apply { id = uuid; role = USER_ROLE },
+					arrayOf(UserModel().apply { id = sameUuidDistinctInstance; role = USER_ROLE }),
+					CONFLICT,
+					USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE,
+					1,
+					1,
+				),
+				Arguments.of(
+					0,
+					listOf(USER_ROLE),
+					USER_ROLE,
+					UserModel().apply { id = uuid },
+					arrayOf(UserModel().apply { id = sameUuidDistinctInstance }),
+					CONFLICT,
+					USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE,
+					0,
+					1,
+				),
 			)
 		}
 	}
@@ -160,14 +202,14 @@ class UserServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = UserSearchParamModel()
 
-		whenever(port.findPage(any(), any()))
+		whenever(port.findPage(any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findUsersPage(pageable, params).block()
 
 		// Assert
-		verify(port).findPage(pageable, params)
+		verify(port).findPage(pageable, params, emptyList())
 	}
 
 	@Test
@@ -276,6 +318,64 @@ class UserServiceTest {
 		verify(port).create(any())
 		verify(preferencesService).findByUser(any())
 		verify(transactionalOperator).transactional(any<Mono<*>>())
+	}
+
+	@Test
+	fun `Should linkUser set oidc id, personal data and last login, keep role and persist`() {
+		// Arrange
+		val invited = CurrentUserModel().apply { id = userId; role = USER_ROLE; oidcId = null }
+		val newOidcId = UUID.randomUUID()
+
+		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
+
+		// Act
+		service.linkUser(invited, newOidcId, "jane.doe@test.com", "Jane", "DOE").block()
+
+		// Assert
+		assertEquals(newOidcId, invited.oidcId)
+		assertEquals("jane.doe@test.com", invited.email)
+		assertEquals("Jane", invited.firstName)
+		assertEquals("DOE", invited.lastName)
+		assertEquals(USER_ROLE, invited.role)
+		assertNotNull(invited.lastLogin)
+		verify(port).update(any())
+	}
+
+	@Test
+	fun `Should findOrCreateInvitedUser return existing user when email matches`() {
+		// Arrange
+		whenever(port.findByEmail(any(), anyOrNull())).thenReturn(Flux.just(currentUser()))
+
+		// Act
+		val result = service.findOrCreateInvitedUser(currentUser().email!!, currentUser()).block()
+
+		// Assert
+		assertEquals(currentUser().id, result?.id)
+		verify(port).findByEmail(currentUser().email!!, visibilitySearched = null)
+		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should findOrCreateInvitedUser create email-only user when none matches`() {
+		// Arrange
+		val inviter = currentUser().apply { role = USER_ROLE }
+		whenever(port.findByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(roleService.getDefaultUserRole()).thenReturn(USER_ROLE)
+		whenever(port.create(any())).thenAnswer { Mono.just(it.getArgument<UserModel>(0)) }
+
+		// Act
+		service.findOrCreateInvitedUser("invited@test.com", inviter).block()
+
+		// Assert
+		val captor = argumentCaptor<UserModel>()
+		verify(port).create(captor.capture())
+		val created = captor.firstValue
+		assertNull(created.oidcId)
+		assertEquals("invited@test.com", created.email)
+		assertNull(created.firstName)
+		assertNull(created.lastName)
+		assertEquals(USER_ROLE, created.role)
+		assertNull(created.lastLogin)
 	}
 
 	@ParameterizedTest
@@ -440,17 +540,21 @@ class UserServiceTest {
 		verify(port).update(any())
 	}
 
+	/**
+	 * Self-service erasure runs the administrative pipeline minus the
+	 * not-current-user guard, so the two things worth pinning are that the
+	 * last-administrator guards still fire and that the row is really deleted.
+	 */
 	@Test
-	fun `Should impersonateUserById block and return User`() {
+	fun `Should deleteCurrentUser delete the caller own account`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
 		val currentUser = currentUser().apply { role = USER_ROLE }
+		val foundUser = UserModel().apply { id = currentUser.id; role = USER_ROLE }
 
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(foundUser))
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 		whenever(
 			userProjectProfileService.validateNotLastProjectRoleLevel0(
 				any(),
@@ -461,18 +565,45 @@ class UserServiceTest {
 		).thenReturn(Mono.just(foundUser))
 
 		// Act
-		service.impersonateUserById(currentUser, uuid).block()
+		service.deleteCurrentUser(currentUser).block()
 
 		// Assert
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService).getLevelByUserRole(USER_ROLE)
-		verify(port).update(any())
+		verify(port).findById(currentUser.id!!, visibilitySearched = null)
+		verify(port).deleteById(currentUser.id!!)
 		verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
-			uuid,
+			currentUser.id!!,
 			projectId = null,
 			foundUser,
-			USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
+			USER_DELETE_LAST_PROJECT_ADMINISTRATOR
 		)
+		verify(auditService).audit(any<Mono<Unit>>(), eq(currentUser), eq(USER_DELETE), eq(currentUser.id))
+	}
+
+	@Test
+	fun `Should deleteCurrentUser throw when current user is the last application administrator`() {
+		// Arrange
+		val currentUser = currentUser().apply { role = USER_ROLE }
+		val foundUser = UserModel().apply { id = currentUser.id; role = USER_ROLE }
+
+		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(foundUser))
+		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(0)
+		whenever(port.findByRoleLevel(any(), any())).thenReturn(Flux.empty())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.deleteCurrentUser(currentUser).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR, result.message)
+
+		verify(port).findByRoleLevel(roleLevel = 0, visibilitySearched = true)
+		verify(userProjectProfileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
+		verify(port, never()).deleteById(any())
 	}
 
 	@Test
@@ -541,6 +672,40 @@ class UserServiceTest {
 
 		// Assert
 		verify(port).findUserIdsOlderThanLastLogin(date)
+		verify(port, never()).deleteById(any())
+	}
+
+	@Test
+	fun `Should purgeLightUsersIfNecessary find stale light users and call port deleteById`() {
+		// Arrange
+		val date = LocalDate.EPOCH
+		val uuid1 = UUID.randomUUID()
+		val uuid2 = UUID.randomUUID()
+
+		whenever(port.findLightUserIdsOlderThanCreation(any())).thenReturn(Flux.just(uuid1, uuid2))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
+
+		// Act
+		service.purgeLightUsersIfNecessary(date, false).collectList().block()
+
+		// Assert
+		verify(port).findLightUserIdsOlderThanCreation(date)
+		verify(port).deleteById(uuid1)
+		verify(port).deleteById(uuid2)
+	}
+
+	@Test
+	fun `Should purgeLightUsersIfNecessary not call port deleteById because of dryRun`() {
+		// Arrange
+		val date = LocalDate.EPOCH
+
+		whenever(port.findLightUserIdsOlderThanCreation(any())).thenReturn(Flux.just(UUID.randomUUID()))
+
+		// Act
+		service.purgeLightUsersIfNecessary(date, true).collectList().block()
+
+		// Assert
+		verify(port).findLightUserIdsOlderThanCreation(date)
 		verify(port, never()).deleteById(any())
 	}
 }

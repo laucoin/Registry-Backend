@@ -16,7 +16,7 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 
 @Repository
-interface IRoleEntityRepository: ReactiveCrudRepository<RoleEntity, String> {
+interface IRoleEntityRepository : ReactiveCrudRepository<RoleEntity, String> {
 	@Query(
 		"""
         SELECT ur.$ENTITY_ROLE_NAME AS $ROLE_NAME, ur.$ROLE_LEVEL, ARRAY_AGG(t.$ROLE_PERMISSION) AS $ROLE_PERMISSIONS

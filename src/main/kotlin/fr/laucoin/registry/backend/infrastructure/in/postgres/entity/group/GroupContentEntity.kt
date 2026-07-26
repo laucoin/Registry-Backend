@@ -8,12 +8,12 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.Gro
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
-import java.time.LocalDate
-import java.util.UUID
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.LocalDate
+import java.util.UUID
 
 @Table(GROUP_CONTENT_TABLE)
 data class GroupContentEntity(

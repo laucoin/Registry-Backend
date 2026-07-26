@@ -2,14 +2,14 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupWithoutMemberReaderDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class GroupWithoutMemberReaderDtoMapper(
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
-): IGenericReaderDtoMapper<GroupModel, GroupWithoutMemberReaderDto> {
+) : IGenericReaderDtoMapper<GroupModel, GroupWithoutMemberReaderDto> {
 	override fun toDto(model: GroupModel): GroupWithoutMemberReaderDto {
 		return GroupWithoutMemberReaderDto(
 			name = model.name,

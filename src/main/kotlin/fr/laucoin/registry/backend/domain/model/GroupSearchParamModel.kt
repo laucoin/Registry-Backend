@@ -14,7 +14,7 @@ data class GroupSearchParamModel(
 		visibilitySearched: Boolean? = null,
 		presenceSearched: Boolean? = null,
 		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, presenceSearched, dateTimeSearched) {
+	) : this(visibilitySearched, presenceSearched, dateTimeSearched) {
 		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
 	}
 }

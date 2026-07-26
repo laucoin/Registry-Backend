@@ -7,4 +7,4 @@ data class JwtConversionException(
 	val status: HttpStatus,
 	val code: String,
 	val args: ArrayList<Any?>? = null,
-): AuthenticationException(code)
+) : AuthenticationException(code)

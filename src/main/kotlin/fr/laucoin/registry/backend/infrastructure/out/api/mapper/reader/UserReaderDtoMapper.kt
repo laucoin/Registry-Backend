@@ -5,13 +5,13 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.UserReaderDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class UserReaderDtoMapper(
 	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<UserModel, UserReaderDto> {
+) : IGenericReaderDtoMapper<UserModel, UserReaderDto> {
 	override fun toDto(model: UserModel): UserReaderDto {
 		return UserReaderDto(
 			firstName = model.firstName,
@@ -25,7 +25,6 @@ class UserReaderDtoMapper(
 			}.orElse(null),
 			birthday = model.birthday,
 			lastLogin = model.lastLogin,
-			purged = model.purged,
 		).apply {
 			id = model.id
 			visible = model.visible

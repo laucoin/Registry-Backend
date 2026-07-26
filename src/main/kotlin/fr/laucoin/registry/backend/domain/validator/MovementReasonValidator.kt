@@ -13,7 +13,7 @@ import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 
-class MovementReasonValidator: GenericValidator<MovementReason, Any>() {
+class MovementReasonValidator : GenericValidator<MovementReason, Any>() {
 	private lateinit var participantType: ParticipantTypeEnum
 	private var hasActivity: Boolean = false
 

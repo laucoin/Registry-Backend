@@ -6,12 +6,12 @@ import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.AlertCreationWriterDto
+import org.springframework.stereotype.Component
 import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
 
 @Component
-class AlertCreationWriterDtoMapper: IGenericProjectWriterDtoMapper<AlertModel, AlertCreationWriterDto> {
+class AlertCreationWriterDtoMapper : IGenericProjectWriterDtoMapper<AlertModel, AlertCreationWriterDto> {
 	override fun toModel(
 		dto: AlertCreationWriterDto,
 		projectId: UUID

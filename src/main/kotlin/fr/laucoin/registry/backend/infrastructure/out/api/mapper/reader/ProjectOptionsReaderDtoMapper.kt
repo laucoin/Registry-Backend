@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 @Component
 class ProjectOptionsReaderDtoMapper(
 	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<ProjectOptionEnum, ProjectOptionsReaderDto> {
+) : IGenericReaderDtoMapper<ProjectOptionEnum, ProjectOptionsReaderDto> {
 	override fun toDto(model: ProjectOptionEnum): ProjectOptionsReaderDto {
 		return ProjectOptionsReaderDto(
 			value = model,

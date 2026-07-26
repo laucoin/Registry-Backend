@@ -7,8 +7,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNIC
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import jakarta.validation.ConstraintValidatorContext
-import java.util.stream.Stream
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -16,6 +14,8 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import java.util.stream.Stream
+import kotlin.test.assertTrue
 
 class ProjectOptionValidatorTest {
 	private val optionValidator = ProjectOptionValidator()

@@ -6,6 +6,8 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communica
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_NAME
@@ -14,7 +16,9 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_LAST_COMMUNICATION_AT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.ACTIVITY_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.ACTIVITY_MOVEMENT_AVAILABILITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.ACTIVITY_MOVEMENT_TEXT_SEARCH_CLAUSE
@@ -24,10 +28,13 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.LAST_PARTICIPANT_MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.MOVEMENT_ACTIVITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.MOVEMENT_LINKED_TO_ACTIVITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.MOVEMENT_TYPE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.ONGOING_ACTIVITY_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.SELECT_ACTIVITY_MOVEMENT_SEARCH
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.SELECT_LINKED_ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.WITH_CURRENT_MOVEMENT
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.WITH_ONGOING_ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.PROJECT_CLAUSE
@@ -36,17 +43,17 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Repository
-interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID> {
+interface IMovementEntityRepository : ReactiveCrudRepository<MovementEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
@@ -264,6 +271,34 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         """
 	)
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementEntity>
+
+	/**
+	 * Ongoing activity outings: the exits linked to an activity whose participants have not yet
+	 * returned — an outing stays listed while it is still somebody's CURRENT movement, and any
+	 * entry checking them back in ends it, whether or not that entry names the activity again.
+	 * Each row is annotated with the max communication date_time so the dashboard can run a
+	 * "since last communication" chronometer.
+	 */
+	@Query(
+		"""
+        WITH $WITH_ONGOING_ACTIVITY
+        SELECT t.*,
+            (
+                SELECT MAX(c.$COMMUNICATION_DATE_TIME)
+                FROM $COMMUNICATION_TABLE c
+                WHERE c.$COMMUNICATION_MOVEMENT_ID = t.$ID AND c.$VISIBLE IS TRUE
+            ) AS $MOVEMENT_LAST_COMMUNICATION_AT,
+            $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $MOVEMENT_TABLE t
+        $ONGOING_ACTIVITY_JOIN
+        $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_LINKED_TO_ACTIVITY_CLAUSE
+            AND t.$MOVEMENT_TYPE = 'OUT'
+        ORDER BY t.$MOVEMENT_DATE_TIME DESC
+        LIMIT :limit
+        """
+	)
+	fun findOngoingActivities(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<MovementEntity>
 
 	@Query(
 		"""

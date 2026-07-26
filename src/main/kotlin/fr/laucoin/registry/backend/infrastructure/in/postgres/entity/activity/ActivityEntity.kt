@@ -11,10 +11,10 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericProjectEntity
-import java.time.LocalDate
-import java.time.OffsetTime
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.LocalDate
+import java.time.OffsetTime
 
 @Table(ACTIVITY_TABLE)
 data class ActivityEntity(
@@ -36,4 +36,4 @@ data class ActivityEntity(
 	var endAvailabilityDate: LocalDate? = null,
 	@Column(ACTIVITY_END_AVAILABILITY_TIME)
 	var endAvailabilityTime: OffsetTime? = null,
-): GenericProjectEntity()
+) : GenericProjectEntity()

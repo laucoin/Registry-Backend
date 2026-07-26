@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -7,6 +8,8 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
@@ -16,7 +19,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.util.UUID
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 @Tag(name = "Users management", description = "API for Users-related operations")
 @RequestMapping("/api/v1/users")
@@ -36,6 +39,7 @@ interface IUserV1Controller {
 		description = "Find or get paginated Users",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
 	fun findUsers(
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) pageNumber: Int,
@@ -82,6 +86,7 @@ interface IUserV1Controller {
 		description = "Prproject a User from logging in",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/block")
 	fun blockUserById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -93,6 +98,7 @@ interface IUserV1Controller {
 		description = "Re-authorize a User to log in",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/unblock")
 	fun unblockUserById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -124,6 +130,7 @@ interface IUserV1Controller {
 		description = "Delete all User data",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
 	fun deleteUserById(@AuthenticationPrincipal currentUser: CurrentUserModel, @PathVariable id: UUID): Mono<Unit>
 }

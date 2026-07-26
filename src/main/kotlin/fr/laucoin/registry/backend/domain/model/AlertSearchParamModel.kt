@@ -18,7 +18,7 @@ data class AlertSearchParamModel(
 		statusSearched: AlertStatusEnum? = null,
 		startDateTimeSearched: ZonedDateTime? = null,
 		endDateTimeSearched: ZonedDateTime? = null,
-	): this(
+	) : this(
 		visibilitySearched,
 		if (Objects.nonNull(statusSearched)) listOf(statusSearched!!) else AlertStatusEnum.entries.toList(),
 		startDateTimeSearched,

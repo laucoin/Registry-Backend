@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -9,6 +10,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
@@ -16,25 +18,26 @@ import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
-import java.time.LocalDate
-import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class VehicleService(
 	private val port: IVehiclePort,
 	private val projectService: IProjectService,
 	private val movementPort: IMovementPort,
-): IVehicleService, GenericService() {
+) : IVehicleService, GenericService() {
 	override fun findVehiclesPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: VehicleSearchParamModel,
+		sort: List<SortModel<VehicleSortFieldEnum>>,
 	): Mono<PageModel<VehicleModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sort)
 	}
 
 	override fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {
@@ -124,16 +127,17 @@ class VehicleService(
 		port.update(it.apply { update(currentUser) })
 	}
 
-	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { vehicleToUpdate ->
-		movementPort.countAllByVehicleId(
-			vehicleToUpdate.project!!.id!!,
-			vehicleToUpdate.id!!,
-			MovementSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The vehicle {} already linked to movement(s)", vehicleToUpdate.id)
-				handle.error(RegistryException(CONFLICT, error))
-			} else handle.next(vehicleToUpdate)
+	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> =
+		flatMap { vehicleToUpdate ->
+			movementPort.countAllByVehicleId(
+				vehicleToUpdate.project!!.id!!,
+				vehicleToUpdate.id!!,
+				MovementSearchParamModel(),
+			).handle { it, handle ->
+				if (it > 0) {
+					log.warn("The vehicle {} already linked to movement(s)", vehicleToUpdate.id)
+					handle.error(RegistryException(CONFLICT, error))
+				} else handle.next(vehicleToUpdate)
+			}
 		}
-	}
 }

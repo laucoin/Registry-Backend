@@ -17,9 +17,6 @@ import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
 import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -36,6 +33,9 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class PreferencesServiceTest {
 	private val port: IPreferencesPort = mock()

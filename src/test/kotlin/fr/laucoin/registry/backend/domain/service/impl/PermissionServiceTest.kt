@@ -4,8 +4,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_IMPLEMENTED_YE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -13,6 +11,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
+import java.util.UUID
+import java.util.stream.Stream
 
 class PermissionServiceTest {
 	private val service: PermissionService = PermissionService()

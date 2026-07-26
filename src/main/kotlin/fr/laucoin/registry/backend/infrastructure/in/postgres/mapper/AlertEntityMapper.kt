@@ -5,11 +5,11 @@ import fr.laucoin.registry.backend.infrastructure.`in`.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndModel
-import java.time.ZonedDateTime
 import org.springframework.stereotype.Component
+import java.time.ZonedDateTime
 
 @Component
-class AlertEntityMapper: IEntityMapper<AlertModel, AlertEntity> {
+class AlertEntityMapper : IEntityMapper<AlertModel, AlertEntity> {
 	override fun toModel(entity: AlertEntity): AlertModel {
 		return AlertModel().apply {
 			title = entity.title

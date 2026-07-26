@@ -8,13 +8,13 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.P
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndModel
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class ProjectProfileEntityMapper(
 	private val userMapper: UserEntityMapper,
-): IEntityMapper<ProjectProfileModel, ProjectProfileEntity> {
+) : IEntityMapper<ProjectProfileModel, ProjectProfileEntity> {
 	override fun toModel(entity: ProjectProfileEntity): ProjectProfileModel {
 		return ProjectProfileModel().apply {
 			user = mapUserEntity(entity)
@@ -22,6 +22,7 @@ class ProjectProfileEntityMapper(
 			startAccess = mapCustomDateTime(entity.startAccessDate, entity.startAccessTime)
 			endAccess = mapCustomDateTime(entity.endAccessDate, entity.endAccessTime)
 			status = entity.status
+			favorite = entity.favorite
 			availabilityStatus = buildStatus()
 		}.fillWithProjectAndEntity(entity)
 	}
@@ -35,7 +36,6 @@ class ProjectProfileEntityMapper(
 					lastName = entity.userLastName
 					email = entity.userEmail
 					lastLogin = entity.userLastLogin
-					purged = entity.userPurged ?: purged
 				}
 			)
 		}.orElse(null)
@@ -50,6 +50,7 @@ class ProjectProfileEntityMapper(
 			startAccessTime = model.startAccess?.time
 			endAccessDate = model.endAccess?.date
 			endAccessTime = model.endAccess?.time
+			favorite = model.favorite
 		}.fillWithProjectAndModel(model)
 	}
 }

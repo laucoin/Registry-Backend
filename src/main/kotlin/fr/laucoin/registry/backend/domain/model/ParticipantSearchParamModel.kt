@@ -23,7 +23,7 @@ data class ParticipantSearchParamModel(
 		visibilitySearched: Boolean? = null,
 		statusSearched: PresenceStatusEnum? = null,
 		dateTimeSearched: ZonedDateTime?,
-	): this(
+	) : this(
 		isMajor = isMajor,
 		typeSearched = typeSearched,
 		visibilitySearched = visibilitySearched,

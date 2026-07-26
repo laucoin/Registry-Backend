@@ -2,13 +2,13 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectWriterDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class ProjectWriterDtoMapper(
 	private val customDateTimeMapper: CustomDateTimeWriterDtoMapper,
-): IGenericWriterDtoMapper<ProjectModel, ProjectWriterDto> {
+) : IGenericWriterDtoMapper<ProjectModel, ProjectWriterDto> {
 	override fun toModel(dto: ProjectWriterDto): ProjectModel {
 		return ProjectModel().apply {
 			name = dto.name

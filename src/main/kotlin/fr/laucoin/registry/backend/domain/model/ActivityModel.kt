@@ -11,4 +11,4 @@ data class ActivityModel(
 	var allowedParticipants: NumericRangeModel? = null,
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,
-): GenericProjectModel()
+) : GenericProjectModel()

@@ -6,14 +6,14 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.Preferenc
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IPreferencesEntityRepository
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import kotlin.test.assertNotNull
 
-class PreferencesModelPostgresRepositoryTest: TestContext() {
+class PreferencesModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IPreferencesEntityRepository
 

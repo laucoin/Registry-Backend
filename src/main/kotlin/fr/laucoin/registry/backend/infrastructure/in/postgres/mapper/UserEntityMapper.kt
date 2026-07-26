@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.Generi
 import org.springframework.stereotype.Component
 
 @Component
-class UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
+class UserEntityMapper : IEntityMapper<UserModel, UserEntity> {
 	override fun toModel(entity: UserEntity): UserModel {
 		return UserModel().apply {
 			oidcId = entity.oidcId
@@ -19,7 +19,6 @@ class UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
 			role = entity.role
 			birthday = entity.birthday
 			lastLogin = entity.lastLogin
-			purged = entity.purged ?: purged
 		}.fillWithEntity(entity)
 	}
 
@@ -33,7 +32,6 @@ class UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
 			role = model.role
 			birthday = model.birthday
 			lastLogin = model.lastLogin
-			purged = model.purged
 		}.fillWithModel(model)
 	}
 }

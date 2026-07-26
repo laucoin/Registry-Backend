@@ -69,7 +69,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
@@ -94,7 +93,6 @@ object MovementQueries {
 	const val CONTENT_JOIN = """
         INNER JOIN $PARTICIPANT_TABLE
             ON t.$MOVEMENT_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
-            AND $PARTICIPANT_TABLE.$PARTICIPANT_PURGED IS FALSE
         LEFT JOIN $VEHICLE_TABLE
             ON t.$MOVEMENT_CONTENT_VEHICLE_ID = $VEHICLE_TABLE.$ID
     """
@@ -249,7 +247,7 @@ object MovementQueries {
             FROM $PARTICIPANT_TABLE t
             LEFT JOIN last_participant_movement ON last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID = t.$ID
             LEFT JOIN filtered_groups fg ON t.$ID = fg.$GROUP_CONTENT_PARTICIPANT_ID
-            WHERE t.$VISIBLE IS TRUE AND t.$PARTICIPANT_PURGED IS FALSE AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
+            WHERE t.$VISIBLE IS TRUE AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
                 (
                     COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
                     OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
@@ -263,4 +261,29 @@ object MovementQueries {
     """
 
 	const val CURRENT_MOVEMENT_JOIN = "INNER JOIN current_movement ON current_movement.$ID = t.$ID"
+
+	/**
+	 * An activity outing is ongoing while at least one of the people it took out is
+	 * STILL out — their current movement is that very exit. Read per participant,
+	 * deliberately not "the last movement carrying this activity": someone walking
+	 * back on site ends the outing whether or not the entry names the activity
+	 * again, and the panel is a safety view, so it must not keep showing a group as
+	 * out once anybody has checked them back in.
+	 */
+	const val WITH_ONGOING_ACTIVITY = """
+        ongoing_activity AS (
+            SELECT DISTINCT current_participant_movement.$MOVEMENT_CONTENT_MOVEMENT_ID AS $ID
+            FROM (
+                SELECT DISTINCT ON (mc.$MOVEMENT_CONTENT_PARTICIPANT_ID) mc.$MOVEMENT_CONTENT_MOVEMENT_ID
+                FROM $MOVEMENT_CONTENT_TABLE mc
+                INNER JOIN $MOVEMENT_TABLE m ON m.$ID = mc.$MOVEMENT_CONTENT_MOVEMENT_ID
+                WHERE m.$LINKED_PROJECT_ID = :projectId AND m.$VISIBLE IS TRUE
+                ORDER BY mc.$MOVEMENT_CONTENT_PARTICIPANT_ID, m.$MOVEMENT_DATE_TIME DESC, m.$CREATED_AT DESC
+            ) AS current_participant_movement
+        )
+    """
+
+	const val ONGOING_ACTIVITY_JOIN = "INNER JOIN ongoing_activity ON ongoing_activity.$ID = t.$ID"
+
+	const val MOVEMENT_LINKED_TO_ACTIVITY_CLAUSE = "t.$MOVEMENT_ACTIVITY_ID IS NOT NULL"
 }

@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectPort
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
@@ -16,11 +17,6 @@ import fr.laucoin.registry.backend.test.ModelExt.commonProject
 import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZoneOffset
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -45,17 +41,28 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZoneOffset
+import java.util.UUID
+import java.util.stream.Stream
 
 class ProjectServiceTest {
 	private val port: IProjectPort = mock()
 	private val projectProfileService: IUserProjectProfileService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
+
+	private val auditService: IAuditService = mock<IAuditService>().also { audit ->
+		whenever(audit.audit(any<Mono<Any>>(), any(), any(), anyOrNull()))
+			.thenAnswer { it.getArgument<Mono<Any>>(0) }
+	}
 	private val service: IProjectService = ProjectService(
 		port,
 		projectProfileService,
 		transactionalOperator,
-		roleService
+		roleService,
+		auditService
 	)
 
 	private companion object {
@@ -222,15 +229,15 @@ class ProjectServiceTest {
 		val withProfile = false
 
 		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(listOf(REGISTRY_PROJECT_R))
-		whenever(port.findPage(any(), any()))
+		whenever(port.findPage(any<PageableModel>(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), pageable, withProfile, params).block()
 
 		// Assert
-		verify(port).findPage(pageable, params)
-		verify(port, never()).findPage(any(), any(), any())
+		verify(port).findPage(pageable, params, emptyList())
+		verify(port, never()).findPage(any(), any(), any(), any())
 	}
 
 	@Test
@@ -242,15 +249,15 @@ class ProjectServiceTest {
 
 		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
 		whenever(roleService.getProjectIdsFromCurrentUserProfiles(any())).thenReturn(emptyList())
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectsPage(currentUser(), pageable, withProfile, params).block()
 
 		// Assert
-		verify(port).findPage(emptyList(), pageable, params)
-		verify(port, never()).findPage(any(), any())
+		verify(port).findPage(emptyList(), pageable, params, emptyList())
+		verify(port, never()).findPage(any<PageableModel>(), any(), any())
 	}
 
 	@Test
@@ -511,7 +518,7 @@ class ProjectServiceTest {
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteProjectById(projectId).block()
+		service.deleteProjectById(currentUser(), projectId).block()
 
 		// Assert
 		verify(port).findById(projectId, visibilitySearched = null)

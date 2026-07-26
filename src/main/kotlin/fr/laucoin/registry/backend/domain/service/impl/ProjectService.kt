@@ -1,31 +1,38 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.PROJECT_DELETE
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.PROJECT_DISABLE
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.PROJECT_ENABLE
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.model.OpenAlertProjectModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.service.GenericService
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.util.UUID
 
 @Service
 class ProjectService(
@@ -33,19 +40,22 @@ class ProjectService(
 	private val userProjectProfileService: IUserProjectProfileService,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
-): IProjectService, GenericService() {
+	private val auditService: IAuditService,
+) : IProjectService, GenericService() {
 	override fun findProjectsPage(
 		currentUser: CurrentUserModel,
 		pageable: PageableModel,
 		withProfile: Boolean,
 		searchParams: ProjectSearchParamModel,
+		sort: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		return if (!withProfile) {
-			port.findPage(pageable, searchParams)
+			port.findPage(pageable, searchParams, sort)
 		} else port.findPage(
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),
 			pageable,
-			searchParams
+			searchParams,
+			sort
 		)
 	}
 
@@ -150,20 +160,27 @@ class ProjectService(
 	}
 
 	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = true)
+		val disabled = findProjectById(id, visibilitySearched = true)
 			.updateVisibility(visibility = false)
 			.updateProject(currentUser)
+		return auditService.audit(disabled, currentUser, PROJECT_DISABLE, id)
 	}
 
 	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = false)
+		val enabled = findProjectById(id, visibilitySearched = false)
 			.updateVisibility(visibility = true)
 			.updateProject(currentUser)
+		return auditService.audit(enabled, currentUser, PROJECT_ENABLE, id)
 	}
 
-	override fun deleteProjectById(id: UUID): Mono<Unit> {
-		return findProjectById(id, visibilitySearched = null)
+	override fun deleteProjectById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		val deleted = findProjectById(id, visibilitySearched = null)
 			.flatMap { port.deleteById(id) }
+		return auditService.audit(deleted, currentUser, PROJECT_DELETE, id)
+	}
+
+	override fun findOpenAlertProjects(currentUser: CurrentUserModel, limit: Int): Flux<OpenAlertProjectModel> {
+		return port.findOpenAlertProjectsByUserId(currentUser.id!!, limit)
 	}
 
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {

@@ -12,11 +12,11 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.G
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.VISIBLE
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
+import java.time.ZonedDateTime
+import java.util.UUID
 
 abstract class GenericEntity(
 	@Id

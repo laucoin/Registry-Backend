@@ -6,6 +6,8 @@ import com.nimbusds.jose.shaded.gson.TypeAdapter
 import com.nimbusds.jose.shaded.gson.stream.JsonReader
 import com.nimbusds.jose.shaded.gson.stream.JsonToken.NULL
 import com.nimbusds.jose.shaded.gson.stream.JsonWriter
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import java.time.LocalDate
 import java.time.OffsetTime
 import java.time.ZonedDateTime
@@ -13,8 +15,6 @@ import java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
 import java.time.format.DateTimeFormatter.ISO_OFFSET_TIME
 import java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME
 import java.util.Objects
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 
 @Configuration
 class GsonConfig {
@@ -27,7 +27,7 @@ class GsonConfig {
 			.create()
 	}
 
-	class ZonedDateTimeTypeAdapter: TypeAdapter<ZonedDateTime>() {
+	class ZonedDateTimeTypeAdapter : TypeAdapter<ZonedDateTime>() {
 		private val formatter = ISO_ZONED_DATE_TIME
 
 		override fun read(`in`: JsonReader): ZonedDateTime? {
@@ -45,7 +45,7 @@ class GsonConfig {
 		}
 	}
 
-	class LocalDateTypeAdapter: TypeAdapter<LocalDate>() {
+	class LocalDateTypeAdapter : TypeAdapter<LocalDate>() {
 		private val formatter = ISO_LOCAL_DATE
 
 		override fun read(`in`: JsonReader): LocalDate? {
@@ -63,7 +63,7 @@ class GsonConfig {
 		}
 	}
 
-	class OffsetTimeTypeAdapter: TypeAdapter<OffsetTime>() {
+	class OffsetTimeTypeAdapter : TypeAdapter<OffsetTime>() {
 		private val formatter = ISO_OFFSET_TIME
 
 		override fun read(`in`: JsonReader): OffsetTime? {

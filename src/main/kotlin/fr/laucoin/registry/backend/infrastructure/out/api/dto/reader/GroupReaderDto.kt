@@ -6,4 +6,4 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 @JsonInclude(NON_NULL)
 data class GroupReaderDto(
 	var members: List<ParticipantReaderDto> = emptyList(),
-): GroupWithoutMemberReaderDto()
+) : GroupWithoutMemberReaderDto()

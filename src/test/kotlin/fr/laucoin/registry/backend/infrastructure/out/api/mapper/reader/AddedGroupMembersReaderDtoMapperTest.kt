@@ -2,12 +2,12 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AddedGroupMembersReaderDto
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class AddedGroupMembersReaderDtoMapperTest {
 	private val mapper = AddedGroupMembersReaderDtoMapper()

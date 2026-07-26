@@ -11,18 +11,18 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithProjectAndModel
+import org.springframework.stereotype.Component
 import java.util.Objects
 import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
 
 @Component
 class ParticipantEntityMapper(
 	private val gson: Gson,
 	private val userMapper: UserEntityMapper,
-): IEntityMapper<ParticipantModel, ParticipantEntity> {
-	private val groupListType = object: TypeToken<List<GroupModel>>() {}.type
-	private val uuidListType = object: TypeToken<List<UUID>>() {}.type
+) : IEntityMapper<ParticipantModel, ParticipantEntity> {
+	private val groupListType = object : TypeToken<List<GroupModel>>() {}.type
+	private val uuidListType = object : TypeToken<List<UUID>>() {}.type
 
 	override fun toModel(entity: ParticipantEntity): ParticipantModel {
 		return ParticipantModel().apply {
@@ -37,7 +37,6 @@ class ParticipantEntityMapper(
 			status = buildStatus(entity.lastMovementType)
 			lastMovement = entity.lastMovementDateTime
 			user = mapUser(entity)
-			purged = entity.purged
 		}.fillWithProjectAndEntity(entity)
 	}
 
@@ -77,7 +76,6 @@ class ParticipantEntityMapper(
 			endAvailabilityDate = model.endAvailability?.date
 			endAvailabilityTime = model.endAvailability?.time
 			userId = model.user?.id
-			purged = model.purged
 		}.fillWithProjectAndModel(model)
 	}
 }

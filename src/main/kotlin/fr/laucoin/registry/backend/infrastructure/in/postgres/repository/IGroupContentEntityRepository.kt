@@ -15,15 +15,15 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
-import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 @Repository
-interface IGroupContentEntityRepository: ReactiveCrudRepository<GroupContentEntity, UUID> {
+interface IGroupContentEntityRepository : ReactiveCrudRepository<GroupContentEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_CONTENT_TO_CONTENT

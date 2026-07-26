@@ -3,11 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -17,6 +12,11 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class UserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
@@ -35,7 +35,6 @@ class UserReaderDtoMapperTest {
 						role = "ADMIN"
 						birthday = LocalDate.now()
 						lastLogin = ZonedDateTime.now()
-						purged = false
 					},
 					1,
 				),
@@ -47,7 +46,6 @@ class UserReaderDtoMapperTest {
 						email = "john.doe@test.com"
 						birthday = LocalDate.now()
 						lastLogin = ZonedDateTime.now()
-						purged = false
 					},
 					0,
 				),
@@ -79,6 +77,5 @@ class UserReaderDtoMapperTest {
 		assertEquals(user.role, result.role?.value)
 		assertEquals(user.birthday, result.birthday)
 		assertEquals(user.lastLogin, result.lastLogin)
-		assertEquals(user.purged, result.purged)
 	}
 }

@@ -7,9 +7,9 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
+import org.springframework.stereotype.Component
 import java.util.Objects
 import java.util.Optional
-import org.springframework.stereotype.Component
 
 @Component
 class ProjectProfileReaderDtoMapper(
@@ -17,7 +17,7 @@ class ProjectProfileReaderDtoMapper(
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val partialUserMapper: PartialUserReaderDtoMapper,
-): IGenericReaderDtoMapper<ProjectProfileModel, ProjectProfileReaderDto> {
+) : IGenericReaderDtoMapper<ProjectProfileModel, ProjectProfileReaderDto> {
 	override fun toDto(model: ProjectProfileModel): ProjectProfileReaderDto {
 		return ProjectProfileReaderDto(
 			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
@@ -33,6 +33,7 @@ class ProjectProfileReaderDtoMapper(
 			status = buildStatus(model),
 			startAccess = model.startAccess,
 			endAccess = model.endAccess,
+			favorite = model.favorite,
 		).apply {
 			id = model.id
 			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)

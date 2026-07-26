@@ -5,13 +5,13 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.infrastructure.`in`.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileRoleCountEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectEntity
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class ProjectProfileRoleCountEntityMapper(
 	private val projectMapper: ProjectEntityMapper,
-): IEntityMapper<ProjectProfileRoleCountModel, ProjectProfileRoleCountEntity> {
+) : IEntityMapper<ProjectProfileRoleCountModel, ProjectProfileRoleCountEntity> {
 	override fun toModel(entity: ProjectProfileRoleCountEntity): ProjectProfileRoleCountModel {
 		return ProjectProfileRoleCountModel().apply {
 			project = mapProject(entity)

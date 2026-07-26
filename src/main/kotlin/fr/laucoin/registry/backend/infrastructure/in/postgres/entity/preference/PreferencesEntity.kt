@@ -22,12 +22,12 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preferenc
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preference.PreferenceFields.PREFERENCE_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preference.PreferenceFields.PREFERENCE_THEME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preference.PreferenceFields.PREFERENCE_USER_ID
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.util.UUID
 
 @Table(PREFERENCE_TABLE)
 data class PreferencesEntity(
@@ -78,5 +78,5 @@ data class PreferencesEntity(
 	@ReadOnlyProperty
 	@Column(PREFERENCE_SELECTED_PROFILE_END_ACCESS_TIME)
 	var selectedProfileEndAccessTime: OffsetTime? = null,
-): GenericEntity()
+) : GenericEntity()
 

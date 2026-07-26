@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.NumericRang
 import org.springframework.stereotype.Component
 
 @Component
-class NumericRangeWriterDtoMapper: IGenericWriterDtoMapper<NumericRangeModel, NumericRangeWriterDto> {
+class NumericRangeWriterDtoMapper : IGenericWriterDtoMapper<NumericRangeModel, NumericRangeWriterDto> {
 	override fun toModel(dto: NumericRangeWriterDto): NumericRangeModel {
 		return NumericRangeModel().apply {
 			lower = dto.lower

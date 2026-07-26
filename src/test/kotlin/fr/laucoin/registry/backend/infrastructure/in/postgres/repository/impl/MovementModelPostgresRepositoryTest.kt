@@ -1,14 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.MovementSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.MovementEntityMapper
@@ -21,10 +24,6 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
@@ -45,8 +44,14 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZonedDateTime
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-class MovementModelPostgresRepositoryTest: TestContext() {
+class MovementModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IMovementEntityRepository
 
@@ -255,6 +260,17 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findOngoingActivities execute its CTE query against the database`() {
+		// Act
+		val result = repository.findOngoingActivities(projectId, limit = 200).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findOngoingActivities(projectId, visibilitySearched = true, limit = 200)
+		assertTrue(result!!.all { it.type == OUT && Objects.nonNull(it.activity) })
+	}
+
+	@Test
 	fun `Should countAllByParticipantId call repository countAllByParticipantId`() {
 		// Act
 		val result = repository.countAllByParticipantId(projectId, participantId, MovementSearchParamModel()).block()
@@ -330,6 +346,148 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			listOf(uuid),
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage execute the sorted query and order by type then dateTime descending`() {
+		// Arrange
+		val pageable = PageableModel(0, 60)
+		val params = MovementSearchParamModel(typeSearched = null)
+		val sort = listOf(
+			SortModel(MovementSortFieldEnum.TYPE),
+			SortModel(MovementSortFieldEnum.DATE_TIME, descending = true),
+		)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(60, result!!.totalElements)
+		assertEquals(60, result.content.size)
+		val expectedOrder = result.content
+			.sortedWith(compareBy<MovementModel> { it.type!!.name }.thenByDescending { it.dateTime.toInstant() })
+			.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	@Test
+	fun `Should findPage combine the visibility filter with the sorted query`() {
+		// Arrange
+		val pageable = PageableModel(0, 60)
+		val params = MovementSearchParamModel(visibilitySearched = true, typeSearched = null)
+		val sort = listOf(
+			SortModel(MovementSortFieldEnum.DATE_TIME),
+			SortModel(MovementSortFieldEnum.TYPE, descending = true),
+		)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(59, result!!.totalElements)
+		assertEquals(59, result.content.size)
+		assertTrue(result.content.all { it.visible })
+		val expectedOrder = result.content
+			.sortedWith(compareBy<MovementModel> { it.dateTime.toInstant() }.thenByDescending { it.type!!.name })
+			.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	@Test
+	fun `Should findCurrentPage execute the sorted current query with a consistent total`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val params = MovementSearchParamModel(typeSearched = null)
+		val sort = listOf(
+			SortModel(MovementSortFieldEnum.TYPE),
+			SortModel(MovementSortFieldEnum.DATE_TIME, descending = true),
+		)
+
+		// Act
+		val result = repository.findCurrentPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertTrue(result!!.content.isNotEmpty())
+		assertEquals(result.content.size.toLong(), result.totalElements)
+		val expectedOrder = result.content
+			.sortedWith(compareBy<MovementModel> { it.type!!.name }.thenByDescending { it.dateTime.toInstant() })
+			.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	/**
+	 * The ongoing-activities panel is read per PARTICIPANT, not per activity: an outing
+	 * stops being ongoing the moment someone checks its people back in, and a plain entry
+	 * that does not name the activity again ends it just as much as one that does
+	 * (functional/features/dashboards.md — "Ongoing activities"). Keying on the activity's
+	 * own last movement instead left a returned group showing as still out, which the panel
+	 * exists to prevent.
+	 */
+	@Nested
+	@TestInstance(PER_CLASS)
+	@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+	inner class OngoingActivityTests {
+		private val outing: MovementModel = MovementModel(contentType = REGISTERED).apply {
+			dateTime = ZonedDateTime.now().minusHours(2)
+			type = OUT
+			activity = ActivityModel().apply { id = activityId }
+			project = ProjectModel().apply { id = projectId }
+			content = listOf(MovementContentModel().apply {
+				participant = ParticipantModel().apply { id = participantId }
+			})
+		}
+		private lateinit var outingId: UUID
+		private lateinit var returnId: UUID
+
+		@Test
+		@Order(1)
+		fun `Should list an outing whose participant is still out`() {
+			// Arrange
+			outingId = repository.create(outing.apply { create(currentUser()) }).block()!!.id!!
+
+			// Act
+			val result = repository.findOngoingActivities(projectId, limit = 200).collectList().block()
+
+			// Assert
+			assertTrue(result!!.any { it.id == outingId })
+		}
+
+		@Test
+		@Order(2)
+		fun `Should drop the outing once a plain entry checks its participant back in`() {
+			// Arrange
+			val back = MovementModel(contentType = REGISTERED).apply {
+				dateTime = ZonedDateTime.now()
+				type = IN
+				project = ProjectModel().apply { id = projectId }
+				content = listOf(MovementContentModel().apply {
+					participant = ParticipantModel().apply { id = participantId }
+				})
+				create(currentUser())
+			}
+			returnId = repository.create(back).block()!!.id!!
+
+			// Act
+			val result = repository.findOngoingActivities(projectId, limit = 200).collectList().block()
+
+			// Assert
+			assertTrue(result!!.none { it.id == outingId })
+		}
+
+		@Test
+		@Order(3)
+		fun `Should clean up the movements it created`() {
+			// Act
+			repository.deleteById(returnId).block()
+			repository.deleteById(outingId).block()
+
+			// Assert
+			assertNull(repository.findById(projectId, outingId, visibilitySearched = null).block())
+			assertNull(repository.findById(projectId, returnId, visibilitySearched = null).block())
+		}
 	}
 
 	@Nested

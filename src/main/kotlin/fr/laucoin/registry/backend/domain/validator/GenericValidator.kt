@@ -3,13 +3,13 @@ package fr.laucoin.registry.backend.domain.validator
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import jakarta.validation.ConstraintValidator
+import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import java.util.Objects
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
-import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
-abstract class GenericValidator<A: Annotation?, T>: ConstraintValidator<A, T> {
+abstract class GenericValidator<A : Annotation?, T> : ConstraintValidator<A, T> {
 	protected val log = LoggerFactory.getLogger(this::class.java)
 
 	protected fun extractValue(fieldName: String, value: Any): Any? {

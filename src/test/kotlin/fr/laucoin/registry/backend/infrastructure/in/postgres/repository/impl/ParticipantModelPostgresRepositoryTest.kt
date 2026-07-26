@@ -1,11 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ParticipantEntityMapper
@@ -16,11 +18,6 @@ import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -39,8 +36,14 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.LocalDate
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class ParticipantModelPostgresRepositoryTest: TestContext() {
+class ParticipantModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IParticipantEntityRepository
 
@@ -241,6 +244,48 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 		verify(mapper, never()).toModel(any())
 	}
 
+	@Test
+	fun `Should findPage execute the sorted query and order by type then lastName descending`() {
+		// Arrange
+		val pageable = PageableModel(0, 50)
+		val params = ParticipantSearchParamModel()
+		val sort = listOf(
+			SortModel(ParticipantSortFieldEnum.TYPE),
+			SortModel(ParticipantSortFieldEnum.LAST_NAME, descending = true),
+		)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(50, result.totalElements)
+		assertEquals(50, result.content.size)
+		val expectedOrder = result.content
+			.sortedWith(compareBy<ParticipantModel> { it.type!!.name }.thenByDescending { it.lastName })
+			.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	@Test
+	fun `Should findPage combine the visibility filter with the sorted query`() {
+		// Arrange
+		val pageable = PageableModel(0, 50)
+		val params = ParticipantSearchParamModel(visibilitySearched = true)
+		val sort = listOf(SortModel(ParticipantSortFieldEnum.LAST_NAME))
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(49, result.totalElements)
+		assertEquals(49, result.content.size)
+		assertTrue(result.content.all { it.visible })
+		val expectedOrder = result.content.sortedBy { it.lastName }.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
 	@Nested
 	@TestInstance(PER_CLASS)
 	@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -283,7 +328,6 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				type = REGISTERED
 				groups = listOf(GroupModel().apply { id = groupId })
 				project = ProjectModel().apply { id = projectId }
-				purged = false
 				create(currentUser())
 			}
 
@@ -310,7 +354,6 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				project = ProjectModel().apply { id = projectId }
-				purged = false
 				create(currentUser())
 			}
 
@@ -335,5 +378,27 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			verify(postgresRepository).deleteById(uuid)
 		}
+	}
+
+	@Test
+	fun `Should findArrivingToday execute its CTE query against the database`() {
+		// Act
+		val result =
+			repository.findArrivingToday(projectId, visibilitySearched = true, limit = 200).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findArrivingToday(projectId, visibilitySearched = true, limit = 200)
+	}
+
+	@Test
+	fun `Should findDepartingToday execute its CTE query against the database`() {
+		// Act
+		val result =
+			repository.findDepartingToday(projectId, visibilitySearched = true, limit = 200).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findDepartingToday(projectId, visibilitySearched = true, limit = 200)
 	}
 }

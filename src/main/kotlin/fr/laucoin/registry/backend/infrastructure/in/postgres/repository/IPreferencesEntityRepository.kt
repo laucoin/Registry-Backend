@@ -8,14 +8,14 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 @Repository
-interface IPreferencesEntityRepository: ReactiveCrudRepository<PreferencesEntity, UUID> {
+interface IPreferencesEntityRepository : ReactiveCrudRepository<PreferencesEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $PREFERENCE_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN

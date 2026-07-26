@@ -1,20 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IProjectEntityRepository
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.OffsetDateTime
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -31,8 +27,15 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class ProjectModelPostgresRepositoryTest: TestContext() {
+class ProjectModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IProjectEntityRepository
 
@@ -164,6 +167,42 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		verify(mapper, never()).toModel(any())
 	}
 
+	@Test
+	fun `Should findPage execute the sorted query and order by name then beginDate descending`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = ProjectSearchParamModel()
+		val sort = listOf(
+			SortModel(ProjectSortFieldEnum.NAME),
+			SortModel(ProjectSortFieldEnum.BEGIN_DATE, descending = true),
+		)
+
+		// Act
+		val result = port.findPage(pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(1, result.totalElements)
+		assertEquals(listOf("Project 1"), result.content.map { it.name })
+	}
+
+	@Test
+	fun `Should findPage combine project ids and the visibility filter with the sorted query`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = ProjectSearchParamModel(textSearched = null, visibilitySearched = true)
+		val sort = listOf(SortModel(ProjectSortFieldEnum.NAME))
+
+		// Act
+		val result = port.findPage(listOf(projectId), pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(1, result.totalElements)
+		assertTrue(result.content.all { it.visible })
+		assertEquals(listOf("Project 1"), result.content.map { it.name })
+	}
+
 	@Nested
 	@TestInstance(PER_CLASS)
 	@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -218,5 +257,15 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			verify(postgresRepository).deleteById(uuid)
 		}
+	}
+
+	@Test
+	fun `Should findOpenAlertProjectsByUserId execute its aggregate query against the database`() {
+		// Act
+		val result = port.findOpenAlertProjectsByUserId(currentUser().id!!, 5).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findOpenAlertProjectsByUserId(currentUser().id!!, 5)
 	}
 }

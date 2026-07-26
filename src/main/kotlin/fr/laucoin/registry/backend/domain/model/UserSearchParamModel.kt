@@ -8,7 +8,7 @@ data class UserSearchParamModel(
 	constructor(
 		textSearched: String? = null,
 		visibilitySearched: Boolean? = null,
-	): this(visibilitySearched) {
+	) : this(visibilitySearched) {
 		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
 	}
 }

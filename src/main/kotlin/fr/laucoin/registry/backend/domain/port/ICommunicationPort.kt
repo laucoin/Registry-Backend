@@ -1,12 +1,14 @@
 package fr.laucoin.registry.backend.domain.port
 
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import java.util.UUID
+import fr.laucoin.registry.backend.domain.model.SortModel
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 interface ICommunicationPort {
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
@@ -14,6 +16,7 @@ interface ICommunicationPort {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel,
+		sort: List<SortModel<CommunicationSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<CommunicationModel>>
 
 	fun findByMovementIdsWithLimit(

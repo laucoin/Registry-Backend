@@ -8,7 +8,7 @@ import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 import org.springframework.http.HttpStatus.BAD_REQUEST
 
-class ProjectOptionValidator: ConstraintValidator<ProjectOptionDependencies, List<ProjectOptionEnum>> {
+class ProjectOptionValidator : ConstraintValidator<ProjectOptionDependencies, List<ProjectOptionEnum>> {
 	override fun isValid(options: List<ProjectOptionEnum>?, context: ConstraintValidatorContext): Boolean {
 		val missingOptions = mutableSetOf<ProjectOptionEnum>()
 		options?.forEach {

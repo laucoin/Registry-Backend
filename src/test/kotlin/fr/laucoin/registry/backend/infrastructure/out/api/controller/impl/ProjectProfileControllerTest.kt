@@ -43,13 +43,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -69,8 +62,15 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
-class ProjectProfileControllerTest: TestContext() {
+class ProjectProfileControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IProjectProfileService
 
@@ -362,10 +362,10 @@ class ProjectProfileControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val profiles = ProjectProfilesWriterDto(userIds = listOf(uuid), role = "ROLE")
-		whenever(service.createProjectProfiles(any(), any(), any(), any())).thenReturn(
+		whenever(service.createProjectProfiles(any(), any(), any(), any(), any())).thenReturn(
 			Mono.just(Pair(listOf(UUID.randomUUID()), emptyList()))
 		)
-		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
+		whenever(profilesWriterMapper.toTemplate(any(), any())).thenReturn(ProjectProfileModel())
 		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
 			CreatedProjectProfilesReaderDto(
 				emptyList(),
@@ -388,12 +388,13 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(profilesWriterMapper).toModels(profiles, projectId)
+		verify(profilesWriterMapper).toTemplate(profiles, projectId)
 		verify(createdProjectProfilesReaderMapper).toDto(any())
 		verify(service).createProjectProfiles(
 			any(),
 			eq(projectId),
 			eq(profiles.userIds!!),
+			eq(emptyList()),
 			any()
 		)
 	}
@@ -410,12 +411,13 @@ class ProjectProfileControllerTest: TestContext() {
 				any(),
 				any(),
 				any(),
+				any(),
 				any()
 			)
 		).thenReturn(
 			Mono.just(Pair(listOf(uuid2), listOf(uuid)))
 		)
-		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
+		whenever(profilesWriterMapper.toTemplate(any(), any())).thenReturn(ProjectProfileModel())
 		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
 			CreatedProjectProfilesReaderDto(
 				listOf(uuid2),
@@ -441,11 +443,12 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(profilesWriterMapper).toModels(profiles, projectId)
+		verify(profilesWriterMapper).toTemplate(profiles, projectId)
 		verify(service).createProjectProfiles(
 			any(),
 			eq(projectId),
 			eq(profiles.userIds!!),
+			eq(emptyList()),
 			any()
 		)
 	}

@@ -14,9 +14,9 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.Movement
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ParticipantTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.PresenceStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectProfileStatusReaderDtoMapper
-import java.security.Principal
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
+import java.security.Principal
 
 @RestController
 class MetadataV1Controller(
@@ -26,7 +26,7 @@ class MetadataV1Controller(
 	private val movementTypeReaderMapper: MovementTypeReaderDtoMapper,
 	private val participantTypeReaderMapper: ParticipantTypeReaderDtoMapper,
 	private val alertStatusReaderMapper: AlertStatusReaderDtoMapper,
-): IMetadataV1Controller {
+) : IMetadataV1Controller {
 	override fun getPresencesStatus(principal: Principal): Flux<LabelDto> {
 		return Flux.fromIterable(PresenceStatusEnum.entries).map(presenceStatusMapper::toDto)
 	}

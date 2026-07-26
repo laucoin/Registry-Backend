@@ -1,0 +1,16 @@
+# Local environment profile — activate with `-Dspring.profiles.active=local`
+# (or SPRING_PROFILES_ACTIVE=local). Unlike `dev`, datasource and OIDC values
+# are still supplied via environment variables (same placeholders as the base
+# application.yml). This profile only opts into the seed dataset — never enable
+# it in production. Rate limiting stays on: the `e2e` profile is the one that
+# disables it, so local development exercises the production behaviour.
+
+spring:
+  flyway:
+    # Load the huge seed dataset (repeatable migration, runs after all versioned
+    # migrations). R__huge_test_dataset.sql TRUNCATEs the dataset's tables then
+    # re-inserts, so re-runs override existing data — but only the dataset's
+    # tables, never the Flyway history or role tables.
+    locations:
+      - classpath:db/migrations
+      - classpath:db/seed

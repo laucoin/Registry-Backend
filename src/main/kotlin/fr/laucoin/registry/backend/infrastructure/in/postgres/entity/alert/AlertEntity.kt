@@ -6,9 +6,9 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.Ale
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertFields.ALERT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertFields.ALERT_TITLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericProjectEntity
-import java.time.ZonedDateTime
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.ZonedDateTime
 
 @Table(ALERT_TABLE)
 data class AlertEntity(
@@ -18,4 +18,4 @@ data class AlertEntity(
 	var title: String? = null,
 	@Column(ALERT_STATUS)
 	var status: AlertStatusEnum? = null,
-): GenericProjectEntity()
+) : GenericProjectEntity()

@@ -9,7 +9,7 @@ import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
 @Component
-class HeadersHandler(private val localeContextResolver: LocaleContextResolver): WebFilter {
+class HeadersHandler(private val localeContextResolver: LocaleContextResolver) : WebFilter {
 
 	override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
 		val localeContext = localeContextResolver.resolveLocaleContext(exchange)

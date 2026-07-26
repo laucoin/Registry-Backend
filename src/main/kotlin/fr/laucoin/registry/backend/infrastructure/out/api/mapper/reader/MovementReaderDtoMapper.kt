@@ -5,9 +5,9 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
+import org.springframework.stereotype.Component
 import java.util.Objects
 import java.util.Optional
-import org.springframework.stereotype.Component
 
 @Component
 class MovementReaderDtoMapper(
@@ -16,7 +16,7 @@ class MovementReaderDtoMapper(
 	private val activityReasonReaderDtoMapper: MovementActivityReasonReaderDtoMapper,
 	private val reasonReaderDtoMapper: MovementReasonReaderDtoMapper,
 	private val movementContentMapper: MovementContentReaderDtoMapper,
-): IGenericReaderDtoMapper<MovementModel, MovementReaderDto> {
+) : IGenericReaderDtoMapper<MovementModel, MovementReaderDto> {
 	override fun toDto(model: MovementModel): MovementReaderDto {
 		return MovementReaderDto(
 			dateTime = model.dateTime,
@@ -31,6 +31,7 @@ class MovementReaderDtoMapper(
 			else null,
 			contentType = model.contentType,
 			content = movementContentMapper.toDtoList(model.content),
+			lastCommunicationAt = model.lastCommunicationAt,
 		).apply {
 			id = model.id
 			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)

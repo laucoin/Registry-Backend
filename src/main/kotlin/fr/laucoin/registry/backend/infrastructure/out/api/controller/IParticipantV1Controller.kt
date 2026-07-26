@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -12,6 +13,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupWithoutMemberReaderDto
@@ -25,9 +28,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.time.ZonedDateTime
-import java.util.TimeZone
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
@@ -42,6 +42,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.TimeZone
+import java.util.UUID
 
 @Tag(name = "Participants management", description = "API for Participants-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/participants")
@@ -51,6 +54,7 @@ interface IParticipantV1Controller {
 		description = "Find or get paginated Participants",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
 	fun findParticipants(
 		@PathVariable projectId: UUID,
@@ -94,6 +98,7 @@ interface IParticipantV1Controller {
 		description = "Search Users to link to a Participant",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/users")
 	fun searchUsers(
 		@PathVariable projectId: UUID,
@@ -105,6 +110,7 @@ interface IParticipantV1Controller {
 		description = "Search Groups to add Participant in it",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/groups")
 	fun searchGroups(
 		@PathVariable projectId: UUID,
@@ -167,6 +173,7 @@ interface IParticipantV1Controller {
 		description = "Disable Participant, it will not visible anymore in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/disable")
 	fun disableParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -179,6 +186,7 @@ interface IParticipantV1Controller {
 		description = "Enable Participant, obviously it will be visible again in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/enable")
 	fun enableParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -191,6 +199,7 @@ interface IParticipantV1Controller {
 		description = "Delete all Participant data.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
 	fun deleteParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

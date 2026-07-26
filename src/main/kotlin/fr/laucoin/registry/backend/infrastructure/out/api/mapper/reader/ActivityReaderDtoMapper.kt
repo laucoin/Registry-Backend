@@ -3,14 +3,14 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ActivityReaderDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class ActivityReaderDtoMapper(
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
-): IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
+) : IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
 	override fun toDto(model: ActivityModel): ActivityReaderDto {
 		return ActivityReaderDto(
 			name = model.name,

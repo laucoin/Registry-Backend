@@ -7,9 +7,6 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
-import java.time.LocalDate
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -18,6 +15,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.LocalDate
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class ParticipantReaderDtoMapperTest {
 	private val partialUserMapper: PartialUserReaderDtoMapper = mock()
@@ -95,7 +95,6 @@ class ParticipantReaderDtoMapperTest {
 		assertEquals(expectedMajor, result.major)
 		assertEquals(participant.startAvailability, result.startAvailability)
 		assertEquals(participant.endAvailability, result.endAvailability)
-		assertEquals(participant.purged, result.purged)
 		assertEquals(participant.visible, result.visible)
 		assertEquals(participant.creation, result.creation)
 		assertEquals(participant.lastEdition, result.lastEdition)

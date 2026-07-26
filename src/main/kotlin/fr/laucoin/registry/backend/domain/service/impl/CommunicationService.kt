@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -27,14 +28,13 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -43,6 +43,8 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class CommunicationService(
@@ -54,13 +56,14 @@ class CommunicationService(
 	private val maxActivityResult: Int,
 	@param:Value($$"${registry.feature.communication.searched.max-alert-result}")
 	private val maxAlertResult: Int,
-): ICommunicationService, GenericService() {
+) : ICommunicationService, GenericService() {
 	override fun findCommunicationPage(
 		projectId: UUID,
 		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel
+		searchParams: CommunicationSearchParamModel,
+		sort: List<SortModel<CommunicationSortFieldEnum>>,
 	): Mono<PageModel<CommunicationModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sort)
 	}
 
 	override fun findCommunicationById(
@@ -135,6 +138,7 @@ class CommunicationService(
 					dateTime = communication.dateTime
 					movement = communication.movement
 					message = communication.message
+					onBehalfOfMovement = communication.onBehalfOfMovement
 				}
 			}
 			.updateCommunication(currentUser)

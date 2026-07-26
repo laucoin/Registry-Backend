@@ -6,13 +6,13 @@ import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.test.assertEquals
 
 class ProjectOptionReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()

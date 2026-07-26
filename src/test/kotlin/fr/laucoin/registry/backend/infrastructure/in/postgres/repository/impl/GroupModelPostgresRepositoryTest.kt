@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.GroupEntityMapper
@@ -15,10 +17,6 @@ import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -38,8 +36,13 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class GroupModelPostgresRepositoryTest: TestContext() {
+class GroupModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IGroupEntityRepository
 
@@ -239,6 +242,46 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage execute the sorted query and order by name then startAvailabilityDate descending`() {
+		// Arrange
+		val pageable = PageableModel(0, 25)
+		val params = GroupSearchParamModel()
+		val sort = listOf(
+			SortModel(GroupSortFieldEnum.NAME),
+			SortModel(GroupSortFieldEnum.START_AVAILABILITY_DATE, descending = true),
+		)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(20, result.totalElements)
+		assertEquals(20, result.content.size)
+		val expectedOrder = result.content.sortedBy { it.name }.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	@Test
+	fun `Should findPage combine the visibility filter with the sorted query`() {
+		// Arrange
+		val pageable = PageableModel(0, 25)
+		val params = GroupSearchParamModel(textSearched = null, visibilitySearched = true)
+		val sort = listOf(SortModel(GroupSortFieldEnum.NAME, descending = true))
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(18, result.totalElements)
+		assertEquals(18, result.content.size)
+		assertTrue(result.content.all { it.visible })
+		val expectedOrder = result.content.sortedByDescending { it.name }.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
 	}
 
 	@Nested

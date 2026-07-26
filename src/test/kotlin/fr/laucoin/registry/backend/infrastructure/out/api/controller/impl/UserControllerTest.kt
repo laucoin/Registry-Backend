@@ -21,9 +21,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -42,8 +39,11 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
-class UserControllerTest: TestContext() {
+class UserControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IUserService
 
@@ -103,7 +103,7 @@ class UserControllerTest: TestContext() {
 			visibilitySearched = visibilitySearched,
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(UserModel()))
-		whenever(service.findUsersPage(any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findUsersPage(any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(UserReaderDto())),
 		)
@@ -130,7 +130,7 @@ class UserControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findUsersPage(pageable, searchParams)
+		verify(service).findUsersPage(pageable, searchParams, emptyList())
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(userRoleReaderMapper)
 	}
@@ -279,11 +279,17 @@ class UserControllerTest: TestContext() {
 		verify(service).unblockUserById(any(), eq(uuid))
 	}
 
+	/**
+	 * v1 is frozen, so these still answer a UserReaderDto — but the act underneath
+	 * is now a deletion, and the row has to be read BEFORE it goes for the legacy
+	 * response body to exist at all.
+	 */
 	@Test
-	fun `Should impersonateUserById return 200`() {
+	fun `Should impersonateUserById delete the user and return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.impersonateUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
+		whenever(service.findUserById(eq(uuid), anyOrNull())).thenReturn(Mono.just(UserModel()))
+		whenever(service.deleteUserById(any(), eq(uuid))).thenReturn(Mono.empty())
 		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
@@ -298,13 +304,15 @@ class UserControllerTest: TestContext() {
 
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), eq(uuid))
+		verify(service).findUserById(eq(uuid), anyOrNull())
+		verify(service).deleteUserById(any(), eq(uuid))
 	}
 
 	@Test
-	fun `Should impersonateCurrentUser return 200`() {
+	fun `Should impersonateCurrentUser delete the caller and return 200`() {
 		// Arrange
-		whenever(service.impersonateUserById(any(), any())).thenReturn(Mono.just(UserModel()))
+		whenever(service.findUserById(any(), anyOrNull())).thenReturn(Mono.just(UserModel()))
+		whenever(service.deleteCurrentUser(any())).thenReturn(Mono.empty())
 		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
 		// Act
@@ -319,7 +327,7 @@ class UserControllerTest: TestContext() {
 
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), any())
+		verify(service).deleteCurrentUser(any())
 	}
 
 	@Test

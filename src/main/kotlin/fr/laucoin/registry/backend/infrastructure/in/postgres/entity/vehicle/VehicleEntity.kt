@@ -12,12 +12,12 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.V
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleFields.VEHICLE_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleFields.VEHICLE_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleFields.VEHICLE_TABLE
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
 
 @Table(VEHICLE_TABLE)
 data class VehicleEntity(
@@ -41,4 +41,4 @@ data class VehicleEntity(
 	var endAvailabilityDate: LocalDate? = null,
 	@Column(VEHICLE_END_AVAILABILITY_TIME)
 	var endAvailabilityTime: OffsetTime? = null,
-): GenericProjectEntity()
+) : GenericProjectEntity()

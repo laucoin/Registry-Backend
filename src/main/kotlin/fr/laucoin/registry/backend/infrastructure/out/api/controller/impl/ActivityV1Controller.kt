@@ -14,10 +14,10 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ActivityWri
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ActivityReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ActivityWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class ActivityV1Controller(
@@ -25,7 +25,7 @@ class ActivityV1Controller(
 	private val readerMapper: ActivityReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: ActivityWriterDtoMapper,
-): IActivityV1Controller {
+) : IActivityV1Controller {
 	override fun findActivities(
 		projectId: UUID,
 		pageNumber: Int,

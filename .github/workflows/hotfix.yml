@@ -14,7 +14,7 @@ env:
 
 jobs:
   hotfix-image:
-    name: Build & push hotfix image
+    name: Build, scan & push hotfix image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,8 +25,29 @@ jobs:
       # build stage reads it, so the jar embeds the hotfix version.
       - name: Pin build to the hotfix version
         run: echo "version=${{ github.ref_name }}" > version.properties
+      # Build locally first (load, no push) so trivy scans the exact image
+      # before publishing — a hotfix must not reintroduce a HIGH/CRITICAL vuln.
       # Tag == the exact hotfix tag name, e.g. 1.0.0-hotfix-1.
-      - uses: ./.github/actions/docker-publish
+      - name: Build hotfix image (local, no push)
+        uses: ./.github/actions/docker-publish
+        with:
+          registry: ${{ env.REGISTRY }}
+          image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tag: ${{ github.ref_name }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+          push: "false"
+          load: "true"
+      - name: Scan image (trivy — HIGH/CRITICAL blocks)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Push hotfix image
+        uses: ./.github/actions/docker-publish
         with:
           registry: ${{ env.REGISTRY }}
           image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}

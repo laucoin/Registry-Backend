@@ -13,11 +13,11 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectPr
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectProfileRoleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IProjectProfileEntityRepository
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Service
 class ProjectProfileModelPostgresRepository(
@@ -25,7 +25,7 @@ class ProjectProfileModelPostgresRepository(
 	private val mapper: ProjectProfileEntityMapper,
 	private val roleMapper: ProjectProfileRoleEntityMapper,
 	private val roleCountMapper: ProjectProfileRoleCountEntityMapper,
-): IProjectProfilePort {
+) : IProjectProfilePort {
 	override fun findProjectProfilesPageByUserId(
 		userId: UUID,
 		pageable: PageableModel,
@@ -39,6 +39,7 @@ class ProjectProfileModelPostgresRepository(
 				searchParams.availabilitySearched,
 				searchParams.statusSearched,
 				searchParams.dateTimeSearched,
+				searchParams.favoriteSearched,
 			),
 			repository.findByUserId(
 				userId,
@@ -47,6 +48,7 @@ class ProjectProfileModelPostgresRepository(
 				searchParams.availabilitySearched,
 				searchParams.statusSearched,
 				searchParams.dateTimeSearched,
+				searchParams.favoriteSearched,
 				pageable.limit,
 				pageable.offset,
 			).map(mapper::toModel).collectList(),
@@ -84,6 +86,20 @@ class ProjectProfileModelPostgresRepository(
 		}
 	}
 
+	override fun findSentInvitationsPageByCreatorId(
+		creatorId: UUID,
+		pageable: PageableModel,
+		since: ZonedDateTime,
+	): Mono<PageModel<ProjectProfileModel>> {
+		return Mono.zip(
+			repository.countSentInvitationsByCreatorId(creatorId, since),
+			repository.findSentInvitationsByCreatorId(creatorId, since, pageable.limit, pageable.offset)
+				.map(mapper::toModel).collectList(),
+		).map {
+			PageModel(pageable, it.t1, it.t2)
+		}
+	}
+
 	override fun findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 		projectId: UUID,
 		userIds: List<UUID>,
@@ -103,10 +119,25 @@ class ProjectProfileModelPostgresRepository(
 		)
 	}
 
+	/**
+	 * Blocking a project profile has to revoke the authorities it granted, and the
+	 * filter is what does it: the block does not change the profile STATUS, it
+	 * clears `visible` — BLOCKED is a presentation the reader DTO derives from that
+	 * flag (hence its "Blocked (Accepted)" label). Filtering on ACCEPTED alone
+	 * therefore left a blocked member holding every authority their role carries.
+	 *
+	 * The earlier A/B that made this look unsafe — the filter appearing to break the
+	 * two dashboards-panels arrival/departure journeys — was a confound, not a
+	 * mechanism: those journeys seeded their availability windows from a UTC date
+	 * while the backend answers CURRENT_DATE in its own zone, so they failed by the
+	 * clock alone between midnight and 02:00 CEST, in both arms. With that fixed in
+	 * the suite, the whole parity run is byte-for-byte identical with and without
+	 * this filter.
+	 */
 	override fun findProjectProfilesRolesByUserId(userId: UUID): Flux<ProjectProfileRoleModel> {
 		return repository.findAllRolesByUserId(
 			userId,
-			visibilitySearched = null,
+			visibilitySearched = true,
 			availabilitySearched = true,
 			statusSearched = listOf(ACCEPTED),
 		).map(roleMapper::toModel)

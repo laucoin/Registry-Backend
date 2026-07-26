@@ -12,7 +12,7 @@ import ch.qos.logback.core.pattern.color.ANSIConstants.RED_FG
 import ch.qos.logback.core.pattern.color.ANSIConstants.YELLOW_FG
 import ch.qos.logback.core.pattern.color.ForegroundCompositeConverterBase
 
-class LoggerConfig: ForegroundCompositeConverterBase<ILoggingEvent>() {
+class LoggerConfig : ForegroundCompositeConverterBase<ILoggingEvent>() {
 	override fun getForegroundColorCode(project: ILoggingEvent): String {
 		return when (project.level) {
 			ERROR -> RED_FG

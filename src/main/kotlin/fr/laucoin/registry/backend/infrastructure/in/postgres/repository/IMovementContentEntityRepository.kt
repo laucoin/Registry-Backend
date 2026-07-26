@@ -9,14 +9,14 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.CONTENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.SELECT_CONTENT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.WITH_CURRENT_MOVEMENT
-import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
+import java.util.UUID
 
 @Repository
-interface IMovementContentEntityRepository: ReactiveCrudRepository<MovementContentEntity, UUID> {
+interface IMovementContentEntityRepository : ReactiveCrudRepository<MovementContentEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_CONTENT

@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.domain.service
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import java.util.UUID
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 interface IPreferencesService {
 	fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel>

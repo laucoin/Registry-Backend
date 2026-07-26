@@ -7,13 +7,13 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.preferenc
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.GenericExt.fillWithModel
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class PreferencesEntityMapper(
 	private val profileMapper: ProjectProfileEntityMapper
-): IEntityMapper<PreferencesModel, PreferencesEntity> {
+) : IEntityMapper<PreferencesModel, PreferencesEntity> {
 	override fun toModel(entity: PreferencesEntity): PreferencesModel {
 		return PreferencesModel().apply {
 			userId = entity.userId

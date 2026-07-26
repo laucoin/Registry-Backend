@@ -2,14 +2,14 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.VehicleReaderDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class VehicleReaderDtoMapper(
 	private val projectMapper: ProjectReaderDtoMapper,
 	private val statusMapper: PresenceStatusReaderDtoMapper,
-): IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
+) : IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
 	override fun toDto(model: VehicleModel): VehicleReaderDto {
 		return VehicleReaderDto(
 			licensePlate = model.licensePlate,

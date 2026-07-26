@@ -9,7 +9,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.RoleModel
 import fr.laucoin.registry.backend.domain.port.IRolePort
 import fr.laucoin.registry.backend.test.ModelExt.projectId
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -25,6 +24,7 @@ import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.publisher.Flux
+import java.util.stream.Stream
 
 class RoleServiceTest {
 	private val port: IRolePort = mock()
@@ -125,6 +125,28 @@ class RoleServiceTest {
 		// Assert
 		verify(port).findUserRoles()
 		verify(port).findProjectRoles()
+	}
+
+	@Test
+	fun `Should refreshRoles swap in the latest role definitions`() {
+		// Arrange
+		whenever(port.findUserRoles())
+			.thenReturn(Flux.just(RoleModel(role = ROLE_0, level = 0, permissions = listOf(PERMISSION_0))))
+		whenever(port.findProjectRoles())
+			.thenReturn(Flux.just(RoleModel(role = ROLE_0, level = 0, permissions = listOf(REGISTRY_PROJECT_R))))
+		service.refreshRoles()
+		assertEquals(0, service.getLevelByUserRole(ROLE_0))
+
+		// Arrange
+		whenever(port.findUserRoles())
+			.thenReturn(Flux.just(RoleModel(role = ROLE_0, level = 1, permissions = listOf(PERMISSION_1))))
+
+		// Act
+		service.refreshRoles()
+
+		// Assert
+		assertEquals(1, service.getLevelByUserRole(ROLE_0))
+		assertEquals(listOf(PERMISSION_1), service.getAuthoritiesByUserRole(ROLE_0))
 	}
 
 	@ParameterizedTest

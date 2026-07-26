@@ -19,10 +19,6 @@ import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.ModelExt.userIdWithoutProfile
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -38,8 +34,12 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 
-class ProjectProfileModelPostgresRepositoryTest: TestContext() {
+class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IProjectProfileEntityRepository
 
@@ -77,6 +77,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
+			favoriteSearched = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -87,8 +88,30 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
+			favoriteSearched = null,
 		)
 		verify(mapper, times(1)).toModel(any())
+	}
+
+	@Test
+	fun `Should findSentInvitationsPageByCreatorId execute its query against the database`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val since = java.time.ZonedDateTime.now().minusDays(2)
+
+		// Act
+		val result = repository.findSentInvitationsPageByCreatorId(currentUser().id!!, pageable, since).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(0, result.pageNumber)
+		verify(postgresRepository).findSentInvitationsByCreatorId(
+			currentUser().id!!,
+			since,
+			pageable.limit,
+			pageable.offset
+		)
+		verify(postgresRepository).countSentInvitationsByCreatorId(currentUser().id!!, since)
 	}
 
 	@Test
@@ -151,8 +174,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		)
 	}
 
+	/**
+	 * The visibility filter is what a block revokes with: blocking clears `visible`
+	 * and leaves the status at ACCEPTED, so without it a blocked member keeps every
+	 * authority their role carries.
+	 */
 	@Test
-	fun `Should findProjectProfilesRolesByUserId call repository findAllRolesByUserId`() {
+	fun `Should findProjectProfilesRolesByUserId call repository findAllRolesByUserId on visible profiles only`() {
 		// Act
 		val result = repository.findProjectProfilesRolesByUserId(currentUser().id!!)
 			.collectList()
@@ -162,7 +190,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).findAllRolesByUserId(
 			currentUser().id!!,
-			visibilitySearched = null,
+			visibilitySearched = true,
 			availabilitySearched = true,
 			statusSearched = listOf(ACCEPTED),
 		)

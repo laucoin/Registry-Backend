@@ -43,10 +43,6 @@ import fr.laucoin.registry.backend.test.ModelExt.communicationId
 import fr.laucoin.registry.backend.test.ModelExt.movementId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.ZonedDateTime
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -69,6 +65,10 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
 class CommunicationServiceTest {
 	private val port: ICommunicationPort = mock()
@@ -214,14 +214,14 @@ class CommunicationServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = CommunicationSearchParamModel()
 
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findCommunicationPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test

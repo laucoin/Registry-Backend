@@ -6,9 +6,9 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 interface IProjectProfileService {
 	fun findProjectProfilesPage(
@@ -24,7 +24,8 @@ interface IProjectProfileService {
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		userIds: List<UUID>,
-		profiles: List<ProjectProfileModel>
+		emails: List<String>,
+		template: ProjectProfileModel,
 	): Mono<Pair<List<UUID>, List<UUID>>>
 
 	fun updateProjectProfileById(

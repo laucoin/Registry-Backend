@@ -31,7 +31,7 @@ import reactor.core.publisher.Mono
 class AuthorizationErrorHandler(
 	private val translateService: ITranslateService,
 	private val gson: Gson,
-): ServerAuthenticationFailureHandler {
+) : ServerAuthenticationFailureHandler {
 	override fun onAuthenticationFailure(
 		webFilterExchange: WebFilterExchange,
 		exception: AuthenticationException
@@ -76,6 +76,10 @@ class AuthorizationErrorHandler(
 		response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION))
 	}
 
+	/**
+	 * error.title.* / error.message.* live in the errors bundle — same fix
+	 * as RegistryControllerAdvice (raw keys were leaking to clients).
+	 */
 	private fun buildBody(
 		response: ServerHttpResponse,
 		status: HttpStatus,
@@ -88,8 +92,8 @@ class AuthorizationErrorHandler(
 			statusCode = status.value(),
 			statusName = status.name,
 			code = errorCode,
-			title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}"),
-			message = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$errorCode"),
+			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}"),
+			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode"),
 		)
 
 		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))

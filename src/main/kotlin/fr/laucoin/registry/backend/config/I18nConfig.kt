@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.config
 
-import java.util.Locale
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver
+import java.util.Locale
 
 @Configuration
 class I18nConfig(

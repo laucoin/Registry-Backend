@@ -10,11 +10,11 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.Gro
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_TABLE
-import java.time.LocalDate
-import java.time.OffsetTime
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import java.time.LocalDate
+import java.time.OffsetTime
 
 @Table(GROUP_TABLE)
 data class GroupEntity(
@@ -37,4 +37,4 @@ data class GroupEntity(
 	@ReadOnlyProperty
 	@Column(GROUP_OUTSIDE_MEMBERS_COUNT)
 	var outsideMembers: Long? = null,
-): GenericProjectEntity()
+) : GenericProjectEntity()

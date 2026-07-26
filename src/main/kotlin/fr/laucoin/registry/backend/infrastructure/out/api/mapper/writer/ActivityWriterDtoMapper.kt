@@ -5,17 +5,17 @@ import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ActivityWriterDto
+import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.stereotype.Component
 import java.util.Optional
 import java.util.UUID
 import kotlin.time.Duration
-import org.springframework.http.HttpStatus.BAD_REQUEST
-import org.springframework.stereotype.Component
 
 @Component
 class ActivityWriterDtoMapper(
 	private val numericRangeMapper: NumericRangeWriterDtoMapper,
 	private val customDateTimeMapper: CustomDateTimeWriterDtoMapper,
-): IGenericProjectWriterDtoMapper<ActivityModel, ActivityWriterDto> {
+) : IGenericProjectWriterDtoMapper<ActivityModel, ActivityWriterDto> {
 	override fun toModel(dto: ActivityWriterDto, projectId: UUID): ActivityModel {
 		return ActivityModel().apply {
 			name = dto.name

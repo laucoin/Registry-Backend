@@ -21,17 +21,17 @@ import reactor.core.publisher.Mono
 @Service
 class KeycloakAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,
-	@param:Value($$"${external.oidc.authorization-uri}")
+	@param:Value($$"${registry.security.oauth2.authorization-uri}")
 	private val authorizationUri: String,
-	@param:Value($$"${external.oidc.token-uri}")
+	@param:Value($$"${registry.security.oauth2.token-uri}")
 	private val tokenUri: String,
-	@param:Value($$"${external.oidc.end-session-uri}")
+	@param:Value($$"${registry.security.oauth2.end-session-uri}")
 	private val endSessionUri: String,
-	@param:Value($$"${external.oidc.client-id}")
+	@param:Value($$"${registry.security.oauth2.client-id}")
 	private val clientId: String,
-	@param:Value($$"${external.oidc.client-secret}")
+	@param:Value($$"${registry.security.oauth2.client-secret}")
 	private val clientSecret: String,
-): IAuthenticationPort {
+) : IAuthenticationPort {
 	private val http: WebClient = WebClient.create()
 
 	private companion object {

@@ -5,14 +5,14 @@ import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantMovementWriterDto
+import org.springframework.stereotype.Component
 import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
 
 @Component
 class ParticipantMovementWriterDtoMapper(
 	private val contentMapper: ParticipantMovementContentWriterDtoMapper
-): IGenericProjectWriterDtoMapper<MovementModel, ParticipantMovementWriterDto> {
+) : IGenericProjectWriterDtoMapper<MovementModel, ParticipantMovementWriterDto> {
 	override fun toModel(dto: ParticipantMovementWriterDto, projectId: UUID): MovementModel {
 		return MovementModel(contentType = REGISTERED).apply {
 			dateTime = dto.dateTime!!

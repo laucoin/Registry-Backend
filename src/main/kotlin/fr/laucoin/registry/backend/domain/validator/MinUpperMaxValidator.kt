@@ -4,10 +4,10 @@ import fr.laucoin.registry.backend.domain.annotation.MinUpperMax
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import jakarta.validation.ConstraintValidatorContext
-import java.util.Objects
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
+import java.util.Objects
 
-class MinUpperMaxValidator: GenericValidator<MinUpperMax, Any>() {
+class MinUpperMaxValidator : GenericValidator<MinUpperMax, Any>() {
 	private lateinit var startField: String
 	private lateinit var endField: String
 

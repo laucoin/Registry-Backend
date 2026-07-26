@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -11,30 +12,32 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.time.LocalDate
-import java.util.UUID
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class ActivityService(
 	private val projectService: IProjectService,
 	private val port: IActivityPort,
 	private val movementPort: IMovementPort,
-): IActivityService, GenericService() {
+) : IActivityService, GenericService() {
 	override fun findActivitiesPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
+		sort: List<SortModel<ActivitySortFieldEnum>>,
 	): Mono<PageModel<ActivityModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sort)
 	}
 
 	override fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
@@ -123,16 +126,17 @@ class ActivityService(
 		port.update(it.apply { update(currentUser) })
 	}
 
-	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->
-		movementPort.countAllByActivityId(
-			activityToUpdate.project!!.id!!,
-			activityToUpdate.id!!,
-			MovementSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The activity {} already linked to movement(s)", activityToUpdate.id)
-				handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
-			} else handle.next(activityToUpdate)
+	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> =
+		flatMap { activityToUpdate ->
+			movementPort.countAllByActivityId(
+				activityToUpdate.project!!.id!!,
+				activityToUpdate.id!!,
+				MovementSearchParamModel(),
+			).handle { it, handle ->
+				if (it > 0) {
+					log.warn("The activity {} already linked to movement(s)", activityToUpdate.id)
+					handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
+				} else handle.next(activityToUpdate)
+			}
 		}
-	}
 }

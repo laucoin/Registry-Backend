@@ -9,16 +9,16 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IUserProjectProfileV1Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectProfileReaderDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class UserProjectProfileController(
 	private val service: IUserProjectProfileService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
-): IUserProjectProfileV1Controller {
+) : IUserProjectProfileV1Controller {
 	override fun findUserProjectProfiles(
 		currentUser: CurrentUserModel,
 		pageNumber: Int,

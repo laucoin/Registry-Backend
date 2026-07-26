@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.P
 import org.springframework.stereotype.Component
 
 @Component
-class ProjectProfileRoleEntityMapper: IEntityReaderMapper<ProjectProfileRoleModel, ProjectProfileRoleEntity> {
+class ProjectProfileRoleEntityMapper : IEntityReaderMapper<ProjectProfileRoleModel, ProjectProfileRoleEntity> {
 	override fun toModel(entity: ProjectProfileRoleEntity): ProjectProfileRoleModel {
 		return ProjectProfileRoleModel(
 			role = entity.role,

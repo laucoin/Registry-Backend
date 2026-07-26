@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -9,6 +10,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_U
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
@@ -22,8 +25,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.ResponseEntity
@@ -39,6 +40,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Tag(name = "Project's Profiles management", description = "API for Project's Profiles-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/profiles")
@@ -48,6 +51,7 @@ interface IProjectProfileV1Controller {
 		description = "Find or get paginated Project's Profiles",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
 	fun findProjectProfiles(
 		@PathVariable projectId: UUID,
@@ -79,6 +83,7 @@ interface IProjectProfileV1Controller {
 		description = "Search Users to invite to an Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/users")
 	fun searchUsers(
 		@PathVariable projectId: UUID,
@@ -126,6 +131,7 @@ interface IProjectProfileV1Controller {
 		description = "Prproject a User from using it",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/block")
 	fun blockProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -138,6 +144,7 @@ interface IProjectProfileV1Controller {
 		description = "Re-authorize a User to use it",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/unblock")
 	fun unblockProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -150,6 +157,7 @@ interface IProjectProfileV1Controller {
 		description = "Delete Project's Profile",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
 	fun deleteProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

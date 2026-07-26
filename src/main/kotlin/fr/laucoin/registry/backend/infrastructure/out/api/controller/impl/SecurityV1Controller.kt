@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 class SecurityV1Controller(
 	private val authenticationPort: IAuthenticationPort,
 	private val mapper: CurrentUserReaderDtoMapper,
-): ISecurityV1Controller {
+) : ISecurityV1Controller {
 	override fun getLoginUri(redirectUri: String?): AuthenticationUriModel {
 		return authenticationPort.getLoginUri(redirectUri!!)
 	}

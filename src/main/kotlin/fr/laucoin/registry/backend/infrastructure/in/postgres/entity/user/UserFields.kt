@@ -11,6 +11,5 @@ object UserFields {
 	const val USER_ROLE = "role"
 	const val USER_BIRTHDAY = "birthday"
 	const val USER_LAST_LOGIN = "last_login"
-	const val USER_PURGED = "purged"
 	const val PREFERENCE_ID = "preference_id"
 }

@@ -8,8 +8,9 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import java.util.UUID
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 interface IUserProjectProfileService {
 	fun findProjectProfilesPage(
@@ -18,7 +19,13 @@ interface IUserProjectProfileService {
 		searchParams: ProjectProfileSearchParamModel,
 	): Mono<PageModel<ProjectProfileModel>>
 
-	fun <T: GenericModel> validateNotLastProjectRoleLevel0(
+	fun findSentInvitationsPage(
+		currentUser: CurrentUserModel,
+		pageable: PageableModel,
+		since: ZonedDateTime,
+	): Mono<PageModel<ProjectProfileModel>>
+
+	fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,
 		projectId: UUID?,
 		result: T,
@@ -38,4 +45,5 @@ interface IUserProjectProfileService {
 
 	fun createSupportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel>
 	fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
+	fun toggleFavorite(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
 }

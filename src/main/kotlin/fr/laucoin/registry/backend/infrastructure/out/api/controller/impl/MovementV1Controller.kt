@@ -32,13 +32,13 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.VehicleR
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.GuestMovementWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.GuestWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ParticipantMovementWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.apache.commons.text.similarity.JaroWinklerSimilarity
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class MovementV1Controller(
@@ -53,7 +53,7 @@ class MovementV1Controller(
 	private val writerMapper: ParticipantMovementWriterDtoMapper,
 	private val guestMovementWriterMapper: GuestMovementWriterDtoMapper,
 	private val guestWriterMapper: GuestWriterDtoMapper,
-): IMovementV1Controller {
+) : IMovementV1Controller {
 	private val similarity: JaroWinklerSimilarity = JaroWinklerSimilarity()
 
 	override fun findMovements(

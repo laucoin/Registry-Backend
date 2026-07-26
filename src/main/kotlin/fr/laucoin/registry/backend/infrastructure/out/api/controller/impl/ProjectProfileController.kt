@@ -19,14 +19,14 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectP
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectProfileRoleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ProjectProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ProjectProfilesWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class ProjectProfileController(
@@ -37,7 +37,7 @@ class ProjectProfileController(
 	private val createdProjectProfilesReaderMapper: CreatedProjectProfilesReaderDtoMapper,
 	private val writerMapper: ProjectProfileWriterDtoMapper,
 	private val profilesWriterMapper: ProjectProfilesWriterDtoMapper,
-): IProjectProfileV1Controller {
+) : IProjectProfileV1Controller {
 	override fun findProjectProfiles(
 		projectId: UUID,
 		pageNumber: Int,
@@ -72,9 +72,15 @@ class ProjectProfileController(
 		projectId: UUID,
 		profiles: ProjectProfilesWriterDto
 	): Mono<ResponseEntity<CreatedProjectProfilesReaderDto>> {
-		val profileModels = profilesWriterMapper.toModels(profiles, projectId)
+		val template = profilesWriterMapper.toTemplate(profiles, projectId)
 
-		return service.createProjectProfiles(currentUser, projectId, profiles.userIds!!, profileModels)
+		return service.createProjectProfiles(
+			currentUser,
+			projectId,
+			profiles.userIds ?: emptyList(),
+			emails = emptyList(),
+			template,
+		)
 			.map(createdProjectProfilesReaderMapper::toDto)
 			.map {
 				val status = if (it.notCreatedUserIds.isEmpty()) OK else MULTI_STATUS

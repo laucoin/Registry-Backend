@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.domain.extension
 
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -9,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.security.oauth2.jwt.Jwt
+import java.util.stream.Stream
 
 class UserExtTest {
 

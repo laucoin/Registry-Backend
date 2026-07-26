@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -14,6 +15,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
@@ -32,8 +35,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
@@ -48,6 +49,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Tag(name = "Movements management", description = "API for Movements-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/movements")
@@ -107,6 +110,7 @@ interface IMovementV1Controller {
 		description = "Search Reasons (and Activity as reason) to add in a Movement",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
+	@RateLimited(SEARCH)
 	@GetMapping("/search/reasons")
 	fun searchReasonsAndActivities(
 		@PathVariable projectId: UUID,
@@ -120,6 +124,7 @@ interface IMovementV1Controller {
 		description = "Search Participants and/or Groups to add in a Movement",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/participants-and-groups")
 	fun searchParticipantsAndGroups(
 		@PathVariable projectId: UUID,
@@ -132,6 +137,7 @@ interface IMovementV1Controller {
 		description = "Search Vehicles to add in a Movement",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/search/vehicles")
 	fun searchVehicles(
 		@PathVariable projectId: UUID,
@@ -143,6 +149,7 @@ interface IMovementV1Controller {
 		description = "Find or get paginated movement communications",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R')")
+	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping("/{id}/communications")
 	fun findMovementCommunications(
 		@PathVariable projectId: UUID,
@@ -231,6 +238,7 @@ interface IMovementV1Controller {
 		description = "Disable Movement, it will not visible anymore in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/disable")
 	fun disableMovementById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -243,6 +251,7 @@ interface IMovementV1Controller {
 		description = "Enable Movement, obviously it will be visible again in the Project",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
+	@RateLimited(SENSITIVE)
 	@PatchMapping("/{id}/enable")
 	fun enableMovementById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -255,6 +264,7 @@ interface IMovementV1Controller {
 		description = "Delete all Movement data.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_D')")
+	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")
 	fun deleteMovementById(@PathVariable projectId: UUID, @PathVariable id: UUID): Mono<Unit>
 }

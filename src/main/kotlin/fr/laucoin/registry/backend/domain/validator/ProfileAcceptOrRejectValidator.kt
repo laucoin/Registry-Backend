@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 
-class ProfileAcceptOrRejectValidator: ConstraintValidator<ProfileAcceptOrReject, ProfileStatusEnum> {
+class ProfileAcceptOrRejectValidator : ConstraintValidator<ProfileAcceptOrReject, ProfileStatusEnum> {
 	override fun isValid(value: ProfileStatusEnum, context: ConstraintValidatorContext): Boolean {
 		return listOf(ACCEPTED, REJECTED).contains(value)
 	}

@@ -32,9 +32,6 @@ import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -55,6 +52,9 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
+import java.util.stream.Stream
 
 class ParticipantServiceTest {
 	private val port: IParticipantPort = mock()
@@ -187,14 +187,14 @@ class ParticipantServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = ParticipantSearchParamModel()
 
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findParticipantsPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test
@@ -215,14 +215,15 @@ class ParticipantServiceTest {
 	fun `Should findBirthdays call port findAllByIds`() {
 		// Arrange
 		val onlyVisible = true
+		val limit = 5
 
-		whenever(port.findBirthdays(any(), any())).thenReturn(Flux.just(commonParticipant()))
+		whenever(port.findBirthdays(any(), any(), any())).thenReturn(Flux.just(commonParticipant()))
 
 		// Act
-		service.findBirthdays(projectId).blockFirst()
+		service.findBirthdays(projectId, limit).blockFirst()
 
 		// Assert
-		verify(port).findBirthdays(projectId, onlyVisible)
+		verify(port).findBirthdays(projectId, onlyVisible, limit)
 	}
 
 	@Test
@@ -485,6 +486,13 @@ class ParticipantServiceTest {
 		verify(port, never()).update(any())
 	}
 
+	/**
+	 * The last-member guard reads `membersCount`, so that is what these stubs carry:
+	 * `findAllByIds` selects the member COUNTS and leaves `members` at its empty
+	 * default, and a stub populating `members` instead describes a row the
+	 * repository never returns — which is how the guard once passed for the wrong
+	 * reason.
+	 */
 	@ParameterizedTest
 	@MethodSource
 	fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and call port update`(
@@ -494,7 +502,7 @@ class ParticipantServiceTest {
 		// Arrange
 		val participant = commonParticipant().apply { groups = participantGroups }
 		val groups = participantGroups
-			.map { GroupModel().apply { members = listOf(participant, ParticipantModel()) } }
+			.map { GroupModel().apply { membersCount = 2 } }
 			.toTypedArray()
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
@@ -520,7 +528,7 @@ class ParticipantServiceTest {
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
 		whenever(groupPort.findAllByIds(any(), any(), anyOrNull()))
-			.thenReturn(Flux.just(commonGroup().apply { members = listOf(participant) }))
+			.thenReturn(Flux.just(commonGroup().apply { membersCount = 1 }))
 		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
 		// Act

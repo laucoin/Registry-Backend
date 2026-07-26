@@ -14,11 +14,11 @@ import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AlertRea
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.CommunicationWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class CommunicationV1Controller(
@@ -27,7 +27,7 @@ class CommunicationV1Controller(
 	private val readerAlertMapper: AlertReaderDtoMapper,
 	private val readerMovementMapper: MovementReaderDtoMapper,
 	private val writerMapper: CommunicationWriterDtoMapper,
-): ICommunicationV1Controller {
+) : ICommunicationV1Controller {
 	override fun findCommunications(
 		projectId: UUID,
 		pageNumber: Int,

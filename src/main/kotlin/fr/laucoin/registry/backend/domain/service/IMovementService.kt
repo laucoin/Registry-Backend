@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
@@ -15,25 +16,28 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
-import java.time.LocalDate
-import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
+import java.time.LocalDate
+import java.util.UUID
 
 interface IMovementService {
 	fun findMovementsPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
+		sort: List<SortModel<MovementSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<MovementModel>>
 
 	fun findCurrentMovementsPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
+		sort: List<SortModel<MovementSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<MovementModel>>
 
 	fun findMovementsContent(
@@ -47,6 +51,7 @@ interface IMovementService {
 	): Flux<Pair<UUID, List<MovementContentModel>>>
 
 	fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+	fun findOngoingActivities(projectId: UUID, limit: Int): Flux<MovementModel>
 	fun searchParticipantsAndGroupsByText(
 		projectId: UUID,
 		typeSearched: ParticipantTypeEnum,

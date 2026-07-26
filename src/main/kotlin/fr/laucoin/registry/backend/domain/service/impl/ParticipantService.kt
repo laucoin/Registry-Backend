@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -21,6 +22,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
@@ -30,9 +32,6 @@ import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.time.LocalDate
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -40,6 +39,9 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class ParticipantService(
@@ -52,17 +54,26 @@ class ParticipantService(
 	private val maxUserResult: Int,
 	@param:Value($$"${registry.feature.participant.searched.max-group-result}")
 	private val maxGroupResult: Int,
-): IParticipantService, GenericService() {
+) : IParticipantService, GenericService() {
 	override fun findParticipantsPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
+		sort: List<SortModel<ParticipantSortFieldEnum>>,
 	): Mono<PageModel<ParticipantModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sort)
 	}
 
-	override fun findBirthdays(projectId: UUID): Flux<ParticipantModel> {
-		return port.findBirthdays(projectId, visibilitySearched = true)
+	override fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findBirthdays(projectId, visibilitySearched = true, limit)
+	}
+
+	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findArrivingToday(projectId, visibilitySearched = true, limit)
+	}
+
+	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findDepartingToday(projectId, visibilitySearched = true, limit)
 	}
 
 	override fun findParticipantsByIds(
@@ -338,36 +349,38 @@ class ParticipantService(
 		}
 	}
 
-	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
-		movementPort.countAllByParticipantId(
-			participantToUpdate.project!!.id!!,
-			participantToUpdate.id!!,
-			MovementSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)
-				handle.error(RegistryException(CONFLICT, error))
-			} else handle.next(participantToUpdate)
-		}
-	}
-
-	private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
-		if (participantToUpdate.groups.isEmpty()) {
-			return@flatMap Mono.just(participantToUpdate)
-		}
-
-		groupPort.findAllByIds(
-			participantToUpdate.project!!.id!!,
-			participantToUpdate.groups.mapNotNull { it.id },
-			visibilitySearched = null
-		)
-			.filter { it.members.size == 1 }
-			.collectList()
-			.handle { it, handle ->
-				if (it.isNotEmpty()) {
-					log.warn("The participant {} is the last member of the group(s)", participantToUpdate.id)
+	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> =
+		flatMap { participantToUpdate ->
+			movementPort.countAllByParticipantId(
+				participantToUpdate.project!!.id!!,
+				participantToUpdate.id!!,
+				MovementSearchParamModel(),
+			).handle { it, handle ->
+				if (it > 0) {
+					log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)
 					handle.error(RegistryException(CONFLICT, error))
 				} else handle.next(participantToUpdate)
 			}
-	}
+		}
+
+	private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String): Mono<ParticipantModel> =
+		flatMap { participantToUpdate ->
+			if (participantToUpdate.groups.isEmpty()) {
+				return@flatMap Mono.just(participantToUpdate)
+			}
+
+			groupPort.findAllByIds(
+				participantToUpdate.project!!.id!!,
+				participantToUpdate.groups.mapNotNull { it.id },
+				visibilitySearched = null
+			)
+				.filter { it.membersCount == 1L }
+				.collectList()
+				.handle { it, handle ->
+					if (it.isNotEmpty()) {
+						log.warn("The participant {} is the last member of the group(s)", participantToUpdate.id)
+						handle.error(RegistryException(CONFLICT, error))
+					} else handle.next(participantToUpdate)
+				}
+		}
 }

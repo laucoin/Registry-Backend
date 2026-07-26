@@ -7,10 +7,10 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import java.time.ZonedDateTime
-import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 interface IProjectProfilePort {
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
@@ -24,6 +24,12 @@ interface IProjectProfilePort {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+	): Mono<PageModel<ProjectProfileModel>>
+
+	fun findSentInvitationsPageByCreatorId(
+		creatorId: UUID,
+		pageable: PageableModel,
+		since: ZonedDateTime,
 	): Mono<PageModel<ProjectProfileModel>>
 
 	fun findUserIdsWithProjectProfileForProjectWithProfileExclusion(

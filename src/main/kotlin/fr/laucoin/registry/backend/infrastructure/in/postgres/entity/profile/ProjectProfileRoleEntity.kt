@@ -5,9 +5,9 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.G
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_OPTIONS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_VISIBLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_ROLE
-import java.util.UUID
 import org.springframework.data.annotation.ReadOnlyProperty
 import org.springframework.data.relational.core.mapping.Column
+import java.util.UUID
 
 data class ProjectProfileRoleEntity(
 	@Column(LINKED_PROJECT_ID)

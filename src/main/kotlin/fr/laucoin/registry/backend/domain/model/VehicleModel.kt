@@ -11,4 +11,4 @@ data class VehicleModel(
 	var lastMovement: ZonedDateTime? = null,
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,
-): GenericProjectModel()
+) : GenericProjectModel()

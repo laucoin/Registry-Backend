@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CustomDateT
 import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 
-class DateDefinedForTimeValidator: GenericValidator<DateDefinedForTime, CustomDateTimeWriterDto>() {
+class DateDefinedForTimeValidator : GenericValidator<DateDefinedForTime, CustomDateTimeWriterDto>() {
 	override fun isValid(value: CustomDateTimeWriterDto, context: ConstraintValidatorContext): Boolean {
 		return when {
 			Objects.isNull(value.date) -> Objects.isNull(value.time)

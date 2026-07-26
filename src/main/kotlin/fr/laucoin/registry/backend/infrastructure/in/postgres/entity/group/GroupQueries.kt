@@ -31,7 +31,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
@@ -135,7 +134,6 @@ object GroupQueries {
 	const val CONTENT_TO_CONTENT_JOIN = """
         INNER JOIN $PARTICIPANT_TABLE
             ON t.$GROUP_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
-            AND $PARTICIPANT_TABLE.$PARTICIPANT_PURGED IS FALSE
     """
 
 	const val GROUP_TEXT_SEARCH_CLAUSE = """

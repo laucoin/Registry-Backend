@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.MovementCon
 import org.springframework.stereotype.Component
 
 @Component
-class MovementContentWriterDtoMapper: IGenericWriterDtoMapper<MovementContentModel, MovementContentWriterDto> {
+class MovementContentWriterDtoMapper : IGenericWriterDtoMapper<MovementContentModel, MovementContentWriterDto> {
 	override fun toModel(dto: MovementContentWriterDto): MovementContentModel {
 		return MovementContentModel().apply {
 			participant = ParticipantModel().apply { id = dto.participantId }

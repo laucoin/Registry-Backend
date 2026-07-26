@@ -2,12 +2,12 @@ package fr.laucoin.registry.backend.domain.extension
 
 import fr.laucoin.registry.backend.domain.extension.StringExt.generateRandomString
 import fr.laucoin.registry.backend.domain.extension.StringExt.getStringBetween
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
 class StringExtTest {
 	private companion object {

@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.extension.Generi
 import org.springframework.stereotype.Component
 
 @Component
-class ProjectEntityMapper: IEntityMapper<ProjectModel, ProjectEntity> {
+class ProjectEntityMapper : IEntityMapper<ProjectModel, ProjectEntity> {
 	override fun toModel(entity: ProjectEntity): ProjectModel {
 		return ProjectModel().apply {
 			name = entity.name

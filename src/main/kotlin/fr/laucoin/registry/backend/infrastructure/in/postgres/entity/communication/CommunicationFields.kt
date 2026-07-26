@@ -19,6 +19,7 @@ object CommunicationFields {
 
 	const val COMMUNICATION_DATE_TIME = "date_time"
 	const val COMMUNICATION_MESSAGE = "message"
+	const val COMMUNICATION_ON_BEHALF_OF_MOVEMENT = "on_behalf_of_movement"
 
 	private const val COMMUNICATION_MOVEMENT_PREFIX = "movement_"
 	const val COMMUNICATION_MOVEMENT_ID = "$COMMUNICATION_MOVEMENT_PREFIX$ID"

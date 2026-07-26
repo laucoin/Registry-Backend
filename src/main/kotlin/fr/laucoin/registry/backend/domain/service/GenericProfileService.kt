@@ -5,14 +5,14 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 open class GenericProfileService(
 	private val repository: IProjectProfilePort,
-): GenericService() {
+) : GenericService() {
 	protected fun validateNoProfileConflict(
 		projectId: UUID,
 		userIds: List<UUID>,

@@ -6,14 +6,14 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantWriterDto
+import org.springframework.stereotype.Component
 import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
 
 @Component
 class ParticipantWriterDtoMapper(
 	private val customDateTimeMapper: CustomDateTimeWriterDtoMapper,
-): IGenericProjectWriterDtoMapper<ParticipantModel, ParticipantWriterDto> {
+) : IGenericProjectWriterDtoMapper<ParticipantModel, ParticipantWriterDto> {
 	override fun toModel(dto: ParticipantWriterDto, projectId: UUID): ParticipantModel {
 		return ParticipantModel().apply {
 			firstName = dto.firstName

@@ -15,6 +15,7 @@ data class CommunicationWriterDto(
 	var dateTime: ZonedDateTime?,
 	@field:Size(max = 250, message = COMMUNICATION_MESSAGE_TOO_LONG)
 	var message: String? = null,
+	var onBehalfOfMovement: Boolean? = null,
 	var movementId: UUID?,
 	var alertId: UUID?,
 )

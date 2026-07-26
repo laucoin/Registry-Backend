@@ -36,7 +36,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.P
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_OPTIONS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.PREFERENCE_ID
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TYPE
 
 object UserQueries {
@@ -65,8 +64,6 @@ object UserQueries {
         LEFT JOIN $PROJECT_PROFILE_TABLE ON $PREFERENCE_TABLE.$PREFERENCE_SELECTED_PROFILE_ID = $PROJECT_PROFILE_TABLE.$ID AND $PROJECT_PROFILE_TABLE.$VISIBLE IS TRUE
         LEFT JOIN $PROJECT_TABLE ON $PROJECT_PROFILE_TABLE.$LINKED_PROJECT_ID = $PROJECT_TABLE.$ID AND $PROJECT_TABLE.$VISIBLE IS TRUE
     """
-
-	const val NOT_PURGED_CLAUSE = "t.$USER_PURGED IS FALSE"
 
 	const val NOT_SERVICE_ACCOUNT = "t.$USER_TYPE <> 'SERVICE_ACCOUNT'"
 

@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_NOT_VERIFIED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -16,8 +16,6 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.ModelExt.userOidcId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -33,14 +31,19 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.LOCKED
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.security.oauth2.jwt.Jwt
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 
 class TokenConverterServiceTest {
@@ -48,13 +51,21 @@ class TokenConverterServiceTest {
 	private val userService: IUserService = mock()
 	private val profilePort: IProjectProfilePort = mock()
 	private val service = TokenConverterService(
-		userService, profilePort, roleService, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY
+		userService,
+		profilePort,
+		roleService,
+		USER_ID_KEY,
+		EMAIL_KEY,
+		EMAIL_VERIFIED_KEY,
+		FIRST_NAME_KEY,
+		LAST_NAME_KEY
 	)
 
 	private val jwt = mock<Jwt>()
 	private val claims: Map<String, Any> = mapOf(
 		USER_ID_KEY to userOidcId.toString(),
 		EMAIL_KEY to currentUser().email!!,
+		EMAIL_VERIFIED_KEY to true,
 		FIRST_NAME_KEY to currentUser().firstName!!,
 		LAST_NAME_KEY to currentUser().lastName!!,
 	)
@@ -62,6 +73,7 @@ class TokenConverterServiceTest {
 	private companion object {
 		private const val USER_ID_KEY = "sub"
 		private const val EMAIL_KEY = "email"
+		private const val EMAIL_VERIFIED_KEY = "email_verified"
 		private const val FIRST_NAME_KEY = "given_name"
 		private const val LAST_NAME_KEY = "family_name"
 		private const val USER_ROLE = "USER_ROLE"
@@ -76,11 +88,17 @@ class TokenConverterServiceTest {
 			)
 
 		@JvmStatic
-		fun `Should convert throw JwtConversionException when user is not visible or purged`(): Stream<Arguments> =
+		fun `Should convert throw JwtConversionException when user is not visible`(): Stream<Arguments> =
 			Stream.of(
-				Arguments.of(false, false, LOCKED, AUTH_BLOCKED_ACCOUNT),
-				Arguments.of(true, true, CONFLICT, AUTH_IMPERSONATED_ACCOUNT),
-				Arguments.of(false, true, LOCKED, AUTH_BLOCKED_ACCOUNT),
+				Arguments.of(false, LOCKED, AUTH_BLOCKED_ACCOUNT),
+			)
+
+		@JvmStatic
+		fun `Should refuse to link invited user when the email is not asserted as verified`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(false),
+				Arguments.of("not-a-boolean"),
+				Arguments.of(null),
 			)
 
 		@JvmStatic
@@ -96,6 +114,7 @@ class TokenConverterServiceTest {
 	fun setup() {
 		whenever(jwt.claims).thenReturn(claims)
 		whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
+		whenever(jwt.getClaimAsBoolean(any())).thenCallRealMethod()
 	}
 
 	@ParameterizedTest
@@ -124,16 +143,15 @@ class TokenConverterServiceTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should convert throw JwtConversionException when user is not visible or purged`(
+	fun `Should convert throw JwtConversionException when user is not visible`(
 		userVisible: Boolean,
-		userPurged: Boolean,
 		expectedStatus: HttpStatus,
 		expectedMessage: String,
 	) {
 		// Arrange
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 
-		val currentUser = currentUser().apply { visible = userVisible; purged = userPurged }
+		val currentUser = currentUser().apply { visible = userVisible }
 		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser))
 
 		// Act
@@ -194,11 +212,11 @@ class TokenConverterServiceTest {
 	}
 
 	@Test
-	fun `Should throw when user already exist with the email`() {
+	fun `Should throw when email already belongs to another linked account`() {
 		// Arrange
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(CurrentUserModel()))
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(currentUser()))
 
 		// Act
 		val result = assertThrows(JwtConversionException::class.java) {
@@ -210,8 +228,120 @@ class TokenConverterServiceTest {
 		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
 
 		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
+		verify(userService, never()).linkUser(any(), any(), any(), anyOrNull(), anyOrNull())
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+		verifyNoInteractions(profilePort)
+		verifyNoInteractions(roleService)
+	}
+
+	@Test
+	fun `Should throw conflict when the email is held by an account excluded from the lookup`() {
+		// Arrange
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
+			.thenReturn(Mono.error(DuplicateKeyException("tb_user_index_email")))
+
+		// Act
+		val result = assertThrows(JwtConversionException::class.java) {
+			service.convert(jwt).block()
+		}
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
+
+		verify(userService).createUser(userOidcId, currentUser().email!!, currentUser().firstName, currentUser().lastName)
+		verifyNoInteractions(profilePort)
+		verifyNoInteractions(roleService)
+	}
+
+	@Test
+	fun `Should link invited user when email matches and oidc id is null`() {
+		// Arrange
+		val invited = CurrentUserModel()
+		val linked = currentUser().apply { role = USER_ROLE }
+		val projectRole = ProjectProfileRoleModel(projectId, null, false, PROJECT_ROLE)
+
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(invited))
+		whenever(userService.linkUser(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(linked))
+		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.just(projectRole))
+		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
+		whenever(roleService.getAuthoritiesByProjectRole(any(), any(), anyOrNull())).thenReturn(emptyList())
+
+		// Act
+		val result = service.convert(jwt).block()
+
+		// Assert
+		assertNotNull(result)
+		verify(userService).linkUser(
+			eq(invited),
+			eq(userOidcId),
+			eq(currentUser().email!!),
+			eq(currentUser().firstName),
+			eq(currentUser().lastName)
+		)
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+		verify(profilePort).findProjectProfilesRolesByUserId(userId)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should refuse to link invited user when the email is not asserted as verified`(emailVerified: Any?) {
+		// Arrange
+		val invited = CurrentUserModel()
+		val unverifiedClaims = claims.filterKeys { it != EMAIL_VERIFIED_KEY }
+			.let { if (emailVerified == null) it else it + (EMAIL_VERIFIED_KEY to emailVerified) }
+
+		whenever(jwt.claims).thenReturn(unverifiedClaims)
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(invited))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.convert(jwt).block()
+		}) as JwtConversionException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(AUTH_EMAIL_NOT_VERIFIED, result.message)
+		verify(userService, never()).linkUser(any(), any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
+		verifyNoInteractions(profilePort)
+		verifyNoInteractions(roleService)
+	}
+
+	@Test
+	fun `Should reject after linking when linked invited user is blocked`() {
+		// Arrange
+		val invited = CurrentUserModel()
+		val linkedButBlocked = currentUser().apply { visible = false }
+
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(invited))
+		whenever(userService.linkUser(any(), any(), any(), anyOrNull(), anyOrNull())).thenReturn(
+			Mono.just(
+				linkedButBlocked
+			)
+		)
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.convert(jwt).block()
+		}) as JwtConversionException
+
+		// Assert
+		assertEquals(LOCKED, result.status)
+		assertEquals(AUTH_BLOCKED_ACCOUNT, result.message)
+		verify(userService).linkUser(any(), any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verifyNoInteractions(profilePort)
 		verifyNoInteractions(roleService)
 	}

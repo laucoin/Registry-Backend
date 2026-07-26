@@ -4,14 +4,14 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto
+import org.springframework.stereotype.Component
 import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
 
 @Component
 class GuestMovementWriterDtoMapper(
 	private val contentMapper: MovementContentWriterDtoMapper
-): IGenericProjectWriterDtoMapper<MovementModel, GuestMovementWriterDto> {
+) : IGenericProjectWriterDtoMapper<MovementModel, GuestMovementWriterDto> {
 	override fun toModel(dto: GuestMovementWriterDto, projectId: UUID): MovementModel {
 		return MovementModel(contentType = GUEST).apply {
 			dateTime = dto.dateTime!!

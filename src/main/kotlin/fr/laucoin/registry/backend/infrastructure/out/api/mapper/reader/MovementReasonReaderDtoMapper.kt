@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 @Component
 class MovementReasonReaderDtoMapper(
 	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<MovementReasonEnum, MovementReasonsReaderDto> {
+) : IGenericReaderDtoMapper<MovementReasonEnum, MovementReasonsReaderDto> {
 	override fun toDto(model: MovementReasonEnum): MovementReasonsReaderDto {
 		return MovementReasonsReaderDto(
 			label = translateService.getMessage(code = "$MOVEMENT_REASON_PREFIX$model"),

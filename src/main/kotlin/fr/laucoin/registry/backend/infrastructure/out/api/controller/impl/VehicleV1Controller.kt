@@ -15,10 +15,10 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.VehicleWrit
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.VehicleWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class VehicleV1Controller(
@@ -26,7 +26,7 @@ class VehicleV1Controller(
 	private val readerMapper: VehicleReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: VehicleWriterDtoMapper,
-): IVehicleV1Controller {
+) : IVehicleV1Controller {
 	override fun findVehicles(
 		projectId: UUID,
 		pageNumber: Int,

@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
@@ -11,10 +13,6 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -33,8 +31,13 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class VehicleModelPostgresRepositoryTest: TestContext() {
+class VehicleModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IVehicleEntityRepository
 
@@ -170,6 +173,46 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage execute the sorted query and order by brand then model descending`() {
+		// Arrange
+		val pageable = PageableModel(0, 15)
+		val params = VehicleSearchParamModel()
+		val sort = listOf(
+			SortModel(VehicleSortFieldEnum.BRAND),
+			SortModel(VehicleSortFieldEnum.MODEL, descending = true),
+		)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(15, result.totalElements)
+		assertEquals(15, result.content.size)
+		val expectedOrder = result.content.sortedBy { it.brand }.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	@Test
+	fun `Should findPage combine the visibility filter with the sorted query`() {
+		// Arrange
+		val pageable = PageableModel(0, 15)
+		val params = VehicleSearchParamModel(visibilitySearched = true)
+		val sort = listOf(SortModel(VehicleSortFieldEnum.MODEL, descending = true))
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(14, result.totalElements)
+		assertEquals(14, result.content.size)
+		assertTrue(result.content.all { it.visible })
+		val expectedOrder = result.content.sortedByDescending { it.model }.map { it.id }
+		assertEquals(expectedOrder, result.content.map { it.id })
 	}
 
 	@Nested

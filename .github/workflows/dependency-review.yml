@@ -5,7 +5,7 @@ name: Dependency Review
 # to be enabled (Settings → Code security).
 on:
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 permissions:
   contents: read

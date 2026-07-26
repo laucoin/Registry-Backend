@@ -5,8 +5,11 @@
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
+            <!-- [traceId,spanId] correlates logs with distributed traces when
+                 tracing is enabled (ADR 020); empty (`[,]`) when it is off. -->
             <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} [%cyan(%-20thread)] %customLoggerLevel(%-5level) - %msg%n
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%cyan(%-20thread)] [%X{traceId:-},%X{spanId:-}]
+                %customLoggerLevel(%-5level) - %msg%n
             </pattern>
         </encoder>
     </appender>
