@@ -20,11 +20,11 @@ version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 
 // External libraries 📚
 val apacheTextVersion = "1.15.0"
-val swaggerVersion = "3.0.3"
+val swaggerVersion = "3.1.0"
 
 // Testing 🧪
 val mockWebServer = "5.4.0"
-val testArch = "1.4.2"
+val testArch = "1.5.0"
 val mockitoKotlinVersion = "6.3.0"
 val testContainerVersion = "2.0.5"
 
