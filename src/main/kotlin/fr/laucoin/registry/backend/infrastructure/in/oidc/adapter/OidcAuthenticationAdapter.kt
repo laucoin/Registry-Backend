@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
+package fr.laucoin.registry.backend.infrastructure.`in`.oidc.adapter
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
@@ -7,8 +7,8 @@ import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
-import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.entity.KeycloakTokenEntity
-import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
+import fr.laucoin.registry.backend.infrastructure.`in`.oidc.entity.OidcTokenEntity
+import fr.laucoin.registry.backend.infrastructure.`in`.oidc.mapper.AuthenticationTokenEntityMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
@@ -19,7 +19,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 
 @Service
-class KeycloakAuthenticationAdapter(
+class OidcAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,
 	@param:Value($$"${registry.security.oauth2.authorization-uri}")
 	private val authorizationUri: String,
@@ -81,7 +81,7 @@ class KeycloakAuthenticationAdapter(
 			.onStatus(
 				{ it.is5xxServerError },
 				{ Mono.error(RegistryException(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
-			.bodyToMono(KeycloakTokenEntity::class.java)
+			.bodyToMono(OidcTokenEntity::class.java)
 			.map(mapper::toModel)
 	}
 }

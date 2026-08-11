@@ -1,13 +1,13 @@
-package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper
+package fr.laucoin.registry.backend.infrastructure.`in`.oidc.mapper
 
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.infrastructure.`in`.IEntityMapper
-import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.entity.KeycloakTokenEntity
+import fr.laucoin.registry.backend.infrastructure.`in`.oidc.entity.OidcTokenEntity
 import org.springframework.stereotype.Component
 
 @Component
-class AuthenticationTokenEntityMapper : IEntityMapper<TokenModel, KeycloakTokenEntity> {
-	override fun toModel(entity: KeycloakTokenEntity): TokenModel {
+class AuthenticationTokenEntityMapper : IEntityMapper<TokenModel, OidcTokenEntity> {
+	override fun toModel(entity: OidcTokenEntity): TokenModel {
 		return TokenModel(
 			accessToken = entity.accessToken,
 			expiresIn = entity.expiresIn,
@@ -17,8 +17,8 @@ class AuthenticationTokenEntityMapper : IEntityMapper<TokenModel, KeycloakTokenE
 		)
 	}
 
-	override fun toEntity(model: TokenModel): KeycloakTokenEntity {
-		return KeycloakTokenEntity(
+	override fun toEntity(model: TokenModel): OidcTokenEntity {
+		return OidcTokenEntity(
 			accessToken = model.accessToken,
 			expiresIn = model.expiresIn,
 			refreshExpiresIn = model.refreshExpiresIn,

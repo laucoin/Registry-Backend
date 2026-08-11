@@ -9,7 +9,7 @@ repository — permanent project policy, not suggestions.
 - **Kotlin 2.4** on **JVM 25**, built with **Gradle** (Kotlin DSL).
 - **Spring Boot 4.1 WebFlux** — fully reactive (`Mono` / `Flux`), non-blocking.
 - **R2DBC + PostgreSQL**, migrations via **Flyway** (`src/main/resources/db/migrations`).
-- **OAuth2 resource server (JWT)** + **Keycloak** for auth.
+- **OAuth2 resource server (JWT)** + an **OIDC provider** for auth (provider-agnostic; local dev runs Authentik).
 - **Kover** (coverage), **ArchUnit** (architecture), **springdoc** (OpenAPI), **Micrometer** metrics (Prometheus
   exposition format, scraped by **VictoriaMetrics** — ADR 025).
 
@@ -22,7 +22,7 @@ repository — permanent project policy, not suggestions.
 ./gradlew koverHtmlReport  # coverage report -> build/reports/kover
 ```
 
-`build` runs `koverVerify` + `koverHtmlReport` after tests. Local deps (Postgres, Keycloak, VictoriaMetrics) come from
+`build` runs `koverVerify` + `koverHtmlReport` after tests. Local deps (Postgres, Authentik, VictoriaMetrics) come from
 `local-dev/compose.yml`; default app port is `8081`.
 
 ## Architecture — hexagonal, enforced by ArchUnit
@@ -32,7 +32,7 @@ Package root: `fr.laucoin.registry.backend`
 - `config` — Spring config (security, r2dbc, i18n, swagger). Nothing else may depend on it.
 - `domain` — business core: `service` (+ `service/impl`), `port` (interfaces to infra), `model`, `validator`, `handler`,
   `extension`, `enumeration`, `constant`, `annotation`. No Spring web / persistence types here.
-- `infrastructure/in` — inbound adapters: `postgres` (R2DBC repos + `entity`), `keycloak`. Entities stay inside their
+- `infrastructure/in` — inbound adapters: `postgres` (R2DBC repos + `entity`), `oidc`. Entities stay inside their
   sub-package.
 - `infrastructure/out` — outbound adapters: `api` (controllers + DTO mappers). Must **not** depend on
   `infrastructure/in`.

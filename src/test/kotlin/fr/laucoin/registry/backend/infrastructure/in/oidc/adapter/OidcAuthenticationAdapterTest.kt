@@ -1,10 +1,10 @@
-package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
+package fr.laucoin.registry.backend.infrastructure.`in`.oidc.adapter
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
+import fr.laucoin.registry.backend.infrastructure.`in`.oidc.mapper.AuthenticationTokenEntityMapper
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
@@ -20,10 +20,10 @@ import reactor.core.Exceptions
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class KeycloakAuthenticationAdapterTest {
+class OidcAuthenticationAdapterTest {
 	private val mockWebServer: MockWebServer = MockWebServer()
 	private val mapper: AuthenticationTokenEntityMapper = spy()
-	private val adapter: KeycloakAuthenticationAdapter = KeycloakAuthenticationAdapter(
+	private val adapter: OidcAuthenticationAdapter = OidcAuthenticationAdapter(
 		mapper,
 		authorizationUri = "authorizationUri",
 		tokenUri = "tokenUri",
@@ -76,7 +76,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should getAuthenticationToken call keycloak to fetch token 2xx`() {
+	fun `Should getAuthenticationToken call the IdP to fetch token 2xx`() {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val authorizationCode = "authorizationCode"
@@ -108,7 +108,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should getAuthenticationToken call keycloak to fetch token 4xx`() {
+	fun `Should getAuthenticationToken call the IdP to fetch token 4xx`() {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val authorizationCode = "authorizationCode"
@@ -130,7 +130,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should getAuthenticationToken call keycloak to fetch token 5xx`() {
+	fun `Should getAuthenticationToken call the IdP to fetch token 5xx`() {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val authorizationCode = "authorizationCode"
@@ -152,7 +152,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should refreshAuthenticationToken call keycloak to refresh token 2xx`() {
+	fun `Should refreshAuthenticationToken call the IdP to refresh token 2xx`() {
 		// Arrange
 		val refreshToken = "refreshToken"
 
@@ -183,7 +183,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should refreshAuthenticationToken call keycloak to refresh token 4xx`() {
+	fun `Should refreshAuthenticationToken call the IdP to refresh token 4xx`() {
 		// Arrange
 		val refreshToken = "refreshToken"
 
@@ -204,7 +204,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should refreshAuthenticationToken call keycloak to refresh token 5xx`() {
+	fun `Should refreshAuthenticationToken call the IdP to refresh token 5xx`() {
 		// Arrange
 		val refreshToken = "refreshToken"
 
