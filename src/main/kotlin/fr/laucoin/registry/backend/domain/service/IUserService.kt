@@ -34,6 +34,7 @@ interface IUserService {
 	): Mono<CurrentUserModel>
 
 	fun findOrCreateInvitedUser(email: String, inviter: CurrentUserModel): Mono<UserModel>
+	fun deleteLightUser(user: UserModel): Mono<Unit>
 	fun updateUserIfPersonalDataChanged(
 		user: CurrentUserModel,
 		email: String,

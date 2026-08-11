@@ -79,15 +79,25 @@ class AlertService(
 	): Mono<AlertModel> {
 		return validateAlertDateWithProjectDates(alert)
 			.flatMap { port.create(alert) }
-			.flatMap { newAlert ->
-				val initialCommunication = alert.communications!!.first().apply { this.alert = newAlert }
-				communicationPort.create(initialCommunication)
-					.map { createdCommunication ->
-						newAlert.communications = listOf(createdCommunication)
-						newAlert
-					}
-			}
+			.flatMap { newAlert -> seedThread(alert, newAlert) }
 			.`as`(transactionalOperator::transactional)
+	}
+
+	/**
+	 * Opens the alert's thread with its first message — when the caller wrote
+	 * one. An alert may legitimately be raised with a title alone, and seeding
+	 * the thread unconditionally used to persist an empty communication for it:
+	 * a row with an author and a timestamp and nothing to read. `first()` on an
+	 * empty list also threw, so this is the same guard doing both jobs.
+	 */
+	private fun seedThread(request: AlertModel, created: AlertModel): Mono<AlertModel> {
+		val initialCommunication = request.communications?.firstOrNull()
+			?: return Mono.just(created.apply { communications = emptyList() })
+
+		return communicationPort.create(initialCommunication.apply { this.alert = created })
+			.map { createdCommunication ->
+				created.apply { communications = listOf(createdCommunication) }
+			}
 	}
 
 	override fun updateAlertById(

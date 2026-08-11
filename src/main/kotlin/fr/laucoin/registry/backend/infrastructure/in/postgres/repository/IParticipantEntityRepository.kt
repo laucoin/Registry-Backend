@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.Gro
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantEntity
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
@@ -22,6 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.GROUPS_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.LAST_MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_AVAILABILITY_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_BIRTHDAY_TODAY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_MAJOR_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_PRESENCE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_TEXT_SEARCH_CLAUSE
@@ -147,7 +147,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		"""
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND t.$PARTICIPANT_BIRTHDAY = CURRENT_DATE AND $VISIBLE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_BIRTHDAY_TODAY_CLAUSE AND $VISIBLE_CLAUSE
         LIMIT :limit
         """
 	)

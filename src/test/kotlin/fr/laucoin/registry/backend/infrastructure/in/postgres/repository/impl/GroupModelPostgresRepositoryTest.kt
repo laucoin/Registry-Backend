@@ -60,6 +60,10 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 
 	private companion object {
 		@JvmStatic
+		fun `Should execute the due-today group queries against the database`(): Stream<Arguments> =
+			Stream.of(Arguments.of(true), Arguments.of(false))
+
+		@JvmStatic
 		fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(
@@ -282,6 +286,26 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 		assertTrue(result.content.all { it.visible })
 		val expectedOrder = result.content.sortedByDescending { it.name }.map { it.id }
 		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	/**
+	 * The "due today" group queries carry correlated EXISTS sub-selects over
+	 * group content, participants and movements — exactly the shape a
+	 * hand-written @Query gets wrong silently. Run against the real database so a
+	 * broken join or a bad column name fails here rather than emptying a
+	 * dashboard panel in production.
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should execute the due-today group queries against the database`(arriving: Boolean) {
+		// Act
+		val result = (if (arriving) repository.findArrivingToday(projectId, visibilitySearched = true, limit = 200)
+		else repository.findDepartingToday(projectId, visibilitySearched = true, limit = 200))
+			.collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		assertTrue(result.all { it.visible })
 	}
 
 	@Nested

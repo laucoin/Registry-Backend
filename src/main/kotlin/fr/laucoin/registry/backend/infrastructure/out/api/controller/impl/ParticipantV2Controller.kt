@@ -14,12 +14,14 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IParticipantV2Controller
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.DueTodayReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.DueTodayReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.PartialUserReaderDtoMapper
@@ -41,6 +43,7 @@ class ParticipantV2Controller(
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
 	private val writerMapper: ParticipantWriterDtoMapper,
+	private val dueTodayMapper: DueTodayReaderDtoMapper,
 ) : IParticipantV2Controller {
 	override fun findParticipants(
 		projectId: UUID,
@@ -60,6 +63,14 @@ class ParticipantV2Controller(
 
 		return service.findParticipantsPage(projectId, pageable, searchParams, sortModels)
 			.map(readerMapper::toDtoPage)
+	}
+
+	override fun findArrivalsToday(projectId: UUID, limit: Int): Mono<DueTodayReaderDto> {
+		return service.findArrivalsToday(projectId, limit).map(dueTodayMapper::toDto)
+	}
+
+	override fun findDeparturesToday(projectId: UUID, limit: Int): Mono<DueTodayReaderDto> {
+		return service.findDeparturesToday(projectId, limit).map(dueTodayMapper::toDto)
 	}
 
 	override fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantReaderDto> {

@@ -9,7 +9,6 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.ReactiveCacheService
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_EMAIL
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_FIRST_NAME
@@ -27,6 +26,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.orderByWithRelevance
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IUserEntityRepository
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter
@@ -106,8 +106,10 @@ class UserModelPostgresRepository(
 		pageable: PageableModel,
 		sort: List<SortModel<UserSortFieldEnum>>,
 	): Flux<UserEntity> {
-		val orderBy =
-			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" } + ", t.$ID ASC"
+		val orderBy = orderByWithRelevance(
+			searchParams.textSearched,
+			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" },
+		)
 		val sql = """
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE

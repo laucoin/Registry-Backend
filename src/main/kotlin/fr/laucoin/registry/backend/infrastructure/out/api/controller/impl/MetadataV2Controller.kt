@@ -8,12 +8,14 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IMetadataV2Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.FeaturesReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AlertStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AvailabilityStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ParticipantTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.PresenceStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectProfileStatusReaderDtoMapper
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 
@@ -25,6 +27,8 @@ class MetadataV2Controller(
 	private val movementTypeReaderMapper: MovementTypeReaderDtoMapper,
 	private val participantTypeReaderMapper: ParticipantTypeReaderDtoMapper,
 	private val alertStatusReaderMapper: AlertStatusReaderDtoMapper,
+	@param:Value($$"${registry.feature.light-user.enabled:true}")
+	private val lightUserEnabled: Boolean,
 ) : IMetadataV2Controller {
 	override fun getPresencesStatus(): Flux<LabelDto> {
 		return Flux.fromIterable(PresenceStatusEnum.entries).map(presenceStatusMapper::toDto)
@@ -48,5 +52,9 @@ class MetadataV2Controller(
 
 	override fun getAlertStatus(): Flux<LabelDto> {
 		return Flux.fromIterable(AlertStatusEnum.entries).map(alertStatusReaderMapper::toDto)
+	}
+
+	override fun getFeatures(): FeaturesReaderDto {
+		return FeaturesReaderDto(lightUser = lightUserEnabled)
 	}
 }

@@ -1,8 +1,8 @@
 # AGENTS.md — Registry Backend
 
-Reactive REST API for the Registry platform. This file is the single source of truth for agents working here.
-It applies to ALL AI agents (Claude Code, Copilot, Cursor, or any other assistant) generating or modifying code
-in this repository — permanent project policy, not suggestions.
+Reactive REST API for the Registry platform. This file is the single source of truth for agents working here. It applies
+to ALL AI agents (Claude Code, Copilot, Cursor, or any other assistant) generating or modifying code in this
+repository — permanent project policy, not suggestions.
 
 ## Stack
 
@@ -118,8 +118,8 @@ Config lives in `config/SecurityConfig.kt` (`@EnableWebFluxSecurity` + `@EnableR
 - **The one allowed comment:** a single English **block comment — KDoc `/** … */`** — placed **directly above** a
   complex or non-obvious declaration (class, function, SQL constant, `@Query`), explaining its intent, high-level logic
   or a constraint the code cannot express (ADR reference, security invariant, regression rationale). Never use a `//`
-  block for documentation: `//` is reserved for the test structure markers below and for tooling directives.
-  If an in-body detail is genuinely load-bearing, fold it into that block comment — never leave it inline in the body.
+  block for documentation: `//` is reserved for the test structure markers below and for tooling directives. If an
+  in-body detail is genuinely load-bearing, fold it into that block comment — never leave it inline in the body.
   Obvious, self-explanatory declarations get no comment at all.
 - **Test structure comments are mandatory and untouchable:** `// Arrange`, `// Act`, `// Assert` (including combined
   forms such as `// Act + Assert`) must be present in tests and must never be deleted, reworded or moved. They are the
@@ -156,20 +156,17 @@ Keep coverage green (`koverVerify`).
 
 ## Reported bugs — check the documentation before fixing
 
-When the user reports a bug, or disputes behaviour a test asserts, treat the documentation as part of
-the investigation rather than as background reading.
+When the user reports a bug, or disputes behaviour a test asserts, treat the documentation as part of the investigation
+rather than as background reading.
 
-1. **Find what the docs claim** about the behaviour — the feature page, the roles/permissions matrix,
-   the API reference, and the journey scenarios in `critical-scenarios.md`.
-2. **Decide which side is wrong.** The reported behaviour, the code, and the docs are three
-   independent claims; a disagreement between them is itself the finding. Where a page names an
-   authoritative source (for example, roles-and-permissions.md defers to the seed migrations for the
-   permission matrix), that source wins over the prose.
-3. **Fix the documentation in the same change as the code.** A bug fix that leaves the docs asserting
-   the old, wrong behaviour just moves the defect. If the docs were right and the code was wrong,
-   say so explicitly in the change; if the docs were wrong, correct them and keep the scenario list
-   in step.
-4. **Never silently loosen a test to match observed behaviour.** Establish which behaviour is correct
-   first, then align the test with that — citing the authority you relied on.
-5. **Report contradictions you cannot resolve** instead of picking a side; they usually mean a
-   decision is owed.
+1. **Find what the docs claim** about the behaviour — the feature page, the roles/permissions matrix, the API reference,
+   and the journey scenarios in `critical-scenarios.md`.
+2. **Decide which side is wrong.** The reported behaviour, the code, and the docs are three independent claims; a
+   disagreement between them is itself the finding. Where a page names an authoritative source (for example,
+   roles-and-permissions.md defers to the seed migrations for the permission matrix), that source wins over the prose.
+3. **Fix the documentation in the same change as the code.** A bug fix that leaves the docs asserting the old, wrong
+   behaviour just moves the defect. If the docs were right and the code was wrong, say so explicitly in the change; if
+   the docs were wrong, correct them and keep the scenario list in step.
+4. **Never silently loosen a test to match observed behaviour.** Establish which behaviour is correct first, then align
+   the test with that — citing the authority you relied on.
+5. **Report contradictions you cannot resolve** instead of picking a side; they usually mean a decision is owed.

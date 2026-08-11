@@ -19,7 +19,6 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -69,8 +68,15 @@ class ProjectServiceTest {
 		private val MIN_DATE = LocalDate.MIN
 		private val MAX_DATE = LocalDate.MAX
 
-		private val MIDNIGHT_PLUS_ONE_NANOSECOND = OffsetTime.of(0, 0, 0, 1, ZoneOffset.of("Z"))
-		private val MIDNIGHT_LESS_ONE_NANOSECOND = OffsetTime.of(23, 59, 59, 0, ZoneOffset.of("Z"))
+		private val JUST_AFTER_MIDNIGHT = OffsetTime.of(0, 0, 0, 1, ZoneOffset.of("Z"))
+
+		/**
+		 * One second before the 23:59:59 a bare departure date resolves to, so a
+		 * date-only departure genuinely falls outside a window that closes early.
+		 * The former fixture sat exactly ON that boundary, which is now — correctly
+		 * — inside the window.
+		 */
+		private val JUST_BEFORE_THE_LAST_SECOND = OffsetTime.of(23, 59, 58, 0, ZoneOffset.of("Z"))
 
 		@JvmStatic
 		fun `Should validateDateTime call port findById and validate the request date is in project range`(): Stream<Arguments> {
@@ -87,6 +93,16 @@ class ProjectServiceTest {
 				Arguments.of(CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE), CustomDateTimeModel.MAX),
 				Arguments.of(CustomDateTimeModel.MIN, CustomDateTimeModel.MAX, CustomDateTimeModel.MIN),
 				Arguments.of(CustomDateTimeModel.MIN, CustomDateTimeModel.MAX, CustomDateTimeModel.MAX),
+				Arguments.of(
+					CustomDateTimeModel(MIN_DATE, JUST_AFTER_MIDNIGHT),
+					CustomDateTimeModel(MAX_DATE),
+					CustomDateTimeModel.MIN,
+				),
+				Arguments.of(
+					CustomDateTimeModel(MIN_DATE),
+					CustomDateTimeModel(MAX_DATE, JUST_BEFORE_THE_LAST_SECOND),
+					CustomDateTimeModel.MAX,
+				),
 			)
 		}
 
@@ -98,16 +114,6 @@ class ProjectServiceTest {
 				),
 				Arguments.of(
 					CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE, MIDNIGHT_PLUS_ONE_NANOSECOND),
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel.MIN,
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE, MIDNIGHT_LESS_ONE_NANOSECOND),
-					CustomDateTimeModel.MAX,
 				),
 			)
 		}
@@ -127,7 +133,7 @@ class ProjectServiceTest {
 					CustomDateTimeModel(MIN_DATE),
 					CustomDateTimeModel(MAX_DATE),
 					CustomDateTimeModel.MIN,
-					CustomDateTimeModel(MIN_DATE, OffsetTime.MAX),
+					CustomDateTimeModel(MIN_DATE, JUST_BEFORE_THE_LAST_SECOND),
 				),
 				Arguments.of(
 					CustomDateTimeModel.MIN, CustomDateTimeModel.MAX, CustomDateTimeModel.MIN, CustomDateTimeModel.MAX,
@@ -151,14 +157,14 @@ class ProjectServiceTest {
 					CustomDateTimeModel(MAX_DATE),
 				),
 				Arguments.of(
-					CustomDateTimeModel(MIN_DATE, MIDNIGHT_PLUS_ONE_NANOSECOND),
+					CustomDateTimeModel(MIN_DATE, JUST_AFTER_MIDNIGHT),
 					CustomDateTimeModel(MAX_DATE),
 					CustomDateTimeModel.MIN,
 					CustomDateTimeModel(MAX_DATE),
 				),
 				Arguments.of(
 					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE, MIDNIGHT_LESS_ONE_NANOSECOND),
+					CustomDateTimeModel(MAX_DATE, JUST_BEFORE_THE_LAST_SECOND),
 					CustomDateTimeModel(MIN_DATE),
 					CustomDateTimeModel.MAX,
 				),
@@ -200,7 +206,7 @@ class ProjectServiceTest {
 					CustomDateTimeModel(MIN_DATE),
 					CustomDateTimeModel(MAX_DATE),
 					CustomDateTimeModel.MIN,
-					CustomDateTimeModel(MIN_DATE, OffsetTime.MAX),
+					CustomDateTimeModel(MIN_DATE, JUST_BEFORE_THE_LAST_SECOND),
 					1,
 				),
 				Arguments.of(
@@ -453,13 +459,20 @@ class ProjectServiceTest {
 		verify(port).update(any())
 	}
 
+	/**
+	 * `error.message.PROJECT_DATE_CONFLICT_WITH_ELEMENTS` names the project in a
+	 * `{0}` placeholder, so the refusal has to carry it: the message source only
+	 * runs MessageFormat when arguments are supplied, and without them the
+	 * placeholder reached the client verbatim.
+	 */
 	@Test
 	fun `Should updateProjectById call port findById, validDateTime and throw due to date conflict`() {
 		// Arrange
 		val dateTime = CustomDateTimeModel(LocalDate.EPOCH)
 		val projectUpdated = commonProject().apply { begin = dateTime; end = dateTime }
 
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(port.findById(any(), anyOrNull()))
+			.thenReturn(Mono.just(commonProject().apply { name = "Spike" }))
 		whenever(port.validDateTime(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(false))
 		whenever(port.update(any())).thenReturn(Mono.just(projectUpdated))
 
@@ -471,14 +484,10 @@ class ProjectServiceTest {
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_DATE_CONFLICT_WITH_ELEMENTS, result.message)
-		assertNull(result.args)
+		assertEquals(arrayListOf<Any?>("Spike"), result.args)
 
 		verify(port).findById(projectId, visibilitySearched = null)
-		verify(port).validDateTime(
-			projectId,
-			dateTime.toZonedDateTime(OffsetTime.MIN),
-			dateTime.toZonedDateTime(OffsetTime.MAX),
-		)
+		verify(port).validDateTime(projectId, dateTime.asStart(), dateTime.asEnd())
 		verify(port, never()).update(any())
 	}
 

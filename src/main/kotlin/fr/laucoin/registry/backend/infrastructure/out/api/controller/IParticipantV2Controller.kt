@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_COLLECTION_L
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
@@ -18,6 +19,7 @@ import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEAR
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.DueTodayReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
@@ -130,6 +132,40 @@ interface IParticipantV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) limit: Int,
 	): Flux<ParticipantReaderDto>
+
+	@Operation(
+		summary = "Find who is due to arrive today",
+		description = "Participants scheduled to arrive today AND groups whose own window opens today; both sides are queried concurrently. Capped at `limit` rows per side",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R') && hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
+	@GetMapping("/arrivals-today")
+	fun findArrivalsToday(
+		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_COLLECTION_LIMIT_PARAM) @Valid @Min(
+			1,
+			message = PAGE_SIZE_IS_LOWER_THAN_ONE
+		) @Max(
+			200,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		) limit: Int,
+	): Mono<DueTodayReaderDto>
+
+	@Operation(
+		summary = "Find who is due to leave today",
+		description = "Participants scheduled to leave today AND groups whose own window closes today; both sides are queried concurrently. Capped at `limit` rows per side",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R') && hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
+	@GetMapping("/departures-today")
+	fun findDeparturesToday(
+		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_COLLECTION_LIMIT_PARAM) @Valid @Min(
+			1,
+			message = PAGE_SIZE_IS_LOWER_THAN_ONE
+		) @Max(
+			200,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		) limit: Int,
+	): Mono<DueTodayReaderDto>
 
 	@Operation(
 		summary = "Find Participant",

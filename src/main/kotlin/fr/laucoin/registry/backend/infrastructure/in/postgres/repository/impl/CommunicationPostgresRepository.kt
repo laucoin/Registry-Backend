@@ -18,7 +18,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communica
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationQueries.SELECT_COMMUNICATION_SEARCH
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationQueries.SELECT_LINKED_ALERT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationQueries.SELECT_LINKED_MOVEMENT
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
@@ -28,6 +27,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.orderByWithRelevance
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.ICommunicationEntityRepository
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter
 import org.springframework.r2dbc.core.DatabaseClient
@@ -90,8 +90,10 @@ class CommunicationPostgresRepository(
 		pageable: PageableModel,
 		sort: List<SortModel<CommunicationSortFieldEnum>>,
 	): Flux<CommunicationEntity> {
-		val orderBy =
-			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" } + ", t.$ID ASC"
+		val orderBy = orderByWithRelevance(
+			searchParams.textSearched,
+			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" },
+		)
 		val sql = """
         SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN

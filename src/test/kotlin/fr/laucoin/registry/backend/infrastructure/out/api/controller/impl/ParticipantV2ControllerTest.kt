@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_COLLECTION_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.SORT_FIELD_IS_UNKNOWN
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
@@ -33,6 +34,9 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
@@ -50,6 +54,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
+import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 class ParticipantV2ControllerTest : TestContext() {
@@ -61,6 +66,19 @@ class ParticipantV2ControllerTest : TestContext() {
 
 	private companion object {
 		private const val BASE_URL = "/api/v2/projects/{projectId}/participants"
+
+		@JvmStatic
+		fun `Should serve a due-today panel with both reads`(): Stream<Arguments> =
+			Stream.of(Arguments.of(true), Arguments.of(false))
+
+		@JvmStatic
+		fun `Should refuse a due-today panel when either read is missing`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of("arrivals-today", REGISTRY_PROJECT_PARTICIPANT_R),
+				Arguments.of("arrivals-today", REGISTRY_PROJECT_GROUP_R),
+				Arguments.of("departures-today", REGISTRY_PROJECT_PARTICIPANT_R),
+				Arguments.of("departures-today", REGISTRY_PROJECT_GROUP_R),
+			)
 	}
 
 	private fun participantPage(): Mono<PageModel<ParticipantModel>> =
@@ -190,6 +208,47 @@ class ParticipantV2ControllerTest : TestContext() {
 			.authenticate()
 			.get()
 			.uri(uriBuilder("$BASE_URL/birthdays", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+	}
+
+	/**
+	 * The combined panels need BOTH reads: they return groups beside
+	 * participants, so a caller holding only one of the two authorities must not
+	 * see the other half.
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should serve a due-today panel with both reads`(arriving: Boolean) {
+		// Arrange
+		val payload = Mono.just(Pair(listOf(commonParticipant()), listOf(commonGroup())))
+		whenever(service.findArrivalsToday(any(), any())).thenReturn(payload)
+		whenever(service.findDeparturesToday(any(), any())).thenReturn(payload)
+		val path = if (arriving) "arrivals-today" else "departures-today"
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/$path", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<Map<*, *>>(OK)
+		if (arriving) verify(service).findArrivalsToday(projectId, DEFAULT_COLLECTION_LIMIT)
+		else verify(service).findDeparturesToday(projectId, DEFAULT_COLLECTION_LIMIT)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should refuse a due-today panel when either read is missing`(path: String, authority: String) {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(authority))
+			.get()
+			.uri(uriBuilder("$BASE_URL/$path", listOf(projectId), emptyList()))
 			.exchange()
 
 		// Assert

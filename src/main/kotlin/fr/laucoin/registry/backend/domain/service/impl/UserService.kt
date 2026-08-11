@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_LIGHT_USER_DISABLED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
@@ -28,10 +29,12 @@ import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
@@ -49,6 +52,8 @@ class UserService(
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
 	private val auditService: IAuditService,
+	@param:Value($$"${registry.feature.light-user.enabled:true}")
+	private val lightUserEnabled: Boolean,
 ) : ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
 	private lateinit var serviceAccount: CurrentUserModel
 
@@ -142,12 +147,48 @@ class UserService(
 			.map { user }
 	}
 
+	/**
+	 * Gated by `registry.feature.light-user.enabled`: with the feature off no
+	 * email-only account may be minted, so an email nobody holds is refused
+	 * rather than silently turned into an invitation that first-login linking
+	 * would never claim.
+	 */
 	override fun findOrCreateInvitedUser(email: String, inviter: CurrentUserModel): Mono<UserModel> {
 		return port.findByEmail(email, visibilitySearched = null)
 			.filter { isNotServiceAccount(it) }
 			.next()
 			.map<UserModel> { it }
-			.switchIfEmpty(Mono.defer { createInvitedUser(email, inviter) })
+			.switchIfEmpty(Mono.defer {
+				if (lightUserEnabled) {
+					createInvitedUser(email, inviter)
+				} else {
+					log.warn("The light user feature is disabled, refusing to invite the unknown address")
+					Mono.error(
+						RegistryException(
+							UNPROCESSABLE_ENTITY,
+							PROJECT_PROFILE_LIGHT_USER_DISABLED,
+							arrayListOf(email)
+						)
+					)
+				}
+			})
+	}
+
+	/**
+	 * Feature-flip fallback for `registry.feature.light-user.enabled=false`: drop
+	 * an unclaimed email-only invitation so the sign-in that found it can
+	 * self-register instead of stalling on an account nobody can claim. Deleting
+	 * cascades to its still-pending project profiles, exactly as the light-user
+	 * purge does. Defensive on both fields — an account already bound to an IdP
+	 * identity is never a light user and must survive.
+	 */
+	override fun deleteLightUser(user: UserModel): Mono<Unit> {
+		val id = user.id
+		if (id == null || user.oidcId != null) {
+			return Mono.empty()
+		}
+		log.info("The light user feature is disabled, deleting the residual light user \"{}\"", id)
+		return port.deleteById(id)
 	}
 
 	/**

@@ -8,16 +8,46 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.time.LocalDate
+import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 class AvailabilityStatusReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
 	private val mapper = AvailabilityStatusReaderDtoMapper(translateService)
+
+	private companion object {
+		@JvmStatic
+		fun `Should not claim a still-open window has expired`(): Stream<Arguments> = Stream.of(
+			Arguments.of(
+				CustomDateTimeModel(LocalDate.now().minusDays(3)),
+				CustomDateTimeModel(LocalDate.now().plusDays(3)),
+				"$AVAILABILITY_STATUS_PREFIX$UNAVAILABLE",
+			),
+			Arguments.of(
+				null,
+				CustomDateTimeModel(LocalDate.now().plusDays(30)),
+				"$AVAILABILITY_STATUS_PREFIX$UNAVAILABLE",
+			),
+			Arguments.of(
+				CustomDateTimeModel(LocalDate.now().plusDays(30)),
+				CustomDateTimeModel(LocalDate.now().plusDays(60)),
+				"${AVAILABILITY_STATUS_DURATION_PREFIX}NOT_YET",
+			),
+			Arguments.of(
+				CustomDateTimeModel(LocalDate.now().minusDays(60)),
+				CustomDateTimeModel(LocalDate.now().minusDays(30)),
+				"${AVAILABILITY_STATUS_DURATION_PREFIX}NO_MORE",
+			),
+		)
+	}
 
 	@BeforeEach
 	fun setUp() {
@@ -63,15 +93,15 @@ class AvailabilityStatusReaderDtoMapperTest {
 	}
 
 	/**
-	 * The two duration branches below encode the mapper's CURRENT (frozen v1)
-	 * direction semantics: NOT_YET fires when now is after the start bound and
-	 * NO_MORE when now is before the end bound. The null-safety fix must not
-	 * change them; revisit the direction question with the v2 contract work.
+	 * The direction question the v1 mapper left open, now settled: NOT_YET means
+	 * the window has not OPENED and NO_MORE that it has CLOSED. Both branches
+	 * used to test the opposite, which is how an availability ending in three
+	 * days announced itself as having ended a few seconds ago.
 	 */
 	@Test
-	fun `Should announce the not-yet label when now is after the start bound`() {
+	fun `Should announce the not-yet label when the window has not opened`() {
 		// Arrange
-		val start = CustomDateTimeModel(LocalDate.now().minusDays(3))
+		val start = CustomDateTimeModel(LocalDate.now().plusDays(3))
 
 		// Act
 		val result = mapper.toDto(UNAVAILABLE, startAvailability = start, endAvailability = null)
@@ -81,14 +111,45 @@ class AvailabilityStatusReaderDtoMapperTest {
 	}
 
 	@Test
-	fun `Should announce the no-more label when now is before the end bound`() {
+	fun `Should announce the no-more label when the window has closed`() {
 		// Arrange
-		val end = CustomDateTimeModel(LocalDate.now().plusDays(3))
+		val end = CustomDateTimeModel(LocalDate.now().minusDays(3))
 
 		// Act
 		val result = mapper.toDto(UNAVAILABLE, startAvailability = null, endAvailability = end)
 
 		// Assert
 		assertEquals("${AVAILABILITY_STATUS_DURATION_PREFIX}NO_MORE", result.label)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should not claim a still-open window has expired`(
+		startAvailability: CustomDateTimeModel?,
+		endAvailability: CustomDateTimeModel?,
+		expected: String,
+	) {
+		// Act
+		val result = mapper.toDto(UNAVAILABLE, startAvailability, endAvailability)
+
+		// Assert
+		assertEquals(expected, result.label)
+	}
+
+	/**
+	 * A bare end date closes at 23:59:59, so an availability ending TODAY is
+	 * still open — the boundary is what keeps the label honest for the whole of
+	 * the last day.
+	 */
+	@Test
+	fun `Should keep an availability ending today open until its last second`() {
+		// Arrange
+		val end = CustomDateTimeModel(LocalDate.now())
+
+		// Act
+		val result = mapper.toDto(UNAVAILABLE, startAvailability = null, endAvailability = end)
+
+		// Assert
+		assertEquals("$AVAILABILITY_STATUS_PREFIX$UNAVAILABLE", result.label)
 	}
 }

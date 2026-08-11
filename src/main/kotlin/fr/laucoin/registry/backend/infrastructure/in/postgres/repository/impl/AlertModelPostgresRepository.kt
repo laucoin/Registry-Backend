@@ -16,7 +16,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.Ale
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertQueries.ALERT_STATUS_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertQueries.ALERT_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertQueries.SELECT_ALERT_SEARCH
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.AlertEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
@@ -26,6 +25,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.orderByWithRelevance
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IAlertEntityRepository
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter
 import org.springframework.r2dbc.core.DatabaseClient
@@ -91,8 +91,10 @@ class AlertModelPostgresRepository(
 		pageable: PageableModel,
 		sort: List<SortModel<AlertSortFieldEnum>>,
 	): Flux<AlertEntity> {
-		val orderBy =
-			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" } + ", t.$ID ASC"
+		val orderBy = orderByWithRelevance(
+			searchParams.textSearched,
+			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" },
+		)
 		val sql = """
         SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN

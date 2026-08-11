@@ -53,10 +53,23 @@ object ErrorConst {
 
 	object ProjectProfileError {
 		const val PROJECT_PROFILE_ROLE_BLANK = "PROJECT_PROFILE_ROLE_BLANK"
-		const val PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS = "PROJECT_START_ACCESS_LATER_THAN_END_ACCESS"
+
+		/**
+		 * The VALUE is the message key: it is what
+		 * `RegistryControllerAdvice`/`AuthorizationErrorHandler` append to
+		 * `error.message.` to look the text up. It read
+		 * `PROJECT_START_ACCESS_…` — no `PROFILE_` — so no bundle entry matched
+		 * and every out-of-order invitation window came back as the generic
+		 * "an unexpected error occurred" instead of saying what was wrong.
+		 * `ErrorConstTest` now pins name == value == bundle key for the whole
+		 * catalogue, so the next typo fails a test rather than a user's day.
+		 */
+		const val PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS =
+			"PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS"
 		const val PROJECT_PROFILE_USERS_EMPTY = "PROJECT_PROFILE_USERS_EMPTY"
 		const val PROJECT_PROFILE_USERS_SIZE_IS_UPPER_THAN_MAX = "PROJECT_PROFILE_USERS_SIZE_IS_UPPER_THAN_MAX"
 		const val PROJECT_PROFILE_EMAIL_INVALID = "PROJECT_PROFILE_EMAIL_INVALID"
+		const val PROJECT_PROFILE_LIGHT_USER_DISABLED = "PROJECT_PROFILE_LIGHT_USER_DISABLED"
 		const val PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED = "PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED"
 		const val PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR = "PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR"
 		const val PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR =

@@ -27,6 +27,8 @@ interface IParticipantService {
 	fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantModel>
 	fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
 	fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
+	fun findArrivalsToday(projectId: UUID, limit: Int): Mono<Pair<List<ParticipantModel>, List<GroupModel>>>
+	fun findDeparturesToday(projectId: UUID, limit: Int): Mono<Pair<List<ParticipantModel>, List<GroupModel>>>
 
 	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
 	fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>

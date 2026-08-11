@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.FeaturesReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AlertStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AvailabilityStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementTypeReaderDtoMapper
@@ -11,6 +12,7 @@ import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
@@ -130,6 +132,20 @@ class MetadataV2ControllerTest : TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 		verify(participantTypeReaderMapper, atLeastOnce()).toDto(any())
+	}
+
+	@Test
+	fun `Should getFeatures return 200 with the light user switch`() {
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder("$BASE_URL/features", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		val features = result.body<FeaturesReaderDto>(OK)
+		assertEquals(true, features?.lightUser)
 	}
 
 	@Test

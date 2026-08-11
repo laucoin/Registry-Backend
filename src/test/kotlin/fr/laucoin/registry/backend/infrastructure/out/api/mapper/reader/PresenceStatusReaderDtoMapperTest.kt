@@ -8,17 +8,34 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.time.LocalDate
 import java.time.ZonedDateTime
+import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 class PresenceStatusReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
 	private val mapper = PresenceStatusReaderDtoMapper(translateService)
+
+	private companion object {
+		@JvmStatic
+		fun `Should not describe a window that has neither opened late nor closed early`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(
+					CustomDateTimeModel(LocalDate.now().minusDays(2)),
+					CustomDateTimeModel(LocalDate.now().plusDays(2)),
+				),
+				Arguments.of(null, CustomDateTimeModel(LocalDate.now())),
+				Arguments.of(CustomDateTimeModel(LocalDate.now()), null),
+			)
+	}
 
 	@BeforeEach
 	fun setUp() {
@@ -56,21 +73,49 @@ class PresenceStatusReaderDtoMapperTest {
 	}
 
 	/**
-	 * The previously-NPEing branch, now exercised with a non-null bound.
-	 * (Direction semantics are frozen v1 behaviour — asStartIsAfterOther
-	 * fires ARRIVE for a past-dated start; we pin the behaviour, not judge it.)
+	 * The direction question the v1 mapper left open, now settled: ARRIVE
+	 * ("arrives in {0}") only while the window has yet to open, LEFT ("left {0}
+	 * ago") only once it has closed. The old conditions were the mirror image,
+	 * so someone expected in two days was announced as having already left.
 	 */
 	@Test
-	fun `Should render the arrival-window branch with a real bound (no crash)`() {
+	fun `Should announce the arrival countdown only before the window opens`() {
 		// Act
 		val result = mapper.toDto(
 			UNAVAILABLE,
 			lastMovement = null,
-			startAvailability = CustomDateTimeModel(LocalDate.now().minusDays(2)),
+			startAvailability = CustomDateTimeModel(LocalDate.now().plusDays(2)),
 			endAvailability = null,
 		)
 
 		// Assert
 		assertEquals("${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE", result.label)
+	}
+
+	@Test
+	fun `Should announce the left label only after the window closes`() {
+		// Act
+		val result = mapper.toDto(
+			UNAVAILABLE,
+			lastMovement = null,
+			startAvailability = null,
+			endAvailability = CustomDateTimeModel(LocalDate.now().minusDays(2)),
+		)
+
+		// Assert
+		assertEquals("${PRESENCE_STATUS_DURATION_PREFIX}LEFT", result.label)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should not describe a window that has neither opened late nor closed early`(
+		startAvailability: CustomDateTimeModel?,
+		endAvailability: CustomDateTimeModel?,
+	) {
+		// Act
+		val result = mapper.toDto(UNAVAILABLE, lastMovement = null, startAvailability, endAvailability)
+
+		// Assert
+		assertEquals("${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET", result.label)
 	}
 }

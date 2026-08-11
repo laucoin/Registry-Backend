@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_LIGHT_USER_DISABLED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
@@ -48,6 +49,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
@@ -69,14 +71,28 @@ class UserServiceTest {
 		whenever(audit.audit(any<Mono<Any>>(), any(), any(), anyOrNull()))
 			.thenAnswer { it.getArgument<Mono<Any>>(0) }
 	}
-	private val service = UserService(
-		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, auditService
-	)
-
 	private val serviceAccountId = UUID.randomUUID()
 	private val serviceAccount = CurrentUserModel().apply { id = serviceAccountId; role = USER_ROLE }
 
+	/**
+	 * The service account is normally injected by the ContextRefreshedEvent, which
+	 * no unit test raises, so every instance gets it wired here — including the
+	 * feature-flag variants built inside a test.
+	 */
+	private fun userService(lightUserEnabled: Boolean = true) = UserService(
+		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, auditService,
+		lightUserEnabled
+	).also { setField(it, "serviceAccount", serviceAccount) }
+
+	private val service = userService()
+
 	private companion object {
+		@JvmStatic
+		fun `Should deleteLightUser leave anything that is not a light user alone`(): Stream<Arguments> = Stream.of(
+			Arguments.of(UserModel(oidcId = UUID.randomUUID()).apply { id = UUID.randomUUID() }),
+			Arguments.of(UserModel(oidcId = null)),
+		)
+
 		@JvmStatic
 		fun `Should updateUserIfPersonalDataChanged update and return User`(): Stream<Arguments> = Stream.of(
 			Arguments.of(UserModel()),
@@ -376,6 +392,60 @@ class UserServiceTest {
 		assertNull(created.lastName)
 		assertEquals(USER_ROLE, created.role)
 		assertNull(created.lastLogin)
+	}
+
+	@Test
+	fun `Should findOrCreateInvitedUser refuse an unknown email when the light user feature is disabled`() {
+		// Arrange
+		whenever(port.findByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			userService(lightUserEnabled = false).findOrCreateInvitedUser("invited@test.com", currentUser()).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(UNPROCESSABLE_ENTITY, result.status)
+		assertEquals(PROJECT_PROFILE_LIGHT_USER_DISABLED, result.code)
+		assertEquals(arrayListOf<Any?>("invited@test.com"), result.args)
+		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should findOrCreateInvitedUser still reuse an existing account when the light user feature is disabled`() {
+		// Arrange
+		whenever(port.findByEmail(any(), anyOrNull())).thenReturn(Flux.just(currentUser()))
+
+		// Act
+		val result = userService(lightUserEnabled = false)
+			.findOrCreateInvitedUser(currentUser().email!!, currentUser()).block()
+
+		// Assert
+		assertEquals(currentUser().id, result?.id)
+		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should deleteLightUser delete an unclaimed email-only account`() {
+		// Arrange
+		val lightUser = UserModel(oidcId = null, email = "invited@test.com").apply { id = UUID.randomUUID() }
+		whenever(port.deleteById(any())).thenReturn(Mono.just(Unit))
+
+		// Act
+		service.deleteLightUser(lightUser).block()
+
+		// Assert
+		verify(port).deleteById(lightUser.id!!)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should deleteLightUser leave anything that is not a light user alone`(user: UserModel) {
+		// Act
+		service.deleteLightUser(user).block()
+
+		// Assert
+		verify(port, never()).deleteById(any())
 	}
 
 	@ParameterizedTest

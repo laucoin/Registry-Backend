@@ -31,7 +31,6 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
-import java.time.OffsetTime
 import java.util.UUID
 
 @Service
@@ -92,7 +91,7 @@ class ProjectService(
 	): Mono<UUID> {
 		return findProjectById(id, visibilitySearched = null)
 			.handle { it, handle ->
-				if (it.isNotInRange(start) || it.isNotInRange(end)) {
+				if (it.isNotStartInRange(start) || it.isNotEndInRange(end)) {
 					log.warn(
 						"Failed to editing, one or more dates ({}, {}) are out of project range [{}, {}]",
 						start,
@@ -147,13 +146,19 @@ class ProjectService(
 		if (project.begin.asStartIsAfterOther(it.begin) || project.end.asEndIsBeforeOther(it.end)) {
 			port.validDateTime(
 				it.id!!,
-				project.begin?.toZonedDateTime(OffsetTime.MIN),
-				project.end?.toZonedDateTime(OffsetTime.MAX)
+				project.begin?.asStart(),
+				project.end?.asEnd()
 			)
 				.handle { valid, handle ->
 					if (!valid) {
 						log.warn("Failed, {} is out of project range [{}, {}]", it, it.begin, it.end)
-						handle.error(RegistryException(CONFLICT, PROJECT_DATE_CONFLICT_WITH_ELEMENTS))
+						handle.error(
+							RegistryException(
+								CONFLICT,
+								PROJECT_DATE_CONFLICT_WITH_ELEMENTS,
+								arrayListOf(it.name)
+							)
+						)
 					} else handle.next(it)
 				}
 		} else Mono.just(it)

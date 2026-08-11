@@ -52,6 +52,38 @@ class VehicleService(
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>> {
 		return movementPort.findPageByVehicleId(projectId, id, pageable, searchParams)
+			.flatMap { page -> attachDrivers(projectId, id, page) }
+	}
+
+	/**
+	 * A vehicle's history reads as a list of dates and directions, which answers
+	 * "when did it move" but never "who had it" — the one thing anyone looking up
+	 * a vehicle's past actually wants. The driver IS the participant whose content
+	 * row carries the vehicle (the same rule the major-driver check applies), so
+	 * the page's content is fetched in ONE extra query and narrowed to the rows
+	 * naming this vehicle: other passengers on the same movement are somebody
+	 * else's history.
+	 */
+	private fun attachDrivers(
+		projectId: UUID,
+		vehicleId: UUID,
+		page: PageModel<MovementModel>,
+	): Mono<PageModel<MovementModel>> {
+		val movementIds = page.content.mapNotNull(MovementModel::id)
+		if (movementIds.isEmpty()) {
+			return Mono.just(page)
+		}
+		return movementPort.findContent(projectId, movementIds)
+			.collectMap({ it.first }, { it.second })
+			.map { contentByMovement ->
+				page.apply {
+					content.forEach { movement ->
+						movement.content = contentByMovement[movement.id]
+							?.filter { it.vehicle?.id == vehicleId }
+							?: emptyList()
+					}
+				}
+			}
 	}
 
 	override fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel> {

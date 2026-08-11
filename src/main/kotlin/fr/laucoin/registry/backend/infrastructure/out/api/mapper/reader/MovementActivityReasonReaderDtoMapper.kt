@@ -17,6 +17,7 @@ class MovementActivityReasonReaderDtoMapper(
 			label = "${model.name} (${translateService.getMessage(code = "$MOVEMENT_REASON_PREFIX$ACTIVITY")})",
 			value = model.id!!.toString(),
 			kind = MovementReasonKindEnum.ACTIVITY,
+			duration = model.duration?.toIsoString(),
 		)
 	}
 }

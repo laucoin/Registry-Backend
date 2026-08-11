@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleFields.VEHICLE_BRAND
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleFields.VEHICLE_LICENSE_PLATE
@@ -30,6 +29,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.orderByWithRelevance
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IVehicleEntityRepository
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter
 import org.springframework.r2dbc.core.DatabaseClient
@@ -95,8 +95,10 @@ class VehicleModelPostgresRepository(
 		pageable: PageableModel,
 		sort: List<SortModel<VehicleSortFieldEnum>>,
 	): Flux<VehicleEntity> {
-		val orderBy =
-			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" } + ", t.$ID ASC"
+		val orderBy = orderByWithRelevance(
+			searchParams.textSearched,
+			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" },
+		)
 		val sql = """
         WITH $WITH_VEHICLE_LAST_MOVEMENT
         SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR

@@ -23,6 +23,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
@@ -152,6 +153,60 @@ object GroupQueries {
                     COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
                     OR (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
                 )
+            )
+        )
+    """
+
+	/**
+	 * A group is due to arrive today when its own start date IS today AND it
+	 * still holds someone the arrival actually concerns: a member with no
+	 * arrival date of their own — so the group's date is what governs them — who
+	 * has never moved. A member carrying their own dates is not part of the
+	 * group's arrival, and one who has already moved has arrived. With neither
+	 * condition the panel listed groups whose members were all long since on
+	 * site.
+	 */
+	const val GROUP_ARRIVING_TODAY_CLAUSE = """
+        (
+            t.$GROUP_START_AVAILABILITY_DATE = CURRENT_DATE
+            AND EXISTS (
+                SELECT 1
+                FROM $GROUP_CONTENT_TABLE gc
+                INNER JOIN $PARTICIPANT_TABLE p ON p.$ID = gc.$GROUP_CONTENT_PARTICIPANT_ID AND p.$VISIBLE IS TRUE
+                WHERE gc.$GROUP_CONTENT_GROUP_ID = t.$ID
+                  AND p.$PARTICIPANT_START_AVAILABILITY_DATE IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM $MOVEMENT_CONTENT_TABLE mc
+                      INNER JOIN $MOVEMENT_TABLE m ON m.$ID = mc.$MOVEMENT_CONTENT_MOVEMENT_ID AND m.$VISIBLE IS TRUE
+                      WHERE mc.$MOVEMENT_CONTENT_PARTICIPANT_ID = p.$ID
+                  )
+            )
+        )
+    """
+
+	/**
+	 * The mirror for departures: the group's own end date IS today and it still
+	 * holds a member with no end date of their own who has not definitively
+	 * left. `DEFINITIVE_DEPARTURE` is the terminal reason — once it is recorded
+	 * the person is gone for good and the group has nothing left to see off.
+	 */
+	const val GROUP_DEPARTING_TODAY_CLAUSE = """
+        (
+            t.$GROUP_END_AVAILABILITY_DATE = CURRENT_DATE
+            AND EXISTS (
+                SELECT 1
+                FROM $GROUP_CONTENT_TABLE gc
+                INNER JOIN $PARTICIPANT_TABLE p ON p.$ID = gc.$GROUP_CONTENT_PARTICIPANT_ID AND p.$VISIBLE IS TRUE
+                WHERE gc.$GROUP_CONTENT_GROUP_ID = t.$ID
+                  AND p.$PARTICIPANT_END_AVAILABILITY_DATE IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM $MOVEMENT_CONTENT_TABLE mc
+                      INNER JOIN $MOVEMENT_TABLE m ON m.$ID = mc.$MOVEMENT_CONTENT_MOVEMENT_ID AND m.$VISIBLE IS TRUE
+                      WHERE mc.$MOVEMENT_CONTENT_PARTICIPANT_ID = p.$ID
+                        AND m.$MOVEMENT_REASON = 'DEFINITIVE_DEPARTURE'
+                  )
             )
         )
     """

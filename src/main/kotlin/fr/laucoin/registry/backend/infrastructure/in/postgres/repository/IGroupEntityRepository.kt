@@ -8,6 +8,8 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.Gro
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.DATE_IN_GROUP_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.GROUP_ARRIVING_TODAY_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.GROUP_DEPARTING_TODAY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.GROUP_INSIDE_MEMBERS_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.GROUP_MEMBERS_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.GROUP_PRESENCE_CLAUSE
@@ -107,6 +109,30 @@ interface IGroupEntityRepository : ReactiveCrudRepository<GroupEntity, UUID> {
         """
 	)
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupEntity>
+
+	@Query(
+		"""
+        WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_ARRIVING_TODAY_CLAUSE
+        ORDER BY t.$GROUP_NAME
+        LIMIT :limit
+        """
+	)
+	fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<GroupEntity>
+
+	@Query(
+		"""
+        WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_DEPARTING_TODAY_CLAUSE
+        ORDER BY t.$GROUP_NAME
+        LIMIT :limit
+        """
+	)
+	fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<GroupEntity>
 
 	@Query(
 		"""

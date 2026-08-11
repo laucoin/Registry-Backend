@@ -10,8 +10,16 @@ abstract class GenericDurationReaderDtoMapper(
 	/**
 	 * Sub-minute durations are deliberately fuzzy ("a few seconds"): exact
 	 * seconds would push clients to re-render every second.
+	 *
+	 * The duration is taken as a MAGNITUDE. Direction is carried by the message
+	 * the caller picks ("since {0}" vs "in {0}"), never by the sign: a negative
+	 * Duration used to fall through every threshold — `seconds < 60` is true for
+	 * anything negative — and came out as "a few seconds", which is how a date
+	 * three weeks in the future ended up reading "no longer available since a few
+	 * seconds".
 	 */
-	fun formatDuration(duration: Duration): String {
+	fun formatDuration(interval: Duration): String {
+		val duration = interval.abs()
 		return when {
 			duration.seconds < 60 -> translateService.getMessage(code = "${DURATION_PREFIX}seconds")
 

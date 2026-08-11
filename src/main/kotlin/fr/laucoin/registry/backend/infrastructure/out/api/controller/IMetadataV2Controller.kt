@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.HttpCacheable
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.FeaturesReaderDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
@@ -63,4 +64,12 @@ interface IMetadataV2Controller {
 	@HttpCacheable
 	@GetMapping("/alerts/status")
 	fun getAlertStatus(): Flux<LabelDto>
+
+	@Operation(
+		summary = "Get feature switches",
+		description = "Get the deployment feature switches the UI mirrors",
+	)
+	@HttpCacheable
+	@GetMapping("/features")
+	fun getFeatures(): FeaturesReaderDto
 }

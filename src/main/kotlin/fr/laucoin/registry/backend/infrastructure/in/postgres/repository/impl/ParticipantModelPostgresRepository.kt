@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
@@ -40,6 +39,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.orderByWithRelevance
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IParticipantEntityRepository
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter
@@ -114,8 +114,10 @@ class ParticipantModelPostgresRepository(
 		pageable: PageableModel,
 		sort: List<SortModel<ParticipantSortFieldEnum>>,
 	): Flux<ParticipantEntity> {
-		val orderBy =
-			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" } + ", t.$ID ASC"
+		val orderBy = orderByWithRelevance(
+			searchParams.textSearched,
+			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" },
+		)
 		val sql = """
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR

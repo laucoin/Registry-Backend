@@ -4,10 +4,13 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIV
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
@@ -106,6 +109,79 @@ class VehicleServiceTest {
 
 		// Assert
 		verify(movementPort).findPageByVehicleId(projectId, uuid, pageable, params)
+	}
+
+	/**
+	 * A vehicle's history is read to find out WHO had it, so each movement is
+	 * annotated with the content rows naming this vehicle — its drivers. Rows for
+	 * other vehicles on the same movement belong to another vehicle's history and
+	 * are dropped.
+	 */
+	@Test
+	fun `Should findVehicleMovementsPage attach only this vehicle's drivers`() {
+		// Arrange
+		val movementId = UUID.randomUUID()
+		val movement = MovementModel().apply { id = movementId }
+		val driver = MovementModel.MovementContentModel(
+			participant = ParticipantModel().apply { firstName = "Nour" },
+			vehicle = VehicleModel().apply { id = vehicleId },
+		)
+		val passengerOfAnotherVehicle = MovementModel.MovementContentModel(
+			participant = ParticipantModel().apply { firstName = "Ilan" },
+			vehicle = VehicleModel().apply { id = UUID.randomUUID() },
+		)
+
+		whenever(movementPort.findPageByVehicleId(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, listOf(movement))))
+		whenever(movementPort.findContent(any(), any()))
+			.thenReturn(Flux.just(movementId to listOf(driver, passengerOfAnotherVehicle)))
+
+		// Act
+		val result = service
+			.findVehicleMovementsPage(projectId, vehicleId, PageableModel(0, 10), MovementSearchParamModel())
+			.block()
+
+		// Assert
+		assertEquals(listOf(driver), result?.content?.first()?.content)
+		verify(movementPort).findContent(projectId, listOf(movementId))
+	}
+
+	@Test
+	fun `Should findVehicleMovementsPage not ask for content on an empty page`() {
+		// Arrange
+		whenever(movementPort.findPageByVehicleId(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 0, emptyList())))
+
+		// Act
+		val result = service
+			.findVehicleMovementsPage(projectId, vehicleId, PageableModel(0, 10), MovementSearchParamModel())
+			.block()
+
+		// Assert
+		assertEquals(emptyList<MovementModel>(), result?.content)
+		verify(movementPort, never()).findContent(any(), any())
+	}
+
+	/**
+	 * A movement the content query says nothing about carries no driver rather
+	 * than keeping whatever the page happened to arrive with.
+	 */
+	@Test
+	fun `Should findVehicleMovementsPage empty the content of a movement with no driver row`() {
+		// Arrange
+		val movement = MovementModel().apply { id = UUID.randomUUID() }
+
+		whenever(movementPort.findPageByVehicleId(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, listOf(movement))))
+		whenever(movementPort.findContent(any(), any())).thenReturn(Flux.empty())
+
+		// Act
+		val result = service
+			.findVehicleMovementsPage(projectId, vehicleId, PageableModel(0, 10), MovementSearchParamModel())
+			.block()
+
+		// Assert
+		assertEquals(emptyList<MovementModel.MovementContentModel>(), result?.content?.first()?.content)
 	}
 
 	@Test

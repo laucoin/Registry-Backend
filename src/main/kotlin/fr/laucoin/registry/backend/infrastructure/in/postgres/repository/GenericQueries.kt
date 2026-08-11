@@ -31,6 +31,23 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.User
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TABLE
 
 object GenericQueries {
+	/**
+	 * The ORDER BY of a v2 sorted page. A TEXT SEARCH is answered by relevance
+	 * first: `similarity_score DESC` leads, and the caller's criterion becomes
+	 * the tie-break. Without it a search fell back to the plain alphabetical
+	 * ordering, so the closest match could sit on page four while page one held
+	 * whatever happened to start with an "A".
+	 *
+	 * The score is a projected column of every searchable query (SELECT_*_SEARCH),
+	 * never user input, and the caller's fragment is already built from the sort
+	 * enum whitelist — nothing here widens what can reach the SQL string. `id`
+	 * closes the ordering so paging is stable when everything else ties.
+	 */
+	fun orderByWithRelevance(textSearched: String?, sortFragment: String): String {
+		val relevance = if (textSearched.isNullOrBlank()) "" else "similarity_score DESC, "
+		return "$relevance$sortFragment, t.$ID ASC"
+	}
+
 	private const val CREATOR_TABLE = "create_tb"
 	const val SELECT_CREATOR = """
         $CREATOR_TABLE.$USER_FIRST_NAME AS $CREATOR_FIRST_NAME,

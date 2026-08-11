@@ -17,7 +17,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityQueries.ACTIVITY_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityQueries.DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityQueries.SELECT_ACTIVITY_SEARCH
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
@@ -27,6 +26,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.orderByWithRelevance
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IActivityEntityRepository
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter
 import org.springframework.r2dbc.core.DatabaseClient
@@ -90,8 +90,10 @@ class ActivityModelPostgresRepository(
 		pageable: PageableModel,
 		sort: List<SortModel<ActivitySortFieldEnum>>,
 	): Flux<ActivityEntity> {
-		val orderBy =
-			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" } + ", t.$ID ASC"
+		val orderBy = orderByWithRelevance(
+			searchParams.textSearched,
+			sort.joinToString(", ") { "t.${it.field.toColumn()} ${if (it.descending) "DESC" else "ASC"}" },
+		)
 		val sql = """
         SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN

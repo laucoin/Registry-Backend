@@ -39,6 +39,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.User
 
 object ParticipantQueries {
 	private const val PARTICIPANT_PREFIX = "participant_"
+
 	/**
 	 * The outer movement MUST be correlated back to the participant, not matched on
 	 * the timestamp alone: several participants routinely share a movement instant
@@ -171,6 +172,16 @@ object ParticipantQueries {
 		"(:isMajor IS NULL OR :isMajor = (t.$PARTICIPANT_BIRTHDAY <= CURRENT_DATE - INTERVAL '18 years'))"
 
 	const val PARTICIPANT_TYPE_SEARCH_CLAUSE = "(:typeSearched IS NULL OR t.type = :typeSearched)"
+
+	/**
+	 * A birthday recurs: it is the DAY and MONTH that fall today, never the year
+	 * the person was born. Comparing the stored date to CURRENT_DATE matched only
+	 * someone born today, so the card was empty every day of the project.
+	 * `TO_CHAR` keeps 29 February honest — it simply finds nobody in a non-leap
+	 * year, which is what the calendar says.
+	 */
+	const val PARTICIPANT_BIRTHDAY_TODAY_CLAUSE =
+		"TO_CHAR(t.$PARTICIPANT_BIRTHDAY, 'MM-DD') = TO_CHAR(CURRENT_DATE, 'MM-DD')"
 
 	const val PARTICIPANT_AVAILABILITY_CLAUSE = """
         (

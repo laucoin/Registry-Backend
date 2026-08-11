@@ -27,7 +27,6 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
-import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
@@ -143,8 +142,8 @@ class UserProjectProfileService(
 			projectId,
 			listOf(currentUser.id!!),
 			profileId = null,
-			profile.startAccess!!.toZonedDateTime(OffsetTime.MIN),
-			profile.endAccess!!.toZonedDateTime(OffsetTime.MAX),
+			profile.startAccess!!.asStart(),
+			profile.endAccess!!.asEnd(),
 		)
 			.flatMap { port.create(profile) }
 			.updateSelectedProfile(currentUser)

@@ -27,6 +27,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
@@ -42,8 +45,17 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
+import java.util.stream.Stream
 
 class AlertServiceTest {
+	private companion object {
+		@JvmStatic
+		fun `Should not open a thread for an alert raised without a message`(): Stream<Arguments> = Stream.of(
+			Arguments.of(emptyList<CommunicationModel>()),
+			Arguments.of(null),
+		)
+	}
+
 	private val port: IAlertPort = mock()
 	private val projectService: IProjectService = mock()
 	private val communicationPort: ICommunicationPort = mock()
@@ -142,6 +154,32 @@ class AlertServiceTest {
 		)
 		verify(communicationPort).create(any())
 		verify(port).create(alert)
+	}
+
+	/**
+	 * The opening message is optional, and an alert raised without one must NOT
+	 * seed its thread: doing so persisted a communication with an author, a
+	 * timestamp and nothing to read, which every later message then had to be
+	 * scrolled past. The mapper stops building the seed, so the service receives
+	 * an alert with no communications and must cope with it — `first()` used to
+	 * throw on exactly that list.
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should not open a thread for an alert raised without a message`(
+		communications: List<CommunicationModel>?,
+	) {
+		// Arrange
+		val alert = commonAlert().apply { this.communications = communications }
+		whenever(port.create(any())).thenReturn(Mono.just(alert))
+
+		// Act
+		val result = service.createAlert(currentUser(), alert).block()
+
+		// Assert
+		assertEquals(emptyList<CommunicationModel>(), result?.communications)
+		verify(port).create(alert)
+		verify(communicationPort, never()).create(any())
 	}
 
 	@Test

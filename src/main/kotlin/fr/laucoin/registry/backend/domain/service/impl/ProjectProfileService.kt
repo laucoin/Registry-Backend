@@ -35,7 +35,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.time.OffsetTime
 import java.util.UUID
 
 @Service
@@ -123,8 +122,8 @@ class ProjectProfileService(
 					projectId,
 					allUserIds,
 					profileId = null,
-					template.startAccess?.toZonedDateTime(OffsetTime.MIN),
-					template.endAccess?.toZonedDateTime(OffsetTime.MAX)
+					template.startAccess?.asStart(),
+					template.endAccess?.asEnd()
 				)
 					.map { allowedUsers ->
 						allowedUsers.map { userId ->
@@ -170,8 +169,8 @@ class ProjectProfileService(
 					projectId,
 					listOf(it.user!!.id!!),
 					it.id,
-					profile.endAccess?.toZonedDateTime(OffsetTime.MIN),
-					profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
+					profile.startAccess?.asStart(),
+					profile.endAccess?.asEnd(),
 				).map { _ -> it }
 			}
 			.validateRole(currentUser, projectId, profile)

@@ -190,17 +190,30 @@ object MovementQueries {
         )
     """
 
+	/**
+	 * `last_participant_movement` carries the same correlation and visibility
+	 * rules as ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT, for the same
+	 * reasons: matching the outer movement on the timestamp alone lets two
+	 * movements recorded in the same minute swap directions, and leaving the outer
+	 * movement unfiltered lets a DISABLED movement decide who counts as currently
+	 * out — so a mistaken exit kept its participant on the home page's current
+	 * movements after being hidden.
+	 */
 	const val WITH_CURRENT_MOVEMENT = """
         last_participant_movement AS (
-            SELECT t.$ID, t.$MOVEMENT_TYPE, plm.$MOVEMENT_CONTENT_PARTICIPANT_ID
+            SELECT DISTINCT t.$ID, t.$MOVEMENT_TYPE, plm.$MOVEMENT_CONTENT_PARTICIPANT_ID
             FROM $MOVEMENT_TABLE t
+            INNER JOIN $MOVEMENT_CONTENT_TABLE mc ON mc.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
             INNER JOIN (
                 SELECT MAX(t.$MOVEMENT_DATE_TIME) as last_participant_movement_date_time, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
                 FROM $MOVEMENT_TABLE t
                 INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
                 WHERE t.$VISIBLE IS TRUE
                 GROUP BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
-            ) AS plm ON plm.last_participant_movement_date_time = t.date_time
+            ) AS plm
+                ON plm.last_participant_movement_date_time = t.$MOVEMENT_DATE_TIME
+                AND plm.$MOVEMENT_CONTENT_PARTICIPANT_ID = mc.$MOVEMENT_CONTENT_PARTICIPANT_ID
+            WHERE t.$VISIBLE IS TRUE
         ),
         filtered_groups AS (
             SELECT t.$ID as $GROUP_CONTENT_PARTICIPANT_ID,

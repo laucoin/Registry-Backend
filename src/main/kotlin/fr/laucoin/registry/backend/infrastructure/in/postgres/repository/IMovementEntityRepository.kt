@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communica
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_ID

@@ -43,6 +43,7 @@ class AuthorizationErrorHandler(
 					response,
 					exception.status,
 					exception.code,
+					exception.args?.toArray(),
 				)
 			)
 
@@ -79,11 +80,19 @@ class AuthorizationErrorHandler(
 	/**
 	 * error.title.* / error.message.* live in the errors bundle — same fix
 	 * as RegistryControllerAdvice (raw keys were leaking to clients).
+	 *
+	 * The refusals raised while converting the JWT carry the data their message
+	 * names — the address behind AUTH_EMAIL_NOT_VERIFIED and
+	 * AUTH_EMAIL_ALREADY_USED. MessageFormat only runs when arguments are passed,
+	 * so dropping them here left the placeholders sitting in the response
+	 * verbatim, on precisely the errors that have to tell the user which address
+	 * is the problem.
 	 */
 	private fun buildBody(
 		response: ServerHttpResponse,
 		status: HttpStatus,
 		errorCode: String,
+		args: Array<Any>? = null,
 	): Mono<DataBuffer> {
 		response.statusCode = status
 		response.headers.contentType = APPLICATION_JSON
@@ -93,7 +102,7 @@ class AuthorizationErrorHandler(
 			statusName = status.name,
 			code = errorCode,
 			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}"),
-			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode"),
+			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode", args = args),
 		)
 
 		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))

@@ -33,6 +33,13 @@ registry:
   feature:
     observability:
       enabled: true
+    light-user:
+      # Email-only accounts with no oidc_id: invitations by email, and the
+      # first-login linking that claims them. Disabled turns the mechanism off
+      # end to end — an unknown email can no longer be invited, and a sign-in
+      # that would have linked an unclaimed invitation drops it and
+      # self-registers instead.
+      enabled: ${REGISTRY_FEATURE_LIGHT_USER_ENABLED:true}
     profile:
       searched:
         max-user-result: 10

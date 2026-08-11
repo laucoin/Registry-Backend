@@ -41,6 +41,7 @@ import org.springframework.security.oauth2.jwt.Jwt
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -50,7 +51,7 @@ class TokenConverterServiceTest {
 	private val roleService: IRoleService = mock()
 	private val userService: IUserService = mock()
 	private val profilePort: IProjectProfilePort = mock()
-	private val service = TokenConverterService(
+	private fun tokenConverter(lightUserEnabled: Boolean = true) = TokenConverterService(
 		userService,
 		profilePort,
 		roleService,
@@ -58,8 +59,11 @@ class TokenConverterServiceTest {
 		EMAIL_KEY,
 		EMAIL_VERIFIED_KEY,
 		FIRST_NAME_KEY,
-		LAST_NAME_KEY
+		LAST_NAME_KEY,
+		lightUserEnabled
 	)
+
+	private val service = tokenConverter()
 
 	private val jwt = mock<Jwt>()
 	private val claims: Map<String, Any> = mapOf(
@@ -98,6 +102,14 @@ class TokenConverterServiceTest {
 			Stream.of(
 				Arguments.of(false),
 				Arguments.of("not-a-boolean"),
+				Arguments.of(null),
+			)
+
+		@JvmStatic
+		fun `Should drop the residual light user and self-register when the light user feature is disabled`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(true),
+				Arguments.of(false),
 				Arguments.of(null),
 			)
 
@@ -253,7 +265,12 @@ class TokenConverterServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
 
-		verify(userService).createUser(userOidcId, currentUser().email!!, currentUser().firstName, currentUser().lastName)
+		verify(userService).createUser(
+			userOidcId,
+			currentUser().email!!,
+			currentUser().firstName,
+			currentUser().lastName
+		)
 		verifyNoInteractions(profilePort)
 		verifyNoInteractions(roleService)
 	}
@@ -315,6 +332,64 @@ class TokenConverterServiceTest {
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verifyNoInteractions(profilePort)
 		verifyNoInteractions(roleService)
+	}
+
+	/**
+	 * Feature off: the invitation mechanism does not exist, so an unclaimed
+	 * email-only row is not something to link — it is deleted and the caller is
+	 * self-registered, which is what breaks the loop an unverified address would
+	 * otherwise be stuck in. Asserted for a verified AND an unverified address:
+	 * with the feature off, verification no longer decides anything here.
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should drop the residual light user and self-register when the light user feature is disabled`(
+		emailVerified: Any?,
+	) {
+		// Arrange
+		val residual = CurrentUserModel()
+		val provisioned = currentUser().apply { role = USER_ROLE }
+		val unverifiedClaims = claims.filterKeys { it != EMAIL_VERIFIED_KEY }
+			.let { if (emailVerified == null) it else it + (EMAIL_VERIFIED_KEY to emailVerified) }
+
+		whenever(jwt.claims).thenReturn(unverifiedClaims)
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(residual))
+		whenever(userService.deleteLightUser(any())).thenReturn(Mono.just(Unit))
+		whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(provisioned))
+		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
+		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.empty())
+
+		// Act
+		val result = tokenConverter(lightUserEnabled = false).convert(jwt).block()
+
+		// Assert
+		assertNotNull(result)
+		verify(userService).deleteLightUser(residual)
+		verify(userService).createUser(eq(userOidcId), eq(currentUser().email!!), anyOrNull(), anyOrNull())
+		verify(userService, never()).linkUser(any(), any(), any(), anyOrNull(), anyOrNull())
+	}
+
+	@Test
+	fun `Should still refuse an email held by another identity when the light user feature is disabled`() {
+		// Arrange
+		val alreadyLinked = currentUser().apply { oidcId = UUID.randomUUID() }
+
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(alreadyLinked))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			tokenConverter(lightUserEnabled = false).convert(jwt).block()
+		}) as JwtConversionException
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(AUTH_EMAIL_ALREADY_USED, result.message)
+		verify(userService, never()).deleteLightUser(any())
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 	}
 
 	@Test

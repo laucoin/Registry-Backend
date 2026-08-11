@@ -20,15 +20,33 @@ class AlertCreationWriterDtoMapper : IGenericProjectWriterDtoMapper<AlertModel, 
 			title = dto.title
 			dateTime = dto.dateTime!!
 			status = IN_PROGRESS
-			communications = listOf(
-				CommunicationModel().apply {
-					dateTime = dto.dateTime!!
-					message = dto.message
-					movement = Optional.ofNullable(dto.movementId).map { MovementModel().apply { id = dto.movementId } }
-						.orElse(null)
-					project = ProjectModel().apply { id = projectId }
-				}
-			)
+			communications = listOfNotNull(seedCommunication(dto, projectId))
+			project = ProjectModel().apply { id = projectId }
+		}
+	}
+
+	/**
+	 * The opening message of the alert's thread — and it exists only if there is
+	 * something to say. The message is optional on the form, but the alert was
+	 * seeded with a communication unconditionally, so raising an alert without
+	 * one wrote a blank row into the thread: an author, a timestamp and no text,
+	 * which then had to be read past on every later message.
+	 *
+	 * A blank string counts as absent — a stray space is not a message. Dropping
+	 * the communication also drops the movement it would have carried, which is
+	 * correct: that link IS the message ("this outing, this note"), and there is
+	 * nothing to attach a movement to without one.
+	 */
+	private fun seedCommunication(dto: AlertCreationWriterDto, projectId: UUID): CommunicationModel? {
+		val message = dto.message?.trim()
+		if (message.isNullOrEmpty()) {
+			return null
+		}
+		return CommunicationModel().apply {
+			dateTime = dto.dateTime!!
+			this.message = message
+			movement = Optional.ofNullable(dto.movementId).map { MovementModel().apply { id = dto.movementId } }
+				.orElse(null)
 			project = ProjectModel().apply { id = projectId }
 		}
 	}

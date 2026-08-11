@@ -42,6 +42,8 @@ class TokenConverterService(
 	private val firstNameKey: String,
 	@param:Value($$"${registry.security.oauth2.claims.last-name}")
 	private val lastNameKey: String,
+	@param:Value($$"${registry.feature.light-user.enabled:true}")
+	private val lightUserEnabled: Boolean,
 ) : Converter<Jwt, Mono<AbstractAuthenticationToken>>, LoggerService() {
 
 	override fun convert(jwt: Jwt): Mono<AbstractAuthenticationToken> {
@@ -106,6 +108,12 @@ class TokenConverterService(
 	 * service accounts, so a row this lookup cannot see may still own the address.
 	 * The duplicate key is mapped to the same CONFLICT rather than surfacing as a
 	 * 500 on every request the caller makes.
+	 *
+	 * `registry.feature.light-user.enabled=false` turns the invitation mechanism
+	 * off end to end. The link branch then has nothing legitimate to link to, so
+	 * the unclaimed row is deleted and the caller self-registers — otherwise an
+	 * unverified address would keep hitting a refusal on every single request,
+	 * with no way to clear the account that causes it.
 	 */
 	private fun resolveByEmailOrCreate(
 		oidcId: UUID, email: String, emailVerified: Boolean, firstName: String?, lastName: String?
@@ -120,10 +128,16 @@ class TokenConverterService(
 						userService.createUser(oidcId, email, firstName, lastName)
 					}
 
+					matches.size == 1 && matches.first().oidcId == null && !lightUserEnabled -> {
+						log.info("Invited account found while the light user feature is off, dropping it")
+						userService.deleteLightUser(matches.first())
+							.then(Mono.defer { userService.createUser(oidcId, email, firstName, lastName) })
+					}
+
 					matches.size == 1 && matches.first().oidcId == null && !emailVerified -> {
 						log.warn(
 							"Invited account found, but claim \"{}\" does not assert the address as verified, "
-								+ "refusing to link OIDC ID \"{}\"",
+									+ "refusing to link OIDC ID \"{}\"",
 							emailVerifiedKey,
 							oidcId
 						)
@@ -139,7 +153,7 @@ class TokenConverterService(
 
 					else -> {
 						log.warn("The address is already used, cannot link OIDC ID \"{}\"", oidcId)
-						Mono.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED))
+						Mono.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
 					}
 				}
 			}
@@ -148,7 +162,7 @@ class TokenConverterService(
 					"The address is held by an account excluded from the lookup, cannot resolve OIDC ID \"{}\"",
 					oidcId
 				)
-				JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED)
+				JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email))
 			}
 	}
 

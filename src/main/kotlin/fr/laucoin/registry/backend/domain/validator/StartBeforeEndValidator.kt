@@ -33,7 +33,11 @@ class StartBeforeEndValidator : GenericValidator<StartBeforeEnd, Any>() {
 
 			Objects.isNull(startValue) || Objects.isNull(endValue) -> true
 			else -> {
-				val exception = RegistryException(INTERNAL_SERVER_ERROR, COMPARING_WRONG_PARAMETER_TYPE)
+				val exception = RegistryException(
+					INTERNAL_SERVER_ERROR,
+					COMPARING_WRONG_PARAMETER_TYPE,
+					arrayListOf(startValue, endValue)
+				)
 				log.error(
 					"The two fields ({}, {}) are not of the same type or the type is not supported.",
 					startValue,

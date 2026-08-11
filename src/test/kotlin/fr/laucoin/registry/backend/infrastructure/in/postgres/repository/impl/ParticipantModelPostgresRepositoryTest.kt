@@ -380,6 +380,22 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		}
 	}
 
+	/**
+	 * A birthday recurs on a day and a month; matching the stored date against
+	 * CURRENT_DATE only ever found someone born today, so the card was empty for
+	 * the whole project. Runs against the real database because the fix lives in
+	 * the SQL (TO_CHAR on both sides), not in Kotlin.
+	 */
+	@Test
+	fun `Should findBirthdays match on the day and month, ignoring the birth year`() {
+		// Act
+		val result = repository.findBirthdays(projectId, visibilitySearched = true, limit = 200).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findAllWithBirthday(projectId, visibilitySearched = true, limit = 200)
+	}
+
 	@Test
 	fun `Should findArrivingToday execute its CTE query against the database`() {
 		// Act

@@ -70,6 +70,16 @@ class ParticipantServiceTest {
 		private const val MAX_USERS = 1
 		private const val MAX_GROUPS = 2
 
+		@JvmStatic
+		fun `Should query participants and groups concurrently for a due-today panel`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(true, listOf(commonParticipant()), listOf(commonGroup())),
+				Arguments.of(false, listOf(commonParticipant()), listOf(commonGroup())),
+				Arguments.of(true, emptyList<ParticipantModel>(), listOf(commonGroup())),
+				Arguments.of(false, listOf(commonParticipant()), emptyList<GroupModel>()),
+				Arguments.of(true, emptyList<ParticipantModel>(), emptyList<GroupModel>()),
+			)
+
 		private val past = CustomDateTimeModel(LocalDate.of(2025, 9, 1))
 		private val now = CustomDateTimeModel(LocalDate.of(2025, 9, 26))
 		private val future = CustomDateTimeModel(LocalDate.of(2025, 10, 1))
@@ -224,6 +234,46 @@ class ParticipantServiceTest {
 
 		// Assert
 		verify(port).findBirthdays(projectId, onlyVisible, limit)
+	}
+
+	/**
+	 * The two "due today" reads are issued CONCURRENTLY: nothing in either side
+	 * feeds the other, so chaining them would make the panel wait for their sum.
+	 * Both are verified to have run, and the two sides come back separated —
+	 * the panel lists groups and participants differently.
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should query participants and groups concurrently for a due-today panel`(
+		arriving: Boolean,
+		participants: List<ParticipantModel>,
+		groups: List<GroupModel>,
+	) {
+		// Arrange
+		val limit = 5
+		whenever(port.findArrivingToday(any(), anyOrNull(), any())).thenReturn(Flux.fromIterable(participants))
+		whenever(port.findDepartingToday(any(), anyOrNull(), any())).thenReturn(Flux.fromIterable(participants))
+		whenever(groupPort.findArrivingToday(any(), anyOrNull(), any())).thenReturn(Flux.fromIterable(groups))
+		whenever(groupPort.findDepartingToday(any(), anyOrNull(), any())).thenReturn(Flux.fromIterable(groups))
+
+		// Act
+		val result = (if (arriving) service.findArrivalsToday(projectId, limit)
+		else service.findDeparturesToday(projectId, limit)).block()
+
+		// Assert
+		assertEquals(participants, result?.first)
+		assertEquals(groups, result?.second)
+		if (arriving) {
+			verify(port).findArrivingToday(projectId, true, limit)
+			verify(groupPort).findArrivingToday(projectId, true, limit)
+			verify(port, never()).findDepartingToday(any(), anyOrNull(), any())
+			verify(groupPort, never()).findDepartingToday(any(), anyOrNull(), any())
+		} else {
+			verify(port).findDepartingToday(projectId, true, limit)
+			verify(groupPort).findDepartingToday(projectId, true, limit)
+			verify(port, never()).findArrivingToday(any(), anyOrNull(), any())
+			verify(groupPort, never()).findArrivingToday(any(), anyOrNull(), any())
+		}
 	}
 
 	@Test

@@ -76,6 +76,30 @@ class ParticipantService(
 		return port.findDepartingToday(projectId, visibilitySearched = true, limit)
 	}
 
+	/**
+	 * The "due today" dashboard panels read two independent tables, so the two
+	 * queries are issued CONCURRENTLY rather than chained: `Mono.zip` subscribes
+	 * to both at once, and the panel waits for the slower of the two instead of
+	 * their sum. Nothing in either result feeds the other, so there is no reason
+	 * to serialize them.
+	 */
+	override fun findArrivalsToday(projectId: UUID, limit: Int): Mono<Pair<List<ParticipantModel>, List<GroupModel>>> {
+		return Mono.zip(
+			port.findArrivingToday(projectId, visibilitySearched = true, limit).collectList(),
+			groupPort.findArrivingToday(projectId, visibilitySearched = true, limit).collectList(),
+		).map { Pair(it.t1, it.t2) }
+	}
+
+	override fun findDeparturesToday(
+		projectId: UUID,
+		limit: Int
+	): Mono<Pair<List<ParticipantModel>, List<GroupModel>>> {
+		return Mono.zip(
+			port.findDepartingToday(projectId, visibilitySearched = true, limit).collectList(),
+			groupPort.findDepartingToday(projectId, visibilitySearched = true, limit).collectList(),
+		).map { Pair(it.t1, it.t2) }
+	}
+
 	override fun findParticipantsByIds(
 		projectId: UUID,
 		ids: List<UUID>,

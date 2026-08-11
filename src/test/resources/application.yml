@@ -28,6 +28,8 @@ registry:
       enabled: true
     observability:
       enabled: true
+    light-user:
+      enabled: ${REGISTRY_FEATURE_LIGHT_USER_ENABLED:true}
     profile:
       searched:
         max-user-result: 1

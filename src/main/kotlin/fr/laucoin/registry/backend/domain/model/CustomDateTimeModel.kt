@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.domain.model
 import com.fasterxml.jackson.annotation.JsonIgnore
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.OffsetDateTime
 import java.time.OffsetTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -20,15 +19,55 @@ data class CustomDateTimeModel(
 	constructor(dateTime: ZonedDateTime) : this(dateTime.toLocalDate(), dateTime.toOffsetDateTime().toOffsetTime())
 
 	companion object {
-		val MIN = CustomDateTimeModel(OffsetDateTime.MIN.toZonedDateTime())
-		val MAX = CustomDateTimeModel(OffsetDateTime.MAX.toZonedDateTime())
+		/**
+		 * Unbounded sentinels, deliberately DATE-ONLY. Built from
+		 * `OffsetDateTime.MIN`/`MAX` they carried ±18 h offsets — outside what
+		 * Postgres accepts and, worse, enough to push "the beginning of time"
+		 * across a day boundary, so a window open from the earliest representable
+		 * date no longer contained that very date. Date-only, they resolve through
+		 * the same boundary rule as any other bare date.
+		 */
+		val MIN = CustomDateTimeModel(LocalDate.MIN)
+		val MAX = CustomDateTimeModel(LocalDate.MAX)
 		val EPOCH = CustomDateTimeModel(LocalDate.EPOCH)
+
+		/**
+		 * The zone every date-only boundary is resolved in. Deliberately fixed:
+		 * `OffsetTime.MIN`/`MAX` carry ±18 h offsets that Postgres cannot store, so
+		 * clamping them to its ±14 h limit moved a "midnight" boundary fourteen
+		 * hours into the previous day — the whole point of a boundary is that it
+		 * does not drift with whoever asks for it.
+		 */
+		val BOUNDARY_ZONE: ZoneOffset = ZoneOffset.UTC
+
+		val START_OF_DAY: LocalTime = LocalTime.MIN
+		val END_OF_DAY: LocalTime = LocalTime.of(23, 59, 59)
 
 		@JsonIgnore
 		fun now(): CustomDateTimeModel {
 			return CustomDateTimeModel(ZonedDateTime.now(ZoneId.of("UTC")))
 		}
 	}
+
+	/**
+	 * The instant this value means when it opens a window (an arrival): a stated
+	 * time as given, a bare date at MIDNIGHT. Computation only — the boundary is
+	 * never written back onto the model, never persisted and never serialized
+	 * (`@JsonIgnore`), so a date-only arrival stays date-only everywhere the
+	 * outside world can see it. Pair with [asEnd] rather than mixing the two:
+	 * that asymmetry is what lets an arrival and a departure share one date and
+	 * still describe a whole day.
+	 */
+	@JsonIgnore
+	fun asStart(): ZonedDateTime = toZonedDateTime(START_OF_DAY, BOUNDARY_ZONE)!!
+
+	/**
+	 * The instant this value means when it closes a window (a departure): a
+	 * stated time as given, a bare date at 23:59:59. Same computation-only
+	 * contract as [asStart].
+	 */
+	@JsonIgnore
+	fun asEnd(): ZonedDateTime = toZonedDateTime(END_OF_DAY, BOUNDARY_ZONE)!!
 
 	@JsonIgnore
 	fun toZonedDateTime(defaultTime: OffsetTime? = null): ZonedDateTime? {

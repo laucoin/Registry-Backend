@@ -169,6 +169,14 @@ class GroupModelPostgresRepository(
 		).map(mapper::toModel)
 	}
 
+	override fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<GroupModel> {
+		return repository.findArrivingToday(projectId, visibilitySearched, limit).map(mapper::toModel)
+	}
+
+	override fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<GroupModel> {
+		return repository.findDepartingToday(projectId, visibilitySearched, limit).map(mapper::toModel)
+	}
+
 	override fun findEmpty(participantToExclude: List<UUID>): Flux<UUID> {
 		return if (participantToExclude.isEmpty()) Flux.empty()
 		else repository.findEmpty(participantToExclude)

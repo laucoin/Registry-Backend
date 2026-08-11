@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle
 
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
@@ -17,18 +16,34 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.V
 
 object VehicleQueries {
 	private const val VEHICLE_PREFIX = "vehicle_"
+
+	/**
+	 * Same two corrections the participant CTE already carries. The outer movement
+	 * MUST be correlated back to the vehicle rather than matched on the timestamp
+	 * alone — two movements recorded for the same minute otherwise lend each other
+	 * their direction, and a vehicle that never moved inherits somebody else's.
+	 * And the outer movement MUST be filtered on visibility: a DISABLED movement
+	 * sharing that timestamp was still allowed to supply the type, so hiding a
+	 * mistaken exit left the vehicle counted as out on the dashboard. The inner
+	 * MAX() already ignored invisible movements, which is exactly what made the
+	 * discrepancy hard to see — the date came from a visible movement and the
+	 * direction from a hidden one.
+	 */
 	const val WITH_VEHICLE_LAST_MOVEMENT = """
         last_movement AS (
-            SELECT plm.$VEHICLE_LAST_MOVEMENT_DATE_TIME, plm.$VEHICLE_PREFIX$ID, t.$MOVEMENT_TYPE
+            SELECT DISTINCT plm.$VEHICLE_LAST_MOVEMENT_DATE_TIME, plm.$VEHICLE_PREFIX$ID, t.$MOVEMENT_TYPE
             FROM $MOVEMENT_TABLE t
-            LEFT JOIN (
-                SELECT MAX(t.$MOVEMENT_DATE_TIME) as $VEHICLE_LAST_MOVEMENT_DATE_TIME, t.$LINKED_PROJECT_ID, $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID
+            INNER JOIN $MOVEMENT_CONTENT_TABLE mc ON mc.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+            INNER JOIN (
+                SELECT MAX(t.$MOVEMENT_DATE_TIME) as $VEHICLE_LAST_MOVEMENT_DATE_TIME, $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID
                 FROM $MOVEMENT_TABLE t
                 INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
                 WHERE t.$VISIBLE IS TRUE
-                GROUP BY $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID, t.$LINKED_PROJECT_ID
-            ) AS plm ON plm.$VEHICLE_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
-            WHERE plm.$VEHICLE_PREFIX$ID IS NOT NULL
+                GROUP BY $MOVEMENT_CONTENT_TABLE.$VEHICLE_PREFIX$ID
+            ) AS plm
+                ON plm.$VEHICLE_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
+                AND plm.$VEHICLE_PREFIX$ID = mc.$VEHICLE_PREFIX$ID
+            WHERE t.$VISIBLE IS TRUE
         )
     """
 

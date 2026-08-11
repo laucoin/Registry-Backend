@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IRegistryControllerAdvice
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
+import org.springframework.context.MessageSourceResolvable
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FORBIDDEN
@@ -34,7 +35,11 @@ class RegistryControllerAdvice(
 
 	override fun handleWebExchangeBindException(exception: WebExchangeBindException): Mono<ResponseEntity<ErrorDto>> {
 		val error = exception.allErrors.first()
-		return buildError(status = BAD_REQUEST, code = error.defaultMessage!!, args = error.arguments ?: emptyArray())
+		return buildError(
+			status = BAD_REQUEST,
+			code = error.defaultMessage!!,
+			args = constraintArguments(error.arguments),
+		)
 	}
 
 	override fun handleServerWebInputException(exception: ServerWebInputException): Mono<ResponseEntity<ErrorDto>> {
@@ -47,10 +52,12 @@ class RegistryControllerAdvice(
 
 	override fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): Mono<ResponseEntity<ErrorDto>> {
 		val error: ParameterValidationResult = exception.valueResults.first()
+		val resolvable = error.resolvableErrors.first()
 		return buildError(
 			status = BAD_REQUEST,
-			code = error.resolvableErrors.first().defaultMessage!!,
-			args = arrayOf(error.argument).filterNotNull().toTypedArray(),
+			code = resolvable.defaultMessage!!,
+			args = constraintArguments(resolvable.arguments)
+				.ifEmpty { arrayOf(error.argument).filterNotNull().toTypedArray() },
 		)
 	}
 
@@ -67,6 +74,21 @@ class RegistryControllerAdvice(
 
 	override fun handleException(exception: Exception): Mono<ResponseEntity<ErrorDto>> {
 		return buildError(status = INTERNAL_SERVER_ERROR, code = "500", exception = exception)
+	}
+
+	/**
+	 * Bean Validation hands the message arguments as
+	 * `[field-name-resolvable, ...constraint attributes sorted by name]`. Passing
+	 * that array straight through shifted every placeholder by one, so a message
+	 * written for the constraint attribute — the max length, the page-size
+	 * ceiling — rendered the field's name instead. Dropping the leading
+	 * resolvable puts the attributes back at `{0}`, which is what the bundles are
+	 * written against.
+	 */
+	private fun constraintArguments(arguments: Array<Any>?): Array<Any> {
+		return arguments.orEmpty()
+			.dropWhile { it is MessageSourceResolvable }
+			.toTypedArray()
 	}
 
 	/**
