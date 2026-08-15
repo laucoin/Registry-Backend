@@ -33,6 +33,7 @@ class ActivityV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		visible: Boolean?,
 		available: Boolean?,
@@ -40,7 +41,7 @@ class ActivityV2Controller(
 	): Mono<PageModel<ActivityReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ActivitySearchParamModel(q, visible, available, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, ActivitySortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, ActivitySortFieldEnum::fromParamName)
 
 		return service.findActivitiesPage(projectId, pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}

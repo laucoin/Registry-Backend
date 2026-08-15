@@ -102,7 +102,8 @@ class ParticipantV2ControllerTest : TestContext() {
 						Pair("size", 10),
 						Pair("q", "john"),
 						Pair("visible", true),
-						Pair("sort", "lastName,-firstName"),
+						Pair("sort", "lastName,firstName"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -114,7 +115,7 @@ class ParticipantV2ControllerTest : TestContext() {
 		val sortCaptor = argumentCaptor<List<SortModel<ParticipantSortFieldEnum>>>()
 		verify(service).findParticipantsPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
-		assertEquals(listOf(SortModel(LAST_NAME), SortModel(FIRST_NAME, descending = true)), sortCaptor.firstValue)
+		assertEquals(listOf(SortModel(LAST_NAME, descending = true), SortModel(FIRST_NAME, descending = true)), sortCaptor.firstValue)
 	}
 
 	@Test

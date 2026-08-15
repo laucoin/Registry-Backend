@@ -102,7 +102,8 @@ class MovementV2ControllerTest : TestContext() {
 						Pair("page", 2),
 						Pair("size", 10),
 						Pair("visible", true),
-						Pair("sort", "-dateTime,type"),
+						Pair("sort", "dateTime,type"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -114,7 +115,7 @@ class MovementV2ControllerTest : TestContext() {
 		val sortCaptor = argumentCaptor<List<SortModel<MovementSortFieldEnum>>>()
 		verify(service).findMovementsPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
-		assertEquals(listOf(SortModel(DATE_TIME, descending = true), SortModel(TYPE)), sortCaptor.firstValue)
+		assertEquals(listOf(SortModel(DATE_TIME, descending = true), SortModel(TYPE, descending = true)), sortCaptor.firstValue)
 	}
 
 	@Test

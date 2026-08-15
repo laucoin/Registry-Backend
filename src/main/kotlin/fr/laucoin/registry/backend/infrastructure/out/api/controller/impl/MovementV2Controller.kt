@@ -64,6 +64,7 @@ class MovementV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		currentMovements: Boolean,
 		linkedToActivity: Boolean?,
 		visible: Boolean?,
@@ -77,7 +78,7 @@ class MovementV2Controller(
 
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, startDateTime, endDateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, MovementSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, MovementSortFieldEnum::fromParamName)
 
 		val movements = if (currentMovements) {
 			service.findCurrentMovementsPage(projectId, pageable, searchParams, sortModels)

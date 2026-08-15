@@ -36,7 +36,7 @@ import java.util.UUID
 
 /**
  * API v2 Users contract — the ADR 017 reference resource:
- * - list grammar: `page`/`size`/`sort=field,-other`/`q`/typed filters (§5)
+ * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
  * - state transitions as explicit `POST` actions, no value-in-path (§3)
  * - eligibility sub-collections named for their relationship (§4)
  * - plain field edits as `PATCH /{id}` with a body of changed fields (§3)
@@ -58,6 +58,7 @@ interface IUserV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@RequestParam(required = false) sort: List<String>?,
+		@RequestParam(required = false, defaultValue = "ASC") direction: String,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 	): Mono<PageModel<UserReaderDto>>

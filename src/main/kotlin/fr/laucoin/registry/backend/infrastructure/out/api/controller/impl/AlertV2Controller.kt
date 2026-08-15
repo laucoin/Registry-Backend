@@ -39,6 +39,7 @@ class AlertV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		visible: Boolean?,
 		status: AlertStatusEnum?,
@@ -47,7 +48,7 @@ class AlertV2Controller(
 	): Mono<PageModel<AlertReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = AlertSearchParamModel(q, visible, status, startDateTime, endDateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, AlertSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, AlertSortFieldEnum::fromParamName)
 
 		return service.findAlertsPage(projectId, pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}

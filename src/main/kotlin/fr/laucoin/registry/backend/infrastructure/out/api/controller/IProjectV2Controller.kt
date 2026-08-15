@@ -43,7 +43,7 @@ import java.util.UUID
 
 /**
  * API v2 Projects contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,-other`/`q`/typed filters (§5)
+ * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
  * - `disable`/`enable` become explicit `POST` transitions (§3)
  * - plain field edits stay `PATCH /{id}` with a body of changed fields (§3)
  */
@@ -65,6 +65,7 @@ interface IProjectV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@RequestParam(required = false) sort: List<String>?,
+		@RequestParam(required = false, defaultValue = "ASC") direction: String,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@Parameter(description = "\"false\" value will be considered only if you have REGISTRY_PROJECT_R authority.")

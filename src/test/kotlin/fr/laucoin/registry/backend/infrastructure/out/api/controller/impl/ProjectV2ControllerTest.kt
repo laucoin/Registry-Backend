@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_AUTHENTICATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.SORT_DIRECTION_IS_UNKNOWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.SORT_FIELD_IS_UNKNOWN
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
@@ -32,6 +33,8 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
@@ -84,7 +87,8 @@ class ProjectV2ControllerTest : TestContext() {
 						Pair("size", 10),
 						Pair("q", "summer"),
 						Pair("visible", true),
-						Pair("sort", "name,-endDate"),
+						Pair("sort", "name,endDate"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -96,20 +100,58 @@ class ProjectV2ControllerTest : TestContext() {
 		val sortCaptor = argumentCaptor<List<SortModel<ProjectSortFieldEnum>>>()
 		verify(service).findProjectsPage(any(), pageableCaptor.capture(), eq(true), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
-		assertEquals(listOf(SortModel(NAME), SortModel(END_DATE, descending = true)), sortCaptor.firstValue)
+		assertEquals(listOf(SortModel(NAME, descending = true), SortModel(END_DATE, descending = true)), sortCaptor.firstValue)
 	}
 
-	@Test
-	fun `Should findProjects reject an unknown sort field with 400`() {
+	/**
+	 * `-name` is listed here on purpose: the leading hyphen used to reverse a
+	 * sort key and is now simply not part of a field name, so the grammar has to
+	 * refuse it rather than quietly order by `name` ascending.
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = ["options", "-name"])
+	fun `Should findProjects reject an unknown sort field with 400`(sort: String) {
 		// Act
 		val result = webClient
 			.authenticate()
 			.get()
-			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("sort", "options"))))
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("sort", sort))))
 			.exchange()
 
 		// Assert
 		result.assertError(BAD_REQUEST, SORT_FIELD_IS_UNKNOWN)
+	}
+
+	@Test
+	fun `Should findProjects reject an unknown sort direction with 400`() {
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("sort", "name"), Pair("direction", "SIDEWAYS"))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, SORT_DIRECTION_IS_UNKNOWN)
+	}
+
+	@Test
+	fun `Should findProjects order ascending when no direction is given`() {
+		// Arrange
+		whenever(service.findProjectsPage(any(), any(), any(), any(), any())).thenReturn(projectPage())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("sort", "name"))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<ProjectReaderDto>>(OK)
+		val sortCaptor = argumentCaptor<List<SortModel<ProjectSortFieldEnum>>>()
+		verify(service).findProjectsPage(any(), any(), any(), any(), sortCaptor.capture())
+		assertEquals(listOf(SortModel(NAME)), sortCaptor.firstValue)
 	}
 
 	@Test

@@ -42,7 +42,7 @@ import java.util.UUID
 
 /**
  * API v2 Alerts contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,-other`/`q`/typed filters (§5)
+ * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
  * - status transitions as explicit `POST` actions, one verb per transition,
  *   no value-in-path (§3): `resolve` / `cancel` / `reopen`
  *   (v1 `PATCH …/status/{status}`)
@@ -65,6 +65,7 @@ interface IAlertV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@RequestParam(required = false) sort: List<String>?,
+		@RequestParam(required = false, defaultValue = "ASC") direction: String,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) status: AlertStatusEnum?,

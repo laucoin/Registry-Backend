@@ -34,6 +34,7 @@ class VehicleV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		visible: Boolean?,
 		status: PresenceStatusEnum?,
@@ -41,7 +42,7 @@ class VehicleV2Controller(
 	): Mono<PageModel<VehicleReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = VehicleSearchParamModel(q, visible, status, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, VehicleSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, VehicleSortFieldEnum::fromParamName)
 
 		return service.findVehiclesPage(projectId, pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}

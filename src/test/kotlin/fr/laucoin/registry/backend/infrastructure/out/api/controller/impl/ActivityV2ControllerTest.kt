@@ -84,7 +84,8 @@ class ActivityV2ControllerTest : TestContext() {
 						Pair("q", "climbing"),
 						Pair("visible", true),
 						Pair("available", true),
-						Pair("sort", "name,-duration"),
+						Pair("sort", "name,duration"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -96,7 +97,7 @@ class ActivityV2ControllerTest : TestContext() {
 		val sortCaptor = argumentCaptor<List<SortModel<ActivitySortFieldEnum>>>()
 		verify(service).findActivitiesPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
-		assertEquals(listOf(SortModel(NAME), SortModel(DURATION, descending = true)), sortCaptor.firstValue)
+		assertEquals(listOf(SortModel(NAME, descending = true), SortModel(DURATION, descending = true)), sortCaptor.firstValue)
 	}
 
 	@Test

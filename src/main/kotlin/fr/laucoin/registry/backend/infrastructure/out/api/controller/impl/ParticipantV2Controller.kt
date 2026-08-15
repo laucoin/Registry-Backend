@@ -50,6 +50,7 @@ class ParticipantV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		isMajor: Boolean?,
 		type: ParticipantTypeEnum?,
@@ -59,7 +60,7 @@ class ParticipantV2Controller(
 	): Mono<PageModel<ParticipantReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ParticipantSearchParamModel(q, isMajor, type, visible, status, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, ParticipantSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, ParticipantSortFieldEnum::fromParamName)
 
 		return service.findParticipantsPage(projectId, pageable, searchParams, sortModels)
 			.map(readerMapper::toDtoPage)

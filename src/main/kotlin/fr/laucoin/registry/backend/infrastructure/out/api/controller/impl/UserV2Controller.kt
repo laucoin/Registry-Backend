@@ -28,12 +28,13 @@ class UserV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		visible: Boolean?,
 	): Mono<PageModel<UserReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = UserSearchParamModel(q, visible)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, UserSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, UserSortFieldEnum::fromParamName)
 
 		return service.findUsersPage(pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}

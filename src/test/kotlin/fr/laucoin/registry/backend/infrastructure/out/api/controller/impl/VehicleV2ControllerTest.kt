@@ -83,7 +83,8 @@ class VehicleV2ControllerTest : TestContext() {
 						Pair("size", 10),
 						Pair("q", "toyota"),
 						Pair("visible", true),
-						Pair("sort", "brand,-licensePlate"),
+						Pair("sort", "brand,licensePlate"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -95,7 +96,7 @@ class VehicleV2ControllerTest : TestContext() {
 		val sortCaptor = argumentCaptor<List<SortModel<VehicleSortFieldEnum>>>()
 		verify(service).findVehiclesPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
-		assertEquals(listOf(SortModel(BRAND), SortModel(LICENSE_PLATE, descending = true)), sortCaptor.firstValue)
+		assertEquals(listOf(SortModel(BRAND, descending = true), SortModel(LICENSE_PLATE, descending = true)), sortCaptor.firstValue)
 	}
 
 	@Test

@@ -45,6 +45,7 @@ class GroupV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		visible: Boolean?,
 		presence: Boolean?,
@@ -52,7 +53,7 @@ class GroupV2Controller(
 	): Mono<PageModel<GroupWithoutMemberReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = GroupSearchParamModel(q, visible, presence, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, GroupSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, GroupSortFieldEnum::fromParamName)
 
 		return service.findGroupsPage(projectId, pageable, searchParams, sortModels)
 			.map(readerLightMapper::toDtoPage)

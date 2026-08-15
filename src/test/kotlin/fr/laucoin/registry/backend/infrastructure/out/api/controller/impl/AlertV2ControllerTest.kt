@@ -89,7 +89,8 @@ class AlertV2ControllerTest : TestContext() {
 						Pair("q", "fire"),
 						Pair("visible", true),
 						Pair("status", IN_PROGRESS),
-						Pair("sort", "dateTime,-title"),
+						Pair("sort", "dateTime,title"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -101,7 +102,7 @@ class AlertV2ControllerTest : TestContext() {
 		val sortCaptor = argumentCaptor<List<SortModel<AlertSortFieldEnum>>>()
 		verify(service).findAlertsPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
-		assertEquals(listOf(SortModel(DATE_TIME), SortModel(TITLE, descending = true)), sortCaptor.firstValue)
+		assertEquals(listOf(SortModel(DATE_TIME, descending = true), SortModel(TITLE, descending = true)), sortCaptor.firstValue)
 	}
 
 	@Test

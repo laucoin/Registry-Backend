@@ -42,7 +42,7 @@ import java.util.UUID
 
 /**
  * API v2 Communications contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,-other`/`q`/typed filters (§5)
+ * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
  * - eligibility sub-collections named for their relationship (§4):
  *   `attachable-movements` / `attachable-alerts` (v1 `search/movements` · `search/alerts`)
  * - state transitions as explicit `POST` actions, no value-in-path (§3)
@@ -65,6 +65,7 @@ interface ICommunicationV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@RequestParam(required = false) sort: List<String>?,
+		@RequestParam(required = false, defaultValue = "ASC") direction: String,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false)

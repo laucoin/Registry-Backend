@@ -38,6 +38,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.O
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.OpenAlertProjectEntity.Companion.OPEN_ALERT_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_NAME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_OPTIONS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectQueries.DATE_IN_PROJECT_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectQueries.PROJECT_TEXT_SEARCH_CLAUSE
@@ -95,12 +96,19 @@ interface IProjectEntityRepository : ReactiveCrudRepository<ProjectEntity, UUID>
 	 * The caller's projects (ACCEPTED + in-window profile, the same
 	 * scope that grants access) that have open (IN_PROGRESS) alerts, with the
 	 * count, most-recent open alert first.
+	 *
+	 * The ALERT option gates the whole thing: turning the module off does not
+	 * delete the alerts already recorded, so without this the dashboard kept
+	 * counting rows for a project whose alerts are no longer reachable — a
+	 * badge pointing at a page that is not there. Mirrors the option half of the
+	 * conjunction every alert endpoint enforces.
 	 */
 	@Query(
 		"""
         SELECT p.$ID AS $LINKED_PROJECT_ID, p.$PROJECT_NAME AS $LINKED_PROJECT_NAME, COUNT(a.$ID) AS $OPEN_ALERT_COUNT
         FROM $PROJECT_PROFILE_TABLE pp
         INNER JOIN $PROJECT_TABLE p ON p.$ID = pp.$LINKED_PROJECT_ID AND p.$VISIBLE IS TRUE
+            AND 'ALERT' = ANY (p.$PROJECT_OPTIONS)
         INNER JOIN $ALERT_TABLE a ON a.$LINKED_PROJECT_ID = p.$ID AND a.$ALERT_STATUS = 'IN_PROGRESS' AND a.$VISIBLE IS TRUE
         WHERE pp.$PROJECT_PROFILE_USER_ID = :userId
             AND pp.$PROJECT_PROFILE_STATUS = 'ACCEPTED'

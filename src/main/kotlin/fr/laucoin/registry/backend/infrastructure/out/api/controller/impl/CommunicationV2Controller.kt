@@ -35,6 +35,7 @@ class CommunicationV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		visible: Boolean?,
 		startDateTime: ZonedDateTime?,
@@ -42,7 +43,7 @@ class CommunicationV2Controller(
 	): Mono<PageModel<CommunicationReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = CommunicationSearchParamModel(q, visible, startDateTime, endDateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, CommunicationSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, CommunicationSortFieldEnum::fromParamName)
 
 		return service.findCommunicationPage(projectId, pageable, searchParams, sortModels)
 			.map(readerMapper::toDtoPage)

@@ -86,7 +86,8 @@ class CommunicationV2ControllerTest : TestContext() {
 						Pair("size", 10),
 						Pair("q", "hello"),
 						Pair("visible", true),
-						Pair("sort", "dateTime,-message"),
+						Pair("sort", "dateTime,message"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -98,7 +99,7 @@ class CommunicationV2ControllerTest : TestContext() {
 		val sortCaptor = argumentCaptor<List<SortModel<CommunicationSortFieldEnum>>>()
 		verify(service).findCommunicationPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
-		assertEquals(listOf(SortModel(DATE_TIME), SortModel(MESSAGE, descending = true)), sortCaptor.firstValue)
+		assertEquals(listOf(SortModel(DATE_TIME, descending = true), SortModel(MESSAGE, descending = true)), sortCaptor.firstValue)
 	}
 
 	@Test

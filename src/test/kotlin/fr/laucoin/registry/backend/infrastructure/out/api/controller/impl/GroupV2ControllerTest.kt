@@ -82,7 +82,8 @@ class GroupV2ControllerTest : TestContext() {
 						Pair("size", 10),
 						Pair("q", "scouts"),
 						Pair("visible", true),
-						Pair("sort", "name,-endAvailabilityDate"),
+						Pair("sort", "name,endAvailabilityDate"),
+						Pair("direction", "DESC"),
 					),
 				)
 			)
@@ -95,7 +96,7 @@ class GroupV2ControllerTest : TestContext() {
 		verify(service).findGroupsPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
 		assertEquals(
-			listOf(SortModel(NAME), SortModel(END_AVAILABILITY_DATE, descending = true)),
+			listOf(SortModel(NAME, descending = true), SortModel(END_AVAILABILITY_DATE, descending = true)),
 			sortCaptor.firstValue
 		)
 	}

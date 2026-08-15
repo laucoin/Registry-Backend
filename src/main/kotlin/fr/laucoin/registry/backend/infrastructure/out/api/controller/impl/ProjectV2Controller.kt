@@ -47,6 +47,7 @@ class ProjectV2Controller(
 		page: Int,
 		size: Int,
 		sort: List<String>?,
+		direction: String,
 		q: String?,
 		visible: Boolean?,
 		withProfile: Boolean,
@@ -58,7 +59,7 @@ class ProjectV2Controller(
 
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ProjectSearchParamModel(q, visible, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, ProjectSortFieldEnum::fromParamName)
+		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, ProjectSortFieldEnum::fromParamName)
 
 		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams, sortModels)
 			.map(readerMapper::toDtoPage)
