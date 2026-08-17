@@ -2,7 +2,7 @@
 
 # ---- Build stage -------------------------------------------------------
 # Use an appropriate base image that has Java and Gradle installed
-FROM gradle:9.6.1-jdk25-alpine AS build
+FROM gradle:9.7.0-jdk25-alpine AS build
 
 # Set the working directory inside the container
 ENV APP_HOME=/usr/app
