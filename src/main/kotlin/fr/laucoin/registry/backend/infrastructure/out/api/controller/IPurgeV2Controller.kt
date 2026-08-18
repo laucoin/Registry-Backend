@@ -19,11 +19,7 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
 
-/**
- * API v2 Purge contract (ADR 017) — data-retention purges triggered by the
- * system's SERVICE_ACCOUNT on a cron schedule (or a platform administrator).
- */
-@Tag(name = "Scheduled job management", description = "API for Scheduled job management")
+@Tag(name = "Scheduled job management (v2)", description = "API for Scheduled job management")
 @RequestMapping("/api/v2/purge")
 interface IPurgeV2Controller {
 	@Operation(

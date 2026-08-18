@@ -1,9 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_METADATA_R
@@ -20,6 +17,8 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUser
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectProfilesWriterDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -43,14 +42,7 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/**
- * API v2 Project profiles (membership) contract (ADR 017):
- * - the v1 `search/users` picker becomes the `assignable-users?q=`
- *   eligibility sub-collection (§4)
- * - `block`/`unblock` become explicit `POST` transitions (§3)
- * - plain field edits stay `PATCH /{id}` with a body of changed fields (§3)
- */
-@Tag(name = "Project's Profiles management", description = "API for Project's Profiles-related operations")
+@Tag(name = "Project's Profiles management (v2)", description = "API for Project's Profiles-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/profiles")
 interface IProjectProfileV2Controller {
 	@Operation(
@@ -62,11 +54,7 @@ interface IProjectProfileV2Controller {
 	@GetMapping
 	fun findProjectProfiles(
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) available: Boolean?,
 		@RequestParam(required = false) status: ProfileStatusEnum?,

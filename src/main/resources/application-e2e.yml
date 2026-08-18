@@ -11,7 +11,7 @@
 registry:
   security:
     rate-limit:
-      # ADR 019 — `capacity: 0` disables the limiter. The end-to-end suite drives
+      # `capacity: 0` disables the limiter. The end-to-end suite drives
       # hundreds of writes back to back, and the production defaults (20 sensitive
       # calls per minute, 60 searches) throttle it well before it finishes: the
       # sensitive bucket empties on the disable/block operations the journeys

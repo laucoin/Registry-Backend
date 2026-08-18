@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.config
 
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
+import fr.laucoin.registry.backend.domain.constant.AuditConst.CORRELATION_ID_HEADER
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
@@ -8,12 +9,12 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
-import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS
-import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN
-import org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS
 import org.springframework.http.HttpHeaders.AUTHORIZATION
 import org.springframework.http.HttpHeaders.CACHE_CONTROL
 import org.springframework.http.HttpHeaders.CONTENT_TYPE
+import org.springframework.http.HttpHeaders.ETAG
+import org.springframework.http.HttpHeaders.IF_NONE_MATCH
+import org.springframework.http.HttpHeaders.RETRY_AFTER
 import org.springframework.http.HttpMethod.DELETE
 import org.springframework.http.HttpMethod.GET
 import org.springframework.http.HttpMethod.HEAD
@@ -74,8 +75,8 @@ class SecurityConfig(
 		if (observabilityEnabled) {
 			it.pathMatchers(GET, "/actuator/**").permitAll()
 		}
-		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
-		it.pathMatchers(POST, "/api/*/authentication/token", "/api/*/authentication/token/refresh").permitAll()
+		it.pathMatchers(GET, "/api/v1/authentication/login/uri", "/api/v1/authentication/logout/uri").permitAll()
+		it.pathMatchers(POST, "/api/v1/authentication/token", "/api/v1/authentication/token/refresh").permitAll()
 		it.anyExchange().authenticated()
 	}
 
@@ -125,9 +126,13 @@ class SecurityConfig(
 			CACHE_CONTROL,
 			CONTENT_TYPE,
 			ACCEPT_LANGUAGE,
-			ACCESS_CONTROL_ALLOW_ORIGIN,
-			ACCESS_CONTROL_ALLOW_HEADERS,
-			ACCESS_CONTROL_EXPOSE_HEADERS,
+			IF_NONE_MATCH,
+			CORRELATION_ID_HEADER,
+		)
+		configuration.exposedHeaders = listOf(
+			ETAG,
+			RETRY_AFTER,
+			CORRELATION_ID_HEADER,
 		)
 		val source = UrlBasedCorsConfigurationSource()
 		source.registerCorsConfiguration("/**", configuration)

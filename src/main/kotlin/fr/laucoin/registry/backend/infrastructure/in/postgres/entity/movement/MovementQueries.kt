@@ -64,6 +64,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_DEPARTED_AT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
@@ -191,112 +192,41 @@ object MovementQueries {
     """
 
 	/**
-	 * `last_participant_movement` carries the same correlation and visibility
-	 * rules as ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT, for the same
-	 * reasons: matching the outer movement on the timestamp alone lets two
-	 * movements recorded in the same minute swap directions, and leaving the outer
-	 * movement unfiltered lets a DISABLED movement decide who counts as currently
-	 * out — so a mistaken exit kept its participant on the home page's current
-	 * movements after being hidden.
+	 * "The movement that still describes this person, and has not been closed": their
+	 * latest VISIBLE movement, in the direction that leaves them engaged — an exit
+	 * for someone enrolled, an entry for a visitor. `DISTINCT ON` keeps exactly one
+	 * row per participant and breaks a tie on the recording order; matching on
+	 * `MAX(date_time)` let two movements saved in the same minute lend each other
+	 * their direction, so a returned participant stayed on the current-movements
+	 * board.
+	 *
+	 * Availability is deliberately absent. A window is a plan and a movement is a
+	 * fact: letting a stay expire while somebody is still out used to erase them
+	 * from this board — the one place a safety register must never lose them. What
+	 * DOES close a movement is departure, and that is read from the register's own
+	 * `departed_at`, so a definitive exit stops being "currently out" at once.
 	 */
 	const val WITH_CURRENT_MOVEMENT = """
         last_participant_movement AS (
-            SELECT DISTINCT t.$ID, t.$MOVEMENT_TYPE, plm.$MOVEMENT_CONTENT_PARTICIPANT_ID
+            SELECT DISTINCT ON (mc.$MOVEMENT_CONTENT_PARTICIPANT_ID)
+                t.$ID, t.$MOVEMENT_TYPE, mc.$MOVEMENT_CONTENT_PARTICIPANT_ID
             FROM $MOVEMENT_TABLE t
             INNER JOIN $MOVEMENT_CONTENT_TABLE mc ON mc.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-            INNER JOIN (
-                SELECT MAX(t.$MOVEMENT_DATE_TIME) as last_participant_movement_date_time, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
-                FROM $MOVEMENT_TABLE t
-                INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-                WHERE t.$VISIBLE IS TRUE
-                GROUP BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
-            ) AS plm
-                ON plm.last_participant_movement_date_time = t.$MOVEMENT_DATE_TIME
-                AND plm.$MOVEMENT_CONTENT_PARTICIPANT_ID = mc.$MOVEMENT_CONTENT_PARTICIPANT_ID
             WHERE t.$VISIBLE IS TRUE
-        ),
-        filtered_groups AS (
-            SELECT t.$ID as $GROUP_CONTENT_PARTICIPANT_ID,
-            JSON_AGG(
-                JSON_BUILD_OBJECT(
-                    'id', $GROUP_TABLE.$ID,
-                    'name', $GROUP_TABLE.$GROUP_NAME
-                )
-            ) FILTER (WHERE $GROUP_TABLE.$ID IS NOT NULL) as groups,
-            MIN(
-                CASE
-                    WHEN group_presence.$GROUP_START_AVAILABILITY_DATE IS NULL THEN
-                      '-infinity'::timestamptz
-                    ELSE
-                      (group_presence.$GROUP_START_AVAILABILITY_DATE + COALESCE(group_presence.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::time))::timestamptz
-                  END
-            ) AS min_start_availability,
-            MAX(
-                CASE
-                    WHEN group_presence.$GROUP_END_AVAILABILITY_DATE IS NULL THEN
-                      '+infinity'::timestamptz
-                    ELSE
-                      (group_presence.$GROUP_END_AVAILABILITY_DATE + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::time))::timestamptz
-                  END
-            ) AS max_end_availability
-            FROM $PARTICIPANT_TABLE t
-            LEFT JOIN $GROUP_CONTENT_TABLE ON $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID = t.$ID
-            LEFT JOIN $GROUP_TABLE ON $GROUP_TABLE.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID AND $GROUP_TABLE.$VISIBLE IS TRUE
-            LEFT JOIN $GROUP_TABLE group_presence ON group_presence.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID AND group_presence.$VISIBLE IS TRUE
-                AND (
-                    (
-                        COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
-                        OR (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.start_availability_time, '00:00:00.000000'::TIME) <= CURRENT_TIME)
-                    ) AND (
-                        COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
-                        OR (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
-                    )
-                )
-            WHERE t.$LINKED_PROJECT_ID = :projectId
-            GROUP BY t.$ID
+            ORDER BY mc.$MOVEMENT_CONTENT_PARTICIPANT_ID, t.$MOVEMENT_DATE_TIME DESC, t.$CREATED_AT DESC
         ),
         current_movement AS (
             SELECT last_participant_movement.$ID, last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID
             FROM $PARTICIPANT_TABLE t
-            LEFT JOIN last_participant_movement ON last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID = t.$ID
-            LEFT JOIN filtered_groups fg ON t.$ID = fg.$GROUP_CONTENT_PARTICIPANT_ID
-            WHERE t.$VISIBLE IS TRUE AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
-                (
-                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
-                ) AND
-                (
-                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
-                )
-            )
+            INNER JOIN last_participant_movement ON last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID = t.$ID
+            WHERE t.$VISIBLE IS TRUE
+                AND t.$LINKED_PROJECT_ID = :projectId
+                AND t.$PARTICIPANT_DEPARTED_AT IS NULL
+                AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END)
         )
     """
 
 	const val CURRENT_MOVEMENT_JOIN = "INNER JOIN current_movement ON current_movement.$ID = t.$ID"
-
-	/**
-	 * An activity outing is ongoing while at least one of the people it took out is
-	 * STILL out — their current movement is that very exit. Read per participant,
-	 * deliberately not "the last movement carrying this activity": someone walking
-	 * back on site ends the outing whether or not the entry names the activity
-	 * again, and the panel is a safety view, so it must not keep showing a group as
-	 * out once anybody has checked them back in.
-	 */
-	const val WITH_ONGOING_ACTIVITY = """
-        ongoing_activity AS (
-            SELECT DISTINCT current_participant_movement.$MOVEMENT_CONTENT_MOVEMENT_ID AS $ID
-            FROM (
-                SELECT DISTINCT ON (mc.$MOVEMENT_CONTENT_PARTICIPANT_ID) mc.$MOVEMENT_CONTENT_MOVEMENT_ID
-                FROM $MOVEMENT_CONTENT_TABLE mc
-                INNER JOIN $MOVEMENT_TABLE m ON m.$ID = mc.$MOVEMENT_CONTENT_MOVEMENT_ID
-                WHERE m.$LINKED_PROJECT_ID = :projectId AND m.$VISIBLE IS TRUE
-                ORDER BY mc.$MOVEMENT_CONTENT_PARTICIPANT_ID, m.$MOVEMENT_DATE_TIME DESC, m.$CREATED_AT DESC
-            ) AS current_participant_movement
-        )
-    """
-
-	const val ONGOING_ACTIVITY_JOIN = "INNER JOIN ongoing_activity ON ongoing_activity.$ID = t.$ID"
 
 	const val MOVEMENT_LINKED_TO_ACTIVITY_CLAUSE = "t.$MOVEMENT_ACTIVITY_ID IS NOT NULL"
 }

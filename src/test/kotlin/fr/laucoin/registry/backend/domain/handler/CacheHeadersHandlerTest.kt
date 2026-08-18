@@ -1,33 +1,31 @@
 package fr.laucoin.registry.backend.domain.handler
 
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AlertStatusReaderDtoMapper
+import fr.laucoin.registry.backend.domain.annotation.HttpCacheable
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.http.HttpHeaders.IF_NONE_MATCH
 import org.springframework.http.HttpHeaders.ORIGIN
-import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.http.HttpMethod.GET
+import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest
+import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.web.util.pattern.PathPatternParser
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
-/**
- * ADR 018 §4 — metadata GETs carry ETag/Cache-Control/Vary and revalidate to
- * 304 without a body.
- */
 class CacheHeadersHandlerTest : TestContext() {
-	@MockitoBean
-	private lateinit var alertStatusReaderMapper: AlertStatusReaderDtoMapper
-
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val METADATA_URL = "/api/v2/metadata/movements/types"
+		private const val METADATA_URL = "/api/v2/metadata/features"
 	}
 
 	@Test
@@ -105,19 +103,34 @@ class CacheHeadersHandlerTest : TestContext() {
 			}
 	}
 
+	/**
+	 * The 5xx branch is asserted directly on the filter: the only remaining
+	 * cacheable endpoint returns a config switch and cannot be driven into an
+	 * error through the HTTP layer. A still-unset status at commit means the
+	 * implied 200, so only an explicit non-2xx must suppress the validator.
+	 */
 	@Test
 	fun `Should not attach revalidation headers to an error response`() {
 		// Arrange
-		whenever(alertStatusReaderMapper.toDto(any())).thenThrow(IllegalStateException("boom"))
+		val annotatedEndpoints: AnnotatedEndpointsHandler = mock()
+		val parser = PathPatternParser()
+		val endpoint = AnnotatedEndpointsHandler.AnnotatedEndpoint(
+			setOf(parser.parse(METADATA_URL)),
+			setOf(GET),
+			HttpCacheable(),
+		)
+		whenever(annotatedEndpoints.endpoints(HttpCacheable::class.java)).thenReturn(listOf(endpoint))
+		val handler = CacheHeadersHandler(300, annotatedEndpoints)
+		val exchange = MockServerWebExchange.from(MockServerHttpRequest.get(METADATA_URL))
 
-		// Act + Assert
-		webClient
-			.authenticate()
-			.get()
-			.uri(uriBuilder("/api/v2/metadata/alerts/status", emptyList(), emptyList()))
-			.exchange()
-			.expectStatus().is5xxServerError
-			.expectHeader().doesNotExist("ETag")
-			.expectHeader().value("Cache-Control") { assert(!it.contains("private")) }
+		// Act
+		handler.filter(exchange) {
+			exchange.response.statusCode = INTERNAL_SERVER_ERROR
+			exchange.response.setComplete()
+		}.block()
+
+		// Assert
+		assertNull(exchange.response.headers.eTag)
+		assertNull(exchange.response.headers.cacheControl)
 	}
 }

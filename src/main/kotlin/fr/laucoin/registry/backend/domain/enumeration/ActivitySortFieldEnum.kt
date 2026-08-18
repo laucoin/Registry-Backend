@@ -1,9 +1,5 @@
 package fr.laucoin.registry.backend.domain.enumeration
 
-/**
- * Fields an Activity collection may be sorted by (API v2 sort grammar, ADR 017).
- * `paramName` is the camelCase name exposed in the query parameter.
- */
 enum class ActivitySortFieldEnum(val paramName: String) {
 	NAME("name"),
 	DURATION("duration"),

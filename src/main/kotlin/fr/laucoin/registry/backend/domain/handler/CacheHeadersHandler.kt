@@ -15,7 +15,7 @@ import java.security.MessageDigest
 import java.util.UUID
 
 /**
- * ADR 018 §4 — HTTP caching for the cacheable reference GETs (metadata). Their
+ * HTTP caching for the cacheable reference GETs (metadata). Their
  * payloads are code-derived (enums + bundled translations), so they only change
  * with a deployment: the ETag is deterministic per (deployment, path, locale)
  * and a matching `If-None-Match` short-circuits to `304 Not Modified` without

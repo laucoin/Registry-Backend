@@ -40,12 +40,17 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-@Tag(name = "Alerts management", description = "API for Alerts-related operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Alerts management (v1, deprecated)", description = "API for Alerts-related operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/projects/{projectId}/alerts")
 interface IAlertV1Controller {
 	@Operation(
 		summary = "Find Alerts",
 		description = "Find or get paginated Alerts",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -69,6 +74,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Find Alert",
 		description = "Find Alert by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_R')")
 	@GetMapping("/{id}")
@@ -80,6 +86,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Find Alert Communications",
 		description = "Find or get paginated alert communications",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_COMMUNICATION_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -103,6 +110,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Create Alert",
 		description = "Create Alert linked to the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_C')")
 	@PostMapping
@@ -115,6 +123,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Update Alert",
 		description = "Update Alert",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
 	@PatchMapping("/{id}")
@@ -128,6 +137,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Update Alert status",
 		description = "Update Alert status",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
 	@PatchMapping("/{id}/status/{status}")
@@ -141,6 +151,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Disable Alert",
 		description = "Disable Alert, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
 	@RateLimited(SENSITIVE)
@@ -154,6 +165,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Enable Alert",
 		description = "Enable Alert, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
 	@RateLimited(SENSITIVE)
@@ -167,6 +179,7 @@ interface IAlertV1Controller {
 	@Operation(
 		summary = "Delete Alert",
 		description = "Delete all Alert data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_D')")
 	@RateLimited(SENSITIVE)

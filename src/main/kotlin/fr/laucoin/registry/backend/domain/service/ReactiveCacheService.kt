@@ -6,10 +6,10 @@ import reactor.core.publisher.Mono
 import java.time.Duration
 
 /**
- * ADR 018 — the reactive-safe caching reference instance: a Caffeine
+ * The reactive-safe caching reference instance: a Caffeine
  * [AsyncCache] behind a [Mono] API, so cache access composes with the reactive
  * pipeline and never blocks the event loop (Spring's blocking `@Cacheable` is
- * deliberately not used, per the ADR).
+ * deliberately not used).
  *
  * Entries expire after [ttl] (per-replica freshness bound) and writers evict
  * explicitly via [evictAll]/[evict]. A failed load is never cached.

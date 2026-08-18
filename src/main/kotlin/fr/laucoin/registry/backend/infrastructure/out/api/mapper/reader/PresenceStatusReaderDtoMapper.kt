@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_STATUS_DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.DEPARTED
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -56,7 +57,7 @@ class PresenceStatusReaderDtoMapper(
 		val start = startAvailability?.asStart()
 		val end = endAvailability?.asEnd()
 		return when {
-			Objects.nonNull(lastMovement) && listOf(IN, OUT).contains(model) -> translateService.getMessage(
+			Objects.nonNull(lastMovement) && listOf(IN, OUT, DEPARTED).contains(model) -> translateService.getMessage(
 				code = "$PRESENCE_STATUS_DURATION_PREFIX$model",
 				args = arrayOf(formatDuration(Duration.between(lastMovement, now))),
 			)

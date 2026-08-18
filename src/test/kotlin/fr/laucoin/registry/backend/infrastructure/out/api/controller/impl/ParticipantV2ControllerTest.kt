@@ -13,9 +13,15 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum.FIRST_NAME
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum.LAST_NAME
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.DEPARTED
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.UNAVAILABLE
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
@@ -72,6 +78,18 @@ class ParticipantV2ControllerTest : TestContext() {
 			Stream.of(Arguments.of(true), Arguments.of(false))
 
 		@JvmStatic
+		fun `Should findParticipants carry a status and available apart`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(IN, false, IN, false),
+				Arguments.of(OUT, true, OUT, true),
+				Arguments.of(UNAVAILABLE, true, UNAVAILABLE, true),
+				Arguments.of(DEPARTED, null, DEPARTED, null),
+				Arguments.of(null, true, null, true),
+				Arguments.of(null, false, null, false),
+				Arguments.of(null, null, null, null),
+			)
+
+		@JvmStatic
 		fun `Should refuse a due-today panel when either read is missing`(): Stream<Arguments> =
 			Stream.of(
 				Arguments.of("arrivals-today", REGISTRY_PROJECT_PARTICIPANT_R),
@@ -116,6 +134,63 @@ class ParticipantV2ControllerTest : TestContext() {
 		verify(service).findParticipantsPage(eq(projectId), pageableCaptor.capture(), any(), sortCaptor.capture())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
 		assertEquals(listOf(SortModel(LAST_NAME, descending = true), SortModel(FIRST_NAME, descending = true)), sortCaptor.firstValue)
+	}
+
+	/**
+	 * The two filters are independent now that a status travels to the query whole:
+	 * `status` names one of the four states, `available` asks the coarser "the
+	 * window contains now". Deriving one from the other is what used to make
+	 * IN imply available, which is exactly the implication this change removes.
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findParticipants carry a status and available apart`(
+		status: PresenceStatusEnum?,
+		available: Boolean?,
+		expectedStatus: PresenceStatusEnum?,
+		expectedAvailability: Boolean?,
+	) {
+		// Arrange
+		whenever(service.findParticipantsPage(any(), any(), any(), any())).thenReturn(participantPage())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.get()
+			.uri(
+				uriBuilder(
+					BASE_URL,
+					listOf(projectId),
+					listOf(Pair("status", status), Pair("available", available)),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<PageModel<ParticipantReaderDto>>(OK)
+		val searchCaptor = argumentCaptor<ParticipantSearchParamModel>()
+		verify(service).findParticipantsPage(eq(projectId), any(), searchCaptor.capture(), any())
+		assertEquals(expectedStatus, searchCaptor.firstValue.presenceStatusSearched)
+		assertEquals(expectedAvailability, searchCaptor.firstValue.availabilitySearched)
+	}
+
+	@Test
+	fun `Should findParticipants pass grouped to the search params`() {
+		// Arrange
+		whenever(service.findParticipantsPage(any(), any(), any(), any())).thenReturn(participantPage())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("grouped", false))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<ParticipantReaderDto>>(OK)
+		val searchCaptor = argumentCaptor<ParticipantSearchParamModel>()
+		verify(service).findParticipantsPage(eq(projectId), any(), searchCaptor.capture(), any())
+		assertEquals(false, searchCaptor.firstValue.groupedSearched)
 	}
 
 	@Test
@@ -250,66 +325,6 @@ class ParticipantV2ControllerTest : TestContext() {
 			.authenticate(buildAuthority(authority))
 			.get()
 			.uri(uriBuilder("$BASE_URL/$path", listOf(projectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-	}
-
-	@Test
-	fun `Should findArrivingToday pass the default limit to the service`() {
-		// Arrange
-		whenever(service.findArrivingToday(any(), any())).thenReturn(Flux.just(commonParticipant()))
-
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
-			.get()
-			.uri(uriBuilder("$BASE_URL/arriving-today", listOf(projectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<List<*>>(OK)
-		verify(service).findArrivingToday(projectId, DEFAULT_COLLECTION_LIMIT)
-	}
-
-	@Test
-	fun `Should findArrivingToday return 403 without the read authority`() {
-		// Act
-		val result = webClient
-			.authenticate()
-			.get()
-			.uri(uriBuilder("$BASE_URL/arriving-today", listOf(projectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-	}
-
-	@Test
-	fun `Should findDepartingToday pass the default limit to the service`() {
-		// Arrange
-		whenever(service.findDepartingToday(any(), any())).thenReturn(Flux.just(commonParticipant()))
-
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
-			.get()
-			.uri(uriBuilder("$BASE_URL/departing-today", listOf(projectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<List<*>>(OK)
-		verify(service).findDepartingToday(projectId, DEFAULT_COLLECTION_LIMIT)
-	}
-
-	@Test
-	fun `Should findDepartingToday return 403 without the read authority`() {
-		// Act
-		val result = webClient
-			.authenticate()
-			.get()
-			.uri(uriBuilder("$BASE_URL/departing-today", listOf(projectId), emptyList()))
 			.exchange()
 
 		// Assert

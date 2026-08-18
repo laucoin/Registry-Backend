@@ -40,12 +40,17 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-@Tag(name = "Communications management", description = "API for Communications-related operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Communications management (v1, deprecated)", description = "API for Communications-related operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/projects/{projectId}/communications")
 interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Find Communications",
 		description = "Find or get paginated Communications",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -68,6 +73,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Find Communication",
 		description = "Find Communication by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_R')")
 	@GetMapping("/{id}")
@@ -79,6 +85,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Search Movements",
 		description = "Search Movements with an activity to link a Communication",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -91,6 +98,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Search Alerts",
 		description = "Search Alerts to link a Communication",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -103,6 +111,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Create Communication",
 		description = "Create Communication linked to the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_C')")
 	@PostMapping
@@ -115,6 +124,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Update Communication",
 		description = "Update Communication",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
 	@PatchMapping("/{id}")
@@ -128,6 +138,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Disable Communication",
 		description = "Disable Communication, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
 	@RateLimited(SENSITIVE)
@@ -141,6 +152,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Enable Communication",
 		description = "Enable Communication, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
 	@RateLimited(SENSITIVE)
@@ -154,6 +166,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Delete Communication",
 		description = "Delete all Communication data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_D')")
 	@RateLimited(SENSITIVE)

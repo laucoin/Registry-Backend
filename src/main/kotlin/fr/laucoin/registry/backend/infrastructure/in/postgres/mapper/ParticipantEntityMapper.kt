@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper
 
 import com.nimbusds.jose.shaded.gson.Gson
 import com.nimbusds.jose.shaded.gson.reflect.TypeToken
+import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildAvailabilityWarning
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -34,7 +35,9 @@ class ParticipantEntityMapper(
 			availableGroups = groups.filter { buildPresentGroupIds(entity.availableGroups).contains(it.id) }
 			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
 			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
+			departedAt = entity.departedAt
 			status = buildStatus(entity.lastMovementType)
+			availabilityWarning = buildAvailabilityWarning(entity.lastMovementType)
 			lastMovement = entity.lastMovementDateTime
 			user = mapUser(entity)
 		}.fillWithProjectAndEntity(entity)
@@ -75,6 +78,7 @@ class ParticipantEntityMapper(
 			startAvailabilityTime = model.startAvailability?.time
 			endAvailabilityDate = model.endAvailability?.date
 			endAvailabilityTime = model.endAvailability?.time
+			departedAt = model.departedAt
 			userId = model.user?.id
 		}.fillWithProjectAndModel(model)
 	}

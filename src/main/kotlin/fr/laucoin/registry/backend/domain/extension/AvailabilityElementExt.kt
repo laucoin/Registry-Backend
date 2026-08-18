@@ -15,9 +15,9 @@ import fr.laucoin.registry.backend.domain.model.VehicleModel
 import java.util.Objects
 
 object AvailabilityElementExt {
-	fun ParticipantModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
+	fun ParticipantModel.isAvailableNow(): Boolean {
 		val now = CustomDateTimeModel.now()
-		val available = (
+		return (
 				(
 						Objects.isNull(startAvailability) && (groups.isEmpty() || availableGroups.isNotEmpty())
 								|| now.asStartIsAfterOther(startAvailability)
@@ -27,19 +27,43 @@ object AvailabilityElementExt {
 										|| now.asEndIsBeforeOther(endAvailability)
 								)
 				)
-		return status(available, lastMovementType)
+	}
+
+	fun ParticipantModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
+		if (Objects.nonNull(departedAt)) return PresenceStatusEnum.DEPARTED
+		return status(isAvailableNow(), lastMovementType)
+	}
+
+	fun ParticipantModel.buildAvailabilityWarning(lastMovementType: MovementTypeEnum?): Boolean {
+		return Objects.isNull(departedAt) && Objects.nonNull(lastMovementType) && !isAvailableNow()
+	}
+
+	fun VehicleModel.isAvailableNow(): Boolean {
+		val now = CustomDateTimeModel.now()
+		return now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
 	}
 
 	fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
-		val now = CustomDateTimeModel.now()
-		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
-		return status(available, lastMovementType)
+		return status(isAvailableNow(), lastMovementType)
 	}
 
+	fun VehicleModel.buildAvailabilityWarning(lastMovementType: MovementTypeEnum?): Boolean {
+		return Objects.nonNull(lastMovementType) && !isAvailableNow()
+	}
+
+	/**
+	 * A recorded movement is a fact, an availability window is a plan: the window
+	 * therefore never hides a movement any more, it only decorates it with a
+	 * warning (`buildAvailabilityWarning`). `UNAVAILABLE` keeps the one case no
+	 * movement contradicts — nobody ever moved this person, and the window does not
+	 * contain now — so that everyone who HAS moved lands in `IN` or `OUT` and no
+	 * head count can lose them. Departure is answered before this, from the
+	 * register rather than from the window.
+	 */
 	private fun status(available: Boolean, lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
 		return when {
-			available && lastMovementType === MovementTypeEnum.IN -> PresenceStatusEnum.IN
-			!available -> PresenceStatusEnum.UNAVAILABLE
+			lastMovementType === MovementTypeEnum.IN -> PresenceStatusEnum.IN
+			Objects.isNull(lastMovementType) && !available -> PresenceStatusEnum.UNAVAILABLE
 			else -> PresenceStatusEnum.OUT
 		}
 	}

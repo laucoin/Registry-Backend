@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst
@@ -18,6 +17,8 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.OpenAlertPr
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectWriterDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -41,13 +42,7 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/**
- * API v2 Projects contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
- * - `disable`/`enable` become explicit `POST` transitions (§3)
- * - plain field edits stay `PATCH /{id}` with a body of changed fields (§3)
- */
-@Tag(name = "Projects management", description = "API for Projects-related operations")
+@Tag(name = "Projects management (v2)", description = "API for Projects-related operations")
 @RequestMapping("/api/v2/projects")
 interface IProjectV2Controller {
 	@Operation(
@@ -59,13 +54,7 @@ interface IProjectV2Controller {
 	@GetMapping
 	fun findProjects(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
-		@RequestParam(required = false) sort: List<String>?,
-		@RequestParam(required = false, defaultValue = "ASC") direction: String,
+		@ParameterObject @Valid pageQuery: SortedPageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@Parameter(description = "\"false\" value will be considered only if you have REGISTRY_PROJECT_R authority.")

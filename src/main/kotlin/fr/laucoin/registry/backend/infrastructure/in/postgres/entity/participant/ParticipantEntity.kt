@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericProjectEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_AVAILABLE_GROUPS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_DEPARTED_AT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
@@ -58,6 +59,8 @@ data class ParticipantEntity(
 	var endAvailabilityDate: LocalDate? = null,
 	@Column(PARTICIPANT_END_AVAILABILITY_TIME)
 	var endAvailabilityTime: OffsetTime? = null,
+	@Column(PARTICIPANT_DEPARTED_AT)
+	var departedAt: ZonedDateTime? = null,
 	@Column(PARTICIPANT_USER_ID)
 	var userId: UUID? = null,
 	@ReadOnlyProperty

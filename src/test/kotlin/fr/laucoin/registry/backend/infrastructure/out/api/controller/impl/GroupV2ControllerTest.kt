@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum.NAME
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AddedGroupMembersReaderDto
@@ -222,6 +223,39 @@ class GroupV2ControllerTest : TestContext() {
 		val pageableCaptor = argumentCaptor<PageableModel>()
 		verify(service).findGroupMembersPageByGroupId(eq(projectId), eq(id), pageableCaptor.capture(), any())
 		assertEquals(PageableModel(offset = 20, limit = 10), pageableCaptor.firstValue)
+	}
+
+	/**
+	 * "Everyone the group expects right now, in or out alike" — the pair
+	 * (availability yes, presence unspecified) no `status` value can express, which
+	 * is the whole point of the parameter.
+	 */
+	@Test
+	fun `Should findGroupMembersByGroupId narrow to the available members`() {
+		// Arrange
+		val id = UUID.randomUUID()
+		val page = PageModel(PageableModel(0, 20), totalElements = 1, listOf(commonParticipant()))
+		whenever(service.findGroupMembersPageByGroupId(any(), any(), any(), any())).thenReturn(Mono.just(page))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(
+				uriBuilder(
+					"$BASE_URL/{id}/members",
+					listOf(projectId, id),
+					listOf(Pair("available", true)),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<PageModel<ParticipantReaderDto>>(OK)
+		val searchCaptor = argumentCaptor<ParticipantSearchParamModel>()
+		verify(service).findGroupMembersPageByGroupId(eq(projectId), eq(id), any(), searchCaptor.capture())
+		assertEquals(true, searchCaptor.firstValue.availabilitySearched)
+		assertEquals(null, searchCaptor.firstValue.presenceStatusSearched)
 	}
 
 	@Test

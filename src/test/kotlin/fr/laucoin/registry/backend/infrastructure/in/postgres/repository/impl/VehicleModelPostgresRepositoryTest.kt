@@ -83,17 +83,19 @@ class VehicleModelPostgresRepositoryTest : TestContext() {
 			textSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(postgresRepository).countAll(
 			projectId,
 			textSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -135,7 +137,8 @@ class VehicleModelPostgresRepositoryTest : TestContext() {
 			textSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
 			size,
 		)

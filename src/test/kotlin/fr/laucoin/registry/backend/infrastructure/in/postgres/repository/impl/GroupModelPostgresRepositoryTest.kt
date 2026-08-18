@@ -135,7 +135,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 		// Act
 		val visibilitySearched = null
 		val availabilitySearched = null
-		repository.findContent(projectId, ids, visibilitySearched, availabilitySearched).collectList().block()
+		repository.findContent(projectId, ids, visibilitySearched, availabilitySearched, null).collectList().block()
 
 		// Assert
 		verify(contentPostgresRepository, times(expectedContentRepositoryCall)).findAllByGroupIds(
@@ -143,6 +143,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 			ids,
 			visibilitySearched,
 			availabilitySearched,
+			null,
 		)
 		verify(contentMapper, atLeast(expectedContentRepositoryCall)).toModel(any())
 	}
@@ -213,6 +214,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 			listOf(groupId),
 			visibilitySearched = null,
 			availabilitySearched = null,
+			departedSearched = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -244,6 +246,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 			listOf(uuid),
 			visibilitySearched = null,
 			availabilitySearched = null,
+			departedSearched = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -357,7 +360,8 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 				projectId,
 				listOf(uuid),
 				visibilitySearched = null,
-				availabilitySearched = null
+				availabilitySearched = null,
+				departedSearched = null,
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
@@ -385,7 +389,8 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 				projectId,
 				listOf(uuid),
 				visibilitySearched = null,
-				availabilitySearched = null
+				availabilitySearched = null,
+				departedSearched = null,
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())

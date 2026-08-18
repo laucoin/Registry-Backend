@@ -13,13 +13,13 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.stream.Stream
 
-class PreferenceReaderDtoMapperTest {
+class CurrentUserPreferencesReaderDtoMapperTest {
 	private val profileMapper: ProjectProfileReaderDtoMapper = mock()
-	private val mapper: PreferenceReaderDtoMapper = PreferenceReaderDtoMapper(profileMapper)
+	private val mapper: CurrentUserPreferencesReaderDtoMapper = CurrentUserPreferencesReaderDtoMapper(profileMapper)
 
 	private companion object {
 		@JvmStatic
-		fun `Should toDto convert PreferencesModel to PreferenceReaderDto`(): Stream<Arguments> {
+		fun `Should toDto convert PreferencesModel to CurrentUserPreferencesReaderDto`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(
 					PreferencesModel(),
@@ -37,7 +37,7 @@ class PreferenceReaderDtoMapperTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should toDto convert PreferencesModel to PreferenceReaderDto`(
+	fun `Should toDto convert PreferencesModel to CurrentUserPreferencesReaderDto`(
 		preferences: PreferencesModel,
 		expectedProfileCast: Int,
 	) {

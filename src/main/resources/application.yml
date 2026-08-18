@@ -15,7 +15,7 @@ external:
 
 registry:
   performance:
-    # ADR 018 — in-process caching knobs. TTLs bound per-replica staleness;
+    # In-process caching knobs. TTLs bound per-replica staleness;
     # 0 disables the count cache entirely.
     count-cache-ttl-seconds: ${REGISTRY_PERFORMANCE_CACHE_TTL_SECONDS:30}
     roles-max-age-seconds: ${REGISTRY_PERFORMANCE_MAX_AGE_ROLES_SECONDS:600}
@@ -108,7 +108,7 @@ spring:
     web-application-type: reactive
     banner-mode: off
   r2dbc:
-    # ADR 018 §5 — pool sized to event-loop/database capacity, with driver-side
+    # Pool sized to event-loop/database capacity, with driver-side
     # prepared-statement caching; all deploy-tunable, defaults suit local dev.
     url: r2dbc:pool:postgresql://${DATASOURCE_BASE_URL}/${DATASOURCE_DATABASE:registry}?currentSchema=${DATASOURCE_SCHEMAS:public}&initialSize=${DATASOURCE_POOL_SIZE:5}&maxSize=${DATASOURCE_POOL_MAX_SIZE:20}&preparedStatementCacheQueries=${DATASOURCE_PREPARED_STATEMENT_CACHE:256}
     username: ${DATASOURCE_USERNAME:registry}
@@ -134,7 +134,7 @@ management:
   endpoints:
     web:
       exposure:
-        # ADR 025 — metrics stay in Prometheus exposition format (Micrometer);
+        # Metrics stay in Prometheus exposition format (Micrometer);
         # VictoriaMetrics scrapes this endpoint. The format is the contract,
         # not the Prometheus server.
         include: prometheus

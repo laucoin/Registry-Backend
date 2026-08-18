@@ -23,6 +23,7 @@ class VehicleReaderDtoMapper(
 					model.endAvailability,
 				)
 			}.orElse(null),
+			availabilityWarning = model.availabilityWarning,
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
 		).apply {

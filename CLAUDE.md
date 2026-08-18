@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Follow the project-wide agent instructions in [AGENTS.md](AGENTS.md) — in particular the strict § Comment policy: no
-extraneous or inline comments, strict preservation of `// Arrange` / `// Act` / `// Assert` test structure comments, and
-documentation limited to English KDoc block comments (`/** … */`) placed directly above complex or non-obvious
-declarations.
+Follow the project-wide agent instructions in [AGENTS.md](AGENTS.md) — in particular the strict § Comment policy: the
+only comments allowed are the `// Arrange` / `// Act` / `// Assert` test structure markers (never deleted, reworded or
+moved), a single KDoc block (`/** … */`) directly above a genuinely complex method, and tooling directives. No inline
+or trailing comments, no restatements of names or signatures, and never an ADR reference.

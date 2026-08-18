@@ -14,6 +14,8 @@ UUID = 'e22a08da-b8b8-4b78-86c8-8557ddfbb945';
 UUID = 'e68014a3-5ac0-42cf-8b85-67d6183f6d69';
         global_blocked_profile_id
 UUID = 'da39968a-c90f-46e1-b3dd-81988458ea0f';
+        global_unverified_id
+UUID = 'eba79b3d-2fcb-4922-805c-2c5a1eadecc7';
 BEGIN
         -- Insert service account. Its email stays NULL (see
         -- V1_11_0__remove_service_account_email.sql): the unique index on tb_user.email
@@ -27,6 +29,10 @@ VALUES ('SERVICE_ACCOUNT', 'Luc', 'AUCOIN');
 -- login via Authentik, the backend links the IdP UUID to the matching email (see
 -- TokenConverterService), so you sign in as one of these seeded users. The
 -- Authentik users are provisioned by local-dev/authentik/blueprints/registry.yaml.
+-- One exception: the IdP does not vouch for `unverified@sgdf.fr` (its Authentik
+-- account carries email_verified: false), so that link is refused with
+-- AUTH_EMAIL_NOT_VERIFIED and the row stays unclaimed run after run. It exists to
+-- make that refusal reproducible by hand — sign in as `unverified`.
 INSERT INTO tb_user (id, oidc_id, type, first_name, last_name, email, role, birthday, last_login, created_by,
                      last_modified_by, visible)
 VALUES (global_admin_id, NULL, 'USER', 'Jane', 'SMITH',
@@ -43,7 +49,10 @@ VALUES (global_admin_id, NULL, 'USER', 'Jane', 'SMITH',
         global_blocked_user_id, global_blocked_user_id, FALSE),
        (global_blocked_profile_id, NULL, 'USER', 'Emil', 'BRADFORD',
         'blocked-profile@sgdf.fr', 'USER_ADMINISTRATOR', '1960-01-01', '2025-03-01 15:28:51.144372 +00:00',
-        global_blocked_profile_id, global_blocked_profile_id, TRUE);
+        global_blocked_profile_id, global_blocked_profile_id, TRUE),
+       (global_unverified_id, NULL, 'USER', 'Nina', 'VOGEL',
+        'unverified@sgdf.fr', 'USER', '1995-01-01', '2025-03-01 15:28:51.144372 +00:00',
+        global_unverified_id, global_unverified_id, TRUE);
 
 -- Insert preferences for users
 INSERT INTO tb_preferences (user_id, created_by, last_modified_by)
@@ -51,7 +60,8 @@ VALUES (global_admin_id, global_admin_id, global_admin_id),
        (global_coordinator_id, global_coordinator_id, global_coordinator_id),
        (global_user_id, global_user_id, global_user_id),
        (global_blocked_user_id, global_blocked_user_id, global_blocked_user_id),
-       (global_blocked_profile_id, global_blocked_profile_id, global_blocked_profile_id);
+       (global_blocked_profile_id, global_blocked_profile_id, global_blocked_profile_id),
+       (global_unverified_id, global_unverified_id, global_unverified_id);
 END
 $$;
 

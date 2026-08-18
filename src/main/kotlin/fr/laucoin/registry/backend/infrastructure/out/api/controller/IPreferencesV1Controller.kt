@@ -14,12 +14,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 import java.util.UUID
 
-@Tag(name = "User's Preferences management", description = "API for User's Preferences-related operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "User's Preferences management (v1, deprecated)", description = "API for User's Preferences-related operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/users/preferences")
 interface IPreferencesV1Controller {
 	@Operation(
 		summary = "Save theme",
 		description = "Save theme preferences for other devices",
+		deprecated = true,
 	)
 	@PostMapping("/theme")
 	fun updateTheme(
@@ -30,6 +35,7 @@ interface IPreferencesV1Controller {
 	@Operation(
 		summary = "Save language",
 		description = "Save language preferences for other devices",
+		deprecated = true,
 	)
 	@PostMapping("/language")
 	fun updateLanguage(
@@ -41,6 +47,7 @@ interface IPreferencesV1Controller {
 	@Operation(
 		summary = "Change Default Profile",
 		description = "Changes the Project on which default operations are performed by changing Profile.",
+		deprecated = true,
 	)
 	@PostMapping("/profile/select")
 	fun updateSelectedProjectProfile(
@@ -51,6 +58,7 @@ interface IPreferencesV1Controller {
 	@Operation(
 		summary = "Change Default Profile by Project id",
 		description = "Changes the Project on which default operations are performed by changing Profile.",
+		deprecated = true,
 	)
 	@PostMapping("/projects/{projectId}/profile/select")
 	fun updateSelectedProjectProfileWithProjectId(

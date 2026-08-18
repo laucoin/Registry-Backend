@@ -40,12 +40,17 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-@Tag(name = "Projects management", description = "API for Projects-related operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Projects management (v1, deprecated)", description = "API for Projects-related operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/projects")
 interface IProjectV1Controller {
 	@Operation(
 		summary = "Find Projects",
 		description = "Find or get paginated Projects",
+		deprecated = true,
 	)
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
@@ -67,6 +72,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Find Project",
 		description = "Find Project by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/{id}")
@@ -75,6 +81,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Get available Options",
 		description = "Get all the Options you are allowed to enable",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_PROJECT_METADATA_R')")
 	@GetMapping("/options")
@@ -83,6 +90,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Create Project",
 		description = "Create Project and Project Profile administration for the Current User",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_PROJECT_C')")
 	@PostMapping
@@ -94,6 +102,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Update Project",
 		description = "Update Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@PatchMapping("/{id}")
@@ -106,6 +115,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Disable Project",
 		description = "Disable Project access, obviously the related profile is no accessible anymore.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@RateLimited(SENSITIVE)
@@ -118,6 +128,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Enable Project",
 		description = "Enable Project, obviously the profiles concerned are accessible again.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@RateLimited(SENSITIVE)
@@ -130,6 +141,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Delete Project",
 		description = "Delete all Project data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_D')")
 	@RateLimited(SENSITIVE)

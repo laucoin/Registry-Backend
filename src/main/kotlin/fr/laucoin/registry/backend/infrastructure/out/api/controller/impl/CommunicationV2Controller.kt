@@ -4,14 +4,14 @@ import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.ICommunicationV2Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CommunicationWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
@@ -32,18 +32,15 @@ class CommunicationV2Controller(
 ) : ICommunicationV2Controller {
 	override fun findCommunications(
 		projectId: UUID,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		startDateTime: ZonedDateTime?,
 		endDateTime: ZonedDateTime?,
 	): Mono<PageModel<CommunicationReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = CommunicationSearchParamModel(q, visible, startDateTime, endDateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, CommunicationSortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, CommunicationSortFieldEnum::fromParamName)
 
 		return service.findCommunicationPage(projectId, pageable, searchParams, sortModels)
 			.map(readerMapper::toDtoPage)

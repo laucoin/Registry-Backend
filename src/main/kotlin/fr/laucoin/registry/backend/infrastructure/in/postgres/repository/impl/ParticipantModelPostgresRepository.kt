@@ -18,10 +18,13 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participa
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.GROUPS_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.LAST_MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_AVAILABILITY_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_DEPARTED_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_GROUPED_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_MAJOR_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_PRESENCE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_STATUS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_TYPE_SEARCH_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.PARTICIPANT_WARNED_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.SELECT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.SELECT_LINKED_GROUPS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantQueries.SELECT_LINKED_USER
@@ -50,6 +53,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZonedDateTime
 import java.util.UUID
 
 @Service
@@ -76,8 +80,11 @@ class ParticipantModelPostgresRepository(
 				searchParams.typeSearched,
 				searchParams.visibilitySearched,
 				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
+				searchParams.presenceStatusSearched?.name,
+				searchParams.departedSearched,
+				searchParams.warnedSearched,
 				searchParams.dateTimeSearched,
+				searchParams.groupedSearched,
 				pageable.limit,
 				pageable.offset,
 			)
@@ -93,8 +100,11 @@ class ParticipantModelPostgresRepository(
 				searchParams.typeSearched,
 				searchParams.visibilitySearched,
 				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
+				searchParams.presenceStatusSearched?.name,
+				searchParams.departedSearched,
+				searchParams.warnedSearched,
 				searchParams.dateTimeSearched,
+				searchParams.groupedSearched,
 			),
 			entities.map(mapper::toModel).collectList()
 		).map {
@@ -103,7 +113,7 @@ class ParticipantModelPostgresRepository(
 	}
 
 	/**
-	 * API v2 sorted page (ADR 017 §5). The ORDER BY is built exclusively from
+	 * API v2 sorted page. The ORDER BY is built exclusively from
 	 * the [ParticipantSortFieldEnum] whitelist ([toColumn]) — user input never
 	 * reaches the SQL string. Row mapping reuses the same converter Spring Data
 	 * applies to the annotated queries.
@@ -122,7 +132,7 @@ class ParticipantModelPostgresRepository(
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_DEPARTED_CLAUSE AND $PARTICIPANT_WARNED_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_GROUPED_CLAUSE
         ORDER BY $orderBy
         LIMIT :limit OFFSET :offset
         """
@@ -146,9 +156,18 @@ class ParticipantModelPostgresRepository(
 		spec = searchParams.availabilitySearched
 			?.let { spec.bind("availabilitySearched", it) }
 			?: spec.bindNull("availabilitySearched", Boolean::class.javaObjectType)
-		spec = searchParams.presenceSearched
-			?.let { spec.bind("presenceSearched", it) }
-			?: spec.bindNull("presenceSearched", Boolean::class.javaObjectType)
+		spec = searchParams.presenceStatusSearched
+			?.let { spec.bind("statusSearched", it.name) }
+			?: spec.bindNull("statusSearched", String::class.java)
+		spec = searchParams.departedSearched
+			?.let { spec.bind("departedSearched", it) }
+			?: spec.bindNull("departedSearched", Boolean::class.javaObjectType)
+		spec = searchParams.warnedSearched
+			?.let { spec.bind("warnedSearched", it) }
+			?: spec.bindNull("warnedSearched", Boolean::class.javaObjectType)
+		spec = searchParams.groupedSearched
+			?.let { spec.bind("groupedSearched", it) }
+			?: spec.bindNull("groupedSearched", Boolean::class.javaObjectType)
 		spec = searchParams.dateTimeSearched
 			?.let { spec.bind("dateTimeSearched", it.toOffsetDateTime()) }
 			?: spec.bindNull("dateTimeSearched", OffsetDateTime::class.java)
@@ -191,8 +210,11 @@ class ParticipantModelPostgresRepository(
 			searchParams.typeSearched,
 			searchParams.visibilitySearched,
 			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
+			searchParams.presenceStatusSearched?.name,
+			searchParams.departedSearched,
+			searchParams.warnedSearched,
 			searchParams.dateTimeSearched,
+			searchParams.groupedSearched,
 		)
 	}
 
@@ -211,7 +233,9 @@ class ParticipantModelPostgresRepository(
 				searchParams.typeSearched,
 				searchParams.visibilitySearched,
 				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
+				searchParams.presenceStatusSearched?.name,
+				searchParams.departedSearched,
+				searchParams.warnedSearched,
 				searchParams.dateTimeSearched,
 			),
 			repository.findAllByGroupId(
@@ -222,7 +246,9 @@ class ParticipantModelPostgresRepository(
 				searchParams.typeSearched,
 				searchParams.visibilitySearched,
 				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
+				searchParams.presenceStatusSearched?.name,
+				searchParams.departedSearched,
+				searchParams.warnedSearched,
 				searchParams.dateTimeSearched,
 				pageable.limit,
 				pageable.offset,
@@ -253,18 +279,17 @@ class ParticipantModelPostgresRepository(
 			searchParams.typeSearched,
 			searchParams.visibilitySearched,
 			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
+			searchParams.presenceStatusSearched?.name,
+			searchParams.departedSearched,
+			searchParams.warnedSearched,
 			searchParams.dateTimeSearched,
 			limit,
 		).map(mapper::toModel)
 	}
 
-	override fun updateAllEndAvailability(
-		ids: List<UUID>,
-		endAvailability: CustomDateTimeModel
-	): Flux<ParticipantModel> {
+	override fun markAllAsDeparted(ids: List<UUID>, departedAt: ZonedDateTime): Flux<ParticipantModel> {
 		return if (ids.isEmpty()) Flux.empty()
-		else repository.updateAllEndAvailability(ids, endAvailability.time, endAvailability.date).map(mapper::toModel)
+		else repository.markAllAsDeparted(ids, departedAt).map(mapper::toModel)
 	}
 
 	override fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel> {

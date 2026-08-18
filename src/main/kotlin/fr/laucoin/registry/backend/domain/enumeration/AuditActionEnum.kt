@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.enumeration
 
 /**
- * ADR 019 §5 — the audit trail vocabulary, one entry per privileged action.
+ * The audit trail vocabulary, one entry per privileged action.
  * Only privileged/destructive administrative actions are audited (RBAC and
  * access changes, deletes, anonymization): they are the security-relevant,
  * low-volume events the trail exists for. Regular CRUD stays out — it is

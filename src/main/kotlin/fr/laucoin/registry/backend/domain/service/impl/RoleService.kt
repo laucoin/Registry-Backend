@@ -27,7 +27,7 @@ class RoleService(
 	private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	/**
-	 * ADR 018 — the RBAC map is the in-memory reference cache. Its consumers
+	 * The RBAC map is the in-memory reference cache. Its consumers
 	 * (the synchronous PermissionEvaluator on the authorization hot path) cannot
 	 * suspend on a reactive lookup, so freshness comes from a scheduled reactive
 	 * refresh instead of per-read caching: role/permission changes now propagate

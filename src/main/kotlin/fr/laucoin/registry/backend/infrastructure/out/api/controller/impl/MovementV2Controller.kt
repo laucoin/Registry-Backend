@@ -9,7 +9,6 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
@@ -23,7 +22,9 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementRea
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantMovementWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementActivityReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementContentsReaderDtoMapper
@@ -61,10 +62,7 @@ class MovementV2Controller(
 	override fun findMovements(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		currentMovements: Boolean,
 		linkedToActivity: Boolean?,
 		visible: Boolean?,
@@ -76,9 +74,9 @@ class MovementV2Controller(
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, startDateTime, endDateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, MovementSortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, MovementSortFieldEnum::fromParamName)
 
 		val movements = if (currentMovements) {
 			service.findCurrentMovementsPage(projectId, pageable, searchParams, sortModels)
@@ -89,19 +87,6 @@ class MovementV2Controller(
 		return movements.map(readerMapper::toDtoPage)
 	}
 
-	override fun findMovementsContents(
-		projectId: UUID,
-		movementIds: List<UUID>,
-		currentMovements: Boolean,
-	): Flux<MovementContentsReaderDto> {
-		val contents = if (currentMovements) {
-			service.findCurrentMovementsContent(projectId, movementIds)
-		} else {
-			service.findMovementsContent(projectId, movementIds)
-		}
-
-		return contents.map(readerContentsMapper::toDto)
-	}
 
 	override fun findMovementById(projectId: UUID, id: UUID): Mono<MovementReaderDto> {
 		return service.findMovementById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
@@ -147,14 +132,13 @@ class MovementV2Controller(
 	override fun findMovementCommunications(
 		projectId: UUID,
 		id: UUID,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		startDateTime: ZonedDateTime?,
 		endDateTime: ZonedDateTime?,
 	): Mono<PageModel<CommunicationReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = CommunicationSearchParamModel(q, visible, startDateTime, endDateTime)
 
 		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)

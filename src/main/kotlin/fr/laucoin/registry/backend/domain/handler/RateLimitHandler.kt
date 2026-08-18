@@ -28,7 +28,7 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit.NANOSECONDS
 
 /**
- * ADR 019 §1 — backend-tier rate limiting: fine-grained, per-authenticated-user
+ * Backend-tier rate limiting: fine-grained, per-authenticated-user
  * limits on the sensitive and expensive operations, enforced with non-blocking
  * in-process buckets (Bucket4j token buckets keyed through a Caffeine cache, so
  * the WebFlux event loop never blocks and no shared store is needed). Limits

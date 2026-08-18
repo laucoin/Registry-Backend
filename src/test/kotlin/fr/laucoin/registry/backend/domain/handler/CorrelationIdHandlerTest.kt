@@ -16,7 +16,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 /**
- * ADR 019 §5 / ADR 020 — every response carries exactly one correlation id:
+ * Every response carries exactly one correlation id:
  * the caller's when well-formed, a generated one otherwise. The handler runs
  * at highest precedence, so even requests rejected by the security chain are
  * covered — no authentication needed here.

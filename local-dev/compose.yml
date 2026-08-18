@@ -21,7 +21,7 @@ services:
       test: pg_isready -d ${PG_AUTHENTIK_DB} -U ${PG_AUTHENTIK_DB}
 
   registry-authentik-server:
-    image: ghcr.io/goauthentik/server:2026.5
+    image: ghcr.io/goauthentik/server:2026.8.0
     restart: unless-stopped
     ports:
       - "9000:9000"
@@ -36,8 +36,6 @@ services:
       AUTHENTIK_SECRET_KEY: ${AU_SECRET_KEY}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AU_EMAIL}
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AU_PASS}
-      # Consumed by ./authentik/blueprints/registry.yaml to provision the OAuth2
-      # provider/application and the seed users' shared dev password.
       IDP_PRIVATE_CLIENT_ID: ${IDP_PRIVATE_CLIENT_ID:-registry}
       IDP_PRIVATE_CLIENT_SECRET: ${IDP_PRIVATE_CLIENT_SECRET}
       AU_DEV_PASSWORD: ${AU_DEV_PASSWORD}
@@ -55,10 +53,10 @@ services:
       retries: 5
       start_period: 20s
       timeout: 5s
-      test: curl -f ${AU_SITE_URL} || exit 1
+      test: [ "CMD", "ak", "healthcheck" ]
 
   registry-authentik-worker:
-    image: ghcr.io/goauthentik/server:2026.5
+    image: ghcr.io/goauthentik/server:2026.8.0
     restart: unless-stopped
     env_file:
       - .env
@@ -70,8 +68,6 @@ services:
       AUTHENTIK_SECRET_KEY: ${AU_SECRET_KEY}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AU_EMAIL}
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AU_PASS}
-      # Consumed by ./authentik/blueprints/registry.yaml to provision the OAuth2
-      # provider/application and the seed users' shared dev password.
       IDP_PRIVATE_CLIENT_ID: ${IDP_PRIVATE_CLIENT_ID:-registry}
       IDP_PRIVATE_CLIENT_SECRET: ${IDP_PRIVATE_CLIENT_SECRET}
       AU_DEV_PASSWORD: ${AU_DEV_PASSWORD}

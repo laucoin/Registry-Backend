@@ -32,6 +32,9 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementRea
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantMovementWriterDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -56,13 +59,7 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/**
- * API v2 Movements contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/typed filters (§5)
- * - state transitions as explicit `POST` actions, no value-in-path (§3)
- * - eligibility sub-collections named for their relationship (§4)
- */
-@Tag(name = "Movements management", description = "API for Movements-related operations")
+@Tag(name = "Movements management (v2)", description = "API for Movements-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/movements")
 interface IMovementV2Controller {
 	@Operation(
@@ -74,13 +71,7 @@ interface IMovementV2Controller {
 	fun findMovements(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
-		@RequestParam(required = false) sort: List<String>?,
-		@RequestParam(required = false, defaultValue = "ASC") direction: String,
+		@ParameterObject @Valid pageQuery: SortedPageQueryDto,
 		@Parameter(description = "\"currentMovements\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
 		@RequestParam(required = false, defaultValue = "false") currentMovements: Boolean,
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
@@ -92,22 +83,6 @@ interface IMovementV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
 	): Mono<PageModel<MovementReaderDto>>
-
-	@Operation(
-		summary = "Find Movements contents",
-		description = "Find or get content of given Movements IDs (at most 200 IDs per request)",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
-	@GetMapping("/contents")
-	fun findMovementsContents(
-		@PathVariable projectId: UUID,
-		@RequestParam(required = true) @Valid @Size(
-			max = 200,
-			message = MOVEMENT_IDS_SIZE_IS_UPPER_THAN_MAX
-		) movementIds: List<UUID>,
-		@Parameter(description = "\"currentMovements\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
-		@RequestParam(required = false, defaultValue = "false") currentMovements: Boolean,
-	): Flux<MovementContentsReaderDto>
 
 	@Operation(
 		summary = "Find Movement",
@@ -169,11 +144,7 @@ interface IMovementV2Controller {
 	fun findMovementCommunications(
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false)

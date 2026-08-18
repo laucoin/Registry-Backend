@@ -1,16 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PreferenceReaderDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CurrentUserPreferencesReaderDto
 import org.springframework.stereotype.Component
 import java.util.Optional
 
 @Component
-class PreferenceReaderDtoMapper(
+class CurrentUserPreferencesReaderDtoMapper(
 	private val profileMapper: ProjectProfileReaderDtoMapper,
-) : IGenericReaderDtoMapper<PreferencesModel, PreferenceReaderDto> {
-	override fun toDto(model: PreferencesModel): PreferenceReaderDto {
-		return PreferenceReaderDto(
+) : IGenericReaderDtoMapper<PreferencesModel, CurrentUserPreferencesReaderDto> {
+	override fun toDto(model: PreferencesModel): CurrentUserPreferencesReaderDto {
+		return CurrentUserPreferencesReaderDto(
 			theme = model.theme,
 			language = model.language,
 			selectedProfile = Optional.ofNullable(model.selectedProfile)

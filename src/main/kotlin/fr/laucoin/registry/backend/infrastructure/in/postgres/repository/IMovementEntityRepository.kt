@@ -29,11 +29,9 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.MOVEMENT_LINKED_TO_ACTIVITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.MOVEMENT_TYPE_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.ONGOING_ACTIVITY_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.SELECT_ACTIVITY_MOVEMENT_SEARCH
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.SELECT_LINKED_ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.WITH_CURRENT_MOVEMENT
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementQueries.WITH_ONGOING_ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.PROJECT_CLAUSE
@@ -272,16 +270,16 @@ interface IMovementEntityRepository : ReactiveCrudRepository<MovementEntity, UUI
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementEntity>
 
 	/**
-	 * Ongoing activity outings: the exits linked to an activity whose participants have not yet
-	 * returned — an outing stays listed while it is still somebody's CURRENT movement, and any
-	 * entry checking them back in ends it, whether or not that entry names the activity again.
-	 * Each row is annotated with the max communication date_time so the dashboard can run a
-	 * "since last communication" chronometer.
+	 * Ongoing activity outings are the activity-linked exits among the CURRENT
+	 * movements — the same `current_movement` the board and the paginated list read,
+	 * so an outing appears, and stops appearing, on exactly the same rule as
+	 * everything else. What this query alone adds is the max communication date_time,
+	 * which lets the dashboard run its "since last communication" chronometer.
 	 */
 	@Query(
 		"""
-        WITH $WITH_ONGOING_ACTIVITY
-        SELECT t.*,
+        WITH $WITH_CURRENT_MOVEMENT
+        SELECT DISTINCT t.*,
             (
                 SELECT MAX(c.$COMMUNICATION_DATE_TIME)
                 FROM $COMMUNICATION_TABLE c
@@ -289,7 +287,7 @@ interface IMovementEntityRepository : ReactiveCrudRepository<MovementEntity, UUI
             ) AS $MOVEMENT_LAST_COMMUNICATION_AT,
             $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $MOVEMENT_TABLE t
-        $ONGOING_ACTIVITY_JOIN
+        $CURRENT_MOVEMENT_JOIN
         $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_LINKED_TO_ACTIVITY_CLAUSE
             AND t.$MOVEMENT_TYPE = 'OUT'

@@ -6,14 +6,15 @@ import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IVehicleV2Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.VehicleWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.VehicleWriterDtoMapper
@@ -31,18 +32,15 @@ class VehicleV2Controller(
 ) : IVehicleV2Controller {
 	override fun findVehicles(
 		projectId: UUID,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		status: PresenceStatusEnum?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageModel<VehicleReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = VehicleSearchParamModel(q, visible, status, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, VehicleSortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, VehicleSortFieldEnum::fromParamName)
 
 		return service.findVehiclesPage(projectId, pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}
@@ -55,15 +53,14 @@ class VehicleV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		visible: Boolean?,
 		linkedToActivity: Boolean?,
 		type: MovementTypeEnum?,
 		startDateTime: ZonedDateTime?,
 		endDateTime: ZonedDateTime?,
 	): Mono<PageModel<MovementReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = MovementSearchParamModel(
 			visible,
 			linkedToActivity,

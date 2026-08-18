@@ -127,7 +127,7 @@ class MovementModelPostgresRepository(
 	}
 
 	/**
-	 * API v2 sorted page (ADR 017 §5). The ORDER BY is built exclusively from
+	 * API v2 sorted page. The ORDER BY is built exclusively from
 	 * the [MovementSortFieldEnum] whitelist ([toColumn]) — user input never
 	 * reaches the SQL string. Row mapping reuses the same converter Spring Data
 	 * applies to the annotated queries.

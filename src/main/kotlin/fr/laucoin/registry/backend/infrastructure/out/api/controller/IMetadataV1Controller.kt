@@ -9,13 +9,18 @@ import org.springframework.web.bind.annotation.RequestMapping
 import reactor.core.publisher.Flux
 import java.security.Principal
 
-@Tag(name = "Metadata", description = "API for global metadata")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Metadata (v1, deprecated)", description = "API for global metadata — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/metadata")
 interface IMetadataV1Controller {
 
 	@Operation(
 		summary = "Get presence element's status",
 		description = "Get all presence element's status",
+		deprecated = true,
 	)
 	@HttpCacheable
 	@GetMapping("/presences/status")
@@ -24,6 +29,7 @@ interface IMetadataV1Controller {
 	@Operation(
 		summary = "Get availabilities status",
 		description = "Get all availabilities status",
+		deprecated = true,
 	)
 	@HttpCacheable
 	@GetMapping("/availabilities/status")
@@ -32,6 +38,7 @@ interface IMetadataV1Controller {
 	@Operation(
 		summary = "Get profile's status",
 		description = "Get all profile's status",
+		deprecated = true,
 	)
 	@HttpCacheable
 	@GetMapping("/profiles/status")
@@ -40,6 +47,7 @@ interface IMetadataV1Controller {
 	@Operation(
 		summary = "Get Movement Type",
 		description = "Get all movement type",
+		deprecated = true,
 	)
 	@HttpCacheable
 	@GetMapping("/movements/types")
@@ -48,6 +56,7 @@ interface IMetadataV1Controller {
 	@Operation(
 		summary = "Get Participant Type",
 		description = "Get all participant type",
+		deprecated = true,
 	)
 	@HttpCacheable
 	@GetMapping("/participants/types")
@@ -56,6 +65,7 @@ interface IMetadataV1Controller {
 	@Operation(
 		summary = "Get Alert Status",
 		description = "Get all alert status",
+		deprecated = true,
 	)
 	@HttpCacheable
 	@GetMapping("/alerts/status")

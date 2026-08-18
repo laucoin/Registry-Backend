@@ -1,9 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_HISTORY_R
@@ -18,6 +15,9 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ActivityWriterDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -39,13 +39,7 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/**
- * API v2 Activities contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
- * - state transitions as explicit `POST` actions, no value-in-path (§3)
- * - plain field edits as `PATCH /{id}` with a body of changed fields (§3)
- */
-@Tag(name = "Activities management", description = "API for Activities-related operations")
+@Tag(name = "Activities management (v2)", description = "API for Activities-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/activities")
 interface IActivityV2Controller {
 	@Operation(
@@ -57,13 +51,7 @@ interface IActivityV2Controller {
 	@GetMapping
 	fun findActivities(
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
-		@RequestParam(required = false) sort: List<String>?,
-		@RequestParam(required = false, defaultValue = "ASC") direction: String,
+		@ParameterObject @Valid pageQuery: SortedPageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) available: Boolean?,
@@ -91,11 +79,7 @@ interface IActivityV2Controller {
 	fun findActivityMovements(
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
 		@RequestParam(required = false)

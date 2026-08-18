@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.model.SortModel
 import org.springframework.http.HttpStatus.BAD_REQUEST
 
 /**
- * Parses the API v2 sort grammar (ADR 017 §5): `sort=field,otherField` with a
+ * Parses the API v2 sort grammar: `sort=field,otherField` with a
  * separate `direction=ASC|DESC`. Spring binds comma-separated and repeated
  * params into one list; the direction applies to every key, so a field name is
  * only ever a field name — the leading `-` that used to reverse one is gone,

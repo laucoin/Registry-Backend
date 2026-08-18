@@ -1,9 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
@@ -21,7 +18,11 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupWithou
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GroupMembersWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GroupWriterDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
@@ -44,13 +45,7 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/**
- * API v2 Groups contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
- * - state transitions as explicit `POST` actions, no value-in-path (§3)
- * - eligibility sub-collections named for their relationship (§4)
- */
-@Tag(name = "Participant's groups management", description = "API for Group-related operations")
+@Tag(name = "Participant's groups management (v2)", description = "API for Group-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/groups")
 interface IGroupV2Controller {
 	@Operation(
@@ -62,13 +57,7 @@ interface IGroupV2Controller {
 	@GetMapping
 	fun findGroups(
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
-		@RequestParam(required = false) sort: List<String>?,
-		@RequestParam(required = false, defaultValue = "ASC") direction: String,
+		@ParameterObject @Valid pageQuery: SortedPageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) presence: Boolean?,
@@ -97,16 +86,14 @@ interface IGroupV2Controller {
 	fun findGroupMembersByGroupId(
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) isMajor: Boolean?,
 		@RequestParam(required = false) type: ParticipantTypeEnum?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) status: PresenceStatusEnum?,
+		@Parameter(description = "\"available\" keeps the Members whose presence window contains now, whether they are IN or OUT. Ignored when \"status\" is given, which pins both.")
+		@RequestParam(required = false) available: Boolean?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
 	): Mono<PageModel<ParticipantReaderDto>>

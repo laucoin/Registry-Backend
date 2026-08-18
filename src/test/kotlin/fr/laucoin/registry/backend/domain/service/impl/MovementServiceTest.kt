@@ -35,7 +35,6 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
@@ -390,13 +389,14 @@ class MovementServiceTest {
 			typeSearched,
 			visibilitySearched = true,
 			availabilitySearched = true,
+			departedSearched = false,
 		).apply { this.textSearched = textSearched }
 		val expectedGroupSearch =
 			GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true)
 
 		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonParticipant()))
 		whenever(groupPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonGroup()))
-		whenever(groupPort.findContent(any(), any(), anyOrNull(), anyOrNull()))
+		whenever(groupPort.findContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Flux.just(Pair(groupId, listOf(commonParticipant()))))
 
 		// Act
@@ -411,7 +411,7 @@ class MovementServiceTest {
 		verify(participantPort).findWithLimit(MAX_PARTICIPANTS, projectId, expectedParticipantSearch)
 		verify(groupPort).findWithLimit(MAX_GROUPS, projectId, expectedGroupSearch)
 		verify(groupPort).findContent(
-			projectId, listOf(groupId), visibilitySearched = true, availabilitySearched = true
+			projectId, listOf(groupId), visibilitySearched = true, availabilitySearched = true, departedSearched = false
 		)
 	}
 
@@ -491,7 +491,7 @@ class MovementServiceTest {
 	}
 
 	@Test
-	fun `Should findParticipantsStatus call participant port 5 times`() {
+	fun `Should findParticipantsStatus call participant port 6 times`() {
 		// Arrange
 		val registeredPresentAdult = 1L
 		val registeredPresentAdultSearch = ParticipantSearchParamModel(
@@ -538,6 +538,14 @@ class MovementServiceTest {
 			visibilitySearched = true,
 			dateTimeSearched = null
 		)
+		val warned = 6L
+		val warnedSearch = ParticipantSearchParamModel(
+			textSearched = null,
+			visibilitySearched = true,
+			dateTimeSearched = null,
+			departedSearched = false,
+			warnedSearched = true,
+		)
 
 		whenever(participantPort.countAll(any(), eq(registeredPresentAdultSearch)))
 			.thenReturn(Mono.just(registeredPresentAdult))
@@ -548,6 +556,7 @@ class MovementServiceTest {
 		whenever(participantPort.countAll(any(), eq(registeredAbsentChildSearch)))
 			.thenReturn(Mono.just(registeredAbsentMinor))
 		whenever(participantPort.countAll(any(), eq(guestPresentSearch))).thenReturn(Mono.just(guestPresent))
+		whenever(participantPort.countAll(any(), eq(warnedSearch))).thenReturn(Mono.just(warned))
 
 		// Act
 		val result = service.findParticipantsStatus(projectId).block()
@@ -558,12 +567,14 @@ class MovementServiceTest {
 		assertEquals(registeredPresentMinor, result?.registered?.presentMinors)
 		assertEquals(registeredAbsentMinor, result?.registered?.absentMinors)
 		assertEquals(guestPresent, result?.guests)
+		assertEquals(warned, result?.warned)
 
 		verify(participantPort).countAll(projectId, registeredPresentAdultSearch)
 		verify(participantPort).countAll(projectId, registeredAbsentAdultSearch)
 		verify(participantPort).countAll(projectId, registeredPresentChildSearch)
 		verify(participantPort).countAll(projectId, registeredAbsentChildSearch)
 		verify(participantPort).countAll(projectId, guestPresentSearch)
+		verify(participantPort).countAll(projectId, warnedSearch)
 	}
 
 	@Test
@@ -776,7 +787,7 @@ class MovementServiceTest {
 		}
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(commonParticipant()))
-		whenever(participantPort.updateAllEndAvailability(any(), any())).thenReturn(Flux.just(commonParticipant()))
+		whenever(participantPort.markAllAsDeparted(any(), any())).thenReturn(Flux.just(commonParticipant()))
 		whenever(port.create(any())).thenReturn(Mono.just(commonMovement()))
 
 		// Act
@@ -784,7 +795,7 @@ class MovementServiceTest {
 
 		// Assert
 		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
-		verify(participantPort).updateAllEndAvailability(listOf(participantId), CustomDateTimeModel(movementDate))
+		verify(participantPort).markAllAsDeparted(listOf(participantId), movementDate)
 		verify(port).create(any())
 	}
 
@@ -801,7 +812,7 @@ class MovementServiceTest {
 		}
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(commonParticipant()))
-		whenever(participantPort.updateAllEndAvailability(any(), any())).thenReturn(Flux.just(commonParticipant()))
+		whenever(participantPort.markAllAsDeparted(any(), any())).thenReturn(Flux.just(commonParticipant()))
 		whenever(port.create(any())).thenReturn(Mono.just(commonMovement()))
 
 		// Act
@@ -809,7 +820,7 @@ class MovementServiceTest {
 
 		// Assert
 		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
-		verify(participantPort).updateAllEndAvailability(listOf(participantId), CustomDateTimeModel(movementDate))
+		verify(participantPort).markAllAsDeparted(listOf(participantId), movementDate)
 		verify(port).create(any())
 	}
 

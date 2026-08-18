@@ -1,9 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
@@ -19,6 +16,9 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AlertReader
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.AlertWriterDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -40,14 +40,7 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/**
- * API v2 Alerts contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
- * - status transitions as explicit `POST` actions, one verb per transition,
- *   no value-in-path (§3): `resolve` / `cancel` / `reopen`
- *   (v1 `PATCH …/status/{status}`)
- */
-@Tag(name = "Alerts management", description = "API for Alerts-related operations")
+@Tag(name = "Alerts management (v2)", description = "API for Alerts-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/alerts")
 interface IAlertV2Controller {
 	@Operation(
@@ -59,13 +52,7 @@ interface IAlertV2Controller {
 	@GetMapping
 	fun findAlerts(
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
-		@RequestParam(required = false) sort: List<String>?,
-		@RequestParam(required = false, defaultValue = "ASC") direction: String,
+		@ParameterObject @Valid pageQuery: SortedPageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) status: AlertStatusEnum?,
@@ -96,11 +83,7 @@ interface IAlertV2Controller {
 	fun findAlertCommunications(
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false)

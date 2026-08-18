@@ -25,6 +25,9 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementRea
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantWriterDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -49,13 +52,7 @@ import java.time.ZonedDateTime
 import java.util.TimeZone
 import java.util.UUID
 
-/**
- * API v2 Participants contract (ADR 017):
- * - list grammar: `page`/`size`/`sort=field,other`/`direction=ASC|DESC`/`q`/typed filters (§5)
- * - state transitions as explicit `POST` actions, no value-in-path (§3)
- * - eligibility sub-collections named for their relationship (§4)
- */
-@Tag(name = "Participants management", description = "API for Participants-related operations")
+@Tag(name = "Participants management (v2)", description = "API for Participants-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/participants")
 interface IParticipantV2Controller {
 	@Operation(
@@ -67,18 +64,18 @@ interface IParticipantV2Controller {
 	@GetMapping
 	fun findParticipants(
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
-		@RequestParam(required = false) sort: List<String>?,
-		@RequestParam(required = false, defaultValue = "ASC") direction: String,
+		@ParameterObject @Valid pageQuery: SortedPageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) isMajor: Boolean?,
 		@RequestParam(required = false) type: ParticipantTypeEnum?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) status: PresenceStatusEnum?,
+		@Parameter(description = "\"available\" keeps the Participants whose presence window contains now, whether they are IN or OUT.")
+		@RequestParam(required = false) available: Boolean?,
+		@Parameter(description = "\"warned\" keeps the Participants whose presence window has closed while a movement of theirs is still open.")
+		@RequestParam(required = false) warned: Boolean?,
+		@Parameter(description = "\"false\" keeps the Participants no visible Group holds, \"true\" only those at least one holds.")
+		@RequestParam(required = false) grouped: Boolean?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
 	): Mono<PageModel<ParticipantReaderDto>>
@@ -90,40 +87,6 @@ interface IParticipantV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/birthdays")
 	fun findBirthdays(
-		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = DEFAULT_COLLECTION_LIMIT_PARAM) @Valid @Min(
-			1,
-			message = PAGE_SIZE_IS_LOWER_THAN_ONE
-		) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) limit: Int,
-	): Flux<ParticipantReaderDto>
-
-	@Operation(
-		summary = "Find participants arriving today",
-		description = "Participants scheduled to arrive today (effective availability starts today, participant window over group's) who are not yet on site (home dashboard); capped at `limit` rows",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
-	@GetMapping("/arriving-today")
-	fun findArrivingToday(
-		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = DEFAULT_COLLECTION_LIMIT_PARAM) @Valid @Min(
-			1,
-			message = PAGE_SIZE_IS_LOWER_THAN_ONE
-		) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) limit: Int,
-	): Flux<ParticipantReaderDto>
-
-	@Operation(
-		summary = "Find participants departing today",
-		description = "Participants scheduled to leave today (effective availability ends today, participant window over group's) who are currently on site (home dashboard); capped at `limit` rows",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
-	@GetMapping("/departing-today")
-	fun findDepartingToday(
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = DEFAULT_COLLECTION_LIMIT_PARAM) @Valid @Min(
 			1,
@@ -213,11 +176,7 @@ interface IParticipantV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 		@RequestParam(required = false) visible: Boolean?,
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
 		@RequestParam(required = false) linkedToActivity: Boolean?,

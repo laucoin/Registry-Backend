@@ -8,6 +8,7 @@ data class VehicleModel(
 	var brand: String? = null,
 	var model: String? = null,
 	var status: PresenceStatusEnum? = null,
+	var availabilityWarning: Boolean = false,
 	var lastMovement: ZonedDateTime? = null,
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,

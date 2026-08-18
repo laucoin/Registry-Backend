@@ -4,7 +4,7 @@ import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.FUNCTION
 
 /**
- * ADR 018 §4 — marks a code-derived reference GET (metadata) whose response
+ * Marks a code-derived reference GET (metadata) whose response
  * carries the HTTP revalidation headers (ETag / Cache-Control / Vary) and can
  * short-circuit to `304 Not Modified`. Declared on the controller contract
  * method so the behaviour is visible where the endpoint is defined;

@@ -49,7 +49,7 @@ class UserModelPostgresRepository(
 	private val countCacheTtlSeconds: Long,
 ) : IUserPort {
 	/**
-	 * ADR 018 §5 — the hot-list count is the second query of every page request;
+	 * The hot-list count is the second query of every page request;
 	 * within the TTL window it is served from memory. Exactness within the TTL
 	 * is deliberately traded away; user writes evict so local changes show
 	 * immediately on the writing replica.
@@ -96,7 +96,7 @@ class UserModelPostgresRepository(
 	}
 
 	/**
-	 * API v2 sorted page (ADR 017 §5). The ORDER BY is built exclusively from
+	 * API v2 sorted page. The ORDER BY is built exclusively from
 	 * the [UserSortFieldEnum] whitelist ([toColumn]) — user input never reaches
 	 * the SQL string. Row mapping reuses the same converter Spring Data applies
 	 * to the annotated queries.
@@ -190,8 +190,7 @@ class UserModelPostgresRepository(
 
 	/**
 	 * Any user write can change list membership (visibility, purge flags) —
-	 * evict the count cache so the writing replica reflects it immediately
-	 * (ADR 018 §3).
+	 * evict the count cache so the writing replica reflects it immediately.
 	 */
 	private fun save(element: UserModel): Mono<UserModel> {
 		return repository.save(mapper.toEntity(element)).map(mapper::toModel)

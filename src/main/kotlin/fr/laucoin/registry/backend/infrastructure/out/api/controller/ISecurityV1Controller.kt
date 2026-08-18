@@ -19,12 +19,17 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
-@Tag(name = "Security management", description = "API for security operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Security management (v1, deprecated)", description = "API for security operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/authentication")
 interface ISecurityV1Controller {
 	@Operation(
 		summary = "OAuth2 auth URI",
 		description = "Build and return the OAuth2 provider authentication URI",
+		deprecated = true,
 	)
 	@GetMapping("/login/uri")
 	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
@@ -32,6 +37,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "OAuth2 logout URI",
 		description = "Build and return the OAuth2 provider logout URI",
+		deprecated = true,
 	)
 	@GetMapping("/logout/uri")
 	fun getLogoutUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
@@ -39,6 +45,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "Fetch token from code",
 		description = "Return OAuth2 provider token from authorization code",
+		deprecated = true,
 	)
 	@PostMapping("/token")
 	fun fetchToken(@RequestBody @Valid authenticationInfo: AuthenticationInfoModel): Mono<TokenModel>
@@ -46,6 +53,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "Fetch token from refresh token",
 		description = "Return OAuth2 provider token from refresh token",
+		deprecated = true,
 	)
 	@PostMapping("/token/refresh")
 	fun refreshToken(@RequestBody @Valid refreshAuthenticationInfo: RefreshAuthenticationInfoModel): Mono<TokenModel>
@@ -53,6 +61,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "Get Current User",
 		description = "Get the logged in User",
+		deprecated = true,
 	)
 	@GetMapping("/user/current")
 	fun findCurrentUser(

@@ -9,7 +9,6 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IParticipantService
@@ -20,7 +19,9 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementRea
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.DueTodayReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
@@ -47,20 +48,30 @@ class ParticipantV2Controller(
 ) : IParticipantV2Controller {
 	override fun findParticipants(
 		projectId: UUID,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		isMajor: Boolean?,
 		type: ParticipantTypeEnum?,
 		visible: Boolean?,
 		status: PresenceStatusEnum?,
+		available: Boolean?,
+		warned: Boolean?,
+		grouped: Boolean?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageModel<ParticipantReaderDto>> {
-		val pageable = PageableModel(page * size, size)
-		val searchParams = ParticipantSearchParamModel(q, isMajor, type, visible, status, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, ParticipantSortFieldEnum::fromParamName)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
+		val searchParams = ParticipantSearchParamModel(
+			q,
+			isMajor,
+			type,
+			visible,
+			status,
+			dateTime,
+			availableSearched = available,
+			warnedSearched = warned,
+			groupedSearched = grouped,
+		)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, ParticipantSortFieldEnum::fromParamName)
 
 		return service.findParticipantsPage(projectId, pageable, searchParams, sortModels)
 			.map(readerMapper::toDtoPage)
@@ -78,13 +89,7 @@ class ParticipantV2Controller(
 		return service.findBirthdays(projectId, limit).map(readerMapper::toDto)
 	}
 
-	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantReaderDto> {
-		return service.findArrivingToday(projectId, limit).map(readerMapper::toDto)
-	}
 
-	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantReaderDto> {
-		return service.findDepartingToday(projectId, limit).map(readerMapper::toDto)
-	}
 
 	override fun findParticipantById(projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
 		return service.findParticipantById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
@@ -102,8 +107,7 @@ class ParticipantV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		visible: Boolean?,
 		linkedToActivity: Boolean?,
 		type: MovementTypeEnum?,
@@ -114,7 +118,7 @@ class ParticipantV2Controller(
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, startDateTime, endDateTime)
 
 		return service.findParticipantMovementsPage(projectId, id, pageable, searchParams)

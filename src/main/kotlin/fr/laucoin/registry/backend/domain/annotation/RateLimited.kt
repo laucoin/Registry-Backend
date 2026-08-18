@@ -5,7 +5,7 @@ import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.FUNCTION
 
 /**
- * ADR 019 §1 — marks an endpoint as rate limited. Declared on the controller
+ * Marks an endpoint as rate limited. Declared on the controller
  * contract method so the behaviour is visible where the endpoint is defined;
  * [fr.laucoin.registry.backend.domain.handler.RateLimitHandler] enforces it.
  *

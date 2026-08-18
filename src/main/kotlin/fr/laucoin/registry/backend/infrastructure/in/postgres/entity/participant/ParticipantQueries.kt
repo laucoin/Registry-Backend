@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant
 
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.VISIBLE
@@ -19,6 +20,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_AVAILABLE_GROUPS
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_DEPARTED_AT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_GROUPS
@@ -41,30 +43,25 @@ object ParticipantQueries {
 	private const val PARTICIPANT_PREFIX = "participant_"
 
 	/**
-	 * The outer movement MUST be correlated back to the participant, not matched on
-	 * the timestamp alone: several participants routinely share a movement instant
-	 * (a group leaving together, or any two movements recorded for the same minute),
-	 * and an uncorrelated join then emits one row per colliding movement. Callers
-	 * that size-check the result — MovementService.validateParticipants compares the
-	 * row count to the requested id count — read that as "participant not found in
-	 * project" and reject a perfectly valid movement. Visibility is filtered on the
-	 * outer movement too, so the last movement is never an invisible one.
+	 * One row per participant, and exactly one: `DISTINCT ON` picks their latest
+	 * VISIBLE movement, breaking a tie on the recording order. Matching on
+	 * `MAX(date_time)` used to emit every movement sharing that instant, so two
+	 * records saved for the same minute lent each other their direction and a
+	 * returned participant still read as out; callers that size-check the result —
+	 * MovementService.validateParticipants compares the row count to the requested
+	 * id count — also read the duplicates as "participant not found in project" and
+	 * rejected a perfectly valid movement.
 	 */
 	const val WITH_PARTICIPANT_LAST_MOVEMENT = """
         last_movement AS (
-            SELECT DISTINCT plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME, plm.$PARTICIPANT_PREFIX$ID, t.$MOVEMENT_TYPE
+            SELECT DISTINCT ON (mc.$PARTICIPANT_PREFIX$ID)
+                mc.$PARTICIPANT_PREFIX$ID,
+                t.$MOVEMENT_TYPE,
+                t.$MOVEMENT_DATE_TIME AS $PARTICIPANT_LAST_MOVEMENT_DATE_TIME
             FROM $MOVEMENT_TABLE t
             INNER JOIN $MOVEMENT_CONTENT_TABLE mc ON mc.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-            INNER JOIN (
-                SELECT MAX(t.$MOVEMENT_DATE_TIME) as $PARTICIPANT_LAST_MOVEMENT_DATE_TIME, $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
-                FROM $MOVEMENT_TABLE t
-                INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-                WHERE t.$VISIBLE IS TRUE
-                GROUP BY $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
-            ) AS plm
-                ON plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
-                AND plm.$PARTICIPANT_PREFIX$ID = mc.$PARTICIPANT_PREFIX$ID
             WHERE t.$VISIBLE IS TRUE
+            ORDER BY mc.$PARTICIPANT_PREFIX$ID, t.$MOVEMENT_DATE_TIME DESC, t.$CREATED_AT DESC
         )
     """
 
@@ -183,23 +180,89 @@ object ParticipantQueries {
 	const val PARTICIPANT_BIRTHDAY_TODAY_CLAUSE =
 		"TO_CHAR(t.$PARTICIPANT_BIRTHDAY, 'MM-DD') = TO_CHAR(CURRENT_DATE, 'MM-DD')"
 
-	const val PARTICIPANT_AVAILABILITY_CLAUSE = """
+	/**
+	 * "The participant is expected on site right now": their own window contains
+	 * now, and — when they carry no dates of their own — at least one of their
+	 * groups is open, since that is the window they actually run on.
+	 *
+	 * The group term cannot be left to the COALESCE below. `filtered_groups` joins
+	 * only the groups that are open now, so a group that has not opened yet leaves
+	 * NULL columns behind and the CASE inside the CTE turns those into
+	 * -infinity/+infinity: group bounds could never make anyone unavailable, and a
+	 * member of a group opening next month was listed as available while the very
+	 * status returned beside them — computed from the same rule as
+	 * [DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE], in `buildStatus` — read
+	 * UNAVAILABLE.
+	 */
+	const val PARTICIPANT_AVAILABLE_EXPRESSION = """
         (
-            :availabilitySearched IS NULL OR :availabilitySearched = (
-                (
-                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
-                ) AND
-                (
-                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
-                )
+            (
+                fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
+                OR (fg.$PARTICIPANT_AVAILABLE_GROUPS IS NOT NULL AND json_array_length(fg.$PARTICIPANT_AVAILABLE_GROUPS) > 0)
+            ) AND
+            (
+                COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
+                OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
+            ) AND
+            (
+                COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
+                OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
             )
         )
     """
 
-	const val PARTICIPANT_PRESENCE_CLAUSE =
-		"(:presenceSearched IS NULL OR :presenceSearched != (last_movement.type IS NULL OR last_movement.type = 'OUT'))"
+	const val PARTICIPANT_AVAILABILITY_CLAUSE =
+		"(:availabilitySearched IS NULL OR :availabilitySearched = $PARTICIPANT_AVAILABLE_EXPRESSION)"
+
+	/**
+	 * The SQL twin of `AvailabilityElementExt.status`, and it must stay one:
+	 * ParticipantStatusParityTest walks a fixture matrix through both. Departure is
+	 * answered first and from the register's own column, then the window is allowed
+	 * to speak only for someone no movement describes — everyone who has moved
+	 * lands in IN or OUT, so no head count can drop them.
+	 */
+	const val PARTICIPANT_STATUS_EXPRESSION = """
+        (
+            CASE
+                WHEN t.$PARTICIPANT_DEPARTED_AT IS NOT NULL THEN 'DEPARTED'
+                WHEN last_movement.type = 'IN' THEN 'IN'
+                WHEN last_movement.type IS NULL AND NOT $PARTICIPANT_AVAILABLE_EXPRESSION THEN 'UNAVAILABLE'
+                ELSE 'OUT'
+            END
+        )
+    """
+
+	const val PARTICIPANT_STATUS_CLAUSE =
+		"(:statusSearched IS NULL OR :statusSearched = $PARTICIPANT_STATUS_EXPRESSION)"
+
+	const val PARTICIPANT_WARNING_EXPRESSION = """
+        (
+            t.$PARTICIPANT_DEPARTED_AT IS NULL
+            AND last_movement.type IS NOT NULL
+            AND NOT $PARTICIPANT_AVAILABLE_EXPRESSION
+        )
+    """
+
+	const val PARTICIPANT_WARNED_CLAUSE =
+		"(:warnedSearched IS NULL OR :warnedSearched = $PARTICIPANT_WARNING_EXPRESSION)"
+
+	const val PARTICIPANT_DEPARTED_CLAUSE =
+		"(:departedSearched IS NULL OR :departedSearched = (t.$PARTICIPANT_DEPARTED_AT IS NOT NULL))"
+
+	/**
+	 * The "no group" bucket the presence board lists apart: `false` keeps only the
+	 * participants no VISIBLE group holds. `filtered_groups` aggregates under a
+	 * FILTER, so the column is NULL — never an empty array — when a participant has
+	 * none, and `json_array_length` is strict, so the test reads the same way in
+	 * both directions.
+	 */
+	const val PARTICIPANT_GROUPED_CLAUSE = """
+        (
+            :groupedSearched IS NULL OR :groupedSearched = (
+                fg.$PARTICIPANT_GROUPS IS NOT NULL AND json_array_length(fg.$PARTICIPANT_GROUPS) > 0
+            )
+        )
+    """
 
 	/**
 	 * "scheduled to arrive today": the participant's EFFECTIVE availability
@@ -227,7 +290,7 @@ object ParticipantQueries {
 	 * one is an exit. Registered participants only (guests aren't scheduled).
 	 */
 	const val ARRIVING_TODAY_NOT_PRESENT_CLAUSE =
-		"((last_movement.type IS NULL OR last_movement.type = 'OUT') AND t.$PARTICIPANT_TYPE = 'REGISTERED')"
+		"((last_movement.type IS NULL OR last_movement.type = 'OUT') AND t.$PARTICIPANT_TYPE = 'REGISTERED' AND t.$PARTICIPANT_DEPARTED_AT IS NULL)"
 
 	/**
 	 * Departures today — the mirror of arrivals: effective availability window
@@ -253,7 +316,7 @@ object ParticipantQueries {
 	 * Registered participants only (guests aren't scheduled).
 	 */
 	const val DEPARTING_TODAY_PRESENT_CLAUSE =
-		"(last_movement.type = 'IN' AND t.$PARTICIPANT_TYPE = 'REGISTERED')"
+		"(last_movement.type = 'IN' AND t.$PARTICIPANT_TYPE = 'REGISTERED' AND t.$PARTICIPANT_DEPARTED_AT IS NULL)"
 
 	const val DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE = """
         (

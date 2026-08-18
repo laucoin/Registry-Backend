@@ -9,14 +9,15 @@ import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IAlertV2Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.AlertWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.AlertCreationWriterDtoMapper
@@ -36,19 +37,16 @@ class AlertV2Controller(
 ) : IAlertV2Controller {
 	override fun findAlerts(
 		projectId: UUID,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		status: AlertStatusEnum?,
 		startDateTime: ZonedDateTime?,
 		endDateTime: ZonedDateTime?,
 	): Mono<PageModel<AlertReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = AlertSearchParamModel(q, visible, status, startDateTime, endDateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, AlertSortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, AlertSortFieldEnum::fromParamName)
 
 		return service.findAlertsPage(projectId, pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}
@@ -60,14 +58,13 @@ class AlertV2Controller(
 	override fun findAlertCommunications(
 		projectId: UUID,
 		id: UUID,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		startDateTime: ZonedDateTime?,
 		endDateTime: ZonedDateTime?,
 	): Mono<PageModel<CommunicationReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = CommunicationSearchParamModel(q, visible, startDateTime, endDateTime)
 
 		return service.findAlertCommunicationsPage(projectId, id, pageable, searchParams)

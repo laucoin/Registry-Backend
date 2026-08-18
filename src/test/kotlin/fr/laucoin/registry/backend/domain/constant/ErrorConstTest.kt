@@ -69,7 +69,7 @@ class ErrorConstTest {
 					// Act
 					val translated = bundle(locale).handleGetObject(key)
 
-					// Assert — a missing entry silently degrades to UNKNOWN_ERROR
+					// Assert
 					assertEquals(true, translated != null, "no $key in the ${locale.language} bundle")
 				}
 			}

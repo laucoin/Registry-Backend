@@ -20,12 +20,12 @@ version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 
 // External libraries 📚
 val apacheTextVersion = "1.15.0"
-val swaggerVersion = "3.0.3"
+val swaggerVersion = "3.1.0"
 val bucket4jVersion = "8.10.1"
 
 // Testing 🧪
 val mockWebServer = "5.4.0"
-val testArch = "1.4.2"
+val testArch = "1.5.0"
 val mockitoKotlinVersion = "6.3.0"
 val testContainerVersion = "2.0.5"
 
@@ -58,16 +58,16 @@ dependencies {
 
 	// Monitoring & Observability 👀
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
-	// Prometheus *exposition format* only (ADR 026) — the metrics store is
-	// VictoriaMetrics, which scrapes /actuator/prometheus. Keep this registry.
+	// Prometheus *exposition format* only — the metrics store is VictoriaMetrics,
+	// which scrapes /actuator/prometheus. Keep this registry.
 	implementation("io.micrometer:micrometer-registry-prometheus")
 
 	// Documentation 📚
 	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
 	// Data 💾
-	implementation("com.github.ben-manes.caffeine:caffeine") // ADR 018 — in-process reference/count caching
-	implementation("com.bucket4j:bucket4j-core:$bucket4jVersion") // ADR 019 — non-blocking rate limiting, Caffeine-keyed
+	implementation("com.github.ben-manes.caffeine:caffeine")
+	implementation("com.bucket4j:bucket4j-core:$bucket4jVersion")
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.apache.commons:commons-text:$apacheTextVersion")
@@ -92,7 +92,9 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
 	useJUnitPlatform()
-	maxParallelForks = Runtime.getRuntime().availableProcessors()
+	maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+	maxHeapSize = "2g"
+	jvmArgs("-XX:MaxMetaspaceSize=768m")
 	testLogging {
 		events = setOf(FAILED, SKIPPED)
 		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

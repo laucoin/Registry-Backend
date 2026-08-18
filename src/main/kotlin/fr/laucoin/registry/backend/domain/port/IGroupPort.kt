@@ -32,6 +32,7 @@ interface IGroupPort {
 		groupIds: List<UUID>,
 		visibilitySearched: Boolean?,
 		availabilitySearched: Boolean?,
+		departedSearched: Boolean?,
 	): Flux<Pair<UUID, List<ParticipantModel>>>
 
 	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildAvailabilityWarning
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.`in`.IEntityMapper
@@ -18,6 +19,7 @@ class VehicleEntityMapper : IEntityMapper<VehicleModel, VehicleEntity> {
 			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
 			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
 			status = buildStatus(entity.lastMovementType)
+			availabilityWarning = buildAvailabilityWarning(entity.lastMovementType)
 			lastMovement = entity.lastMovementDateTime
 		}.fillWithProjectAndEntity(entity)
 	}

@@ -54,7 +54,7 @@ class UserV1Controller(
 	}
 
 	/**
-	 * v1 is frozen (ADR 017), and for its client this stays what it always was: the
+	 * v1 is frozen, and for its client this stays what it always was: the
 	 * account can no longer sign in and has left the directory. Only the mechanism
 	 * changed underneath — erasure deletes the row instead of scrambling it — and
 	 * since every v1 read already filtered anonymized rows out, the two are

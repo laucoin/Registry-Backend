@@ -98,8 +98,15 @@ role tables). It re-applies whenever the file changes. The default profile leave
 The seeded users are created **email-only** (no `oidc_id`) — i.e. as invitations. The Authentik blueprint provisions
 matching login accounts (Authentik assigns their UUIDs, which can't be pinned); on your **first login** the backend
 links the IdP UUID to the seeded account by email, so you sign in as that user with all their seeded projects/data. No
-linking script is needed. Log in with the shared
-`AU_DEV_PASSWORD`:
+linking script is needed.
+
+Linking an invitation demands an address the IdP vouches for, and Authentik's stock email mapping hardcodes
+`email_verified: False`, so every one of these logins used to be refused with `AUTH_EMAIL_NOT_VERIFIED` — with no local
+mail to confirm from. The blueprint ships its own mapping that asserts the address instead, per user and defaulting to
+true. `unverified` is the one account that opts out, so the refusal stays reachable on demand; it never links, so it
+reproduces as often as you like.
+
+Log in with the shared `AU_DEV_PASSWORD`:
 
 | Login (username / email)                      | Name           | Role                 | Notes                                           |
 |-----------------------------------------------|----------------|----------------------|-------------------------------------------------|
@@ -108,6 +115,7 @@ linking script is needed. Log in with the shared
 | `participant` / `participant@sgdf.fr`         | Charles PINA   | `USER`               |                                                 |
 | `blocked-user` / `blocked-user@sgdf.fr`       | Aliyah NIELSEN | `USER_ADMINISTRATOR` | blocked → login links then returns `423 LOCKED` |
 | `blocked-profile` / `blocked-profile@sgdf.fr` | Emil BRADFORD  | `USER_ADMINISTRATOR` |                                                 |
+| `unverified` / `unverified@sgdf.fr`           | Nina VOGEL     | `USER`               | unverified address → `403` on every login       |
 
 This same linking powers **invitations**: `POST /api/v2/projects/{id}/profiles`
 accepts `emails` (in addition to `userIds`), creating email-only users who are linked automatically the first time they

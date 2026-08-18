@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.Gro
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.CONTENT_TO_CONTENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupQueries.SELECT_CONTENT_TO_CONTENT
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_DEPARTED_AT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
@@ -29,7 +30,7 @@ interface IGroupContentEntityRepository : ReactiveCrudRepository<GroupContentEnt
         SELECT t.*, $SELECT_CONTENT_TO_CONTENT
         FROM $GROUP_CONTENT_TABLE t
         INNER JOIN $GROUP_TABLE gt ON t.$GROUP_CONTENT_GROUP_ID = gt.$ID $CONTENT_TO_CONTENT_JOIN
-        WHERE gt.$LINKED_PROJECT_ID = :projectId AND t.$GROUP_CONTENT_GROUP_ID IN (:groupIds) AND (:visibilitySearched IS NULL OR $PARTICIPANT_TABLE.$VISIBLE = :visibilitySearched) AND (
+        WHERE gt.$LINKED_PROJECT_ID = :projectId AND t.$GROUP_CONTENT_GROUP_ID IN (:groupIds) AND (:visibilitySearched IS NULL OR $PARTICIPANT_TABLE.$VISIBLE = :visibilitySearched) AND (:departedSearched IS NULL OR :departedSearched = ($PARTICIPANT_TABLE.$PARTICIPANT_DEPARTED_AT IS NOT NULL)) AND (
             :availabilitySearched IS NULL OR :availabilitySearched = (
                 (
                     COALESCE($PARTICIPANT_TABLE.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
@@ -47,7 +48,8 @@ interface IGroupContentEntityRepository : ReactiveCrudRepository<GroupContentEnt
 		projectId: UUID,
 		groupIds: List<UUID>,
 		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?
+		availabilitySearched: Boolean?,
+		departedSearched: Boolean?
 	): Flux<GroupContentEntity>
 
 	@Query("DELETE FROM $GROUP_CONTENT_TABLE WHERE $GROUP_CONTENT_GROUP_ID = :groupId AND $GROUP_CONTENT_PARTICIPANT_ID IN (:participantIds)")

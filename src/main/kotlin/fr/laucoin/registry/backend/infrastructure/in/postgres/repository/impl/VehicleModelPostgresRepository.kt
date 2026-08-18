@@ -17,7 +17,8 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.V
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.SELECT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.SELECT_VEHICLE_SEARCH
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.VEHICLE_AVAILABILITY_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.VEHICLE_PRESENCE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.VEHICLE_STATUS_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.VEHICLE_WARNED_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.VEHICLE_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.vehicle.VehicleQueries.WITH_VEHICLE_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.VehicleEntityMapper
@@ -59,7 +60,8 @@ class VehicleModelPostgresRepository(
 				searchParams.textSearched,
 				searchParams.visibilitySearched,
 				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
+				searchParams.presenceStatusSearched?.name,
+				searchParams.warnedSearched,
 				searchParams.dateTimeSearched,
 				pageable.limit,
 				pageable.offset,
@@ -74,7 +76,8 @@ class VehicleModelPostgresRepository(
 				searchParams.textSearched,
 				searchParams.visibilitySearched,
 				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
+				searchParams.presenceStatusSearched?.name,
+				searchParams.warnedSearched,
 				searchParams.dateTimeSearched,
 			),
 			entities.map(mapper::toModel).collectList()
@@ -84,7 +87,7 @@ class VehicleModelPostgresRepository(
 	}
 
 	/**
-	 * API v2 sorted page (ADR 017 §5). The ORDER BY is built exclusively from
+	 * API v2 sorted page. The ORDER BY is built exclusively from
 	 * the [VehicleSortFieldEnum] whitelist ([toColumn]) — user input never
 	 * reaches the SQL string. Row mapping reuses the same converter Spring Data
 	 * applies to the annotated queries.
@@ -103,7 +106,7 @@ class VehicleModelPostgresRepository(
         WITH $WITH_VEHICLE_LAST_MOVEMENT
         SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_STATUS_CLAUSE AND $VEHICLE_WARNED_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
         ORDER BY $orderBy
         LIMIT :limit OFFSET :offset
         """
@@ -121,9 +124,12 @@ class VehicleModelPostgresRepository(
 		spec = searchParams.availabilitySearched
 			?.let { spec.bind("availabilitySearched", it) }
 			?: spec.bindNull("availabilitySearched", Boolean::class.javaObjectType)
-		spec = searchParams.presenceSearched
-			?.let { spec.bind("presenceSearched", it) }
-			?: spec.bindNull("presenceSearched", Boolean::class.javaObjectType)
+		spec = searchParams.presenceStatusSearched
+			?.let { spec.bind("statusSearched", it.name) }
+			?: spec.bindNull("statusSearched", String::class.java)
+		spec = searchParams.warnedSearched
+			?.let { spec.bind("warnedSearched", it) }
+			?: spec.bindNull("warnedSearched", Boolean::class.javaObjectType)
 		spec = searchParams.dateTimeSearched
 			?.let { spec.bind("dateTimeSearched", it) }
 			?: spec.bindNull("dateTimeSearched", ZonedDateTime::class.java)
@@ -148,7 +154,8 @@ class VehicleModelPostgresRepository(
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
+			searchParams.presenceStatusSearched?.name,
+			searchParams.warnedSearched,
 			searchParams.dateTimeSearched,
 		)
 	}
@@ -164,7 +171,8 @@ class VehicleModelPostgresRepository(
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
+			searchParams.presenceStatusSearched?.name,
+			searchParams.warnedSearched,
 			searchParams.dateTimeSearched,
 			limit,
 		).map(mapper::toModel)

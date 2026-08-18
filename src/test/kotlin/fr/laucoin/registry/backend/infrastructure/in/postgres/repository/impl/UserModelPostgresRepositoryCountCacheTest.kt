@@ -19,10 +19,6 @@ import org.springframework.r2dbc.core.DatabaseClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-/**
- * ADR 018 §5 — the hot-list count cache: within the TTL the count query runs
- * once per distinct criteria; any user write evicts.
- */
 class UserModelPostgresRepositoryCountCacheTest {
 	private val entityRepository: IUserEntityRepository = mock()
 	private val mapper: UserEntityMapper = mock()

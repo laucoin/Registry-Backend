@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CurrentUserReaderDto
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PreferenceReaderDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CurrentUserPreferencesReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
@@ -28,13 +28,13 @@ import kotlin.test.assertEquals
 
 class CurrentUserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val preferenceMapper: PreferenceReaderDtoMapper = mock()
+	private val preferenceMapper: CurrentUserPreferencesReaderDtoMapper = mock()
 	private val mapper = CurrentUserReaderDtoMapper(translateService, preferenceMapper)
 
 	private companion object {
 		private const val TRANSLATED = "TRANSLATED"
 		private val now = ZonedDateTime.now()
-		private val preferenceDto = PreferenceReaderDto()
+		private val preferenceDto = CurrentUserPreferencesReaderDto()
 
 		private val model = CurrentUserModel(
 			authorities = mutableListOf(SimpleGrantedAuthority("USER_AUTHORITY")),

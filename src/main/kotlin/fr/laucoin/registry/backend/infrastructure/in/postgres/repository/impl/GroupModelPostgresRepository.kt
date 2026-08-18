@@ -89,7 +89,7 @@ class GroupModelPostgresRepository(
 	}
 
 	/**
-	 * API v2 sorted page (ADR 017 §5). The ORDER BY is built exclusively from
+	 * API v2 sorted page. The ORDER BY is built exclusively from
 	 * the [GroupSortFieldEnum] whitelist ([toColumn]) — user input never
 	 * reaches the SQL string. Row mapping reuses the same converter Spring Data
 	 * applies to the annotated queries.
@@ -144,9 +144,10 @@ class GroupModelPostgresRepository(
 		groupIds: List<UUID>,
 		visibilitySearched: Boolean?,
 		availabilitySearched: Boolean?,
+		departedSearched: Boolean?,
 	): Flux<Pair<UUID, List<ParticipantModel>>> {
 		return if (groupIds.isEmpty()) Flux.empty()
-		else contentRepository.findAllByGroupIds(projectId, groupIds, visibilitySearched, availabilitySearched)
+		else contentRepository.findAllByGroupIds(projectId, groupIds, visibilitySearched, availabilitySearched, departedSearched)
 			.groupBy { it.groupId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
@@ -191,7 +192,7 @@ class GroupModelPostgresRepository(
 	): Mono<GroupModel> {
 		return Mono.zip(
 			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
-			findContent(projectId, listOf(id), memberVisibilitySearched, memberAvailabilitySearched).collectList()
+			findContent(projectId, listOf(id), memberVisibilitySearched, memberAvailabilitySearched, null).collectList()
 				.handle<List<ParticipantModel>> { it, handle ->
 					if (it.isEmpty()) handle.next(emptyList()) else handle.next(
 						it.first().second

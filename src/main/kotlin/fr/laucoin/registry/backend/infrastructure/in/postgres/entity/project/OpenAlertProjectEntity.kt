@@ -5,10 +5,6 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.G
 import org.springframework.data.relational.core.mapping.Column
 import java.util.UUID
 
-/**
- * Projection for the open-alert-projects dashboard query (a project id/name +
- * its open-alert count). Not a table — mapped from the aggregate SELECT.
- */
 data class OpenAlertProjectEntity(
 	@Column(LINKED_PROJECT_ID)
 	var projectId: UUID? = null,

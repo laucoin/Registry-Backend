@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IProjectProfileV2Controller
@@ -13,6 +12,8 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.PartialUser
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectProfilesWriterDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CreatedProjectProfilesReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectProfileReaderDtoMapper
@@ -40,14 +41,13 @@ class ProjectProfileV2Controller(
 ) : IProjectProfileV2Controller {
 	override fun findProjectProfiles(
 		projectId: UUID,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		q: String?,
 		available: Boolean?,
 		status: ProfileStatusEnum?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageModel<ProjectProfileReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = ProjectProfileSearchParamModel(q, available, status, dateTime)
 
 		return service.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)

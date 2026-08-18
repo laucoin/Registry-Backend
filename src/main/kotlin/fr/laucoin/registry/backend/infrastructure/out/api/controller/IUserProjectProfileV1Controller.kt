@@ -30,12 +30,17 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-@Tag(name = "User's Profiles management", description = "API for User's Profiles-related operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "User's Profiles management (v1, deprecated)", description = "API for User's Profiles-related operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/users/profiles")
 interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Find User's Profiles",
 		description = "Find or get paginated User's Profiles",
+		deprecated = true,
 	)
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
 	@GetMapping
@@ -56,6 +61,7 @@ interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Accept or Reject Project's invitation",
 		description = "Allow User to access the concerned Project if accepted",
+		deprecated = true,
 	)
 	@PostMapping("/{id}/accept/{accepted}")
 	fun manageUserProjectProfileAcceptance(
@@ -67,6 +73,7 @@ interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Create support Project's Profile",
 		description = "Support profile is a temporary Profile for an User to access an Project to help the administration",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_PROFILE_C')")
 	@PostMapping("/{projectId}/support")
@@ -78,6 +85,7 @@ interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Delete User's Profile",
 		description = "Delete User's Profile",
+		deprecated = true,
 	)
 	@RateLimited(SENSITIVE)
 	@DeleteMapping("/{id}")

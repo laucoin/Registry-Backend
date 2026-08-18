@@ -48,10 +48,6 @@ class UserProjectProfileService(
 			.findProjectProfilesPageByUserId(userId, pageable, searchParams)
 	}
 
-	/**
-	 * "invitations I sent" for the home dashboard: profiles the caller
-	 * created for others, still pending or answered since the given cutoff.
-	 */
 	override fun findSentInvitationsPage(
 		currentUser: CurrentUserModel,
 		pageable: PageableModel,
@@ -166,10 +162,6 @@ class UserProjectProfileService(
 		return auditService.audit(revoked, currentUser, MEMBERSHIP_REVOKE, id)
 	}
 
-	/**
-	 * Star/unstar the caller's own membership (pins the project on the
-	 * home dashboard). Toggling flips the flag on the profile the caller owns.
-	 */
 	override fun toggleFavorite(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
 			.notFoundIfEmpty(id)

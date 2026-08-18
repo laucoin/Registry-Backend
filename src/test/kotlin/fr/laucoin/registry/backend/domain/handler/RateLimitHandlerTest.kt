@@ -25,7 +25,7 @@ import reactor.core.publisher.Mono
 import java.util.UUID
 
 /**
- * ADR 019 §1 — per-user limits on sensitive operations. Tiny capacities via
+ * Per-user limits on sensitive operations. Tiny capacities via
  * test properties: this also forces a dedicated Spring context, so exhausted
  * buckets can never leak into the shared cached context of other tests.
  */
@@ -96,9 +96,6 @@ class RateLimitHandlerTest : TestContext() {
 		result.assertError(TOO_MANY_REQUESTS, RATE_LIMIT_EXCEEDED)
 	}
 
-	/**
-	 * Also checks that a well-formed caller id is echoed back (ADR 019 §5 / ADR 020).
-	 */
 	@Test
 	fun `Should leave plain reads unlimited and carry the API headers`() {
 		// Arrange
@@ -120,7 +117,7 @@ class RateLimitHandlerTest : TestContext() {
 }
 
 /**
- * ADR 019 §1 — capacity 0 is the deploy-time kill switch: the category is
+ * Capacity 0 is the deploy-time kill switch: the category is
  * disabled entirely and requests are never rejected.
  */
 @TestPropertySource(

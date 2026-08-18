@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.UNAVAILABLE
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -58,6 +59,14 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 
 	private companion object {
 		@JvmStatic
+		fun `Should findPage split the participants on the grouped filter`(): Stream<Arguments> =
+			Stream.of(Arguments.of(false), Arguments.of(true))
+
+		@JvmStatic
+		fun `Should findPage keep both presence states under the availability filter`(): Stream<Arguments> =
+			Stream.of(Arguments.of(false), Arguments.of(true))
+
+		@JvmStatic
 		fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(
@@ -94,10 +103,13 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			typeSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			departedSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			groupedSearched = null,
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(postgresRepository).countAll(
 			projectId,
@@ -106,8 +118,11 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			typeSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			departedSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
+			groupedSearched = null,
 		)
 		verify(mapper, times(10)).toModel(any())
 	}
@@ -134,10 +149,12 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			typeSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			departedSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(postgresRepository).countAllByGroupId(
 			projectId,
@@ -147,7 +164,9 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			typeSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			departedSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -202,7 +221,9 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			typeSearched = null,
 			visibilitySearched = null,
 			availabilitySearched = null,
-			presenceSearched = null,
+			statusSearched = null,
+			departedSearched = null,
+			warnedSearched = null,
 			dateTimeSearched = null,
 			size,
 		)
@@ -284,6 +305,54 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		assertTrue(result.content.all { it.visible })
 		val expectedOrder = result.content.sortedBy { it.lastName }.map { it.id }
 		assertEquals(expectedOrder, result.content.map { it.id })
+	}
+
+	/**
+	 * The two buckets the presence board draws apart must partition the project:
+	 * whoever a visible group holds, and whoever none does. Absolute counts are
+	 * deliberately not asserted — the dataset assigns groups with ORDER BY RANDOM().
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findPage split the participants on the grouped filter`(sorted: Boolean) {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val sort = if (sorted) listOf(SortModel(ParticipantSortFieldEnum.LAST_NAME)) else emptyList()
+
+		// Act
+		val grouped = repository.findPage(projectId, pageable, ParticipantSearchParamModel(groupedSearched = true), sort).block()
+		val ungrouped = repository.findPage(projectId, pageable, ParticipantSearchParamModel(groupedSearched = false), sort).block()
+		val all = repository.findPage(projectId, pageable, ParticipantSearchParamModel(), sort).block()
+
+		// Assert
+		assertNotNull(grouped)
+		assertNotNull(ungrouped)
+		assertNotNull(all)
+		assertTrue(grouped.content.all { it.groups.isNotEmpty() })
+		assertTrue(ungrouped.content.all { it.groups.isEmpty() })
+		assertEquals(all.totalElements, grouped.totalElements + ungrouped.totalElements)
+	}
+
+	/**
+	 * `availabilitySearched` without `presenceSearched` — the combination the
+	 * `available` query param opened up — must run on both query paths and keep the
+	 * two presence states together.
+	 */
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findPage keep both presence states under the availability filter`(sorted: Boolean) {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val sort = if (sorted) listOf(SortModel(ParticipantSortFieldEnum.LAST_NAME)) else emptyList()
+		val params = ParticipantSearchParamModel(availabilitySearched = true)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params, sort).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(result.totalElements, result.content.size.toLong())
+		assertTrue(result.content.none { it.status == UNAVAILABLE })
 	}
 
 	@Nested

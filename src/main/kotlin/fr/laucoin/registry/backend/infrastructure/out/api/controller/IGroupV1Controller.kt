@@ -45,12 +45,17 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-@Tag(name = "Participant's groups management", description = "API for Group-related operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Participant's groups management (v1, deprecated)", description = "API for Group-related operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/projects/{projectId}/groups")
 interface IGroupV1Controller {
 	@Operation(
 		summary = "Find Groups",
 		description = "Find or get paginated Groups",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -72,6 +77,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Find Group Members",
 		description = "Find or get paginated Group Members by Group ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -96,6 +102,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Find Group",
 		description = "Find Group by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@GetMapping("/{id}")
@@ -107,6 +114,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Search Participants",
 		description = "Search Participants to add in a Group",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_METADATA_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -119,6 +127,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Create Group",
 		description = "Create Group and related Group Content",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_C')")
 	@PostMapping
@@ -131,6 +140,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Update Group",
 		description = "Update Group",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@PatchMapping("/{id}")
@@ -144,6 +154,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Add members in Group",
 		description = "Add members in an existing Group",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@PatchMapping("/{id}/members")
@@ -157,6 +168,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Remove member from Group",
 		description = "Remove member from an existing Group",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -171,6 +183,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Disable Group",
 		description = "Disable Group, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -184,6 +197,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Enable Group",
 		description = "Enable Group, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -197,6 +211,7 @@ interface IGroupV1Controller {
 	@Operation(
 		summary = "Delete Group",
 		description = "Delete all Group data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_D')")
 	@RateLimited(SENSITIVE)

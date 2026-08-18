@@ -6,8 +6,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 *.log
-local-dev/postgres/data
-local-dev/victoriametrics/data
+local-dev/**/data
 .env
 
 ### STS ###

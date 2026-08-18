@@ -10,11 +10,11 @@ import org.springframework.web.server.WebFilterChain
 import reactor.core.publisher.Mono
 
 /**
- * ADR 019 §3 — transport headers for the (private) JSON API: `nosniff` on
+ * Transport headers for the (private) JSON API: `nosniff` on
  * everything and `Cache-Control: no-store` as the default for authenticated
  * responses. Applied at commit time so the deliberate exceptions (the metadata
- * revalidation headers from ADR 018 §4) win when already set. HSTS/CSP are
- * public-tier (Nuxt) concerns, specified in ADR 024.
+ * revalidation headers) win when already set. HSTS/CSP are public-tier
+ * (Nuxt) concerns.
  */
 @Component
 class ApiHeadersHandler : WebFilter {

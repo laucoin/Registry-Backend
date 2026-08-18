@@ -6,13 +6,14 @@ import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IActivityV2Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ActivityWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ActivityReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.writer.ActivityWriterDtoMapper
@@ -30,18 +31,15 @@ class ActivityV2Controller(
 ) : IActivityV2Controller {
 	override fun findActivities(
 		projectId: UUID,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		available: Boolean?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageModel<ActivityReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = ActivitySearchParamModel(q, visible, available, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, ActivitySortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, ActivitySortFieldEnum::fromParamName)
 
 		return service.findActivitiesPage(projectId, pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}
@@ -53,14 +51,13 @@ class ActivityV2Controller(
 	override fun findActivityMovements(
 		projectId: UUID,
 		id: UUID,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		visible: Boolean?,
 		type: MovementTypeEnum?,
 		startDateTime: ZonedDateTime?,
 		endDateTime: ZonedDateTime?,
 	): Mono<PageModel<MovementReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = MovementSearchParamModel(
 			visible,
 			linkedToActivity = null,

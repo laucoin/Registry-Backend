@@ -228,58 +228,6 @@ class MovementV2ControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should findMovementsContents return 200 with the mapped contents`() {
-		// Arrange
-		whenever(service.findMovementsContent(any(), any())).thenReturn(
-			Flux.just(Pair(movementId, listOf(MovementModel.MovementContentModel()))),
-		)
-
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
-			.get()
-			.uri(uriBuilder("$BASE_URL/contents", listOf(projectId), listOf(Pair("movementIds", movementId))))
-			.exchange()
-
-		// Assert
-		val contents = result.body<List<MovementContentsReaderDto>>(OK)
-		assertEquals(movementId, contents?.first()?.movementId)
-		verify(service).findMovementsContent(projectId, listOf(movementId))
-	}
-
-	@Test
-	fun `Should findMovementsContents reject more than 200 movementIds with 400`() {
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
-			.get()
-			.uri(
-				uriBuilder(
-					"$BASE_URL/contents",
-					listOf(projectId),
-					(1..201).map { Pair("movementIds", UUID.randomUUID()) })
-			)
-			.exchange()
-
-		// Assert
-		result.assertError(BAD_REQUEST, MOVEMENT_IDS_SIZE_IS_UPPER_THAN_MAX)
-		verifyNoInteractions(service)
-	}
-
-	@Test
-	fun `Should findMovementsContents return 403 without the read authority`() {
-		// Act
-		val result = webClient
-			.authenticate()
-			.get()
-			.uri(uriBuilder("$BASE_URL/contents", listOf(projectId), listOf(Pair("movementIds", movementId))))
-			.exchange()
-
-		// Assert
-		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-	}
-
-	@Test
 	fun `Should findReasons return 200 with reasons and activities merged`() {
 		// Arrange
 		whenever(service.searchActivitiesByText(any(), any(), anyOrNull())).thenReturn(Flux.just(commonActivity()))
@@ -407,7 +355,7 @@ class MovementV2ControllerTest : TestContext() {
 	fun `Should findParticipantsStatus return 200 with the presence status`() {
 		// Arrange
 		whenever(service.findParticipantsStatus(any())).thenReturn(
-			Mono.just(ProjectStatusModel(ProjectStatusModel.ParticipantStatusModel(1, 2, 3, 4), guests = 5)),
+			Mono.just(ProjectStatusModel(ProjectStatusModel.ParticipantStatusModel(1, 2, 3, 4), guests = 5, warned = 6)),
 		)
 
 		// Act

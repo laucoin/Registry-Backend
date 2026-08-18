@@ -53,8 +53,8 @@ Write or extend tests for the code I point you at, following this project's conv
 - Use existing test helpers/extensions rather than re-inventing setup.
 - **Comments (AGENTS.md § Comment policy)**: structure each test with `// Arrange`, `// Act`, `// Assert` (or
   `// Act + Assert`) comments — these are mandatory and must never be deleted or modified. Write no other comments
-  inside test bodies; anything non-obvious goes in an English KDoc block comment (`/** … */`) directly above the test
-  class or method.
+  inside test bodies; a genuinely complex test gets one English KDoc block (`/** … */`) directly above it, never an ADR
+  reference.
 
 ## Deliverable
 

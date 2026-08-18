@@ -70,6 +70,7 @@ import reactor.kotlin.core.util.function.component2
 import reactor.kotlin.core.util.function.component3
 import reactor.kotlin.core.util.function.component4
 import reactor.kotlin.core.util.function.component5
+import reactor.kotlin.core.util.function.component6
 import reactor.util.function.Tuple2
 import java.time.LocalDate
 import java.util.Objects
@@ -154,6 +155,7 @@ class MovementService(
 			this.textSearched = textSearched
 			visibilitySearched = true
 			availabilitySearched = true
+			departedSearched = false
 		}
 
 		return participantPort.findWithLimit(maxParticipantResult, projectId, participantSearch)
@@ -170,6 +172,7 @@ class MovementService(
 					groups.mapNotNull(GroupModel::id),
 					visibilitySearched = true,
 					availabilitySearched = true,
+					departedSearched = false,
 				).map {
 					groups.first { g -> g.id == it.first }.apply { members = it.second }
 				}.collectList()
@@ -272,9 +275,19 @@ class MovementService(
 					visibilitySearched = true,
 					dateTimeSearched = null
 				)
+			),
+			participantPort.countAll(
+				projectId,
+				searchParams = ParticipantSearchParamModel(
+					textSearched = null,
+					visibilitySearched = true,
+					dateTimeSearched = null,
+					departedSearched = false,
+					warnedSearched = true,
+				)
 			)
 		)
-			.map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentMinor, registeredAbsentMinor, guestPresent) ->
+			.map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentMinor, registeredAbsentMinor, guestPresent, warned) ->
 				ProjectStatusModel(
 					registered = ProjectStatusModel.ParticipantStatusModel(
 						registeredPresentMinor,
@@ -283,6 +296,7 @@ class MovementService(
 						registeredAbsentAdult,
 					),
 					guests = guestPresent,
+					warned = warned,
 				)
 			}
 	}
@@ -351,7 +365,7 @@ class MovementService(
 			}
 			.flatMap {
 				if (movement.isLastParticipantMovement()) {
-					updateParticipantsEndAvailability(it)
+					markParticipantsAsDeparted(it)
 				} else Mono.just(it)
 			}
 			.flatMap { port.create(movement.apply { create(currentUser) }) }
@@ -529,10 +543,10 @@ class MovementService(
 			}
 	}
 
-	private fun updateParticipantsEndAvailability(movement: MovementModel): Mono<MovementModel> {
-		return participantPort.updateAllEndAvailability(
+	private fun markParticipantsAsDeparted(movement: MovementModel): Mono<MovementModel> {
+		return participantPort.markAllAsDeparted(
 			movement.content.mapNotNull { it.participant?.id },
-			CustomDateTimeModel(movement.dateTime)
+			movement.dateTime!!,
 		)
 			.collectList()
 			.map { movement }

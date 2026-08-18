@@ -3,14 +3,14 @@ package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IUserV2Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.UserWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.UserRoleReaderDtoMapper
 import org.springframework.web.bind.annotation.RestController
@@ -25,16 +25,13 @@ class UserV2Controller(
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
 ) : IUserV2Controller {
 	override fun findUsers(
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		visible: Boolean?,
 	): Mono<PageModel<UserReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = UserSearchParamModel(q, visible)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, UserSortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, UserSortFieldEnum::fromParamName)
 
 		return service.findUsersPage(pageable, searchParams, sortModels).map(readerMapper::toDtoPage)
 	}

@@ -186,36 +186,6 @@ class UserProjectProfileV2ControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should createSupportProjectProfile return 200 with the create authority`() {
-		// Arrange
-		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(commonProjectProfile()))
-
-		// Act
-		val result = webClient
-			.authenticate(REGISTRY_PROFILE_C)
-			.post()
-			.uri(uriBuilder("$BASE_URL/{projectId}/support", listOf(projectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
-		verify(service).createSupportProjectProfile(any(), eq(projectId))
-	}
-
-	@Test
-	fun `Should createSupportProjectProfile return 403 without the create authority`() {
-		// Act
-		val result = webClient
-			.authenticate()
-			.post()
-			.uri(uriBuilder("$BASE_URL/{projectId}/support", listOf(projectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-	}
-
-	@Test
 	fun `Should deleteUserProfileById return 200`() {
 		// Arrange
 		val id = UUID.randomUUID()

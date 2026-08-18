@@ -19,12 +19,17 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
 
-@Tag(name = "Scheduled job management", description = "API for Scheduled job management")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Scheduled job management (v1, deprecated)", description = "API for Scheduled job management — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/purge")
 interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge users",
 		description = "Purge users if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)
@@ -39,6 +44,7 @@ interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge light users",
 		description = "Purge stale light users (email-only invitations never claimed by a first login) if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)
@@ -53,6 +59,7 @@ interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge projects",
 		description = "Purge projects if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)
@@ -67,6 +74,7 @@ interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge projects contents",
 		description = "Purge projects contents (movements, communications and alerts) if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)
@@ -81,6 +89,7 @@ interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge projects configurations",
 		description = "Purge projects configurations (vehicles, activities, groups and participants) if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)

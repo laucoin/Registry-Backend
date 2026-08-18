@@ -11,6 +11,8 @@ import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENS
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -30,12 +32,7 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/**
- * API v2 "My profiles" contract (ADR 017): the caller's own project profiles.
- * The v1 `accept/{accepted}` boolean-in-path becomes the two explicit
- * transitions `POST /{id}/accept` and `POST /{id}/reject` (§3).
- */
-@Tag(name = "User's Profiles management", description = "API for User's Profiles-related operations")
+@Tag(name = "User's Profiles management (v2)", description = "API for User's Profiles-related operations")
 @RequestMapping("/api/v2/users/profiles")
 interface IUserProjectProfileV2Controller {
 	@Operation(
@@ -47,11 +44,7 @@ interface IUserProjectProfileV2Controller {
 	@GetMapping
 	fun findUserProjectProfiles(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 		@RequestParam(required = false) q: String?,
 		@RequestParam(required = false) available: Boolean?,
 		@RequestParam(required = false) status: ProfileStatusEnum?,
@@ -68,11 +61,7 @@ interface IUserProjectProfileV2Controller {
 	@GetMapping("/sent")
 	fun findSentInvitations(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@ParameterObject @Valid pageQuery: PageQueryDto,
 	): Mono<PageModel<ProjectProfileReaderDto>>
 
 	@Operation(
@@ -97,17 +86,6 @@ interface IUserProjectProfileV2Controller {
 	fun rejectUserProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable id: UUID,
-	): Mono<ProjectProfileReaderDto>
-
-	@Operation(
-		summary = "Create support Project's Profile",
-		description = "Support profile is a temporary Profile for an User to access an Project to help the administration",
-	)
-	@PreAuthorize("hasAuthority('$REGISTRY_PROFILE_C')")
-	@PostMapping("/{projectId}/support")
-	fun createSupportProjectProfile(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
 	): Mono<ProjectProfileReaderDto>
 
 	@Operation(

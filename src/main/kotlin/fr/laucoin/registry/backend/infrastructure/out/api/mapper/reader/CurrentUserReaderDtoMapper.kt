@@ -12,7 +12,7 @@ import java.util.Optional
 @Component
 class CurrentUserReaderDtoMapper(
 	private val translateService: ITranslateService,
-	private val preferenceMapper: PreferenceReaderDtoMapper,
+	private val preferenceMapper: CurrentUserPreferencesReaderDtoMapper,
 ) : IGenericReaderDtoMapper<CurrentUserModel, CurrentUserReaderDto> {
 	override fun toDto(model: CurrentUserModel): CurrentUserReaderDto {
 		return CurrentUserReaderDto(

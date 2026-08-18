@@ -43,12 +43,17 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
-@Tag(name = "Project's Profiles management", description = "API for Project's Profiles-related operations")
+@Deprecated(
+	"API v1 has no remaining Registry-Frontend consumer and is scheduled for removal; use the /api/v2 contract.",
+	level = DeprecationLevel.WARNING,
+)
+@Tag(name = "Project's Profiles management (v1, deprecated)", description = "API for Project's Profiles-related operations — deprecated, scheduled for removal; use /api/v2")
 @RequestMapping("/api/v1/projects/{projectId}/profiles")
 interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Find Project's Profiles",
 		description = "Find or get paginated Project's Profiles",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -70,6 +75,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Find Project's Profile",
 		description = "Find Project's Profile by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@GetMapping("/{id}")
@@ -81,6 +87,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Search Users",
 		description = "Search Users to invite to an Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["textSearched"])
@@ -93,6 +100,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Get assignable Roles",
 		description = "Get all the roles you are allowed to assign",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
 	@GetMapping("/roles")
@@ -104,6 +112,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Create Project's Profiles",
 		description = "Create Project's Profiles (multiple Users)",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_C')")
 	@PostMapping
@@ -116,6 +125,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Update Project's Profile",
 		description = "Update Project's Profile",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@PatchMapping("/{id}")
@@ -129,6 +139,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Block Project's Profile",
 		description = "Prproject a User from using it",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@RateLimited(SENSITIVE)
@@ -142,6 +153,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Unblock Project's Profile",
 		description = "Re-authorize a User to use it",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@RateLimited(SENSITIVE)
@@ -155,6 +167,7 @@ interface IProjectProfileV1Controller {
 	@Operation(
 		summary = "Delete Project's Profile",
 		description = "Delete Project's Profile",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_D')")
 	@RateLimited(SENSITIVE)

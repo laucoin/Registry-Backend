@@ -6,6 +6,7 @@ import java.time.ZonedDateTime.now
 data class ProjectStatusModel(
 	val registered: ParticipantStatusModel,
 	val guests: Long,
+	val warned: Long,
 	val lastRefresh: ZonedDateTime = now()
 ) {
 	data class ParticipantStatusModel(

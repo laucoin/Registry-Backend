@@ -15,6 +15,7 @@ object ParticipantFields {
 	const val PARTICIPANT_START_AVAILABILITY_TIME = "start_availability_time"
 	const val PARTICIPANT_END_AVAILABILITY_DATE = "end_availability_date"
 	const val PARTICIPANT_END_AVAILABILITY_TIME = "end_availability_time"
+	const val PARTICIPANT_DEPARTED_AT = "departed_at"
 	const val PARTICIPANT_USER_ID = "user_id"
 	const val PARTICIPANT_USER_FIRST_NAME = "user_first_name"
 	const val PARTICIPANT_USER_LAST_NAME = "user_last_name"

@@ -6,7 +6,7 @@ import java.time.ZonedDateTime
 
 data class CurrentUserReaderDto(
 	var authorities: List<String>,
-	var preferences: PreferenceReaderDto? = null,
+	var preferences: CurrentUserPreferencesReaderDto? = null,
 	var firstName: String? = null,
 	var lastName: String? = null,
 	var email: String? = null,

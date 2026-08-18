@@ -1,4 +1,4 @@
-# ADR 019 §6 — supply-chain scanning. Complements the existing pipelines:
+# Supply-chain scanning. Complements the existing pipelines:
 # CodeQL (SAST, codeql.yml) and dependency-review (SCA on PRs). This adds
 # secret scanning (gitleaks) and vulnerability scanning over the repository
 # and lockfiles (trivy), failing on high-severity findings.

@@ -3,11 +3,12 @@ package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IUserProjectProfileV2Controller
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectProfileReaderDtoMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.RestController
@@ -24,15 +25,14 @@ class UserProjectProfileV2Controller(
 ) : IUserProjectProfileV2Controller {
 	override fun findUserProjectProfiles(
 		currentUser: CurrentUserModel,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		q: String?,
 		available: Boolean?,
 		status: ProfileStatusEnum?,
 		dateTime: ZonedDateTime?,
 		favorite: Boolean?,
 	): Mono<PageModel<ProjectProfileReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = ProjectProfileSearchParamModel(q, available, status, dateTime)
 			.apply { favoriteSearched = favorite }
 
@@ -48,10 +48,9 @@ class UserProjectProfileV2Controller(
 
 	override fun findSentInvitations(
 		currentUser: CurrentUserModel,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 	): Mono<PageModel<ProjectProfileReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val since = ZonedDateTime.now().minusDays(sentInvitationWindowDays)
 		return service.findSentInvitationsPage(currentUser, pageable, since).map(readerMapper::toDtoPage)
 	}
@@ -72,12 +71,6 @@ class UserProjectProfileV2Controller(
 			.map(readerMapper::toDto)
 	}
 
-	override fun createSupportProjectProfile(
-		currentUser: CurrentUserModel,
-		projectId: UUID
-	): Mono<ProjectProfileReaderDto> {
-		return service.createSupportProjectProfile(currentUser, projectId).map(readerMapper::toDto)
-	}
 
 	override fun deleteUserProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return service.deleteUserProjectProfileById(currentUser, id)

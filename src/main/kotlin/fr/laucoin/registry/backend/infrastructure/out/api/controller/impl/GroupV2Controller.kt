@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import fr.laucoin.registry.backend.infrastructure.out.api.controller.IGroupV2Controller
@@ -16,7 +15,9 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.GroupWithou
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GroupMembersWriterDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GroupWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.PageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.AddedGroupMembersReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.GroupReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
@@ -42,18 +43,15 @@ class GroupV2Controller(
 ) : IGroupV2Controller {
 	override fun findGroups(
 		projectId: UUID,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		presence: Boolean?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageModel<GroupWithoutMemberReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = GroupSearchParamModel(q, visible, presence, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, GroupSortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, GroupSortFieldEnum::fromParamName)
 
 		return service.findGroupsPage(projectId, pageable, searchParams, sortModels)
 			.map(readerLightMapper::toDtoPage)
@@ -72,17 +70,17 @@ class GroupV2Controller(
 	override fun findGroupMembersByGroupId(
 		projectId: UUID,
 		id: UUID,
-		page: Int,
-		size: Int,
+		pageQuery: PageQueryDto,
 		q: String?,
 		isMajor: Boolean?,
 		type: ParticipantTypeEnum?,
 		visible: Boolean?,
 		status: PresenceStatusEnum?,
+		available: Boolean?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageModel<ParticipantReaderDto>> {
-		val pageable = PageableModel(page * size, size)
-		val searchParams = ParticipantSearchParamModel(q, isMajor, type, visible, status, dateTime)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
+		val searchParams = ParticipantSearchParamModel(q, isMajor, type, visible, status, dateTime, availableSearched = available)
 
 		return service.findGroupMembersPageByGroupId(projectId, id, pageable, searchParams)
 			.map(participantReaderMapper::toDtoPage)

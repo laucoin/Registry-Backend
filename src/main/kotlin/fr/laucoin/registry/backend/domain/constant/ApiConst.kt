@@ -1,12 +1,16 @@
 package fr.laucoin.registry.backend.domain.constant
 
 /**
- * Shared bounds for non-paginated collection endpoints: every list endpoint
- * must be bounded, so dashboard-style collections take a `limit` capped at the
- * paginated endpoints' maximum page size, which is also the default so callers
- * that never paginated (v1) keep their practical behavior.
+ * The single upper bound on how much of a collection one request may return.
+ * Paginated endpoints enforce it as the maximum `size`; the dashboard-style
+ * endpoints that take a plain `limit` reuse the same ceiling, which is also
+ * their default so callers that never paginated (v1) keep their behaviour.
+ * [MAX_PAGE_SIZE] is the same number typed for Bean Validation's `long` bound.
  */
 object ApiConst {
 	const val DEFAULT_COLLECTION_LIMIT = 200
 	const val DEFAULT_COLLECTION_LIMIT_PARAM = "$DEFAULT_COLLECTION_LIMIT"
+	const val MAX_PAGE_SIZE = 200L
+	const val DEFAULT_PAGE_NUMBER = 0
+	const val DEFAULT_PAGE_SIZE = 20
 }

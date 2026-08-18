@@ -68,14 +68,6 @@ class ParticipantService(
 		return port.findBirthdays(projectId, visibilitySearched = true, limit)
 	}
 
-	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
-		return port.findArrivingToday(projectId, visibilitySearched = true, limit)
-	}
-
-	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
-		return port.findDepartingToday(projectId, visibilitySearched = true, limit)
-	}
-
 	/**
 	 * The "due today" dashboard panels read two independent tables, so the two
 	 * queries are issued CONCURRENTLY rather than chained: `Mono.zip` subscribes

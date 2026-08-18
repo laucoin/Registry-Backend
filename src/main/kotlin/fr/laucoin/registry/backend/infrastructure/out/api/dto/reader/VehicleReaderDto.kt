@@ -8,6 +8,7 @@ data class VehicleReaderDto(
 	var brand: String? = null,
 	var model: String? = null,
 	var status: LabelDto? = null,
+	var availabilityWarning: Boolean = false,
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,
 ) : GenericProjectReaderDto()

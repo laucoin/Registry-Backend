@@ -16,7 +16,7 @@ import java.time.ZonedDateTime
 import java.util.Objects
 
 /**
- * ADR 019 §5 — append-only audit emission, separate from application logs: a
+ * Append-only audit emission, separate from application logs: a
  * dedicated logger name ([AUDIT_LOGGER]) carries one structured line per
  * privileged action, so the stream can be routed/retained independently (SIEM
  * shipping and a durable sink are deployment concerns on this logger name).

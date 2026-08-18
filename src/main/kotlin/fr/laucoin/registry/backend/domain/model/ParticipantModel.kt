@@ -14,9 +14,11 @@ data class ParticipantModel(
 	var groups: List<GroupModel> = emptyList(),
 	var availableGroups: List<GroupModel> = emptyList(),
 	var status: PresenceStatusEnum? = null,
+	var availabilityWarning: Boolean = false,
 	var lastMovement: ZonedDateTime? = null,
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,
+	var departedAt: ZonedDateTime? = null,
 	var user: UserModel? = null,
 ) : GenericProjectModel() {
 	fun isNotUsable() = isNotVisible()

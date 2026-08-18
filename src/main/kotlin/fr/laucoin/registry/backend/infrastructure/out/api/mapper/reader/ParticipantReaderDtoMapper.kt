@@ -27,8 +27,10 @@ class ParticipantReaderDtoMapper(
 			status = Optional.ofNullable(model.status)
 				.map { statusMapper.toDto(it, model.lastMovement, model.startAvailability, model.endAvailability) }
 				.orElse(null),
+			availabilityWarning = model.availabilityWarning,
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
+			departedAt = model.departedAt,
 			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
 		).apply {
 			id = model.id

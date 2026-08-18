@@ -1,9 +1,9 @@
-# Authentik blueprint for local development (validated against Authentik 2026.5).
+# Authentik blueprint for local development (validated against Authentik 2026.8.0).
 # It provisions:
 #   - a confidential OAuth2 provider + application at slug `registry`, so the issuer
 #     is http://localhost:9000/application/o/registry/ and its JWKS is the single key
 #     the backend trusts (sub_mode user_uuid → the JWT `sub` is the user UUID);
-#   - the five seed users from src/main/resources/db/seed/R__huge_test_dataset.sql
+#   - the six seed users from src/main/resources/db/seed/R__huge_test_dataset.sql
 #     (same emails + given/family names), each with a shared dev password. Their
 #     Authentik UUIDs are random (User.uuid is not settable); the backend links them
 #     to the seeded, email-only accounts on first login (oidc_id is filled in then).
@@ -33,6 +33,26 @@ entries:
             "family_name": request.user.attributes.get("family_name", ""),
             "preferred_username": request.user.username,
             "nickname": request.user.username,
+        }
+
+  # Authentik's default email mapping hardcodes `email_verified: False`, and the
+  # backend treats a verified address as identity-grade evidence — it is what
+  # authorises binding an IdP identity to an invited (email-only) row, so the check
+  # is fail-closed and every seeded account was refused with AUTH_EMAIL_NOT_VERIFIED
+  # (403) on its very first sign-in. Nothing in a local stack sends confirmation
+  # mail, so there is no way to clear that by hand: assert the address instead.
+  # The attribute lookup keeps the refusal reachable — `unverified` below opts out.
+  - model: authentik_providers_oauth2.scopemapping
+    id: registry-email-scope
+    identifiers:
+      name: Registry local email
+    attrs:
+      scope_name: email
+      description: Registry email claims (address asserted as verified)
+      expression: |
+        return {
+            "email": request.user.email,
+            "email_verified": request.user.attributes.get("email_verified", True),
         }
 
   # --- Seed users (match src/main/resources/db/seed/R__huge_test_dataset.sql) ---
@@ -109,6 +129,25 @@ entries:
       is_active: true
       path: users
 
+  # The one account the mapping above does NOT vouch for. Its seeded row stays
+  # invited (oidc_id NULL) forever because the link is refused before anything is
+  # written, so signing in as `unverified` reproduces AUTH_EMAIL_NOT_VERIFIED as
+  # many times as you like without resetting the stack.
+  - model: authentik_core.user
+    id: registry-user-unverified
+    identifiers:
+      username: unverified
+    attrs:
+      name: Nina VOGEL
+      attributes:
+        given_name: Nina
+        family_name: VOGEL
+        email_verified: false
+      email: unverified@sgdf.fr
+      password: !Env [ AU_DEV_PASSWORD, "" ]
+      is_active: true
+      path: users
+
   # RP-initiated logout has to do BOTH halves, and neither Authentik default does:
   # `default-provider-invalidation-flow` honours post_logout_redirect_uri but ships
   # with no stages, so it drops the application session and leaves the SSO one
@@ -160,12 +199,12 @@ entries:
       # offline_access is what makes the IdP issue a usable refresh token. Without
       # this mapping Authentik hands out none at all, the BFF's silent renewal has
       # nothing to renew with, and every session dies the moment its access token
-      # expires (ADR 022). The app requests the scope in
+      # expires. The app requests the scope in
       # Registry-Frontend/server/routes/auth/login.get.ts.
       property_mappings:
         - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, openid ] ]
-        - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, email ] ]
         - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, offline_access ] ]
+        - !KeyOf registry-email-scope
         - !KeyOf registry-profile-scope
 
   - model: authentik_core.application

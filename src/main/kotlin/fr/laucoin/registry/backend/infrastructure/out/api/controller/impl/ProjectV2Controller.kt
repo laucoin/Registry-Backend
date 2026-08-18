@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IProjectService
@@ -14,7 +13,8 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.OpenAlertPr
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ProjectWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.mapper.SortParamDtoMapper
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.SortedPageQueryDto
+import fr.laucoin.registry.backend.infrastructure.out.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.OpenAlertProjectReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.ProjectReaderDtoMapper
@@ -44,10 +44,7 @@ class ProjectV2Controller(
 
 	override fun findProjects(
 		currentUser: CurrentUserModel,
-		page: Int,
-		size: Int,
-		sort: List<String>?,
-		direction: String,
+		pageQuery: SortedPageQueryDto,
 		q: String?,
 		visible: Boolean?,
 		withProfile: Boolean,
@@ -57,9 +54,9 @@ class ProjectV2Controller(
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageQueryDtoMapper.toPageable(pageQuery)
 		val searchParams = ProjectSearchParamModel(q, visible, dateTime)
-		val sortModels = SortParamDtoMapper.toSortModels(sort, direction, ProjectSortFieldEnum::fromParamName)
+		val sortModels = PageQueryDtoMapper.toSortModels(pageQuery, ProjectSortFieldEnum::fromParamName)
 
 		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams, sortModels)
 			.map(readerMapper::toDtoPage)

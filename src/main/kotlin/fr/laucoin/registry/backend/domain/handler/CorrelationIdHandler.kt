@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono
 import java.util.UUID
 
 /**
- * ADR 019 §5 (and ADR 020) — one correlation id per request: taken from the
+ * One correlation id per request: taken from the
  * caller (the Nuxt BFF forwards its own) when well-formed, generated
  * otherwise; echoed on the response and pushed into the Reactor context so the
  * audit trail can stamp every entry. Highest precedence so even requests
