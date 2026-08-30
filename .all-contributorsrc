@@ -1,0 +1,65 @@
+{
+  "projectName": "Registry-Backend",
+  "projectOwner": "laucoin",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": true,
+  "commitConvention": "angular",
+  "commitType": "docs",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+      "login": "laucoin",
+      "name": "Luc AUCOIN",
+      "avatar_url": "https://avatars.githubusercontent.com/u/31480129?v=4",
+      "profile": "https://doc.laucoin.fr/resume",
+      "contributions": [
+        "projectManagement",
+        "ideas",
+        "code",
+        "maintenance",
+        "infra"
+      ]
+    },
+    {
+      "login": "Usinouv",
+      "name": "Usinouv",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13047412?v=4",
+      "profile": "https://github.com/Usinouv",
+      "contributions": [
+        "ideas"
+      ]
+    },
+    {
+      "login": "lvicainne",
+      "name": "Louis VICAINNE",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1641160?v=4",
+      "profile": "https://github.com/lvicainne",
+      "contributions": [
+        "infra",
+        "ideas"
+      ]
+    },
+    {
+      "login": "ctruillet",
+      "name": "Clément Truillet",
+      "avatar_url": "https://avatars.githubusercontent.com/u/43933447?v=4",
+      "profile": "https://github.com/ctruillet",
+      "contributions": [
+        "ideas"
+      ]
+    },
+    {
+      "name": "Cécile CROCHON",
+      "avatar_url": "https://media.licdn.com/dms/image/v2/C4D03AQEWB-ofOcjZ7A/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1626700975351?e=1789603200&v=beta&t=Vj9eWZiVoCro7Lg-L3ewYLOaB3lXejJ8NLNP-LiXkhk",
+      "profile": "https://www.linkedin.com/in/c%C3%A9cile-crochon/",
+      "contributions": [
+        "projectManagement"
+      ]
+    }
+  ]
+}
