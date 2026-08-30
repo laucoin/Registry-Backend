@@ -145,8 +145,10 @@ object ParticipantQueries {
 
 	const val PARTICIPANT_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 
+	// A participant is an adult when born on or before today minus 18 years.
+	// Mirrors DateExt.isMajor(), which the driver check relies on — keep both in sync.
 	const val PARTICIPANT_MAJOR_CLAUSE =
-		"(:isMajor IS NULL OR :isMajor = (t.$PARTICIPANT_BIRTHDAY >= CURRENT_DATE - INTERVAL '18 years'))"
+		"(:isMajor IS NULL OR :isMajor = (t.$PARTICIPANT_BIRTHDAY <= CURRENT_DATE - INTERVAL '18 years'))"
 
 	const val PARTICIPANT_TYPE_SEARCH_CLAUSE = "(:typeSearched IS NULL OR t.type = :typeSearched)"
 
