@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/laucoin/Registry-Backend/compare/1.2.0...1.3.0) (2026-08-30)
+
+### 📦️ Other
+
+* **PR:** Add pull request template ([#12](https://github.com/laucoin/Registry-Backend/issues/12)) ([7d840fa](https://github.com/laucoin/Registry-Backend/commit/7d840fa6978d5d8c0c05ce8e09aed6fc26890fa9))
+
 ## [1.2.0](https://github.com/laucoin/Registry-Backend/compare/1.1.0...1.2.0) (2026-08-30)
 
 ### 🚀 Features
