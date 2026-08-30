@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/laucoin/Registry-Backend/compare/1.1.0...1.2.0) (2026-08-30)
+
+### 🚀 Features
+
+* **readme:** Improve README.md content ([#11](https://github.com/laucoin/Registry-Backend/issues/11)) ([73e1ab7](https://github.com/laucoin/Registry-Backend/commit/73e1ab7a91ded2de52232166ba7e3f507bc979c3))
+
 ## [1.1.0](https://github.com/laucoin/Registry-Backend/compare/1.0.2...1.1.0) (2026-07-24)
 
 ### 👷 Automation
