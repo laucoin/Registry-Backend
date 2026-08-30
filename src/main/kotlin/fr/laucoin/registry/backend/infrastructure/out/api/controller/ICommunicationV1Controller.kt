@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -76,7 +77,7 @@ interface ICommunicationV1Controller {
 		summary = "Search Movements",
 		description = "Search Movements with an activity to link a Communication",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
 	@GetMapping("/search/movements")
 	fun searchActivities(
 		@PathVariable projectId: UUID,
@@ -87,7 +88,7 @@ interface ICommunicationV1Controller {
 		summary = "Search Alerts",
 		description = "Search Alerts to link a Communication",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
 	@GetMapping("/search/alerts")
 	fun searchAlerts(
 		@PathVariable projectId: UUID,

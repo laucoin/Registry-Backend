@@ -6,11 +6,14 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
@@ -46,10 +49,12 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class CommunicationControllerTest: TestContext() {
@@ -490,5 +495,77 @@ class CommunicationControllerTest: TestContext() {
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 		verify(service).deleteCommunicationById(any(), eq(projectId), eq(uuid))
+	}
+
+	@Test
+	fun `Should searchActivities return 200`() {
+		// Arrange
+		whenever(service.searchOutMovementWithActivityByText(any(), anyOrNull())).thenReturn(Flux.empty())
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
+			.get()
+			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+
+		verify(service).searchOutMovementWithActivityByText(projectId, "a")
+	}
+
+	@Test
+	fun `Should searchActivities throw due to missing communication option`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should searchAlerts return 200`() {
+		// Arrange
+		whenever(service.searchAlertByText(any(), anyOrNull())).thenReturn(Flux.empty())
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT)
+			)
+			.get()
+			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+
+		verify(service).searchAlertByText(projectId, "a")
+	}
+
+	@Test
+	fun `Should searchAlerts throw due to missing alert option`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+		verifyNoInteractions(service)
 	}
 }
