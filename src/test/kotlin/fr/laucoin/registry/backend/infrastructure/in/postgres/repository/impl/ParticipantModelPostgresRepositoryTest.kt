@@ -67,6 +67,37 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				),
 			)
 		}
+
+		// The dataset gives every tenth participant a birthday between 1990 and
+		// today minus 18 years (adults), and all the others a birthday inside the
+		// last 18 years (minors) — so 5 adults and 45 minors out of the 50.
+		@JvmStatic
+		fun `Should findPage filter on adulthood`(): Stream<Arguments> {
+			return Stream.of(
+				Arguments.of(true, 5L),
+				Arguments.of(false, 45L),
+			)
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findPage filter on adulthood`(isMajor: Boolean, expectedTotalElements: Long) {
+		// Arrange
+		val pageable = PageableModel(0, 50)
+		val params = ParticipantSearchParamModel(isMajor = isMajor)
+		val eighteenYearsAgo = LocalDate.now().minusYears(18)
+
+		// Act
+		val result = repository.findPage(projectId, pageable, params).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(expectedTotalElements, result.totalElements)
+		result.content.forEach {
+			val birthday = assertNotNull(it.birthday)
+			assertEquals(isMajor, !birthday.isAfter(eighteenYearsAgo))
+		}
 	}
 
 	@Test

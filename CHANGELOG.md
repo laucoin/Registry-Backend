@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/laucoin/Registry-Backend/compare/1.4.0...1.4.1) (2026-08-30)
+
+### 🐛 Bug Fixes
+
+* **participant:** Correct the inverted adult/minor filter ([#14](https://github.com/laucoin/Registry-Backend/issues/14)) ([8c9a1b7](https://github.com/laucoin/Registry-Backend/commit/8c9a1b7bfa9dceab446467119375a9f8f8964bba))
+
 ## [1.4.0](https://github.com/laucoin/Registry-Backend/compare/1.3.0...1.4.0) (2026-08-30)
 
 ### 📦️ Other
