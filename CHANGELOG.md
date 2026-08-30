@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/laucoin/Registry-Backend/compare/1.4.1...1.4.2) (2026-08-30)
+
+### 🐛 Bug Fixes
+
+* **communication:** Gate the search endpoints on their project option ([#15](https://github.com/laucoin/Registry-Backend/issues/15)) ([c2b877b](https://github.com/laucoin/Registry-Backend/commit/c2b877baddf9fe8b40ae60d9ea1eadd53f5f55df)), closes [#projectId](https://github.com/laucoin/Registry-Backend/issues/projectId)
+
 ## [1.4.1](https://github.com/laucoin/Registry-Backend/compare/1.4.0...1.4.1) (2026-08-30)
 
 ### 🐛 Bug Fixes
