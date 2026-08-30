@@ -1,17 +1,29 @@
 # Registry (Backend)
 
+[![Build](https://github.com/laucoin/Registry-Backend/actions/workflows/release.yml/badge.svg)](https://github.com/laucoin/Registry-Backend/actions/workflows/release.yml)
+[![Pull Request](https://github.com/laucoin/Registry-Backend/actions/workflows/pull-request.yml/badge.svg)](https://github.com/laucoin/Registry-Backend/actions/workflows/pull-request.yml)
+[![CodeQL](https://github.com/laucoin/Registry-Backend/actions/workflows/codeql.yml/badge.svg)](https://github.com/laucoin/Registry-Backend/actions/workflows/codeql.yml)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Gradle](https://img.shields.io/badge/Gradle-02303A?logo=gradle&logoColor=white)](https://gradle.org)
+[![JDK](https://img.shields.io/badge/JDK-25-437291?logo=openjdk&logoColor=white)](https://openjdk.org)
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-4-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ## This repository 📖
 
 This project was generated with [spring initializr](https://start.spring.io/), and it uses Spring, Gradle and Kotlin.
 
-This application allows virtual registry management. This is a backend which one is called by the
-frontend (https://gitlab.com/laucoin/registry-frontend.git).
+This application allows virtual registry management. This is a backend which one is called by the frontend.
 
-Checkout the full documentation [here](documentation/README.md).
+Checkout the full documentation [here](https://doc.laucoin.fr/registry).
+
+Linked repositories:
+
+- [Frontend](https://github.com/laucoin/Registry-Frontend.git)
+- [E2E tests](https://github.com/laucoin/Registry-E2E.git)
 
 ## How to install and use it? ⚙️
 
@@ -25,21 +37,23 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 
 1. Clone this repository with:
     ```shell
-    git clone https://gitlab.com/laucoin/registry-backend.git
+    git clone https://github.com/laucoin/Registry-Backend.git
     ```
    OR
     ```shell
-    git clone git@gitlab.com:laucoin/registry-backend.git
+    git clone git@github.com:laucoin/Registry-Backend.git
     ```
 2. Move into the project directory
     ```shell
-    cd registry-backend/
+    cd Registry-Backend/
     ```
-3. You can use dev container
+3. Start dependency containers (PostgreSQL, Authentik, …) in the background:
+    ```shell script
+    cp local-dev/.example.env local-dev/.env
+    # Edit local-dev/.env to set secrets (PG_PASS, AU_SECRET_KEY, etc.)
+    docker compose -f local-dev/compose.yml up -d
+    ```
 4. Enjoy the following commands 🎉
-
-> If you can to run it directly without dev container, you can check the [prerequisites](#prerequisites) section
-> and [compose.yml](local-dev/compose.yml) file to run required dependencies.
 
 ##### JAVA_OPTS
 
@@ -49,18 +63,24 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dregistry.datasource.database=<database-name> # For example: postgres
 -Dregistry.datasource.username=<database-username> # For example: postgres
 -Dregistry.datasource.password=<database-username> # For example: postgres
--Dexternal.oidc.jwks-uri=<oidc-jwks-uri> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/certs
--Dexternal.oidc.authorization-uri=<oidc-authorization-endpoint> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/auth
--Dexternal.oidc.token-uri=<oidc-token-endpoint> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/token
--Dexternal.oidc.end-session-uri=<oidc-end-session-endpoint> # For example: http://localhost:8080/realms/laucoin/protocol/openid-connect/logout
+-Dexternal.oidc.jwks-uri=<oidc-jwks-uri> # For example: http://localhost:9000/application/o/registry/jwks
+-Dexternal.oidc.authorization-uri=<oidc-authorization-endpoint> # For example: http://localhost:9000/application/o/authorize
+-Dexternal.oidc.token-uri=<oidc-token-endpoint> # For example: http://localhost:9000/application/o/token
+-Dexternal.oidc.end-session-uri=<oidc-end-session-endpoint> # For example: http://localhost:9000/application/o/registry/end-session
 -Dexternal.oidc.client-id=<oidc-provider-client-id> # For example: registry
 -Dexternal.oidc.client-secret=<oidc-provider-client-secret> # For example: XXXX
 -Dexternal.oidc.swagger.client-id=<oidc-provider-client-id> # For example: registry
 -Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
--Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 8080 for the identity provider instance)
+-Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 9000 for the identity provider instance)
 -Dregistry.feature.documentation.enabled=false # true only for development
 -Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
 ```
+
+> [!IMPORTANT]
+> **Secrets** (`registry.datasource.password`, `external.oidc.client-secret`) must
+> be passed as JVM options or environment variables — **never committed** to any
+> `application*.yml`. The profile files reference them as placeholders so
+> startup fails loudly if they are missing.
 
 #### Running the application in dev mode
 
@@ -142,24 +162,59 @@ These additional references should also help you:
 
 The `main` branch contain the development code.
 
-WARNING :
+> [!WARNING]
+> Any development must be done on a separate branch: every change reaches `main` through a pull request.
 
-- Any development must be done on a separate branch.
+The GitHub Actions workflows are the review gate — a pull request must be green before merge:
 
-If you have more question, please have a look
-on [contributing file](https://gitlab.com/laucoin/global-readme/-/blob/main/CONTRIBUTING.md)
+- **Pull Request** ([pull-request.yml](.github/workflows/pull-request.yml)) — runs `./gradlew build` (tests included)
+  and publishes a branch-tagged image for review.
+- **Dependency Review** ([dependency-review.yml](.github/workflows/dependency-review.yml)) — blocks a pull request that
+  introduces vulnerable dependencies.
+- **CodeQL** ([codeql.yml](.github/workflows/codeql.yml)) — java-kotlin static analysis on pull requests, pushes to
+  `main` and on a schedule.
+- **Release** ([release.yml](.github/workflows/release.yml), on merge to `main`) — builds & pushes the DEV image, then
+  Semantic Release derives the next version from the commit messages, tags it and publishes the release image; a
+  retention job prunes old images. Commit messages must therefore follow
+  [Conventional Commits](https://www.conventionalcommits.org/).
+- **Hotfix** ([hotfix.yml](.github/workflows/hotfix.yml)) — pushing a tag matching `*-hotfix-*` (branched off an
+  existing release tag) builds & pushes an isolated hotfix image, outside Semantic Release.
+- **PR Cleanup** ([pr-cleanup.yml](.github/workflows/pr-cleanup.yml)) — deletes the branch image from the registry when
+  the pull request closes.
+
+Before contributing, please read the [documentation](https://doc.laucoin.fr/registry/) and our
+[code of conduct](CODE_OF_CONDUCT.md).
 
 ## Contributors 🧑‍💻
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/en/reference/emoji-key/)):
 
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
 <table>
   <tbody>
     <tr>
-      <td><div style='text-align: center'><a href="https://laucoin.fr"><img src="https://gitlab.com/uploads/-/system/user/avatar/4656880/avatar.png?width=400" width="100px;" alt="Luc AUCOIN"/><br /><sub><b>Luc AUCOIN</b></sub></a><br /><a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Code">💻</a> <a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Documentation">📖</a> <a href="#" title="Maintenance">🚧</a> <a href="#" title="Project Management">📆</a> <a href="https://gitlab.com/laucoin/registry-backend/commits?author=laucoin" title="Tests">⚠️</a></div></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://doc.laucoin.fr/resume"><img src="https://avatars.githubusercontent.com/u/31480129?v=4?s=100" width="100px;" alt="Luc AUCOIN"/><br /><sub><b>Luc AUCOIN</b></sub></a><br /><a href="#projectManagement-laucoin" title="Project Management">📆</a> <a href="#ideas-laucoin" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/laucoin/Registry-Backend/commits?author=laucoin" title="Code">💻</a> <a href="#maintenance-laucoin" title="Maintenance">🚧</a> <a href="#infra-laucoin" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Usinouv"><img src="https://avatars.githubusercontent.com/u/13047412?v=4?s=100" width="100px;" alt="Usinouv"/><br /><sub><b>Usinouv</b></sub></a><br /><a href="#ideas-Usinouv" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/lvicainne"><img src="https://avatars.githubusercontent.com/u/1641160?v=4?s=100" width="100px;" alt="Louis VICAINNE"/><br /><sub><b>Louis VICAINNE</b></sub></a><br /><a href="#infra-lvicainne" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#ideas-lvicainne" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ctruillet"><img src="https://avatars.githubusercontent.com/u/43933447?v=4?s=100" width="100px;" alt="Clément Truillet"/><br /><sub><b>Clément Truillet</b></sub></a><br /><a href="#ideas-ctruillet" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.linkedin.com/in/c%C3%A9cile-crochon/"><img src="https://media.licdn.com/dms/image/v2/C4D03AQEWB-ofOcjZ7A/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1626700975351?e=1789603200&v=beta&t=Vj9eWZiVoCro7Lg-L3ewYLOaB3lXejJ8NLNP-LiXkhk" width="100px;" alt="Cécile CROCHON"/><br /><sub><b>Cécile CROCHON</b></sub></a><br /><a href="#projectManagement-crochon" title="Project Management">📆</a></td>
     </tr>
   </tbody>
 </table>
 
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
 Contributions of any kind welcome!
+
+To add a contributor, either comment on an issue/PR with
+`@all-contributors please add @<username> for <contributions>` (bot), or run:
+
+```shell script
+npx --yes all-contributors-cli add <username> <contributions>
+```
