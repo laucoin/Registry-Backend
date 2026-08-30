@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/laucoin/Registry-Backend/compare/1.3.0...1.4.0) (2026-08-30)
+
+### 📦️ Other
+
+* **AI:** Add doc diff skill ([#13](https://github.com/laucoin/Registry-Backend/issues/13)) ([42a4193](https://github.com/laucoin/Registry-Backend/commit/42a419325d43db449ab59da7451e561f632ae900))
+
 ## [1.3.0](https://github.com/laucoin/Registry-Backend/compare/1.2.0...1.3.0) (2026-08-30)
 
 ### 📦️ Other
