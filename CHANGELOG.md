@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/laucoin/Registry-Backend/compare/1.4.2...1.5.0) (2026-09-04)
+
+### 📦️ Other
+
+* **AI:** Add generated AGENTS.md from documentation ([#17](https://github.com/laucoin/Registry-Backend/issues/17)) ([57c8bc2](https://github.com/laucoin/Registry-Backend/commit/57c8bc2859225992bd993564740ba48afb5e9d81))
+
 ## [1.4.2](https://github.com/laucoin/Registry-Backend/compare/1.4.1...1.4.2) (2026-08-30)
 
 ### 🐛 Bug Fixes
