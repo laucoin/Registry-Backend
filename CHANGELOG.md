@@ -1,3 +1,9 @@
+## [1.6.1](https://github.com/laucoin/Registry-Backend/compare/1.6.0...1.6.1) (2026-09-05)
+
+### 🐛 Bug Fixes
+
+* **purge:** Reject a purge threshold set in the future ([#21](https://github.com/laucoin/Registry-Backend/issues/21)) ([b152100](https://github.com/laucoin/Registry-Backend/commit/b152100ba4f1ad393dd39d6a71dca7899c4d173e))
+
 ## [1.6.0](https://github.com/laucoin/Registry-Backend/compare/1.5.0...1.6.0) (2026-09-05)
 
 ### 📦️ Other
