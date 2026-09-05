@@ -21,11 +21,8 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.test.ModelExt.commonUser
 import fr.laucoin.registry.backend.test.ModelExt.userId
+import fr.laucoin.registry.backend.test.UuidExt.distinctCopy
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
@@ -51,6 +48,10 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
 class UserServiceTest {
 	private val port: IUserPort = mock()
@@ -102,7 +103,7 @@ class UserServiceTest {
 					emptyList<String>(),
 					"OTHER_USER_ROLE",
 					UserModel().apply { id = uuid; role = USER_ROLE },
-					arrayOf(UserModel().apply { id = uuid; role = USER_ROLE }),
+					arrayOf(UserModel().apply { id = uuid.distinctCopy(); role = USER_ROLE }),
 					NOT_FOUND,
 					NOT_FOUND_WITH_GIVEN_IDENTIFIER,
 					0,
@@ -113,7 +114,7 @@ class UserServiceTest {
 					listOf(USER_ROLE),
 					USER_ROLE,
 					UserModel().apply { id = uuid; role = USER_ROLE },
-					arrayOf(UserModel().apply { id = uuid; role = USER_ROLE }),
+					arrayOf(UserModel().apply { id = uuid.distinctCopy(); role = USER_ROLE }),
 					CONFLICT,
 					USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE,
 					1,
@@ -124,7 +125,7 @@ class UserServiceTest {
 					listOf(USER_ROLE),
 					USER_ROLE,
 					UserModel().apply { id = uuid },
-					arrayOf(UserModel().apply { id = uuid }),
+					arrayOf(UserModel().apply { id = uuid.distinctCopy() }),
 					CONFLICT,
 					USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE,
 					0,
@@ -400,7 +401,7 @@ class UserServiceTest {
 	fun `Should blockUserById throw when user is current user`() {
 		// Arrange
 		val uuid = currentUser().id!!
-		val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
+		val foundUser = UserModel().apply { id = uuid.distinctCopy(); role = USER_ROLE }
 
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
 		whenever(port.findById(any(), any())).thenReturn(Mono.just(foundUser))
