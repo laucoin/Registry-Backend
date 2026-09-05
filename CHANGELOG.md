@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/laucoin/Registry-Backend/compare/1.5.0...1.6.0) (2026-09-05)
+
+### 📦️ Other
+
+* **ci:** Align backend and frontend conventional commit config ([#18](https://github.com/laucoin/Registry-Backend/issues/18)) ([e769bd9](https://github.com/laucoin/Registry-Backend/commit/e769bd9cb6e71a1c159ab0feb650f857211af375))
+
 ## [1.5.0](https://github.com/laucoin/Registry-Backend/compare/1.4.2...1.5.0) (2026-09-04)
 
 ### 📦️ Other
