@@ -61,7 +61,8 @@ jobs:
             @semantic-release/changelog
             @semantic-release/git
             @semantic-release/exec
-            conventional-changelog-conventionalcommits
+            @semantic-release/release-notes-generator@14.1.1
+            conventional-changelog-conventionalcommits@9.3.1
         env:
           # Must be able to push the CHANGELOG/version.properties bump to the
           # protected main branch (GITHUB_TOKEN cannot bypass branch protection).
