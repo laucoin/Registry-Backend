@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.config
 
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler
+import fr.laucoin.registry.backend.domain.handler.TokenExtractionHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
@@ -41,6 +42,7 @@ class SecurityConfig(
 	private val tokenConverter: TokenConverterService,
 	private val authorizationErrorHandler: AuthorizationErrorHandler,
 	private val headersHandler: HeadersHandler,
+	private val tokenExtractionHandler: TokenExtractionHandler,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.feature.documentation.enabled:false}")
@@ -89,6 +91,8 @@ class SecurityConfig(
 
 	private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
 		resourceServer.authenticationFailureHandler(authorizationErrorHandler)
+		// Reads the token from the Authorization header, then from the session cookie.
+		resourceServer.bearerTokenConverter(tokenExtractionHandler)
 		resourceServer.jwt {
 			it.jwtAuthenticationConverter(tokenConverter)
 		}
