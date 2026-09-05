@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PurgeError.PURGE_DATE_THRESHOLD_IN_FUTURE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_JOB_C
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IAlertService
@@ -15,15 +16,20 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectCont
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
+import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
+import java.time.LocalDate
 import java.util.UUID
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -213,5 +219,76 @@ class PurgeControllerTest: TestContext() {
 		verify(vehicleService).purgeVehiclesIfNecessary(any(), any())
 		verify(participantService).purgeParticipantsIfNecessary(any(), any())
 		verify(groupService).purgeEmptyGroups(any(), any())
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["/users", "/projects", "/projects/contents", "/projects/configurations"])
+	fun `Should reject a purge threshold in the future`(endpoint: String) {
+		// Arrange
+		val tomorrow = LocalDate.now().plusDays(1)
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_JOB_C)
+			.post()
+			.uri(
+				uriBuilder(
+					"$BASE_URL$endpoint",
+					listOf(projectId),
+					listOf(
+						Pair("dateThreshold", tomorrow.toString()),
+						Pair("dryRun", false),
+					),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PURGE_DATE_THRESHOLD_IN_FUTURE)
+
+		verifyNoInteractions(userService)
+		verifyNoInteractions(projectService)
+		verifyNoInteractions(movementService)
+		verifyNoInteractions(alertService)
+		verifyNoInteractions(communicationService)
+		verifyNoInteractions(activityService)
+		verifyNoInteractions(vehicleService)
+		verifyNoInteractions(participantService)
+		verifyNoInteractions(groupService)
+	}
+
+	/**
+	 * Purging more aggressively than the configured retention window is a legitimate operation, so
+	 * the constraint must reject future dates only — never dates that are merely more recent than
+	 * the threshold in configuration.
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = [0, -1])
+	fun `Should accept a purge threshold more recent than the configured retention window`(daysFromToday: Long) {
+		// Arrange
+		val threshold = LocalDate.now().plusDays(daysFromToday)
+
+		whenever(userService.purgeUsersIfNecessary(any(), any())).thenReturn(Flux.empty())
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_JOB_C)
+			.post()
+			.uri(
+				uriBuilder(
+					"$BASE_URL/users",
+					listOf(projectId),
+					listOf(
+						Pair("dateThreshold", threshold.toString()),
+						Pair("dryRun", true),
+					),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+
+		verify(userService).purgeUsersIfNecessary(threshold, true)
 	}
 }

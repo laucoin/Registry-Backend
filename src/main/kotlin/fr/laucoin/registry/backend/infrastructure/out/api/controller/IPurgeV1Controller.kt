@@ -1,11 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PurgeError.PURGE_DATE_THRESHOLD_IN_FUTURE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_JOB_C
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.ProjectContentPurgeReaderDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import jakarta.validation.constraints.PastOrPresent
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
@@ -29,6 +32,7 @@ interface IPurgeV1Controller {
 	fun purgeUsersIfNecessary(
 		@Parameter(description = "If not specified, the purge will be done with the default threshold defined in registry's configuration")
 		@RequestParam(required = false)
+		@Valid @PastOrPresent(message = PURGE_DATE_THRESHOLD_IN_FUTURE)
 		@DateTimeFormat(iso = DATE) dateThreshold: LocalDate? = null,
 		@RequestParam(required = false, defaultValue = "true") dryRun: Boolean,
 	): Flux<UUID>
@@ -42,6 +46,7 @@ interface IPurgeV1Controller {
 	fun purgeProjectsIfNecessary(
 		@Parameter(description = "If not specified, the purge will be done with the default threshold defined in registry's configuration")
 		@RequestParam(required = false)
+		@Valid @PastOrPresent(message = PURGE_DATE_THRESHOLD_IN_FUTURE)
 		@DateTimeFormat(iso = DATE) dateThreshold: LocalDate? = null,
 		@RequestParam(required = false, defaultValue = "true") dryRun: Boolean,
 	): Flux<UUID>
@@ -55,6 +60,7 @@ interface IPurgeV1Controller {
 	fun purgeProjectsContentsIfNecessary(
 		@Parameter(description = "If not specified, the purge will be done with the default threshold defined in registry's configuration")
 		@RequestParam(required = false)
+		@Valid @PastOrPresent(message = PURGE_DATE_THRESHOLD_IN_FUTURE)
 		@DateTimeFormat(iso = DATE) dateThreshold: LocalDate? = null,
 		@RequestParam(required = false, defaultValue = "true") dryRun: Boolean,
 	): Mono<ProjectContentPurgeReaderDto>
@@ -68,6 +74,7 @@ interface IPurgeV1Controller {
 	fun purgeProjectsConfigurationsIfNecessary(
 		@Parameter(description = "If not specified, the purge will be done with the default threshold defined in registry's configuration")
 		@RequestParam(required = false)
+		@Valid @PastOrPresent(message = PURGE_DATE_THRESHOLD_IN_FUTURE)
 		@DateTimeFormat(iso = DATE) dateThreshold: LocalDate? = null,
 		@RequestParam(required = false, defaultValue = "true") dryRun: Boolean,
 	): Mono<ProjectConfigurationPurgeReaderDto>
