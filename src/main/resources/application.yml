@@ -61,7 +61,7 @@ registry:
     oauth2:
       jwks-uri: ${external.oidc.jwks-uri}
       issuer: ${external.oidc.issuer}
-      audience: ${external.oidc.audience:${external.oidc.client-id}}
+      audiences: ${external.oidc.audiences:${external.oidc.client-id},${external.oidc.swagger.client-id}}
       authorization-uri: ${external.oidc.authorization-uri}
       token-uri: ${external.oidc.token-uri}
       end-session-uri: ${external.oidc.end-session-uri}

@@ -16,6 +16,7 @@ class JwtConfigTest {
 	private companion object {
 		private const val ISSUER = "https://test.oidc.com"
 		private const val AUDIENCE = "client-test"
+		private const val SWAGGER_AUDIENCE = "client-swagger"
 
 		private fun jwt(
 			issuer: String? = ISSUER,
@@ -36,7 +37,7 @@ class JwtConfigTest {
 	private val validator = JwtConfig(
 		jwksUri = "$ISSUER/jwks",
 		issuer = ISSUER,
-		audience = AUDIENCE,
+		audiences = listOf(AUDIENCE, SWAGGER_AUDIENCE),
 	).jwtValidator()
 
 	@Test
@@ -72,5 +73,37 @@ class JwtConfigTest {
 	@Test
 	fun `Should reject a token carrying no issuer`() {
 		assertTrue(validator.validate(jwt(issuer = null)).hasErrors())
+	}
+
+	/**
+	 * Swagger UI authenticates as its own public client, so its tokens carry a different `aud` than
+	 * the one the frontend obtains through the backend's confidential client. Accepting a single
+	 * audience would reject every "try it out" call.
+	 */
+	@Test
+	fun `Should accept a token issued for the Swagger client`() {
+		assertFalse(validator.validate(jwt(audience = listOf(SWAGGER_AUDIENCE))).hasErrors())
+	}
+
+	/**
+	 * Authentik emits `aud` as a **plain string**, not an array — `id_token.aud = provider.client_id`
+	 * in its source, confirmed by decoding a real token from the blueprinted local stack. Spring
+	 * normalises a scalar claim into a single-element list, and this test pins that behaviour: were
+	 * it to change, every login would break with no other test noticing.
+	 */
+	@Test
+	fun `Should accept a token whose audience is a bare string rather than a list`() {
+		val issuedAt = Instant.now()
+		val jwt = Jwt.withTokenValue("token")
+			.header("alg", "RS256")
+			.claim(SUB, "5c042096-a49e-4d87-bddc-26c6a4260786")
+			.claim(ISS, ISSUER)
+			.claim(AUD, AUDIENCE)
+			.claim(EXP, issuedAt.plus(5, ChronoUnit.MINUTES))
+			.issuedAt(issuedAt)
+			.build()
+
+		assertEquals(listOf(AUDIENCE), jwt.audience)
+		assertFalse(validator.validate(jwt).hasErrors())
 	}
 }

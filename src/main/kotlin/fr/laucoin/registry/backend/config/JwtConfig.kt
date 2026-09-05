@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.config
 
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -33,9 +34,10 @@ class JwtConfig(
 	private val jwksUri: String,
 	@param:Value($$"${registry.security.oauth2.issuer}")
 	private val issuer: String,
-	@param:Value($$"${registry.security.oauth2.audience}")
-	private val audience: String,
+	@param:Value($$"${registry.security.oauth2.audiences}")
+	private val audiences: List<String>,
 ) {
+	private val log = LoggerFactory.getLogger(this::class.java)
 
 	@Bean
 	fun jwtValidator(): OAuth2TokenValidator<Jwt> = DelegatingOAuth2TokenValidator(
@@ -44,14 +46,31 @@ class JwtConfig(
 	)
 
 	/**
-	 * Rejects a token whose `aud` claim does not name this application. The claim is absent on some
-	 * providers, so it is treated as nullable rather than trusted to be present.
+	 * Rejects a token whose `aud` claim names none of this deployment's clients.
+	 *
+	 * Several clients legitimately reach the same API — the frontend goes through the backend's
+	 * confidential client, while Swagger UI authenticates as its own — so the claim is matched
+	 * against a list rather than a single value. The claim is absent on some providers, so it is
+	 * treated as nullable rather than trusted to be present.
+	 *
+	 * A rejection names the audience the token actually carried. Without that, a provider whose
+	 * `aud` does not match the configuration produces nothing but silent 401s, and the operator has
+	 * no way to discover which value to configure.
 	 */
 	private fun audienceValidator() = OAuth2TokenValidator<Jwt> { jwt ->
-		if (jwt.audience?.contains(audience) == true) OAuth2TokenValidatorResult.success()
-		else OAuth2TokenValidatorResult.failure(
-			OAuth2Error(INVALID_TOKEN, "The required audience \"$audience\" is missing", null)
-		)
+		val presented = jwt.audience.orEmpty()
+		if (presented.any(audiences::contains)) OAuth2TokenValidatorResult.success()
+		else {
+			log.warn(
+				"Rejecting a token issued for audience {}: none of the accepted audiences {} is present. "
+					+ "If the identity provider is correct, add the presented value to \"registry.security.oauth2.audiences\".",
+				presented,
+				audiences,
+			)
+			OAuth2TokenValidatorResult.failure(
+				OAuth2Error(INVALID_TOKEN, "The token audience $presented names none of $audiences", null)
+			)
+		}
 	}
 
 	@Bean
