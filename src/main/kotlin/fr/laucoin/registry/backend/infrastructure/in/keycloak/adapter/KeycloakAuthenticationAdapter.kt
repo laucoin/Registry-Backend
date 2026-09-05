@@ -36,11 +36,21 @@ class KeycloakAuthenticationAdapter(
 
 	private companion object {
 		private const val RESPONSE_TYPE = "code"
+
+		/**
+		 * Requested explicitly, because the provider grants nothing by default.
+		 *
+		 * `email` and `profile` carry the claims TokenConverterService requires — without them the
+		 * conversion fails on a missing email. `offline_access` is what makes Authentik issue a
+		 * refresh token at all; without it the session simply ends when the access token expires.
+		 */
+		private const val SCOPE = "openid profile email offline_access"
 	}
 
 	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
 		return AuthenticationUriModel(
-			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=$redirectUri"
+			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId"
+				+ "&scope=${SCOPE.replace(" ", "%20")}&redirect_uri=$redirectUri"
 		)
 	}
 

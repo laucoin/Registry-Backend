@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
@@ -51,7 +52,8 @@ class KeycloakAuthenticationAdapterTest {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val expected =
-			"${mockWebServer.url("/protocol/openid-connect/auth")}?response_type=code&client_id=clientId&redirect_uri=redirectUri"
+			"${mockWebServer.url("/protocol/openid-connect/auth")}?response_type=code&client_id=clientId" +
+				"&scope=openid%20profile%20email%20offline_access&redirect_uri=redirectUri"
 
 		// Act
 		val result = adapter.getLoginUri(redirectUri)
@@ -105,6 +107,41 @@ class KeycloakAuthenticationAdapterTest {
 		assertEquals("refreshToken", result.refreshToken)
 		assertEquals(3600, result.expiresIn)
 		assertEquals(18000, result.refreshExpiresIn)
+	}
+
+	/**
+	 * The response as Authentik actually sends it. Its `views/token.py` builds the body from
+	 * `access_token`, `token_type`, `scope`, `expires_in` and `id_token`, and adds `refresh_token`
+	 * only when `offline_access` was requested — `refresh_expires_in` is a Keycloak field it never
+	 * emits. Declaring either as required made every exchange fail to decode, which is why this
+	 * fixture is verbatim rather than tidied up.
+	 */
+	@Test
+	fun `Should accept a token response carrying neither refresh token nor refresh lifetime`() {
+		// Arrange
+		val responseBody = """{
+            "access_token": "accessToken",
+            "token_type": "Bearer",
+            "scope": "openid profile email",
+            "expires_in": 3600,
+            "id_token": "anIdToken"
+        }"""
+		mockWebServer.enqueue(
+			MockResponse()
+				.setBody(responseBody)
+				.setResponseCode(200)
+				.setHeader("Content-Type", "application/json")
+		)
+
+		// Act
+		val result = adapter.getAuthenticationToken("authorizationCode", "redirectUri").block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals("accessToken", result.accessToken)
+		assertEquals(3600, result.expiresIn)
+		assertNull(result.refreshToken)
+		assertNull(result.refreshExpiresIn)
 	}
 
 	@Test

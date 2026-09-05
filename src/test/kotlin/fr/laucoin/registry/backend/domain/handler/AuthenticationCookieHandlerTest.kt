@@ -75,6 +75,35 @@ class AuthenticationCookieHandlerTest {
 	 * Local development runs without TLS, so `Secure` has to be configurable — a `Secure` cookie
 	 * over plain http is simply dropped, and every sign-in would silently fail.
 	 */
+	/**
+	 * Authentik issues no refresh token unless `offline_access` was requested. Writing an empty
+	 * cookie would look like a session that can be renewed and fail confusingly on the first
+	 * attempt; leaving it out makes the session simply end when the access token expires.
+	 */
+	@Test
+	fun `Should write no refresh cookie when the provider issued no refresh token`() {
+		val exchange = exchange()
+
+		handler().write(exchange, token.copy(refreshToken = null, refreshExpiresIn = null))
+
+		assertEquals(ACCESS_TOKEN, exchange.cookie(ACCESS_TOKEN_COOKIE).value)
+		assertNull(exchange.response.cookies.getFirst(REFRESH_TOKEN_COOKIE))
+	}
+
+	/**
+	 * A provider that issues a refresh token without stating its lifetime gets a session cookie —
+	 * dropped when the browser closes, which is exactly what `sessionStorage` did before this
+	 * change. Inventing an expiry the provider never stated would be worse.
+	 */
+	@Test
+	fun `Should write a session cookie when the refresh lifetime is unknown`() {
+		val exchange = exchange()
+
+		handler().write(exchange, token.copy(refreshExpiresIn = null))
+
+		assertEquals(Duration.ofSeconds(-1), exchange.cookie(REFRESH_TOKEN_COOKIE).maxAge)
+	}
+
 	@Test
 	fun `Should allow an insecure cookie for local development`() {
 		val exchange = exchange()

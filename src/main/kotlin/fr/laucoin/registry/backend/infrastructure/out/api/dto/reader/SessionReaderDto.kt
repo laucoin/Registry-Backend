@@ -8,5 +8,6 @@ package fr.laucoin.registry.backend.infrastructure.out.api.dto.reader
  */
 data class SessionReaderDto(
 	val expiresIn: Long,
-	val refreshExpiresIn: Long,
+	/** Null when the provider stated no refresh lifetime, or issued no refresh token at all. */
+	val refreshExpiresIn: Long? = null,
 )

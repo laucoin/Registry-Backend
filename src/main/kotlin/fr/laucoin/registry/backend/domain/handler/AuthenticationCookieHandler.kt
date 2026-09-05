@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.handler
 
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import java.time.Duration
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Component
@@ -26,6 +27,8 @@ class AuthenticationCookieHandler(
 	@param:Value($$"${registry.security.cookie.same-site:Lax}")
 	private val sameSite: String,
 ) {
+	private val log = LoggerFactory.getLogger(this::class.java)
+
 	companion object {
 		const val ACCESS_TOKEN_COOKIE = "registry_token"
 		const val REFRESH_TOKEN_COOKIE = "registry_refresh"
@@ -46,6 +49,19 @@ class AuthenticationCookieHandler(
 		exchange.response.addCookie(
 			cookie(ACCESS_TOKEN_COOKIE, token.accessToken, ROOT_PATH, sameSite, token.expiresIn)
 		)
+
+		if (token.refreshToken == null) {
+			// Nothing to renew with. The session still works until the access token expires, so this
+			// is a warning rather than a failure — but it is almost always a missing `offline_access`
+			// scope, and without this line the symptom is an unexplained sign-out later on.
+			log.warn(
+				"The provider issued no refresh token, so the session cannot be renewed and will end "
+					+ "when the access token expires. Check that \"offline_access\" is among the requested "
+					+ "scopes and granted by the provider."
+			)
+			return
+		}
+
 		exchange.response.addCookie(
 			cookie(REFRESH_TOKEN_COOKIE, token.refreshToken, REFRESH_TOKEN_PATH, STRICT, token.refreshExpiresIn)
 		)
@@ -60,17 +76,20 @@ class AuthenticationCookieHandler(
 	 * domain **and** path, so the attributes here have to mirror [write] exactly.
 	 */
 	fun clear(exchange: ServerWebExchange) {
-		exchange.response.addCookie(cookie(ACCESS_TOKEN_COOKIE, "", ROOT_PATH, sameSite, maxAge = 0))
-		exchange.response.addCookie(cookie(REFRESH_TOKEN_COOKIE, "", REFRESH_TOKEN_PATH, STRICT, maxAge = 0))
+		exchange.response.addCookie(cookie(ACCESS_TOKEN_COOKIE, "", ROOT_PATH, sameSite, maxAge = 0L))
+		exchange.response.addCookie(cookie(REFRESH_TOKEN_COOKIE, "", REFRESH_TOKEN_PATH, STRICT, maxAge = 0L))
 	}
 
-	private fun cookie(name: String, value: String, path: String, sameSite: String, maxAge: Long): ResponseCookie {
+	private fun cookie(name: String, value: String, path: String, sameSite: String, maxAge: Long?): ResponseCookie {
 		val builder = ResponseCookie.from(name, value)
 			.httpOnly(true)
 			.secure(secure)
 			.sameSite(sameSite)
 			.path(path)
-			.maxAge(Duration.ofSeconds(maxAge))
+			// An unknown lifetime makes it a session cookie, dropped when the browser closes. That is
+			// what sessionStorage did before this change, so nothing regresses — and it beats inventing
+			// an expiry the provider never stated.
+			.maxAge(maxAge?.let(Duration::ofSeconds) ?: Duration.ofSeconds(-1))
 
 		// An empty domain would be written out as `Domain=`, which browsers reject. Leaving the
 		// attribute off makes the cookie host-only, which is what local development wants.
