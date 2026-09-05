@@ -63,6 +63,10 @@ registry:
         months-threshold: 12
   security:
     default-role: "USER"
+    cookie:
+      domain: registry.test.com
+      secure: true
+      same-site: Lax
     oauth2:
       jwks-uri: ${external.oidc.jwks-uri}
       authorization-uri: ${external.oidc.authorization-uri}
