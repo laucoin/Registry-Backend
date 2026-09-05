@@ -74,6 +74,9 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 9000 for the identity provider instance)
 -Dregistry.feature.documentation.enabled=false # true only for development
 -Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
+-Dexternal.cookie.domain=<cookie-domain> # Optional, host-only when unset. For example: registry.laucoin.fr — covers backend.registry.laucoin.fr without exposing the cookie to unrelated subdomains
+-Dexternal.cookie.secure=true # Set to false ONLY for local development without TLS: a Secure cookie over plain http is dropped and every sign-in fails silently
+-Dexternal.cookie.same-site=Lax # SameSite of the access cookie; the refresh cookie is always Strict
 ```
 
 > [!IMPORTANT]
