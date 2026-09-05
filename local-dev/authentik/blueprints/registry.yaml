@@ -89,6 +89,10 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
         - !KeyOf mapping-email
         - !KeyOf mapping-profile
+        # Without it Authentik issues no refresh token at all, and the session simply ends
+        # when the access token expires — see views/token.py, which adds `refresh_token` to
+        # the response only when this scope was requested.
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, offline_access]]
       redirect_uris:
         - matching_mode: strict
           url: !Env [IDP_FRONTEND_REDIRECT_URI, "http://localhost:3000/auth/callback"]
