@@ -51,6 +51,10 @@ class AuthenticationCookieHandler(
 		)
 	}
 
+	/** The refresh token as the browser sent it, or `null` when there is no usable session. */
+	fun readRefreshToken(exchange: ServerWebExchange): String? =
+		exchange.request.cookies.getFirst(REFRESH_TOKEN_COOKIE)?.value?.takeIf { it.isNotBlank() }
+
 	/**
 	 * Expires both cookies. A browser only drops a cookie when the replacement matches its name,
 	 * domain **and** path, so the attributes here have to mirror [write] exactly.
