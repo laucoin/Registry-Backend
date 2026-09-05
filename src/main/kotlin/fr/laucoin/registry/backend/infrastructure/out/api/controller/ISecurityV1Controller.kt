@@ -4,9 +4,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT
 import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.RefreshAuthenticationInfoModel
-import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CurrentUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.SessionReaderDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
 @Tag(name = "Security management", description = "API for security operations")
@@ -37,18 +37,23 @@ interface ISecurityV1Controller {
 	fun getLogoutUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
 
 	@Operation(
-		summary = "Fetch token from code",
-		description = "Return OAuth2 provider token from authorization code",
+		summary = "Open a session from an authorization code",
+		description = "Exchange the code with the provider and set the session cookies. The tokens are "
+			+ "not returned in the body: they are written as HttpOnly cookies, out of reach of any script.",
 	)
 	@PostMapping("/token")
-	fun fetchToken(@RequestBody @Valid authenticationInfo: AuthenticationInfoModel): Mono<TokenModel>
+	fun fetchToken(
+		exchange: ServerWebExchange,
+		@RequestBody @Valid authenticationInfo: AuthenticationInfoModel,
+	): Mono<SessionReaderDto>
 
 	@Operation(
-		summary = "Fetch token from refresh token",
-		description = "Return OAuth2 provider token from refresh token",
+		summary = "Renew the session",
+		description = "Read the refresh token from its cookie, renew it with the provider and set the "
+			+ "session cookies again. Takes no request body.",
 	)
 	@PostMapping("/token/refresh")
-	fun refreshToken(@RequestBody @Valid refreshAuthenticationInfo: RefreshAuthenticationInfoModel): Mono<TokenModel>
+	fun refreshToken(exchange: ServerWebExchange): Mono<SessionReaderDto>
 
 	@Operation(
 		summary = "Get Current User",
