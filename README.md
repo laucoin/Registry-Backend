@@ -81,16 +81,37 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 ### Local identity provider
 
 `local-dev/authentik/blueprints/registry.yaml` provisions everything the identity provider needs on
-startup — both OAuth2 clients, their applications, and a non-admin `registry-dev` account — so a
-fresh `docker compose up` yields a working login with no clicking through the Authentik UI. Authentik
-re-applies the blueprint whenever the file changes.
+startup — the OAuth2 client, its application, two scope mappings and six test personas — so a fresh
+`docker compose up` yields a working login with no clicking through the Authentik UI. Authentik
+re-applies the blueprint whenever the file changes, matching the provider on `client_id` and users on
+`username`, so it updates in place instead of duplicating.
 
-Two settings in it are load-bearing and easy to get wrong when configuring a provider by hand:
+> [!WARNING]
+> Applying the blueprint sets the password of all six personas to `AU_DEV_PASSWORD`.
 
-- **`sub_mode: user_uuid`.** The backend reads `sub` straight into `UUID.fromString`. Authentik's
-  default (`hashed_user_id`) is not a UUID and every sign-in would fail.
-- **`signing_key`.** Without it Authentik signs with HS256 and serves an empty JWKS, so the resource
-  server cannot validate anything. The blueprint binds the self-signed certificate Authentik ships.
+Four settings in it are load-bearing and easy to get wrong when configuring by hand:
+
+- **`sub_mode: user_uuid`** — the backend reads `sub` straight into `UUID.fromString`. Authentik's
+  default (`hashed_user_id`) is not a UUID and every sign-in fails.
+- **`signing_key`** — without it Authentik signs with HS256 and serves an empty JWKS, so the resource
+  server cannot validate anything.
+- **`grant_types`** — explicit since Authentik 2026.5. The field defaults to an empty list, which
+  refuses every token request with *Invalid grant_type for provider*.
+- **The two local scope mappings.** Authentik stores a single `name` field, so its stock `profile`
+  mapping puts the *full* name in `given_name` and emits no `family_name` — while
+  `TokenConverterService` reads both. The local mappings read them from user attributes instead, and
+  drive `email_verified` from an attribute rather than hardcoding `False`.
+
+#### Test personas
+
+| Username | Name | Purpose |
+| -------- | ---- | ------- |
+| `administrator` | Jane SMITH | Platform administration |
+| `coordinator` | John DOE | Project-level management |
+| `participant` | Charles PINA | Ground-level staff |
+| `blocked-user` | Aliyah NIELSEN | Blocked in Registry — the provider still issues a token, the rejection happens at JWT conversion |
+| `blocked-profile` | Emil BRADFORD | Account fine, project profile blocked |
+| `unverified` | Nina VOGEL | Carries `email_verified: false` |
 
 Decoding a real token from this stack gives the values the backend expects:
 
@@ -103,8 +124,9 @@ Decoding a real token from this stack gives the values the backend expects:
 > [!WARNING]
 > `docker-entrypoint-initdb.d` scripts run **only on an empty data directory**. If
 > `local-dev/postgres/data` already exists from an earlier run, the `registry` and `authentik`
-> databases are never created and Authentik loops on `password authentication failed`. Remove the
-> directory and start again — that is the only recovery, and it discards local data.
+> databases are never created and Authentik loops on `password authentication failed`. Recreating
+> just the `authentik` database is enough to recover, and leaves the `registry` data alone —
+> the blueprint reprovisions the identity provider from scratch.
 
 > [!IMPORTANT]
 > **Secrets** (`registry.datasource.password`, `external.oidc.client-secret`) must
