@@ -64,6 +64,8 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dregistry.datasource.username=<database-username> # For example: postgres
 -Dregistry.datasource.password=<database-username> # For example: postgres
 -Dexternal.oidc.jwks-uri=<oidc-jwks-uri> # For example: http://localhost:9000/application/o/registry/jwks
+-Dexternal.oidc.issuer=<oidc-issuer> # REQUIRED. The `iss` claim every accepted token must carry. For example: http://localhost:9000/application/o/registry/
+-Dexternal.oidc.audience=<oidc-audience> # Optional, defaults to external.oidc.client-id. The `aud` claim every accepted token must contain
 -Dexternal.oidc.authorization-uri=<oidc-authorization-endpoint> # For example: http://localhost:9000/application/o/authorize
 -Dexternal.oidc.token-uri=<oidc-token-endpoint> # For example: http://localhost:9000/application/o/token
 -Dexternal.oidc.end-session-uri=<oidc-end-session-endpoint> # For example: http://localhost:9000/application/o/registry/end-session

@@ -60,6 +60,8 @@ registry:
     default-role: USER
     oauth2:
       jwks-uri: ${external.oidc.jwks-uri}
+      issuer: ${external.oidc.issuer}
+      audience: ${external.oidc.audience:${external.oidc.client-id}}
       authorization-uri: ${external.oidc.authorization-uri}
       token-uri: ${external.oidc.token-uri}
       end-session-uri: ${external.oidc.end-session-uri}
