@@ -8,9 +8,14 @@ function create_user_and_database() {
     echo "  Creating user and database '$database'"
 
     # 1. Create the user and database as the superuser, setting the user as the owner of the database
+    # Guarded so the script stays safe to re-run by hand against an existing cluster —
+    # `docker-entrypoint-initdb.d` only runs on an empty data directory, so recovering a
+    # half-initialised volume otherwise means dropping it.
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-        CREATE USER $database WITH PASSWORD '$POSTGRES_PASSWORD';
-        CREATE DATABASE $database OWNER $database;
+        SELECT 'CREATE USER $database WITH PASSWORD ''$POSTGRES_PASSWORD'''
+            WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$database')\\gexec
+        SELECT 'CREATE DATABASE $database OWNER $database'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$database')\\gexec
         GRANT ALL PRIVILEGES ON DATABASE $database TO $database;
 EOSQL
 

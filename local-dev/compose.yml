@@ -20,7 +20,10 @@ services:
       timeout: 5s
       test:
         - CMD-SHELL
-        - pg_isready -d ${PG_AUTHENTIK_DB} -U ${PG_AUTHENTIK_DB}
+        # `pg_isready` only proves the server answers — it reports success even when the
+        # database and its user were never created, which silently hides a half-initialised
+        # volume. Query the database as its own user instead.
+        - psql -U ${PG_AUTHENTIK_DB} -d ${PG_AUTHENTIK_DB} -c 'SELECT 1' > /dev/null
 
   registry-authentik-server:
     image: ghcr.io/goauthentik/server:2026.5

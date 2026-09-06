@@ -1,0 +1,239 @@
+# Provisions everything Registry needs from the identity provider, so that a fresh
+# `docker compose up` yields a working login and the full set of test personas without a
+# single click in the Authentik UI.
+#
+# Authentik's worker applies every file mounted under /blueprints/custom and re-applies it
+# on change. Entries are matched on their `identifiers`, so this updates existing objects
+# rather than duplicating them — the provider is matched on `client_id` and users on
+# `username`, both stable natural keys.
+#
+# WARNING: applying this sets the password of all six test accounts to AU_DEV_PASSWORD.
+version: 1
+metadata:
+  name: Registry — OAuth2 provider, application and test personas
+
+entries:
+  # ---------------------------------------------------------------------- scope mappings
+  # Authentik has no concept of first and last names — it stores one `name` field, and its
+  # stock `profile` mapping therefore puts the *full* name in `given_name` and emits no
+  # `family_name` at all. TokenConverterService reads both claims
+  # (registry.security.oauth2.claims.*), so it would provision every user with the full name
+  # as their first name and no surname. These mappings read the two attributes instead.
+  - id: mapping-profile
+    model: authentik_providers_oauth2.scopemapping
+    identifiers:
+      name: Registry local profile
+    attrs:
+      scope_name: profile
+      description: First and last names read from user attributes, as Registry expects
+      expression: |
+        return {
+            "name": request.user.name,
+            "given_name": request.user.attributes.get("given_name", request.user.name),
+            "family_name": request.user.attributes.get("family_name", ""),
+            "preferred_username": request.user.username,
+            "nickname": request.user.username,
+        }
+
+  # The stock `email` mapping hardcodes `email_verified: False`. Defaulting to True keeps
+  # every persona usable while letting a single account opt out through its attributes,
+  # which is what makes the `unverified` persona below meaningful.
+  - id: mapping-email
+    model: authentik_providers_oauth2.scopemapping
+    identifiers:
+      name: Registry local email
+    attrs:
+      scope_name: email
+      description: Email with a verification flag driven by user attributes
+      expression: |
+        return {
+            "email": request.user.email,
+            "email_verified": request.user.attributes.get("email_verified", True),
+        }
+
+  # ---------------------------------------------------------------------------- provider
+  # A single confidential client serves both the SPA and the Swagger UI; they differ only by
+  # redirect URI. `external.oidc.client-id` and `external.oidc.swagger.client-id` may be set
+  # to different clients in other environments, which is why the backend accepts a list of
+  # audiences rather than one value.
+  - id: provider-registry
+    model: authentik_providers_oauth2.oauth2provider
+    identifiers:
+      client_id: !Env [IDP_PRIVATE_CLIENT_ID, registry]
+    attrs:
+      name: registry
+      client_type: confidential
+      client_secret: !Env [IDP_PRIVATE_CLIENT_SECRET, ""]
+      # `sub` must parse as a UUID: the backend reads it straight into UUID.fromString.
+      # Authentik's default (hashed_user_id) is not a UUID and every sign-in would fail.
+      sub_mode: user_uuid
+      # Registry validates signatures against the JWKS endpoint, so tokens must be signed
+      # asymmetrically. Without a signing key Authentik falls back to HS256 and the JWKS
+      # endpoint serves nothing.
+      signing_key:
+        !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      # Explicit since Authentik 2026.5: the field defaults to an empty list, and an empty
+      # list refuses every token request with "Invalid grant_type for provider".
+      grant_types:
+        - authorization_code
+        - refresh_token
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      # The stock `openid` mapping carries no claims and is required by the spec; `email`
+      # and `profile` are the local ones above, replacing Authentik's defaults rather than
+      # sitting alongside them — two mappings on the same scope would merge in an
+      # unspecified order.
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
+        - !KeyOf mapping-email
+        - !KeyOf mapping-profile
+        # Without it Authentik issues no refresh token at all, and the session simply ends
+        # when the access token expires — see views/token.py, which adds `refresh_token` to
+        # the response only when this scope was requested.
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, offline_access]]
+      redirect_uris:
+        - matching_mode: strict
+          url: !Env [IDP_FRONTEND_REDIRECT_URI, "http://localhost:3000/auth/callback"]
+
+  - id: app-registry
+    model: authentik_core.application
+    identifiers:
+      slug: registry
+    attrs:
+      name: Registry
+      provider: !KeyOf provider-registry
+
+  # ------------------------------------------------------------------- Swagger UI (public)
+  # Swagger runs in a browser and holds no secret, so it cannot be the backend's confidential
+  # client: the provider would refuse it at the token endpoint for failing to authenticate.
+  # A public client with PKCE is the shape that fits, and it gives Swagger an `aud` of its own —
+  # which is why the backend accepts a list of audiences rather than a single value.
+  - id: provider-swagger
+    model: authentik_providers_oauth2.oauth2provider
+    identifiers:
+      client_id: !Env [IDP_PUBLIC_CLIENT_ID, registry-swagger]
+    attrs:
+      name: registry-swagger
+      client_type: public
+      sub_mode: user_uuid
+      signing_key:
+        !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      grant_types:
+        - authorization_code
+        - refresh_token
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
+        - !KeyOf mapping-email
+        - !KeyOf mapping-profile
+      redirect_uris:
+        # The UI moved to the management port, and so did its callback.
+        - matching_mode: strict
+          url: !Env
+            - IDP_SWAGGER_REDIRECT_URI
+            - "http://localhost:8082/actuator/swagger-ui/oauth2-redirect.html"
+
+  - id: app-swagger
+    model: authentik_core.application
+    identifiers:
+      slug: registry-swagger
+    attrs:
+      name: Registry Swagger
+      provider: !KeyOf provider-swagger
+
+  # ------------------------------------------------------------------------ test personas
+  # One account per case the backend has to handle. `given_name` and `family_name` are read
+  # by TokenConverterService through registry.security.oauth2.claims.*, so they must be set
+  # as attributes rather than left to Authentik's single `name` field.
+  #
+  # First sign-in auto-provisions the matching Registry user with the default USER role;
+  # the roles below are then assigned inside Registry, not here.
+  - &persona
+    id: user-administrator
+    model: authentik_core.user
+    identifiers:
+      username: administrator
+    attrs: &persona_attrs
+      name: Jane SMITH
+      email: administrator@sgdf.fr
+      # Scalar form on purpose: no fallback value. A default here would be a known password
+      # for six accounts, committed to the repository — which is what it looks like, because
+      # that is what it would be. Unset, the accounts get no usable password and the developer
+      # is pointed at AU_DEV_PASSWORD in .example.env.
+      password: !Env AU_DEV_PASSWORD
+      is_active: true
+      path: users
+      attributes:
+        given_name: Jane
+        family_name: SMITH
+
+  - <<: *persona
+    id: user-coordinator
+    identifiers:
+      username: coordinator
+    attrs:
+      <<: *persona_attrs
+      name: John DOE
+      email: coordinator@sgdf.fr
+      attributes:
+        given_name: John
+        family_name: DOE
+
+  - <<: *persona
+    id: user-participant
+    identifiers:
+      username: participant
+    attrs:
+      <<: *persona_attrs
+      name: Charles PINA
+      email: participant@sgdf.fr
+      attributes:
+        given_name: Charles
+        family_name: PINA
+
+  # Exercises the AUTH_BLOCKED_ACCOUNT path: blocked inside Registry, not in Authentik, so
+  # the provider still issues a token and the rejection happens at JWT conversion.
+  - <<: *persona
+    id: user-blocked-user
+    identifiers:
+      username: blocked-user
+    attrs:
+      <<: *persona_attrs
+      name: Aliyah NIELSEN
+      email: blocked-user@sgdf.fr
+      attributes:
+        given_name: Aliyah
+        family_name: NIELSEN
+
+  # Same idea one level down: the account is fine, its project profile is blocked.
+  - <<: *persona
+    id: user-blocked-profile
+    identifiers:
+      username: blocked-profile
+    attrs:
+      <<: *persona_attrs
+      name: Emil BRADFORD
+      email: blocked-profile@sgdf.fr
+      attributes:
+        given_name: Emil
+        family_name: BRADFORD
+
+  # Carries `email_verified: false`. The backend does not read that claim today — it trusts
+  # the email for identity linking regardless — so this persona is the fixture for that gap.
+  - <<: *persona
+    id: user-unverified
+    identifiers:
+      username: unverified
+    attrs:
+      <<: *persona_attrs
+      name: Nina VOGEL
+      email: unverified@sgdf.fr
+      attributes:
+        given_name: Nina
+        family_name: VOGEL
+        email_verified: false

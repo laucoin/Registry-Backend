@@ -64,6 +64,8 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dregistry.datasource.username=<database-username> # For example: postgres
 -Dregistry.datasource.password=<database-username> # For example: postgres
 -Dexternal.oidc.jwks-uri=<oidc-jwks-uri> # For example: http://localhost:9000/application/o/registry/jwks
+-Dexternal.oidc.issuer=<oidc-issuer> # REQUIRED. The `iss` claim every accepted token must carry — mind the trailing slash. For example: http://localhost:9000/application/o/registry/
+-Dexternal.oidc.audiences=<oidc-audiences> # Optional, comma-separated. Defaults to the backend and Swagger client ids. Accepted values of the `aud` claim
 -Dexternal.oidc.authorization-uri=<oidc-authorization-endpoint> # For example: http://localhost:9000/application/o/authorize
 -Dexternal.oidc.token-uri=<oidc-token-endpoint> # For example: http://localhost:9000/application/o/token
 -Dexternal.oidc.end-session-uri=<oidc-end-session-endpoint> # For example: http://localhost:9000/application/o/registry/end-session
@@ -75,6 +77,56 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dregistry.feature.documentation.enabled=false # true only for development
 -Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
 ```
+
+### Local identity provider
+
+`local-dev/authentik/blueprints/registry.yaml` provisions everything the identity provider needs on
+startup — the OAuth2 client, its application, two scope mappings and six test personas — so a fresh
+`docker compose up` yields a working login with no clicking through the Authentik UI. Authentik
+re-applies the blueprint whenever the file changes, matching the provider on `client_id` and users on
+`username`, so it updates in place instead of duplicating.
+
+> [!WARNING]
+> Applying the blueprint sets the password of all six personas to `AU_DEV_PASSWORD`.
+
+Four settings in it are load-bearing and easy to get wrong when configuring by hand:
+
+- **`sub_mode: user_uuid`** — the backend reads `sub` straight into `UUID.fromString`. Authentik's
+  default (`hashed_user_id`) is not a UUID and every sign-in fails.
+- **`signing_key`** — without it Authentik signs with HS256 and serves an empty JWKS, so the resource
+  server cannot validate anything.
+- **`grant_types`** — explicit since Authentik 2026.5. The field defaults to an empty list, which
+  refuses every token request with *Invalid grant_type for provider*.
+- **The two local scope mappings.** Authentik stores a single `name` field, so its stock `profile`
+  mapping puts the *full* name in `given_name` and emits no `family_name` — while
+  `TokenConverterService` reads both. The local mappings read them from user attributes instead, and
+  drive `email_verified` from an attribute rather than hardcoding `False`.
+
+#### Test personas
+
+| Username | Name | Purpose |
+| -------- | ---- | ------- |
+| `administrator` | Jane SMITH | Platform administration |
+| `coordinator` | John DOE | Project-level management |
+| `participant` | Charles PINA | Ground-level staff |
+| `blocked-user` | Aliyah NIELSEN | Blocked in Registry — the provider still issues a token, the rejection happens at JWT conversion |
+| `blocked-profile` | Emil BRADFORD | Account fine, project profile blocked |
+| `unverified` | Nina VOGEL | Carries `email_verified: false` |
+
+Decoding a real token from this stack gives the values the backend expects:
+
+| Claim | Value | Note |
+| ----- | ----- | ---- |
+| `iss` | `http://localhost:9000/application/o/registry/` | Trailing slash included — `external.oidc.issuer` must match exactly |
+| `aud` | `registry` | A bare string, not an array |
+| `sub` | a UUID | Thanks to `sub_mode: user_uuid` |
+
+> [!WARNING]
+> `docker-entrypoint-initdb.d` scripts run **only on an empty data directory**. If
+> `local-dev/postgres/data` already exists from an earlier run, the `registry` and `authentik`
+> databases are never created and Authentik loops on `password authentication failed`. Recreating
+> just the `authentik` database is enough to recover, and leaves the `registry` data alone —
+> the blueprint reprovisions the identity provider from scratch.
 
 > [!IMPORTANT]
 > **Secrets** (`registry.datasource.password`, `external.oidc.client-secret`) must
