@@ -10,9 +10,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
-import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS
-import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN
-import org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS
 import org.springframework.http.HttpHeaders.AUTHORIZATION
 import org.springframework.http.HttpHeaders.CACHE_CONTROL
 import org.springframework.http.HttpHeaders.CONTENT_TYPE
@@ -66,6 +63,9 @@ class SecurityConfig(
 	private companion object {
 		/** Matches `/api/<version>/authentication/token` exactly — never `/token/refresh`. */
 		private val SESSION_OPENING_PATH = Regex("^/api/v\\d+/authentication/token$")
+
+		/** Where the double-submit token comes back; the name Spring's cookie repository expects. */
+		private const val CSRF_HEADER = "X-XSRF-TOKEN"
 	}
 
 	@Bean
@@ -179,15 +179,19 @@ class SecurityConfig(
 			PATCH.name(),
 			OPTIONS.name(),
 		)
+		// Required now that the session travels in cookies: without it the browser sends none of them
+		// cross-origin, and every authenticated call from the SPA fails. It also forbids a wildcard
+		// origin, which is a useful guard on `external.cors.urls`.
 		configuration.allowCredentials = true
 		configuration.allowedHeaders = listOf(
 			AUTHORIZATION,
 			CACHE_CONTROL,
 			CONTENT_TYPE,
 			ACCEPT_LANGUAGE,
-			ACCESS_CONTROL_ALLOW_ORIGIN,
-			ACCESS_CONTROL_ALLOW_HEADERS,
-			ACCESS_CONTROL_EXPOSE_HEADERS,
+			// The CSRF token the SPA reads from its cookie and echoes back. Angular's built-in XSRF
+			// support does not apply — it only attaches the header to same-origin requests, and the
+			// SPA sits on a sibling host — so the interceptor sets it itself.
+			CSRF_HEADER,
 		)
 		val source = UrlBasedCorsConfigurationSource()
 		source.registerCorsConfiguration("/**", configuration)
