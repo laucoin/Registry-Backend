@@ -1,11 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import okhttp3.mockwebserver.MockResponse
@@ -17,6 +20,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.spy
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.Exceptions
@@ -31,7 +35,13 @@ class KeycloakAuthenticationAdapterTest {
 		endSessionUri = "endSessionUri",
 		clientId = "clientId",
 		clientSecret = "clientSecret",
+		allowedOrigins = listOf(ALLOWED_ORIGIN),
 	)
+
+	private companion object {
+		private const val ALLOWED_ORIGIN = "https://app.test"
+		private const val REDIRECT_URI = "$ALLOWED_ORIGIN/auth/callback"
+	}
 
 	@BeforeEach
 	fun setUp() {
@@ -50,10 +60,11 @@ class KeycloakAuthenticationAdapterTest {
 	@Test
 	fun `Should getLoginUri return built auth url`() {
 		// Arrange
-		val redirectUri = "redirectUri"
+		val redirectUri = REDIRECT_URI
 		val expected =
 			"${mockWebServer.url("/protocol/openid-connect/auth")}?response_type=code&client_id=clientId" +
-				"&scope=openid%20profile%20email%20offline_access&redirect_uri=redirectUri"
+				"&scope=openid%20profile%20email%20offline_access" +
+				"&redirect_uri=https://app.test/auth/callback"
 
 		// Act
 		val result = adapter.getLoginUri(redirectUri)
@@ -63,11 +74,50 @@ class KeycloakAuthenticationAdapterTest {
 		assertEquals(expected, result.uri)
 	}
 
+	/**
+	 * The redirect used to be concatenated into the URL unencoded, so an `&` in it added parameters
+	 * of the caller's choosing to the authorization request. Building through UriComponentsBuilder
+	 * escapes it, and the whole value stays one parameter.
+	 */
+	@Test
+	fun `Should not let a redirect URI inject extra authorization parameters`() {
+		// Arrange
+		val hostile = "$ALLOWED_ORIGIN/auth/callback?a=1&prompt=none&client_id=other"
+
+		// Act
+		val result = adapter.getLoginUri(hostile)
+
+		// Assert
+		assertEquals(1, result.uri.split("client_id=").size - 1, "client_id was smuggled in a second time")
+		assertFalse(result.uri.contains("&prompt=none"), "prompt was smuggled in as its own parameter")
+		assertTrue(result.uri.contains("%26prompt%3Dnone"), "the ampersand should have been escaped")
+	}
+
+	@Test
+	fun `Should refuse a redirect URI from another origin`() {
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			adapter.getLoginUri("https://evil.test/auth/callback")
+		}) as RegistryException
+
+		assertEquals(BAD_REQUEST, result.status)
+		assertEquals(REDIRECT_URI_NOT_ALLOWED, result.message)
+	}
+
+	@Test
+	fun `Should refuse a redirect URI carrying no origin at all`() {
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			adapter.getLogoutUri("/auth/callback")
+		}) as RegistryException
+
+		assertEquals(REDIRECT_URI_NOT_ALLOWED, result.message)
+	}
+
 	@Test
 	fun `Should getLogoutUri return built logout url`() {
 		// Arrange
-		val redirectUri = "redirectUri"
-		val expected = "${mockWebServer.url("/protocol/openid-connect/logout")}?redirect_uri=redirectUri"
+		val redirectUri = REDIRECT_URI
+		val expected =
+			"${mockWebServer.url("/protocol/openid-connect/logout")}?redirect_uri=https://app.test/auth/callback"
 
 		// Act
 		val result = adapter.getLogoutUri(redirectUri)
@@ -80,7 +130,7 @@ class KeycloakAuthenticationAdapterTest {
 	@Test
 	fun `Should getAuthenticationToken call keycloak to fetch token 2xx`() {
 		// Arrange
-		val redirectUri = "redirectUri"
+		val redirectUri = REDIRECT_URI
 		val authorizationCode = "authorizationCode"
 
 		val responseBody = """{
@@ -134,7 +184,7 @@ class KeycloakAuthenticationAdapterTest {
 		)
 
 		// Act
-		val result = adapter.getAuthenticationToken("authorizationCode", "redirectUri").block()
+		val result = adapter.getAuthenticationToken("authorizationCode", REDIRECT_URI).block()
 
 		// Assert
 		assertNotNull(result)
@@ -147,7 +197,7 @@ class KeycloakAuthenticationAdapterTest {
 	@Test
 	fun `Should getAuthenticationToken call keycloak to fetch token 4xx`() {
 		// Arrange
-		val redirectUri = "redirectUri"
+		val redirectUri = REDIRECT_URI
 		val authorizationCode = "authorizationCode"
 
 		mockWebServer.enqueue(
@@ -169,7 +219,7 @@ class KeycloakAuthenticationAdapterTest {
 	@Test
 	fun `Should getAuthenticationToken call keycloak to fetch token 5xx`() {
 		// Arrange
-		val redirectUri = "redirectUri"
+		val redirectUri = REDIRECT_URI
 		val authorizationCode = "authorizationCode"
 
 		mockWebServer.enqueue(
