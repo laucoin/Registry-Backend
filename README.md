@@ -72,12 +72,38 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dexternal.oidc.swagger.client-id=<oidc-provider-client-id> # For example: registry
 -Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
 -Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 9000 for the identity provider instance)
+-Dregistry.server.management-port=<port> # Defaults to 8082. Health, metrics and the API documentation are served here, never on the API port — keep it off the public ingress
 -Dregistry.feature.documentation.enabled=false # true only for development
 -Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
 -Dexternal.cookie.domain=<cookie-domain> # Optional, host-only when unset. For example: registry.laucoin.fr — covers backend.registry.laucoin.fr without exposing the cookie to unrelated subdomains
 -Dexternal.cookie.secure=true # Set to false ONLY for local development without TLS: a Secure cookie over plain http is dropped and every sign-in fails silently
 -Dexternal.cookie.same-site=Lax # SameSite of the access cookie; the refresh cookie is always Strict
 ```
+
+### Management port
+
+The application listens on two ports. The API port serves the API and nothing else; health, metrics
+and the API documentation live on a separate management port, so the address exposed publicly carries
+no operational surface at all.
+
+| | API port | Management port |
+| --- | --- | --- |
+| `/api/v1/**` | ✅ | — |
+| `/actuator/health`, `/health/liveness`, `/health/readiness` | — | ✅ |
+| `/actuator/prometheus` | — | ✅ |
+| `/actuator/swagger-ui/index.html` | — | ✅ *(when documentation is enabled)* |
+| `/actuator/openapi/{group}` | — | ✅ *(when documentation is enabled)* |
+
+Point liveness and readiness probes, and the Prometheus scraper, at the management port.
+
+> [!CAUTION]
+> **The management port is unauthenticated on purpose** — a liveness probe and a metrics scraper have
+> no credentials to present. That is only safe while the port stays off the public ingress, which is
+> the entire reason for separating it. Publish the API port; do not publish the management port.
+
+Both features remain individually switchable: `registry.feature.observability.enabled` and
+`registry.feature.documentation.enabled`. With both off, the management port answers `401` — the
+endpoints are governed by the same security chain as the API.
 
 > [!IMPORTANT]
 > **Secrets** (`registry.datasource.password`, `external.oidc.client-secret`) must
