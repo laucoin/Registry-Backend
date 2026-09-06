@@ -36,7 +36,6 @@ import org.springframework.security.web.server.csrf.CsrfWebFilter
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult
-import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
@@ -73,11 +72,10 @@ class SecurityConfig(
 	fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
 		return http
 			.configureCsrf()
-			.handleHeaders()
+			.addLocaleFilter()
 			.addFilterAt(csrfTokenHandler, CSRF)
 			.configureResourceAccess()
 			.disableAuthForm()
-			.configureLogout()
 			.configureOAuth2Server()
 			.handleException()
 			.build()
@@ -129,7 +127,8 @@ class SecurityConfig(
 		}
 	}
 
-	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
+	/** Named for what it does: [HeadersHandler] resolves the request locale, it sets no headers. */
+	private fun ServerHttpSecurity.addLocaleFilter() = addFilterBefore(headersHandler, FIRST)
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
 		if (documentationEnabled) {
@@ -145,12 +144,6 @@ class SecurityConfig(
 	}
 
 	private fun ServerHttpSecurity.disableAuthForm() = formLogin { it.disable() }
-
-	private fun ServerHttpSecurity.configureLogout() = logout {
-		val logoutUrl = "/logout"
-		it.logoutUrl(logoutUrl)
-		it.requiresLogout(ServerWebExchangeMatchers.pathMatchers(GET, *arrayOf(logoutUrl)))
-	}
 
 	private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
 		resourceServer.authenticationFailureHandler(authorizationErrorHandler)
