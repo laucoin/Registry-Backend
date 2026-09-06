@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.handler
 
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import java.time.Duration
 import org.slf4j.LoggerFactory
@@ -36,6 +37,18 @@ class AuthenticationCookieHandler(
 		/** The refresh cookie is sent to `/token` and `/token/refresh`, and nowhere else. */
 		const val REFRESH_TOKEN_PATH = "/api/v1/authentication/token"
 
+		const val STATE_COOKIE = "registry_state"
+		const val CODE_VERIFIER_COOKIE = "registry_verifier"
+
+		/** The challenge cookies are only ever read back by the token exchange. */
+		const val AUTHENTICATION_PATH = "/api/v1/authentication"
+
+		/**
+		 * How long a sign-in may take. Long enough for a password manager, a second factor and a
+		 * moment of hesitation; short enough that an abandoned attempt stops being usable.
+		 */
+		private const val CHALLENGE_MAX_AGE = 600L
+
 		private const val ROOT_PATH = "/"
 
 		/**
@@ -66,6 +79,38 @@ class AuthenticationCookieHandler(
 			cookie(REFRESH_TOKEN_COOKIE, token.refreshToken, REFRESH_TOKEN_PATH, STRICT, token.refreshExpiresIn)
 		)
 	}
+
+	/**
+	 * Remembers the challenge for the length of the round trip to the provider.
+	 *
+	 * Held in cookies rather than server-side so the backend stays stateless and survives a restart
+	 * mid-login. `Strict` throughout: nothing legitimately arrives at the token exchange from another
+	 * site, and these two values are precisely what an attacker would need to forge one.
+	 */
+	fun writeChallenge(exchange: ServerWebExchange, challenge: AuthorizationChallengeModel) {
+		exchange.response.addCookie(
+			cookie(STATE_COOKIE, challenge.state, AUTHENTICATION_PATH, STRICT, CHALLENGE_MAX_AGE)
+		)
+		exchange.response.addCookie(
+			cookie(CODE_VERIFIER_COOKIE, challenge.codeVerifier, AUTHENTICATION_PATH, STRICT, CHALLENGE_MAX_AGE)
+		)
+	}
+
+	fun readState(exchange: ServerWebExchange): String? = read(exchange, STATE_COOKIE)
+
+	fun readCodeVerifier(exchange: ServerWebExchange): String? = read(exchange, CODE_VERIFIER_COOKIE)
+
+	/**
+	 * Expires the challenge cookies. A challenge is good for exactly one exchange, so they go whether
+	 * it succeeded or failed — a verifier left behind is a replay waiting to happen.
+	 */
+	fun clearChallenge(exchange: ServerWebExchange) {
+		exchange.response.addCookie(cookie(STATE_COOKIE, "", AUTHENTICATION_PATH, STRICT, maxAge = 0L))
+		exchange.response.addCookie(cookie(CODE_VERIFIER_COOKIE, "", AUTHENTICATION_PATH, STRICT, maxAge = 0L))
+	}
+
+	private fun read(exchange: ServerWebExchange, name: String): String? =
+		exchange.request.cookies.getFirst(name)?.value?.takeIf { it.isNotBlank() }
 
 	/** The refresh token as the browser sent it, or `null` when there is no usable session. */
 	fun readRefreshToken(exchange: ServerWebExchange): String? =

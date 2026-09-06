@@ -65,12 +65,12 @@ class SecurityCsrfTest: TestContext() {
 	 */
 	@Test
 	fun `Should allow opening a session without a CSRF token`() {
-		whenever(authenticationPort.getAuthenticationToken(any(), any())).thenReturn(Mono.just(TOKEN))
+		whenever(authenticationPort.getAuthenticationToken(any(), any(), any())).thenReturn(Mono.just(TOKEN))
 
 		val status = webClient
 			.post()
 			.uri(uriBuilder("$BASE_URL/token", emptyList(), emptyList()))
-			.bodyValue(mapOf("redirectUri" to "redirectUri", "authorizationCode" to "code"))
+			.bodyValue(mapOf("redirectUri" to "redirectUri", "authorizationCode" to "code", "state" to "aState"))
 			.exchange()
 			.returnResult(String::class.java)
 			.status
