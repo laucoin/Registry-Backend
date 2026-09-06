@@ -29,7 +29,13 @@ class SecurityV1Controller(
 		return authenticationPort.getLoginUri(redirectUri!!)
 	}
 
-	override fun getLogoutUri(redirectUri: String?): AuthenticationUriModel {
+	/**
+	 * Clearing the cookies here rather than leaving it to the provider redirect matters: the browser
+	 * may never follow that redirect — a closed tab, a failed request — and the session would then
+	 * outlive the sign-out on this side.
+	 */
+	override fun getLogoutUri(exchange: ServerWebExchange, redirectUri: String?): AuthenticationUriModel {
+		cookieHandler.clear(exchange)
 		return authenticationPort.getLogoutUri(redirectUri!!)
 	}
 
