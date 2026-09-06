@@ -101,6 +101,8 @@ spring:
           jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
+  # Serves the documentation from the management port rather than alongside the API.
+  use-management-port: true
   api-docs:
     path: /api-docs
     enabled: ${registry.feature.documentation.enabled:false}
@@ -112,10 +114,23 @@ springdoc:
       client-id: ${external.oidc.swagger.client-id}
 
 management:
+  server:
+    # Health, metrics and the API documentation all live here, away from the API itself, so the
+    # port serving the public API exposes nothing but the API. Point probes and scrapers at this
+    # one and keep it off the public ingress.
+    port: ${registry.server.management-port:8082}
   endpoints:
     web:
+      # `openapi` and `swagger-ui` are contributed by springdoc; they appear only when
+      # registry.feature.documentation.enabled is on.
       exposure:
-        include: prometheus
+        include: health,prometheus,openapi,swagger-ui
+  endpoint:
+    health:
+      # Liveness and readiness as separate probes, so an orchestrator can tell "starting" from
+      # "broken" instead of restarting a container that is merely still warming up.
+      probes:
+        enabled: true
   metrics:
     distribution:
       percentiles-histogram:
