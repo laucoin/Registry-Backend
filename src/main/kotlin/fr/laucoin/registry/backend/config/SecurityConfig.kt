@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.config
 
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
+import fr.laucoin.registry.backend.domain.handler.CsrfTokenHandler
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler
 import fr.laucoin.registry.backend.domain.handler.TokenExtractionHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
@@ -26,9 +27,15 @@ import org.springframework.security.access.expression.method.DefaultMethodSecuri
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder.CSRF
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository
+import org.springframework.security.web.server.csrf.CsrfWebFilter
+import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
@@ -42,7 +49,14 @@ class SecurityConfig(
 	private val tokenConverter: TokenConverterService,
 	private val authorizationErrorHandler: AuthorizationErrorHandler,
 	private val headersHandler: HeadersHandler,
+	private val csrfTokenHandler: CsrfTokenHandler,
 	private val tokenExtractionHandler: TokenExtractionHandler,
+	@param:Value($$"${registry.security.cookie.domain:}")
+	private val cookieDomain: String,
+	@param:Value($$"${registry.security.cookie.secure:true}")
+	private val cookieSecure: Boolean,
+	@param:Value($$"${registry.security.cookie.same-site:Lax}")
+	private val cookieSameSite: String,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.feature.documentation.enabled:false}")
@@ -50,12 +64,17 @@ class SecurityConfig(
 	@param:Value($$"${registry.feature.observability.enabled:false}")
 	private val observabilityEnabled: Boolean,
 ) {
+	private companion object {
+		/** Matches `/api/<version>/authentication/token` exactly — never `/token/refresh`. */
+		private val SESSION_OPENING_PATH = Regex("^/api/v\\d+/authentication/token$")
+	}
 
 	@Bean
 	fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
 		return http
-			.disableCsrf()
+			.configureCsrf()
 			.handleHeaders()
+			.addFilterAt(csrfTokenHandler, CSRF)
 			.configureResourceAccess()
 			.disableAuthForm()
 			.configureLogout()
@@ -64,7 +83,51 @@ class SecurityConfig(
 			.build()
 	}
 
-	private fun ServerHttpSecurity.disableCsrf() = csrf { it.disable() }
+	private fun ServerHttpSecurity.configureCsrf() = csrf {
+		it.csrfTokenRepository(csrfTokenRepository())
+		it.requireCsrfProtectionMatcher(csrfProtectionMatcher())
+		// Spring defaults to the XOR handler, which masks the token to blunt BREACH. That assumes the
+		// token is rendered into a response body; ours travels in a cookie the frontend reads and
+		// echoes back verbatim, so the masked value never matches the raw one and every mutating call
+		// is refused. BREACH is not a concern here precisely because the token is never in a body.
+		it.csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
+	}
+
+	/**
+	 * The token is readable by script on purpose — that is the double-submit pattern: the browser
+	 * returns it in a header, and only same-origin script can read the cookie to do so. It is
+	 * scoped like the session cookies so the frontend, served from a sibling host, can read it.
+	 */
+	private fun csrfTokenRepository() = CookieServerCsrfTokenRepository.withHttpOnlyFalse().apply {
+		setCookieCustomizer {
+			it.secure(cookieSecure).sameSite(cookieSameSite)
+			if (cookieDomain.isNotBlank()) it.domain(cookieDomain)
+		}
+	}
+
+	/**
+	 * CSRF applies to state-changing requests, minus two deliberate exemptions.
+	 *
+	 * A request carrying an `Authorization` header authenticates through a credential the caller set
+	 * itself — Swagger, a service account, any non-browser client — and a browser never attaches that
+	 * header to a cross-site request, so such a caller cannot be a CSRF victim. This exemption is only
+	 * sound because [TokenExtractionHandler] reads the header **before** the cookie: were the cookie to
+	 * win, a request could carry a meaningless header to claim the exemption while authenticating
+	 * through the ambient cookie.
+	 *
+	 * `POST /authentication/token` opens the session, so no ambient credential exists yet and there is
+	 * nothing to protect. `/token/refresh` is deliberately **not** exempt — that one runs entirely on
+	 * the refresh cookie, which is exactly the shape CSRF attacks.
+	 */
+	private fun csrfProtectionMatcher(): ServerWebExchangeMatcher {
+		val stateChanging = CsrfWebFilter.DEFAULT_CSRF_MATCHER
+		return ServerWebExchangeMatcher { exchange ->
+			val request = exchange.request
+			val exempt = request.headers.getFirst(AUTHORIZATION) != null
+				|| (request.method == POST && SESSION_OPENING_PATH.matches(request.path.pathWithinApplication().value()))
+			if (exempt) MatchResult.notMatch() else stateChanging.matches(exchange)
+		}
+	}
 
 	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
 

@@ -34,6 +34,7 @@ import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
 
@@ -205,6 +206,7 @@ class SecurityControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
+			.mutateWith(csrf())
 			.post()
 			.uri(uriBuilder("$BASE_URL/token/refresh", emptyList(), emptyList()))
 			.cookie(REFRESH_TOKEN_COOKIE, "refreshToken")
@@ -225,6 +227,7 @@ class SecurityControllerTest: TestContext() {
 	fun `Should refreshToken return 401 without the refresh cookie`() {
 		// Act
 		val result = webClient
+			.mutateWith(csrf())
 			.post()
 			.uri(uriBuilder("$BASE_URL/token/refresh", emptyList(), emptyList()))
 			.exchange()

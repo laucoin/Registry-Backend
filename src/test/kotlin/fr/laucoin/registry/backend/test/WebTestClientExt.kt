@@ -17,6 +17,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.core.context.SecurityContextImpl
+import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockUser
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec
@@ -39,10 +40,18 @@ object WebTestClientExt {
 
 	fun buildAuthority(authority: String): String = "${projectId}_$authority"
 
+	/**
+	 * Authenticates the client and attaches a valid CSRF token.
+	 *
+	 * The token is part of the contract for every mutating call now that sessions are carried by
+	 * cookies, so it belongs here rather than in each test: a test that forgets it would fail with a
+	 * 403 that says nothing about what it was actually verifying. Whether CSRF is enforced at all is
+	 * covered on its own in `SecurityCsrfTest`.
+	 */
 	fun WebTestClient.authenticate(vararg authorities: String): WebTestClient {
 		val currentUser = currentUser(*authorities)
 		authentication(currentUser)
-		return mutateWith(mockUser(currentUser))
+		return mutateWith(mockUser(currentUser)).mutateWith(csrf())
 	}
 
 	fun authenticate(vararg authorities: String): Authentication {
