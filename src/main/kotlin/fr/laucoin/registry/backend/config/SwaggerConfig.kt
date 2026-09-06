@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.security.OAuthFlow
 import io.swagger.v3.oas.models.security.OAuthFlows
+import io.swagger.v3.oas.models.security.Scopes
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2
@@ -43,6 +44,19 @@ class SwaggerConfig(
 ) {
     private companion object {
         private const val CLIENT_NAME = "OAuth2"
+
+        /**
+         * `email` is not optional: TokenConverterService refuses a token without it, so a Swagger
+         * session opened without this scope authenticates against the provider and is then rejected
+         * here — which reads as a broken API rather than a missing scope.
+         *
+         * `offline_access` is deliberately absent. It would have the provider mint a refresh token
+         * into the browser, and Swagger has no use for one.
+         */
+        private val SCOPES = Scopes()
+            .addString("openid", "Required by OpenID Connect")
+            .addString("profile", "First and last names, for the auto-provisioned user")
+            .addString("email", "Email address, which Registry uses to identify the account")
     }
 
     @Bean
@@ -55,13 +69,20 @@ class SwaggerConfig(
                         CLIENT_NAME,
                         SecurityScheme()
                             .type(OAUTH2)
+                            // Authorization code with PKCE, not implicit. The implicit flow returns
+                            // the token in the URL fragment, where it lands in browser history and in
+                            // any Referer that leaks — OAuth 2.0 Security Best Current Practice has
+                            // dropped it for that reason. PKCE is what makes the exchange safe for a
+                            // browser client that holds no secret; springdoc enables it through
+                            // `springdoc.swagger-ui.use-pkce-with-authorization-code-grant`.
                             .flows(
                                 OAuthFlows()
-                                    .implicit(
+                                    .authorizationCode(
                                         OAuthFlow().apply {
                                             authorizationUrl = configAuthUrl
                                             refreshUrl = configTokenUrl
                                             tokenUrl = configTokenUrl
+                                            scopes = SCOPES
                                         }
                                     )
                             )
