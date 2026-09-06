@@ -96,8 +96,6 @@ entries:
       redirect_uris:
         - matching_mode: strict
           url: !Env [IDP_FRONTEND_REDIRECT_URI, "http://localhost:3000/auth/callback"]
-        - matching_mode: strict
-          url: !Env [IDP_SWAGGER_REDIRECT_URI, "http://localhost:8081/swagger-ui/oauth2-redirect.html"]
 
   - id: app-registry
     model: authentik_core.application
@@ -106,6 +104,47 @@ entries:
     attrs:
       name: Registry
       provider: !KeyOf provider-registry
+
+  # ------------------------------------------------------------------- Swagger UI (public)
+  # Swagger runs in a browser and holds no secret, so it cannot be the backend's confidential
+  # client: the provider would refuse it at the token endpoint for failing to authenticate.
+  # A public client with PKCE is the shape that fits, and it gives Swagger an `aud` of its own —
+  # which is why the backend accepts a list of audiences rather than a single value.
+  - id: provider-swagger
+    model: authentik_providers_oauth2.oauth2provider
+    identifiers:
+      client_id: !Env [IDP_PUBLIC_CLIENT_ID, registry-swagger]
+    attrs:
+      name: registry-swagger
+      client_type: public
+      sub_mode: user_uuid
+      signing_key:
+        !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      grant_types:
+        - authorization_code
+        - refresh_token
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
+        - !KeyOf mapping-email
+        - !KeyOf mapping-profile
+      redirect_uris:
+        # The UI moved to the management port, and so did its callback.
+        - matching_mode: strict
+          url: !Env
+            - IDP_SWAGGER_REDIRECT_URI
+            - "http://localhost:8082/actuator/swagger-ui/oauth2-redirect.html"
+
+  - id: app-swagger
+    model: authentik_core.application
+    identifiers:
+      slug: registry-swagger
+    attrs:
+      name: Registry Swagger
+      provider: !KeyOf provider-swagger
 
   # ------------------------------------------------------------------------ test personas
   # One account per case the backend has to handle. `given_name` and `family_name` are read
