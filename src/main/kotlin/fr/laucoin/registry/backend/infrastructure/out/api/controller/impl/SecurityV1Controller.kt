@@ -1,9 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_COOKIE_MISSING
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.STATE_MISMATCH
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler
 import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
@@ -13,6 +15,7 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.CurrentUser
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.SessionReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CurrentUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.SessionReaderDtoMapper
+import java.security.MessageDigest
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
@@ -25,8 +28,11 @@ class SecurityV1Controller(
 	private val sessionMapper: SessionReaderDtoMapper,
 	private val cookieHandler: AuthenticationCookieHandler,
 ): ISecurityV1Controller {
-	override fun getLoginUri(redirectUri: String?): AuthenticationUriModel {
-		return authenticationPort.getLoginUri(redirectUri!!)
+	override fun getLoginUri(exchange: ServerWebExchange, redirectUri: String?): AuthenticationUriModel {
+		val challenge = AuthorizationChallengeModel.generate()
+		val uri = authenticationPort.getLoginUri(redirectUri!!, challenge)
+		cookieHandler.writeChallenge(exchange, challenge)
+		return uri
 	}
 
 	/**
@@ -43,10 +49,39 @@ class SecurityV1Controller(
 		exchange: ServerWebExchange,
 		authenticationInfo: AuthenticationInfoModel,
 	): Mono<SessionReaderDto> {
+		val codeVerifier = verifyState(exchange, authenticationInfo.state!!)
+
 		return authenticationPort.getAuthenticationToken(
 			authenticationInfo.authorizationCode!!,
-			authenticationInfo.redirectUri!!
+			authenticationInfo.redirectUri!!,
+			codeVerifier,
 		).openSession(exchange)
+	}
+
+	/**
+	 * Checks that this callback belongs to a sign-in this browser started, and hands back the verifier.
+	 *
+	 * Without it, an attacker holding a valid authorization code for their own identity can navigate a
+	 * victim's browser to the callback and silently sign that victim into the attacker's account. The
+	 * challenge is consumed either way: one exchange per sign-in, so a verifier is never left behind
+	 * for a replay.
+	 *
+	 * The comparison is constant-time. The margin is thin — the value is unguessable and short-lived —
+	 * but a timing-sensitive comparison of a security token is the kind of thing that gets copied.
+	 */
+	private fun verifyState(exchange: ServerWebExchange, presented: String): String {
+		val expected = cookieHandler.readState(exchange)
+		val codeVerifier = cookieHandler.readCodeVerifier(exchange)
+		cookieHandler.clearChallenge(exchange)
+
+		val matches = expected != null && MessageDigest.isEqual(
+			expected.toByteArray(Charsets.UTF_8),
+			presented.toByteArray(Charsets.UTF_8),
+		)
+		if (!matches || codeVerifier == null) {
+			throw RegistryException(UNAUTHORIZED, STATE_MISMATCH)
+		}
+		return codeVerifier
 	}
 
 	override fun refreshToken(exchange: ServerWebExchange): Mono<SessionReaderDto> {

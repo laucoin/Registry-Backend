@@ -23,11 +23,15 @@ import reactor.core.publisher.Mono
 @RequestMapping("/api/v1/authentication")
 interface ISecurityV1Controller {
 	@Operation(
-		summary = "OAuth2 auth URI",
-		description = "Build and return the OAuth2 provider authentication URI",
+		summary = "Start a sign-in",
+		description = "Returns the provider authorization URL and remembers the one-time challenge "
+			+ "that ties the eventual callback to this browser.",
 	)
 	@GetMapping("/login/uri")
-	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
+	fun getLoginUri(
+		exchange: ServerWebExchange,
+		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?,
+	): AuthenticationUriModel
 
 	@Operation(
 		summary = "Close the session and return the provider logout URI",
