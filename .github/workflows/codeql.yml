@@ -33,8 +33,22 @@ jobs:
           languages: java-kotlin
           build-mode: manual
 
+      # `clean` is required: build-mode manual extracts only what it watches being
+      # compiled, and an up-to-date build compiles nothing. That forces a full Kotlin
+      # compilation under CodeQL's tracer on every run, which is what exhausted the
+      # default heap — `compileKotlin` died on "GC overhead limit exceeded" while the
+      # ordinary build job, which is not traced, passed on the same commit.
+      #
+      # Memory is set here rather than in gradle.properties so the Docker build and
+      # local development keep their own defaults; only the traced build needs this.
+      # `in-process` keeps the Kotlin compiler inside the Gradle JVM: with --no-daemon
+      # the alternative is a second JVM sized independently, which is what made the
+      # footprint hard to reason about.
       - name: Compile sources
-        run: ./gradlew clean assemble -x test --no-daemon
+        run: >
+          ./gradlew clean assemble -x test --no-daemon
+          -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+          -Pkotlin.compiler.execution.strategy=in-process
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
