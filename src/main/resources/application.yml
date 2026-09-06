@@ -112,6 +112,11 @@ springdoc:
     use-root-path: true
     oauth:
       client-id: ${external.oidc.swagger.client-id}
+      # Swagger holds no client secret — it runs in a browser — so the code it receives is bound to
+      # the request by PKCE instead. Without this the exchange has nothing proving it is the same
+      # caller that asked for the code. The setting belongs under `oauth`, not directly under
+      # `swagger-ui`: placed one level up it is accepted silently and does nothing.
+      use-pkce-with-authorization-code-grant: true
 
 management:
   server:

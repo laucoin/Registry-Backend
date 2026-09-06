@@ -96,6 +96,20 @@ no operational surface at all.
 
 Point liveness and readiness probes, and the Prometheus scraper, at the management port.
 
+#### Swagger and the identity provider
+
+Swagger authenticates through the authorization code flow with PKCE, so its provider client must be
+configured for it:
+
+- **A public client.** Swagger runs in a browser and holds no secret; a confidential client would be
+  refused at the token endpoint for failing to authenticate. `external.oidc.swagger.client-id` should
+  therefore name a client of its own, distinct from the backend's.
+- **The redirect URI is on the management port**, since that is where the UI now lives:
+  `http://<host>:<management-port>/actuator/swagger-ui/oauth2-redirect.html`.
+- **Scopes `openid`, `profile` and `email`.** `email` is not optional — the backend refuses a token
+  without it, so a session opened without that scope authenticates against the provider and is then
+  rejected here, which reads as a broken API rather than a missing scope.
+
 > [!CAUTION]
 > **The management port is unauthenticated on purpose** — a liveness probe and a metrics scraper have
 > no credentials to present. That is only safe while the port stays off the public ingress, which is
