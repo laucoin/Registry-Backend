@@ -74,7 +74,7 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
 -Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 9000 for the identity provider instance)
 -Dregistry.server.management-port=<port> # Defaults to 8082. Health, metrics and the API documentation are served here, never on the API port — keep it off the public ingress
 -Dregistry.feature.documentation.enabled=false # true only for development
--Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
+-Dexternal.cors.urls=<cors-urls> # Origins allowed to call the API, comma-separated. For example: http://localhost:4200,http://localhost:8082 — the second being the management port, needed for Swagger's "try it out" when documentation is enabled
 -Dexternal.cookie.domain=<cookie-domain> # Optional, host-only when unset. For example: registry.laucoin.fr — covers backend.registry.laucoin.fr without exposing the cookie to unrelated subdomains
 -Dexternal.cookie.secure=true # Set to false ONLY for local development without TLS: a Secure cookie over plain http is dropped and every sign-in fails silently
 -Dexternal.cookie.same-site=Lax # SameSite of the access cookie; the refresh cookie is always Strict
@@ -109,6 +109,17 @@ configured for it:
 - **Scopes `openid`, `profile` and `email`.** `email` is not optional — the backend refuses a token
   without it, so a session opened without that scope authenticates against the provider and is then
   rejected here, which reads as a broken API rather than a missing scope.
+
+> [!NOTE]
+> **Swagger's calls to the API are cross-origin**, because the UI is served from the management port
+> while the API answers on its own. *Try it out* is refused until that origin appears in
+> `external.cors.urls` — locally `http://localhost:8082`, alongside the SPA's own origin.
+>
+> Be aware that this list does double duty: it is also what the OAuth `redirectUri` is validated
+> against, so an entry here is allowed both to **call the API** and to **receive an authorization
+> code**. That is harmless for the management port, which is this application's own, and Authentik
+> checks `redirect_uri` against the client's registered URIs regardless. It is worth a second thought
+> before adding an origin you do not control.
 
 > [!CAUTION]
 > **The management port is unauthenticated on purpose** — a liveness probe and a metrics scraper have
