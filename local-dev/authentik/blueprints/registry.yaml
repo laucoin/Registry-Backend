@@ -1,0 +1,230 @@
+# Declares the Registry setup inside Authentik so a wiped `local-dev` database comes back
+# identical. Everything here is idempotent: re-applying updates in place, it never duplicates.
+#
+# The redirect URIs live in `local-dev/.env`, not in this file. They are the one value that
+# drifts whenever a dev server changes port, and a mismatch surfaces only as Authentik's
+# opaque "Redirect URI Error" at login — keep them next to the other environment settings.
+version: 1
+
+metadata:
+  name: Registry - local dev
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+context:
+  private_client_id: !Env [ OIDC_PRIVATE_CLIENT_ID, registry ]
+  private_client_secret: !Env [ OIDC_PRIVATE_CLIENT_SECRET, registry-secret ]
+  private_redirect_uri: !Env [ OIDC_PRIVATE_REDIRECT_URI, "http://localhost:4200/auth/callback" ]
+  public_client_id: !Env [ OIDC_PUBLIC_CLIENT_ID, registry-swagger ]
+  public_redirect_uri:
+    !Env [ OIDC_PUBLIC_REDIRECT_URI, "http://localhost:8082/actuator/swagger-ui/oauth2-redirect.html" ]
+  dev_password: !Env [ AU_DEV_PASSWORD, dev123 ]
+
+entries:
+  # --- Scope mappings ------------------------------------------------------------------
+  # The stock `profile` and `email` scopes emit claims the backend does not read. These two
+  # replace them for the Registry providers only; the managed `openid` mapping is reused.
+
+  - model: authentik_providers_oauth2.scopemapping
+    identifiers:
+      name: Registry local profile
+    attrs:
+      scope_name: profile
+      description: First and last names read from user attributes, as Registry expects
+      expression: |
+        return {
+            "name": request.user.name,
+            "given_name": request.user.attributes.get("given_name", request.user.name),
+            "family_name": request.user.attributes.get("family_name", ""),
+            "preferred_username": request.user.username,
+            "nickname": request.user.username,
+        }
+
+  - model: authentik_providers_oauth2.scopemapping
+    identifiers:
+      name: Registry local email
+    attrs:
+      scope_name: email
+      description: Email with a verification flag driven by user attributes
+      expression: |
+        return {
+            "email": request.user.email,
+            "email_verified": request.user.attributes.get("email_verified", True),
+        }
+
+  # --- Registry frontend (confidential client, code flow driven by the backend) ---------
+  # Entries reference each other with !Find rather than !KeyOf: on authentik 2026.5 !KeyOf
+  # resolves against an empty blueprint while rendering its own error log, so any failure in
+  # an entry using it surfaces as an unrelated crash instead of the real message.
+
+  - model: authentik_providers_oauth2.oauth2provider
+    identifiers:
+      name: registry
+    attrs:
+      client_type: confidential
+      client_id: !Context private_client_id
+      client_secret: !Context private_client_secret
+      authorization_flow:
+        !Find [ authentik_flows.flow, [ slug, default-provider-authorization-implicit-consent ] ]
+      invalidation_flow: !Find [ authentik_flows.flow, [ slug, default-provider-invalidation-flow ] ]
+      signing_key: !Find [ authentik_crypto.certificatekeypair, [ name, authentik Self-signed Certificate ] ]
+      # `user_uuid` is what the backend stores in `tb_user.oidc_id`; changing it orphans every
+      # provisioned Registry user.
+      sub_mode: user_uuid
+      issuer_mode: per_provider
+      include_claims_in_id_token: true
+      logout_method: backchannel
+      grant_types:
+        - authorization_code
+        - refresh_token
+      access_code_validity: minutes=1
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+      redirect_uris:
+        - url: !Context private_redirect_uri
+          matching_mode: strict
+      property_mappings:
+        - !Find [ authentik_providers_oauth2.scopemapping, [ managed, goauthentik.io/providers/oauth2/scope-openid ] ]
+        - !Find [ authentik_providers_oauth2.scopemapping, [ managed, goauthentik.io/providers/oauth2/scope-offline_access ] ]
+        - !Find [ authentik_providers_oauth2.scopemapping, [ name, Registry local profile ] ]
+        - !Find [ authentik_providers_oauth2.scopemapping, [ name, Registry local email ] ]
+
+  - model: authentik_core.application
+    identifiers:
+      slug: registry
+    attrs:
+      name: Registry
+      provider: !Find [ authentik_providers_oauth2.oauth2provider, [ name, registry ] ]
+
+  # --- Swagger UI (public client, no refresh token) ------------------------------------
+
+  - model: authentik_providers_oauth2.oauth2provider
+    identifiers:
+      name: registry-swagger
+    attrs:
+      client_type: public
+      client_id: !Context public_client_id
+      authorization_flow:
+        !Find [ authentik_flows.flow, [ slug, default-provider-authorization-implicit-consent ] ]
+      invalidation_flow: !Find [ authentik_flows.flow, [ slug, default-provider-invalidation-flow ] ]
+      signing_key: !Find [ authentik_crypto.certificatekeypair, [ name, authentik Self-signed Certificate ] ]
+      sub_mode: user_uuid
+      issuer_mode: per_provider
+      include_claims_in_id_token: true
+      logout_method: backchannel
+      grant_types:
+        - authorization_code
+        - refresh_token
+      access_code_validity: minutes=1
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+      # Served on the management port, which is where springdoc mounts the Swagger UI.
+      redirect_uris:
+        - url: !Context public_redirect_uri
+          matching_mode: strict
+      property_mappings:
+        - !Find [ authentik_providers_oauth2.scopemapping, [ managed, goauthentik.io/providers/oauth2/scope-openid ] ]
+        - !Find [ authentik_providers_oauth2.scopemapping, [ name, Registry local profile ] ]
+        - !Find [ authentik_providers_oauth2.scopemapping, [ name, Registry local email ] ]
+
+  - model: authentik_core.application
+    identifiers:
+      slug: registry-swagger
+    attrs:
+      name: Registry Swagger
+      provider: !Find [ authentik_providers_oauth2.oauth2provider, [ name, registry-swagger ] ]
+
+  # --- Seeded dev users -----------------------------------------------------------------
+  # Every account shares AU_DEV_PASSWORD. `password` is a write-only field the user
+  # serializer exposes only when it runs under a blueprint, so it works here and stays
+  # absent from the API — re-applying rewrites it, which is what makes a wiped database
+  # come back loginable without a follow-up step.
+  #
+  # `blocked-user` and `blocked-profile` are ordinary accounts here — what they exercise is
+  # Registry-side state, not an Authentik restriction. Only `unverified` differs at the IdP,
+  # through the email_verified claim the mapping above reads.
+
+  - model: authentik_core.user
+    identifiers:
+      username: administrator
+    attrs:
+      name: Jane SMITH
+      email: administrator@sgdf.fr
+      path: users
+      type: internal
+      is_active: true
+      password: !Context dev_password
+      attributes:
+        given_name: Jane
+        family_name: SMITH
+
+  - model: authentik_core.user
+    identifiers:
+      username: coordinator
+    attrs:
+      name: John DOE
+      email: coordinator@sgdf.fr
+      path: users
+      type: internal
+      is_active: true
+      password: !Context dev_password
+      attributes:
+        given_name: John
+        family_name: DOE
+
+  - model: authentik_core.user
+    identifiers:
+      username: participant
+    attrs:
+      name: Charles PINA
+      email: participant@sgdf.fr
+      path: users
+      type: internal
+      is_active: true
+      password: !Context dev_password
+      attributes:
+        given_name: Charles
+        family_name: PINA
+
+  - model: authentik_core.user
+    identifiers:
+      username: blocked-user
+    attrs:
+      name: Aliyah NIELSEN
+      email: blocked-user@sgdf.fr
+      path: users
+      type: internal
+      is_active: true
+      password: !Context dev_password
+      attributes:
+        given_name: Aliyah
+        family_name: NIELSEN
+
+  - model: authentik_core.user
+    identifiers:
+      username: blocked-profile
+    attrs:
+      name: Emil BRADFORD
+      email: blocked-profile@sgdf.fr
+      path: users
+      type: internal
+      is_active: true
+      password: !Context dev_password
+      attributes:
+        given_name: Emil
+        family_name: BRADFORD
+
+  - model: authentik_core.user
+    identifiers:
+      username: unverified
+    attrs:
+      name: Nina VOGEL
+      email: unverified@sgdf.fr
+      path: users
+      type: internal
+      is_active: true
+      password: !Context dev_password
+      attributes:
+        given_name: Nina
+        family_name: VOGEL
+        email_verified: false

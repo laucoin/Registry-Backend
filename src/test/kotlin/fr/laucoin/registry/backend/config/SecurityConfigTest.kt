@@ -34,6 +34,7 @@ class SecurityConfigTest {
 		headersHandler = mock(),
 		csrfTokenHandler = mock(),
 		tokenExtractionHandler = mock(),
+		documentationRedirectHandler = mock(),
 		cookieDomain = "registry.test.com",
 		cookieSecure = true,
 		cookieSameSite = "Lax",

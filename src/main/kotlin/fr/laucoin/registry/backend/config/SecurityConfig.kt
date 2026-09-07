@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.config
 
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.CsrfTokenHandler
+import fr.laucoin.registry.backend.domain.handler.DocumentationRedirectHandler
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler
 import fr.laucoin.registry.backend.domain.handler.TokenExtractionHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
@@ -52,6 +53,7 @@ class SecurityConfig(
 	private val headersHandler: HeadersHandler,
 	private val csrfTokenHandler: CsrfTokenHandler,
 	private val tokenExtractionHandler: TokenExtractionHandler,
+	private val documentationRedirectHandler: DocumentationRedirectHandler,
 	@param:Value($$"${registry.security.cookie.domain:}")
 	private val cookieDomain: String,
 	@param:Value($$"${registry.security.cookie.secure:true}")
@@ -103,6 +105,7 @@ class SecurityConfig(
 		return http
 			.configureCsrf()
 			.securityHeaders()
+			.addDocumentationRedirect()
 			.addLocaleFilter()
 			.addFilterAt(csrfTokenHandler, CSRF)
 			.configureResourceAccess()
@@ -194,6 +197,9 @@ class SecurityConfig(
 
 	/** Named for what it does: [HeadersHandler] resolves the request locale, it sets no headers. */
 	private fun ServerHttpSecurity.addLocaleFilter() = addFilterBefore(headersHandler, FIRST)
+
+	/** In the chain rather than as a plain bean: the management endpoints sit in a child context. */
+	private fun ServerHttpSecurity.addDocumentationRedirect() = addFilterBefore(documentationRedirectHandler, FIRST)
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
 		// Health, metrics and the API documentation are all served from the management port, and this
