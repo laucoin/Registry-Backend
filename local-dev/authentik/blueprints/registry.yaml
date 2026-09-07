@@ -110,6 +110,15 @@ entries:
   # client: the provider would refuse it at the token endpoint for failing to authenticate.
   # A public client with PKCE is the shape that fits, and it gives Swagger an `aud` of its own —
   # which is why the backend accepts a list of audiences rather than a single value.
+  # IDP_PUBLIC_CLIENT_ID must differ from IDP_PRIVATE_CLIENT_ID. Both entries are matched on
+  # `client_id`, so equal values make this one collide with the provider above — and Authentik
+  # reports that as:
+  #
+  #     KeyOf: failed to find entry with `id` of `provider-swagger`
+  #
+  # which names neither the field nor the cause: the message is produced while Authentik is
+  # serialising the *real* error, and replaces it. If you are reading this because of that error,
+  # the two client ids in your .env are the same.
   - id: provider-swagger
     model: authentik_providers_oauth2.oauth2provider
     identifiers:
