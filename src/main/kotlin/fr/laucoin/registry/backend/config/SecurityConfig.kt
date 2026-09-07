@@ -28,6 +28,9 @@ import org.springframework.security.config.web.server.SecurityWebFiltersOrder.CS
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN
+import org.springframework.security.web.server.header.ServerHttpHeadersWriter
+import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode.DENY
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository
 import org.springframework.security.web.server.csrf.CsrfWebFilter
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
@@ -36,6 +39,7 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+import reactor.core.publisher.Mono
 
 
 @Configuration
@@ -66,12 +70,38 @@ class SecurityConfig(
 
 		/** Where the double-submit token comes back; the name Spring's cookie repository expects. */
 		private const val CSRF_HEADER = "X-XSRF-TOKEN"
+
+		/** Not on Spring's [org.springframework.http.HttpHeaders], which predates the header. */
+		private const val CSP_HEADER = "Content-Security-Policy"
+
+		private const val ACTUATOR_PATH = "/actuator"
+
+		/**
+		 * The API answers JSON and nothing else, so it needs to load nothing at all. This mostly
+		 * matters for a response opened directly in a browser, and for `frame-ancestors`.
+		 */
+		private const val API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+
+		/**
+		 * Swagger UI gets framing protection and nothing more, deliberately.
+		 *
+		 * A content policy here would have to allow what the page legitimately connects to, and that
+		 * is two origins this header cannot know: the API — which lives on another port, so `'self'`
+		 * excludes it and *try it out* stops working — and the provider's token endpoint, which the
+		 * PKCE exchange behind *Authorize* calls directly. Reconstructing both from configuration
+		 * would put the deployment topology into a header, to constrain a first-party page on a port
+		 * that is internal by design. `frame-ancestors` is the directive that pays for itself.
+		 */
+		private const val DOCUMENTATION_CSP = "frame-ancestors 'none'"
+
+		private const val PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()"
 	}
 
 	@Bean
 	fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
 		return http
 			.configureCsrf()
+			.securityHeaders()
 			.addLocaleFilter()
 			.addFilterAt(csrfTokenHandler, CSRF)
 			.configureResourceAccess()
@@ -125,6 +155,34 @@ class SecurityConfig(
 				|| (request.method == POST && SESSION_OPENING_PATH.matches(request.path.pathWithinApplication().value()))
 			if (exempt) MatchResult.notMatch() else stateChanging.matches(exchange)
 		}
+	}
+
+	/**
+	 * The headers Spring does not set on its own.
+	 *
+	 * `nosniff`, HSTS and `Cache-Control: no-store` are already written by the default header
+	 * writers; redeclaring them here would only create a second place to keep them in step.
+	 */
+	private fun ServerHttpSecurity.securityHeaders() = headers {
+		it.referrerPolicy { policy -> policy.policy(STRICT_ORIGIN_WHEN_CROSS_ORIGIN) }
+		it.permissionsPolicy { policy -> policy.policy(PERMISSIONS_POLICY) }
+		it.frameOptions { frame -> frame.mode(DENY) }
+		it.writer(contentSecurityPolicyWriter())
+	}
+
+	/**
+	 * Writes a Content-Security-Policy that depends on what the response actually is.
+	 *
+	 * This chain governs the management port as well as the API one, and the two serve different
+	 * things: JSON on one side, the Swagger UI — a real document, with its own scripts and styles —
+	 * on the other. A single strict policy would either be useless on the API or break the UI, so the
+	 * path decides. Spring's `contentSecurityPolicy` DSL takes one fixed policy, hence a writer.
+	 */
+	private fun contentSecurityPolicyWriter() = ServerHttpHeadersWriter { exchange ->
+		val path = exchange.request.path.pathWithinApplication().value()
+		exchange.response.headers
+			.set(CSP_HEADER, if (path.startsWith(ACTUATOR_PATH)) DOCUMENTATION_CSP else API_CSP)
+		Mono.empty()
 	}
 
 	/** Named for what it does: [HeadersHandler] resolves the request locale, it sets no headers. */
