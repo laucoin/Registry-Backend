@@ -41,7 +41,30 @@ class SwaggerConfig(
     private val configTokenUrl: String?,
     @param:Value($$"${registry.server.prefix:''}")
     private val configApiPrefix: String,
+    @param:Value($$"${registry.security.oauth2.client-id:}")
+    private val backendClientId: String,
+    @param:Value($$"${external.oidc.swagger.client-id:}")
+    private val swaggerClientId: String,
 ) {
+    init {
+        // Swagger runs in a browser and holds no secret, so it authenticates with the authorization
+        // code flow and PKCE — which the provider only allows for a *public* client. Pointing it at
+        // the backend's confidential client instead means the provider refuses the token exchange
+        // for missing client authentication, and Swagger's Authorize button fails with an error that
+        // says nothing about the configuration.
+        //
+        // The identity provider cannot report this legibly either: on Authentik, provisioning two
+        // clients under one id fails with "KeyOf: failed to find entry", which names neither the
+        // field nor the cause. So the check lives here, where the message can say what is wrong.
+        //
+        // Only reachable when documentation is enabled, which this class is conditional on.
+        require(swaggerClientId != backendClientId) {
+            "Swagger must authenticate as its own public client: external.oidc.swagger.client-id is " +
+                "\"$swaggerClientId\", the same as the backend's confidential client. Give Swagger a " +
+                "separate client id, or disable registry.feature.documentation.enabled."
+        }
+    }
+
     private companion object {
         private const val CLIENT_NAME = "OAuth2"
 
