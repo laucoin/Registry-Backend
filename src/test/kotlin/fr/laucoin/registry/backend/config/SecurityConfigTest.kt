@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.net.InetSocketAddress
 import org.mockito.kotlin.mock
 import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS
 import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN
@@ -23,6 +24,8 @@ class SecurityConfigTest {
 	private companion object {
 		private const val ORIGIN = "https://registry.test.com"
 		private const val CSRF_HEADER = "X-XSRF-TOKEN"
+		private const val API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+		private const val DOCUMENTATION_CSP = "frame-ancestors 'none'"
 	}
 
 	private val config = SecurityConfig(
@@ -35,6 +38,7 @@ class SecurityConfigTest {
 		cookieSecure = true,
 		cookieSameSite = "Lax",
 		corsUrls = listOf(ORIGIN),
+		managementPort = 8082,
 		documentationEnabled = false,
 		observabilityEnabled = false,
 	)
@@ -81,5 +85,37 @@ class SecurityConfigTest {
 	@Test
 	fun `Should restrict the origins to the configured allowlist`() {
 		assertEquals(listOf(ORIGIN), corsConfiguration().allowedOrigins)
+	}
+
+	/**
+	 * The API and the management surface are told apart by the port a request arrived on, not by a
+	 * path prefix.
+	 *
+	 * A prefix said the same thing only while the endpoints sat under `/actuator`, and stopped being
+	 * true the moment they moved to the root of the management port. This is asserted here rather
+	 * than through `WebTestClient`, whose mock exchange carries no local address and can therefore
+	 * only ever represent the API port.
+	 */
+	@Test
+	fun `Should serve the API policy on the API port and the documentation policy on the management one`() {
+		assertEquals(API_CSP, policyServedOn(port = 8081))
+		assertEquals(DOCUMENTATION_CSP, policyServedOn(port = 8082))
+	}
+
+	/** The permit rule that keeps probes working is written on the same predicate. */
+	@Test
+	fun `Should permit only what arrives on the management port`() {
+		assertFalse(config.onManagementPort().matches(exchangeOn(port = 8081)).block()!!.isMatch)
+		assertTrue(config.onManagementPort().matches(exchangeOn(port = 8082)).block()!!.isMatch)
+	}
+
+	private fun exchangeOn(port: Int) = MockServerWebExchange.from(
+		MockServerHttpRequest.get("/anything").localAddress(InetSocketAddress("localhost", port)),
+	)
+
+	private fun policyServedOn(port: Int): String {
+		val exchange = exchangeOn(port)
+		config.contentSecurityPolicyWriter().writeHttpHeaders(exchange).block()
+		return exchange.response.headers.getFirst("Content-Security-Policy")!!
 	}
 }

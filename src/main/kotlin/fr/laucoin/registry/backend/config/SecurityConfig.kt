@@ -39,6 +39,7 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
 
@@ -59,6 +60,8 @@ class SecurityConfig(
 	private val cookieSameSite: String,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
+	@param:Value($$"${management.server.port}")
+	private val managementPort: Int,
 	@param:Value($$"${registry.feature.documentation.enabled:false}")
 	private val documentationEnabled: Boolean,
 	@param:Value($$"${registry.feature.observability.enabled:false}")
@@ -73,8 +76,6 @@ class SecurityConfig(
 
 		/** Not on Spring's [org.springframework.http.HttpHeaders], which predates the header. */
 		private const val CSP_HEADER = "Content-Security-Policy"
-
-		private const val ACTUATOR_PATH = "/actuator"
 
 		/**
 		 * The API answers JSON and nothing else, so it needs to load nothing at all. This mostly
@@ -178,26 +179,38 @@ class SecurityConfig(
 	 * on the other. A single strict policy would either be useless on the API or break the UI, so the
 	 * path decides. Spring's `contentSecurityPolicy` DSL takes one fixed policy, hence a writer.
 	 */
-	private fun contentSecurityPolicyWriter() = ServerHttpHeadersWriter { exchange ->
-		val path = exchange.request.path.pathWithinApplication().value()
+	fun contentSecurityPolicyWriter() = ServerHttpHeadersWriter { exchange ->
 		exchange.response.headers
-			.set(CSP_HEADER, if (path.startsWith(ACTUATOR_PATH)) DOCUMENTATION_CSP else API_CSP)
+			.set(CSP_HEADER, if (exchange.isOnManagementPort()) DOCUMENTATION_CSP else API_CSP)
 		Mono.empty()
+	}
+
+	/** The port a request arrived on, which is what separates the API from the management surface. */
+	private fun ServerWebExchange.isOnManagementPort() = request.localAddress?.port == managementPort
+
+	fun onManagementPort() = ServerWebExchangeMatcher { exchange ->
+		if (exchange.isOnManagementPort()) MatchResult.match() else MatchResult.notMatch()
 	}
 
 	/** Named for what it does: [HeadersHandler] resolves the request locale, it sets no headers. */
 	private fun ServerHttpSecurity.addLocaleFilter() = addFilterBefore(headersHandler, FIRST)
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
-		// Health, metrics and the API documentation are all served from the management port, under
-		// `/actuator`. This chain governs that port too — with the rule removed they answer 401, which
-		// is what a probe would then report as an outage — so the two features share one matcher.
+		// Health, metrics and the API documentation are all served from the management port, and this
+		// chain governs that port too — with the rule removed they answer 401, which is what a probe
+		// would then report as an outage — so the two features share one matcher.
+		//
+		// The rule is written on the port, not on a path prefix, because the port is what the decision
+		// is actually about: everything reachable there is meant to be open, and nothing reachable
+		// there is meant to be public. A path prefix said the same thing only for as long as the
+		// endpoints happened to live under `/actuator`, and stopped being true the moment they moved
+		// to the root of that port.
 		//
 		// Left open because a liveness probe and a Prometheus scraper have no credentials to present.
 		// That is only safe as long as the management port stays off the public ingress, which is the
 		// whole reason for separating it; see the README.
 		if (observabilityEnabled || documentationEnabled) {
-			it.pathMatchers(GET, "/actuator/**").permitAll()
+			it.matchers(onManagementPort()).permitAll()
 		}
 		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
 		it.pathMatchers(POST, "/api/*/authentication/token", "/api/*/authentication/token/refresh").permitAll()

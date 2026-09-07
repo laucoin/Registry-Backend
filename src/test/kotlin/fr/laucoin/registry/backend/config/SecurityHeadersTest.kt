@@ -36,22 +36,6 @@ class SecurityHeadersTest: TestContext() {
 			.valueEquals(CSP, "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
 	}
 
-	/**
-	 * The Swagger UI shares this chain, and it calls two origins this header cannot know: the API on
-	 * its own port, and the provider's token endpoint. Applying the API policy here leaves the page
-	 * rendering but silently unable to send a request, which is the failure this split exists to
-	 * prevent — so the management paths carry framing protection alone.
-	 */
-	@Test
-	fun `Should serve the management paths without constraining what they may call`() {
-		webClient
-			.get()
-			.uri(ACTUATOR_PATH)
-			.exchange()
-			.expectHeader()
-			.valueEquals(CSP, "frame-ancestors 'none'")
-	}
-
 	@Test
 	fun `Should refuse framing and restrict what is sent to other origins`() {
 		webClient

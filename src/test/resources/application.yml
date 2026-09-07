@@ -81,6 +81,7 @@ registry:
         last-name: "family_name"
   server:
     logging-level: DEBUG
+    management-port: 8082
 
 spring:
   application:
@@ -119,3 +120,9 @@ springdoc:
     oauth:
       client-id: ${registry.security.oauth2.client-id}
       client-secret: ${registry.security.oauth2.client-secret}
+
+management:
+  server:
+    # A bean reads this port to tell the management surface from the API one, so the test context
+    # has to define it as the real one does.
+    port: ${registry.server.management-port}
