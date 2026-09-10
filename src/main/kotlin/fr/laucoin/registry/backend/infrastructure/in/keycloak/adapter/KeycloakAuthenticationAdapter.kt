@@ -5,6 +5,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PRO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel.Companion.CHALLENGE_METHOD
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
@@ -57,7 +59,7 @@ class KeycloakAuthenticationAdapter(
 		private const val SCOPE = "openid profile email offline_access"
 	}
 
-	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
+	override fun getLoginUri(redirectUri: String, challenge: AuthorizationChallengeModel): AuthenticationUriModel {
 		validateRedirectUri(redirectUri)
 		return AuthenticationUriModel(
 			uri = UriComponentsBuilder.fromUriString(authorizationUri)
@@ -65,6 +67,10 @@ class KeycloakAuthenticationAdapter(
 				.queryParam("client_id", clientId)
 				.queryParam("scope", SCOPE)
 				.queryParam("redirect_uri", redirectUri)
+				.queryParam("state", challenge.state)
+				.queryParam("nonce", challenge.nonce)
+				.queryParam("code_challenge", challenge.codeChallenge)
+				.queryParam("code_challenge_method", CHALLENGE_METHOD)
 				.build()
 				.encode()
 				.toUriString()
@@ -105,11 +111,16 @@ class KeycloakAuthenticationAdapter(
 		else "${uri.scheme.lowercase()}://${uri.host.lowercase()}${if (uri.port == -1) "" else ":${uri.port}"}"
 	}.getOrNull()
 
-	override fun getAuthenticationToken(authorizationCode: String, redirectUri: String): Mono<TokenModel> {
+	override fun getAuthenticationToken(
+		authorizationCode: String,
+		redirectUri: String,
+		codeVerifier: String,
+	): Mono<TokenModel> {
 		return fetchToken(
 			BodyInserters.fromFormData("grant_type", "authorization_code")
 				.with("code", authorizationCode)
-				.with("redirect_uri", redirectUri),
+				.with("redirect_uri", redirectUri)
+				.with("code_verifier", codeVerifier),
 			AUTHORIZATION_CODE_OUTDATED
 		)
 	}

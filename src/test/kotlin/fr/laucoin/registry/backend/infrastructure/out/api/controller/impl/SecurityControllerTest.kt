@@ -3,12 +3,17 @@ package fr.laucoin.registry.backend.infrastructure.out.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_COOKIE_MISSING
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.STATE_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.STATE_MISMATCH
 import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.ACCESS_TOKEN_COOKIE
+import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.AUTHENTICATION_PATH
+import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.CODE_VERIFIER_COOKIE
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.REFRESH_TOKEN_COOKIE
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.REFRESH_TOKEN_PATH
+import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.STATE_COOKIE
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.SessionReaderDto
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
@@ -27,6 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
@@ -51,6 +57,8 @@ class SecurityControllerTest: TestContext() {
 
 	private companion object {
 		private const val BASE_URL = "/api/v1/authentication"
+		private const val STATE = "aState"
+		private const val CODE_VERIFIER = "aVerifier"
 
 		@JvmStatic
 		fun `blank redirectUri`(): Stream<Arguments> {
@@ -63,10 +71,12 @@ class SecurityControllerTest: TestContext() {
 		@JvmStatic
 		fun `Should fetchToken return 400`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of("redirectUri", null, AUTHORIZATION_CODE_BLANK),
-				Arguments.of("redirectUri", "", AUTHORIZATION_CODE_BLANK),
-				Arguments.of(null, "code", REDIRECT_URI_BLANK),
-				Arguments.of("", "code", REDIRECT_URI_BLANK),
+				Arguments.of("redirectUri", null, STATE, AUTHORIZATION_CODE_BLANK),
+				Arguments.of("redirectUri", "", STATE, AUTHORIZATION_CODE_BLANK),
+				Arguments.of(null, "code", STATE, REDIRECT_URI_BLANK),
+				Arguments.of("", "code", STATE, REDIRECT_URI_BLANK),
+				Arguments.of("redirectUri", "code", null, STATE_BLANK),
+				Arguments.of("redirectUri", "code", "", STATE_BLANK),
 			)
 		}
 
@@ -76,7 +86,7 @@ class SecurityControllerTest: TestContext() {
 	fun `Should getLoginUri return 200`() {
 		// Arrange
 		val redirectUri = "redirectUri"
-		whenever(authenticationPort.getLoginUri(any())).thenReturn(AuthenticationUriModel("uri"))
+		whenever(authenticationPort.getLoginUri(any(), any())).thenReturn(AuthenticationUriModel("uri"))
 
 		// Act
 		val result = webClient
@@ -86,7 +96,8 @@ class SecurityControllerTest: TestContext() {
 
 		// Assert
 		result.body<AuthenticationUriModel>(OK)
-		verify(authenticationPort).getLoginUri(redirectUri)
+		assertChallengeCookies(result)
+		verify(authenticationPort).getLoginUri(eq(redirectUri), any())
 	}
 
 	@ParameterizedTest
@@ -141,8 +152,9 @@ class SecurityControllerTest: TestContext() {
 		val body = AuthenticationInfoModel(
 			redirectUri = "redirectUri",
 			authorizationCode = "code",
+			state = STATE,
 		)
-		whenever(authenticationPort.getAuthenticationToken(any(), any())).thenReturn(
+		whenever(authenticationPort.getAuthenticationToken(any(), any(), any())).thenReturn(
 			Mono.just(
 				TokenModel(
 					accessToken = "accessToken",
@@ -158,6 +170,8 @@ class SecurityControllerTest: TestContext() {
 		val result = webClient
 			.post()
 			.uri(uriBuilder("$BASE_URL/token", emptyList(), emptyList()))
+			.cookie(STATE_COOKIE, STATE)
+			.cookie(CODE_VERIFIER_COOKIE, CODE_VERIFIER)
 			.bodyValue(body)
 			.exchange()
 
@@ -166,7 +180,41 @@ class SecurityControllerTest: TestContext() {
 		assertEquals(3600, session?.expiresIn)
 		assertEquals(18000, session?.refreshExpiresIn)
 		assertSessionCookies(result)
-		verify(authenticationPort).getAuthenticationToken(body.authorizationCode!!, body.redirectUri!!)
+		verify(authenticationPort).getAuthenticationToken(body.authorizationCode!!, body.redirectUri!!, CODE_VERIFIER)
+	}
+
+	/**
+	 * The whole point of `state`: a callback that did not come from a sign-in this browser started is
+	 * refused, so a code obtained by someone else cannot be walked through a victim's session.
+	 */
+	@Test
+	fun `Should fetchToken refuse a state that does not match the browser`() {
+		// Act
+		val result = webClient
+			.post()
+			.uri(uriBuilder("$BASE_URL/token", emptyList(), emptyList()))
+			.cookie(STATE_COOKIE, STATE)
+			.cookie(CODE_VERIFIER_COOKIE, CODE_VERIFIER)
+			.bodyValue(AuthenticationInfoModel("redirectUri", "code", state = "someone-elses-state"))
+			.exchange()
+
+		// Assert
+		result.assertError(UNAUTHORIZED, STATE_MISMATCH)
+		verifyNoInteractions(authenticationPort)
+	}
+
+	@Test
+	fun `Should fetchToken refuse a callback with no challenge cookie at all`() {
+		// Act
+		val result = webClient
+			.post()
+			.uri(uriBuilder("$BASE_URL/token", emptyList(), emptyList()))
+			.bodyValue(AuthenticationInfoModel("redirectUri", "code", state = STATE))
+			.exchange()
+
+		// Assert
+		result.assertError(UNAUTHORIZED, STATE_MISMATCH)
+		verifyNoInteractions(authenticationPort)
 	}
 
 	@ParameterizedTest
@@ -174,10 +222,11 @@ class SecurityControllerTest: TestContext() {
 	fun `Should fetchToken return 400`(
 		redirectUri: String?,
 		authorizationCode: String?,
+		state: String?,
 		expectedCode: String,
 	) {
 		// Arrange
-		val body = AuthenticationInfoModel(redirectUri, authorizationCode)
+		val body = AuthenticationInfoModel(redirectUri, authorizationCode, state)
 
 		// Act
 		val result = webClient
@@ -252,6 +301,22 @@ class SecurityControllerTest: TestContext() {
 		// Assert
 		result.body<CurrentUserModel>(OK)
 		verify(mapper).toDto(any())
+	}
+
+	/**
+	 * The challenge must be remembered somewhere the callback can prove it came from here, and be out
+	 * of reach of script so a successful XSS cannot mint a matching `state` of its own.
+	 */
+	private fun assertChallengeCookies(result: WebTestClient.ResponseSpec) {
+		val cookies = result.returnResult(String::class.java).responseCookies
+		val state = cookies.getFirst(STATE_COOKIE)!!
+		val verifier = cookies.getFirst(CODE_VERIFIER_COOKIE)!!
+
+		assertTrue(state.isHttpOnly)
+		assertTrue(verifier.isHttpOnly)
+		assertEquals("Strict", state.sameSite)
+		assertEquals(AUTHENTICATION_PATH, state.path)
+		assertEquals(AUTHENTICATION_PATH, verifier.path)
 	}
 
 	/**

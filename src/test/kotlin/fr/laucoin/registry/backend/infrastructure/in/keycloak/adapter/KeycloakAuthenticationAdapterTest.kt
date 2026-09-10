@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
@@ -41,6 +42,13 @@ class KeycloakAuthenticationAdapterTest {
 	private companion object {
 		private const val ALLOWED_ORIGIN = "https://app.test"
 		private const val REDIRECT_URI = "$ALLOWED_ORIGIN/auth/callback"
+		private const val CODE_VERIFIER = "aVerifier"
+
+		private val CHALLENGE = AuthorizationChallengeModel(
+			state = "aState",
+			nonce = "aNonce",
+			codeVerifier = CODE_VERIFIER,
+		)
 	}
 
 	@BeforeEach
@@ -64,10 +72,12 @@ class KeycloakAuthenticationAdapterTest {
 		val expected =
 			"${mockWebServer.url("/protocol/openid-connect/auth")}?response_type=code&client_id=clientId" +
 				"&scope=openid%20profile%20email%20offline_access" +
-				"&redirect_uri=https://app.test/auth/callback"
+				"&redirect_uri=https://app.test/auth/callback" +
+				"&state=aState&nonce=aNonce" +
+				"&code_challenge=${CHALLENGE.codeChallenge}&code_challenge_method=S256"
 
 		// Act
-		val result = adapter.getLoginUri(redirectUri)
+		val result = adapter.getLoginUri(redirectUri, CHALLENGE)
 
 		// Assert
 		assertNotNull(result)
@@ -85,7 +95,7 @@ class KeycloakAuthenticationAdapterTest {
 		val hostile = "$ALLOWED_ORIGIN/auth/callback?a=1&prompt=none&client_id=other"
 
 		// Act
-		val result = adapter.getLoginUri(hostile)
+		val result = adapter.getLoginUri(hostile, CHALLENGE)
 
 		// Assert
 		assertEquals(1, result.uri.split("client_id=").size - 1, "client_id was smuggled in a second time")
@@ -96,7 +106,7 @@ class KeycloakAuthenticationAdapterTest {
 	@Test
 	fun `Should refuse a redirect URI from another origin`() {
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			adapter.getLoginUri("https://evil.test/auth/callback")
+			adapter.getLoginUri("https://evil.test/auth/callback", CHALLENGE)
 		}) as RegistryException
 
 		assertEquals(BAD_REQUEST, result.status)
@@ -148,7 +158,7 @@ class KeycloakAuthenticationAdapterTest {
 		)
 
 		// Act
-		val result = adapter.getAuthenticationToken(authorizationCode, redirectUri).block()
+		val result = adapter.getAuthenticationToken(authorizationCode, redirectUri, CODE_VERIFIER).block()
 
 		// Assert
 		assertNotNull(result)
@@ -184,7 +194,7 @@ class KeycloakAuthenticationAdapterTest {
 		)
 
 		// Act
-		val result = adapter.getAuthenticationToken("authorizationCode", REDIRECT_URI).block()
+		val result = adapter.getAuthenticationToken("authorizationCode", REDIRECT_URI, CODE_VERIFIER).block()
 
 		// Assert
 		assertNotNull(result)
@@ -207,7 +217,7 @@ class KeycloakAuthenticationAdapterTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			adapter.getAuthenticationToken(authorizationCode, redirectUri).block()
+			adapter.getAuthenticationToken(authorizationCode, redirectUri, CODE_VERIFIER).block()
 		}) as RegistryException
 
 		// Assert
@@ -229,7 +239,7 @@ class KeycloakAuthenticationAdapterTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			adapter.getAuthenticationToken(authorizationCode, redirectUri).block()
+			adapter.getAuthenticationToken(authorizationCode, redirectUri, CODE_VERIFIER).block()
 		}) as RegistryException
 
 		// Assert
