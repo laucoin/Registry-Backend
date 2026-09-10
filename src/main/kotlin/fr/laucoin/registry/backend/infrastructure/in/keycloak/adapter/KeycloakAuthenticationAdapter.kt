@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.entity.KeycloakTokenEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
-import java.net.URI
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.BAD_REQUEST
@@ -22,8 +21,10 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.BodyInserters.FormInserter
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.bodyToMono
 import org.springframework.web.util.UriComponentsBuilder
 import reactor.core.publisher.Mono
+import java.net.URI
 
 @Service
 class KeycloakAuthenticationAdapter(
@@ -38,24 +39,14 @@ class KeycloakAuthenticationAdapter(
 	private val clientId: String,
 	@param:Value($$"${external.oidc.client-secret}")
 	private val clientSecret: String,
-	// The origins the SPA is served from are exactly the places it is legitimate to send a user back
-	// to, so the CORS allowlist is reused rather than duplicated under another name.
 	@param:Value($$"${external.cors.urls}")
 	private val allowedOrigins: List<String>,
-): IAuthenticationPort {
+) : IAuthenticationPort {
 	private val http: WebClient = WebClient.create()
 	private val log = LoggerFactory.getLogger(this::class.java)
 
 	private companion object {
 		private const val RESPONSE_TYPE = "code"
-
-		/**
-		 * Requested explicitly, because the provider grants nothing by default.
-		 *
-		 * `email` and `profile` carry the claims TokenConverterService requires — without them the
-		 * conversion fails on a missing email. `offline_access` is what makes Authentik issue a
-		 * refresh token at all; without it the session simply ends when the access token expires.
-		 */
 		private const val SCOPE = "openid profile email offline_access"
 	}
 
@@ -88,14 +79,6 @@ class KeycloakAuthenticationAdapter(
 		)
 	}
 
-	/**
-	 * Refuses a redirect target outside the configured origins.
-	 *
-	 * The provider keeps its own allowlist, so this is a second lock rather than the only one — but
-	 * relying on the provider alone means the URL this application hands out is only as safe as
-	 * someone else's configuration, and a loose entry there would turn this endpoint into an open
-	 * redirect that leaks authorization codes.
-	 */
 	private fun validateRedirectUri(redirectUri: String) {
 		val origin = originOf(redirectUri)
 		if (origin == null || allowedOrigins.none { originOf(it) == origin }) {
@@ -104,7 +87,6 @@ class KeycloakAuthenticationAdapter(
 		}
 	}
 
-	/** Scheme, host and port — the part that decides who receives the authorization code. */
 	private fun originOf(value: String): String? = runCatching {
 		val uri = URI(value.trim())
 		if (uri.scheme == null || uri.host == null) null
@@ -147,7 +129,7 @@ class KeycloakAuthenticationAdapter(
 			.onStatus(
 				{ it.is5xxServerError },
 				{ Mono.error(RegistryException(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
-			.bodyToMono(KeycloakTokenEntity::class.java)
+			.bodyToMono<KeycloakTokenEntity>()
 			.map(mapper::toModel)
 	}
 }

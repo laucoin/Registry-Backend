@@ -52,10 +52,10 @@ registry:
       projects:
         cron: 0 30 1 * * *
         months-threshold: 12
-        content: # Groupment of movements, communications and alerts
+        content:
           cron: 0 0 2 * * *
           months-threshold: 12
-        configuration: # Groupment of vehicles, activities, groups and participants
+        configuration:
           cron: 0 30 2 * * *
           months-threshold: 12
       users:
@@ -123,6 +123,4 @@ springdoc:
 
 management:
   server:
-    # A bean reads this port to tell the management surface from the API one, so the test context
-    # has to define it as the real one does.
     port: ${registry.server.management-port}

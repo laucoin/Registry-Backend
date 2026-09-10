@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.config
 
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.CsrfTokenHandler
+import fr.laucoin.registry.backend.domain.handler.DocumentationRedirectHandler
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler
 import fr.laucoin.registry.backend.domain.handler.TokenExtractionHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
@@ -28,12 +29,12 @@ import org.springframework.security.config.web.server.SecurityWebFiltersOrder.CS
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
-import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN
-import org.springframework.security.web.server.header.ServerHttpHeadersWriter
-import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode.DENY
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository
 import org.springframework.security.web.server.csrf.CsrfWebFilter
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
+import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN
+import org.springframework.security.web.server.header.ServerHttpHeadersWriter
+import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode.DENY
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult
 import org.springframework.web.cors.CorsConfiguration
@@ -52,6 +53,7 @@ class SecurityConfig(
 	private val headersHandler: HeadersHandler,
 	private val csrfTokenHandler: CsrfTokenHandler,
 	private val tokenExtractionHandler: TokenExtractionHandler,
+	private val documentationRedirectHandler: DocumentationRedirectHandler,
 	@param:Value($$"${registry.security.cookie.domain:}")
 	private val cookieDomain: String,
 	@param:Value($$"${registry.security.cookie.secure:true}")
@@ -68,33 +70,11 @@ class SecurityConfig(
 	private val observabilityEnabled: Boolean,
 ) {
 	private companion object {
-		/** Matches `/api/<version>/authentication/token` exactly — never `/token/refresh`. */
 		private val SESSION_OPENING_PATH = Regex("^/api/v\\d+/authentication/token$")
-
-		/** Where the double-submit token comes back; the name Spring's cookie repository expects. */
 		private const val CSRF_HEADER = "X-XSRF-TOKEN"
-
-		/** Not on Spring's [org.springframework.http.HttpHeaders], which predates the header. */
 		private const val CSP_HEADER = "Content-Security-Policy"
-
-		/**
-		 * The API answers JSON and nothing else, so it needs to load nothing at all. This mostly
-		 * matters for a response opened directly in a browser, and for `frame-ancestors`.
-		 */
 		private const val API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
-
-		/**
-		 * Swagger UI gets framing protection and nothing more, deliberately.
-		 *
-		 * A content policy here would have to allow what the page legitimately connects to, and that
-		 * is two origins this header cannot know: the API — which lives on another port, so `'self'`
-		 * excludes it and *try it out* stops working — and the provider's token endpoint, which the
-		 * PKCE exchange behind *Authorize* calls directly. Reconstructing both from configuration
-		 * would put the deployment topology into a header, to constrain a first-party page on a port
-		 * that is internal by design. `frame-ancestors` is the directive that pays for itself.
-		 */
 		private const val DOCUMENTATION_CSP = "frame-ancestors 'none'"
-
 		private const val PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()"
 	}
 
@@ -103,6 +83,7 @@ class SecurityConfig(
 		return http
 			.configureCsrf()
 			.securityHeaders()
+			.addDocumentationRedirect()
 			.addLocaleFilter()
 			.addFilterAt(csrfTokenHandler, CSRF)
 			.configureResourceAccess()
@@ -115,18 +96,9 @@ class SecurityConfig(
 	private fun ServerHttpSecurity.configureCsrf() = csrf {
 		it.csrfTokenRepository(csrfTokenRepository())
 		it.requireCsrfProtectionMatcher(csrfProtectionMatcher())
-		// Spring defaults to the XOR handler, which masks the token to blunt BREACH. That assumes the
-		// token is rendered into a response body; ours travels in a cookie the frontend reads and
-		// echoes back verbatim, so the masked value never matches the raw one and every mutating call
-		// is refused. BREACH is not a concern here precisely because the token is never in a body.
 		it.csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
 	}
 
-	/**
-	 * The token is readable by script on purpose — that is the double-submit pattern: the browser
-	 * returns it in a header, and only same-origin script can read the cookie to do so. It is
-	 * scoped like the session cookies so the frontend, served from a sibling host, can read it.
-	 */
 	private fun csrfTokenRepository() = CookieServerCsrfTokenRepository.withHttpOnlyFalse().apply {
 		setCookieCustomizer {
 			it.secure(cookieSecure).sameSite(cookieSameSite)
@@ -134,36 +106,18 @@ class SecurityConfig(
 		}
 	}
 
-	/**
-	 * CSRF applies to state-changing requests, minus two deliberate exemptions.
-	 *
-	 * A request carrying an `Authorization` header authenticates through a credential the caller set
-	 * itself — Swagger, a service account, any non-browser client — and a browser never attaches that
-	 * header to a cross-site request, so such a caller cannot be a CSRF victim. This exemption is only
-	 * sound because [TokenExtractionHandler] reads the header **before** the cookie: were the cookie to
-	 * win, a request could carry a meaningless header to claim the exemption while authenticating
-	 * through the ambient cookie.
-	 *
-	 * `POST /authentication/token` opens the session, so no ambient credential exists yet and there is
-	 * nothing to protect. `/token/refresh` is deliberately **not** exempt — that one runs entirely on
-	 * the refresh cookie, which is exactly the shape CSRF attacks.
-	 */
 	private fun csrfProtectionMatcher(): ServerWebExchangeMatcher {
 		val stateChanging = CsrfWebFilter.DEFAULT_CSRF_MATCHER
 		return ServerWebExchangeMatcher { exchange ->
 			val request = exchange.request
 			val exempt = request.headers.getFirst(AUTHORIZATION) != null
-				|| (request.method == POST && SESSION_OPENING_PATH.matches(request.path.pathWithinApplication().value()))
+					|| (request.method == POST && SESSION_OPENING_PATH.matches(
+				request.path.pathWithinApplication().value()
+			))
 			if (exempt) MatchResult.notMatch() else stateChanging.matches(exchange)
 		}
 	}
 
-	/**
-	 * The headers Spring does not set on its own.
-	 *
-	 * `nosniff`, HSTS and `Cache-Control: no-store` are already written by the default header
-	 * writers; redeclaring them here would only create a second place to keep them in step.
-	 */
 	private fun ServerHttpSecurity.securityHeaders() = headers {
 		it.referrerPolicy { policy -> policy.policy(STRICT_ORIGIN_WHEN_CROSS_ORIGIN) }
 		it.permissionsPolicy { policy -> policy.policy(PERMISSIONS_POLICY) }
@@ -171,44 +125,23 @@ class SecurityConfig(
 		it.writer(contentSecurityPolicyWriter())
 	}
 
-	/**
-	 * Writes a Content-Security-Policy that depends on what the response actually is.
-	 *
-	 * This chain governs the management port as well as the API one, and the two serve different
-	 * things: JSON on one side, the Swagger UI — a real document, with its own scripts and styles —
-	 * on the other. A single strict policy would either be useless on the API or break the UI, so the
-	 * path decides. Spring's `contentSecurityPolicy` DSL takes one fixed policy, hence a writer.
-	 */
 	fun contentSecurityPolicyWriter() = ServerHttpHeadersWriter { exchange ->
 		exchange.response.headers
 			.set(CSP_HEADER, if (exchange.isOnManagementPort()) DOCUMENTATION_CSP else API_CSP)
 		Mono.empty()
 	}
 
-	/** The port a request arrived on, which is what separates the API from the management surface. */
 	private fun ServerWebExchange.isOnManagementPort() = request.localAddress?.port == managementPort
 
 	fun onManagementPort() = ServerWebExchangeMatcher { exchange ->
 		if (exchange.isOnManagementPort()) MatchResult.match() else MatchResult.notMatch()
 	}
 
-	/** Named for what it does: [HeadersHandler] resolves the request locale, it sets no headers. */
 	private fun ServerHttpSecurity.addLocaleFilter() = addFilterBefore(headersHandler, FIRST)
 
+	private fun ServerHttpSecurity.addDocumentationRedirect() = addFilterBefore(documentationRedirectHandler, FIRST)
+
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
-		// Health, metrics and the API documentation are all served from the management port, and this
-		// chain governs that port too — with the rule removed they answer 401, which is what a probe
-		// would then report as an outage — so the two features share one matcher.
-		//
-		// The rule is written on the port, not on a path prefix, because the port is what the decision
-		// is actually about: everything reachable there is meant to be open, and nothing reachable
-		// there is meant to be public. A path prefix said the same thing only for as long as the
-		// endpoints happened to live under `/actuator`, and stopped being true the moment they moved
-		// to the root of that port.
-		//
-		// Left open because a liveness probe and a Prometheus scraper have no credentials to present.
-		// That is only safe as long as the management port stays off the public ingress, which is the
-		// whole reason for separating it; see the README.
 		if (observabilityEnabled || documentationEnabled) {
 			it.matchers(onManagementPort()).permitAll()
 		}
@@ -221,7 +154,6 @@ class SecurityConfig(
 
 	private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
 		resourceServer.authenticationFailureHandler(authorizationErrorHandler)
-		// Reads the token from the Authorization header, then from the session cookie.
 		resourceServer.bearerTokenConverter(tokenExtractionHandler)
 		resourceServer.jwt {
 			it.jwtAuthenticationConverter(tokenConverter)
@@ -253,18 +185,12 @@ class SecurityConfig(
 			PATCH.name(),
 			OPTIONS.name(),
 		)
-		// Required now that the session travels in cookies: without it the browser sends none of them
-		// cross-origin, and every authenticated call from the SPA fails. It also forbids a wildcard
-		// origin, which is a useful guard on `external.cors.urls`.
 		configuration.allowCredentials = true
 		configuration.allowedHeaders = listOf(
 			AUTHORIZATION,
 			CACHE_CONTROL,
 			CONTENT_TYPE,
 			ACCEPT_LANGUAGE,
-			// The CSRF token the SPA reads from its cookie and echoes back. Angular's built-in XSRF
-			// support does not apply — it only attaches the header to same-origin requests, and the
-			// SPA sits on a sibling host — so the interceptor sets it itself.
 			CSRF_HEADER,
 		)
 		val source = UrlBasedCorsConfigurationSource()

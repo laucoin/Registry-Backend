@@ -1,3 +1,16 @@
+external:
+  oidc:
+    jwks-uri: ${OIDC_JWKS_URI}
+    authorization-uri: ${OIDC_AUTHORIZATION_URI}
+    token-uri: ${OIDC_TOKEN_URI}
+    end-session-uri: ${OIDC_END_SESSION_URI}
+    client-id: ${OIDC_PRIVATE_CLIENT_ID}
+    client-secret: ${OIDC_PRIVATE_CLIENT_SECRET}
+    swagger:
+      client-id: ${OIDC_PUBLIC_CLIENT_ID}
+  cors:
+    urls: ${EXTERNAL_CORS_URLS}
+
 logging:
   level:
     fr.laucoin.registry.backend: ${registry.server.logging-level}
@@ -5,33 +18,37 @@ logging:
     org.springframework.security.oauth2: ${registry.server.logging-level}
     org.springframework.security.oauth2.client: ${registry.server.logging-level}
     org.flywaydb: ${registry.server.logging-level}
-    # springdoc registers its Swagger UI as @ControllerEndpoint(id = "swagger-ui"), and Spring Boot
-    # has rejected hyphens in an endpoint id since 2.2 — so every startup with documentation enabled
-    # warns about a name we do not choose and cannot change: the id is baked into a compiled
-    # annotation, with no property to override it. Still present in springdoc 3.1.1, the latest
-    # release at the time of writing, so an upgrade does not remove it either.
-    #
-    # This silences that one class. The cost is narrow but real: an endpoint of ours carrying an
-    # invalid id would now go unreported. Drop this entry when springdoc renames the endpoint.
-    org.springframework.boot.actuate.endpoint.EndpointId: ERROR
+    org.springframework.boot.actuate.endpoint.EndpointId: ${registry.server.logging-level}
 
-server:
-  port: ${registry.server.port}
+management:
+  server:
+    port: ${registry.server.management-port}
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: health,prometheus,openapi,swagger-ui
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 registry:
-  information:
-    name: Registry
-    description: This application allows virtual registry management. This is a backend which one is called by the frontend.
-    locale:
-      default: en
-      supported: en,fr
-    support:
-      name: Luc AUCOIN
-      email: luc.aucoin1998@gmail.com
-      url: https://doc.laucoin.fr/registry/
+  datasource:
+    schemas: ${DATASOURCE_SCHEMA:public}
+    base-url: ${DATASOURCE_BASE_URL}
+    database: ${DATASOURCE_DATABASE:registry}
+    username: ${DATASOURCE_USERNAME:registry}
+    password: ${DATASOURCE_PASSWORD}
   feature:
+    documentation:
+      enabled: ${REGISTRY_DOCUMENTATION_ENABLED:false}
     observability:
-      enabled: true
+      enabled: ${REGISTRY_OBSERVABILITY_ENABLED:true}
     profile:
       searched:
         max-user-result: 10
@@ -56,21 +73,31 @@ registry:
       projects:
         cron: 0 30 1 * * *
         months-threshold: 12
-        content: # Groupment of movements, communications and alerts
+        content:
           cron: 0 0 2 * * *
           months-threshold: 12
-        configuration: # Groupment of vehicles, activities, groups and participants
+        configuration:
           cron: 0 30 2 * * *
           months-threshold: 12
       users:
         cron: 0 0 1 * * *
         months-threshold: 12
+  information:
+    name: Registry
+    description: This application allows virtual registry management. This is a backend which one is called by the frontend.
+    locale:
+      default: en
+      supported: en,fr
+    support:
+      name: Luc AUCOIN
+      email: luc.aucoin1998@gmail.com
+      url: https://doc.laucoin.fr/registry/
   security:
     default-role: USER
     cookie:
-      domain: ${external.cookie.domain:}
-      secure: ${external.cookie.secure:true}
-      same-site: ${external.cookie.same-site:Lax}
+      domain: ${REGISTRY_SECURITY_COOKIE_DOMAIN:}
+      secure: ${REGISTRY_SECURITY_COOKIE_SECURE:true}
+      same-site: ${REGISTRY_SECURITY_COOKIE_SAME_SITE:Lax}
     oauth2:
       jwks-uri: ${external.oidc.jwks-uri}
       authorization-uri: ${external.oidc.authorization-uri}
@@ -85,6 +112,12 @@ registry:
         last-name: family_name
   server:
     prefix: /api
+    port: ${SERVER_PORT:8081}
+    management-port: ${SERVER_MANAGEMENT_PORT:8082}
+    logging-level: ${REGISTRY_LOGGING_LEVEL:INFO}
+
+server:
+  port: ${registry.server.port}
 
 spring:
   application:
@@ -110,50 +143,11 @@ spring:
           jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
-  # Serves the documentation from the management port rather than alongside the API.
-  #
-  # This switches off springdoc's ordinary WebFlux configuration entirely — it is annotated
-  # @ConditionalOnProperty(name = "springdoc.use-management-port", havingValue = "false") — and the UI
-  # is registered as an Actuator endpoint instead. `api-docs.path`, `swagger-ui.path` and
-  # `use-root-path` therefore have no effect at all here and are not declared: the endpoints take
-  # their address from their endpoint ids, under the Actuator base path. Only the `enabled` flags and
-  # the `oauth` block still apply.
   use-management-port: true
   api-docs:
-    enabled: ${registry.feature.documentation.enabled:false}
+    enabled: ${registry.feature.documentation.enabled}
   swagger-ui:
-    enabled: ${registry.feature.documentation.enabled:false}
+    enabled: ${registry.feature.documentation.enabled}
     oauth:
       client-id: ${external.oidc.swagger.client-id}
-      # Swagger holds no client secret — it runs in a browser — so the code it receives is bound to
-      # the request by PKCE instead. Without this the exchange has nothing proving it is the same
-      # caller that asked for the code. The setting belongs under `oauth`, not directly under
-      # `swagger-ui`: placed one level up it is accepted silently and does nothing.
       use-pkce-with-authorization-code-grant: true
-
-management:
-  server:
-    # Health, metrics and the API documentation all live here, away from the API itself, so the
-    # port serving the public API exposes nothing but the API. Point probes and scrapers at this
-    # one and keep it off the public ingress.
-    port: ${registry.server.management-port:8082}
-  endpoints:
-    web:
-      # The management port serves nothing but these endpoints, so they take its root: the UI is at
-      # /swagger-ui/index.html, not /actuator/swagger-ui/index.html. Boot only allows this because
-      # the management port differs from the API one.
-      base-path: /
-      # `openapi` and `swagger-ui` are contributed by springdoc; they appear only when
-      # registry.feature.documentation.enabled is on.
-      exposure:
-        include: health,prometheus,openapi,swagger-ui
-  endpoint:
-    health:
-      # Liveness and readiness as separate probes, so an orchestrator can tell "starting" from
-      # "broken" instead of restarting a container that is merely still warming up.
-      probes:
-        enabled: true
-  metrics:
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true

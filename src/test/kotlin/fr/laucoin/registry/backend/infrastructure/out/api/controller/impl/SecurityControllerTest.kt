@@ -5,26 +5,24 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_COOKIE_MISSING
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.STATE_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.STATE_MISMATCH
-import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
-import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
-import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.ACCESS_TOKEN_COOKIE
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.AUTHENTICATION_PATH
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.CODE_VERIFIER_COOKIE
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.REFRESH_TOKEN_COOKIE
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.REFRESH_TOKEN_PATH
 import fr.laucoin.registry.backend.domain.handler.AuthenticationCookieHandler.Companion.STATE_COOKIE
+import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
+import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.TokenModel
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.SessionReaderDto
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
+import fr.laucoin.registry.backend.infrastructure.out.api.dto.reader.SessionReaderDto
 import fr.laucoin.registry.backend.infrastructure.out.api.mapper.reader.CurrentUserReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.Duration
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -40,12 +38,15 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.UNAUTHORIZED
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.reactive.server.returnResult
 import reactor.core.publisher.Mono
+import java.time.Duration
+import java.util.stream.Stream
 
-class SecurityControllerTest: TestContext() {
+class SecurityControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var authenticationPort: IAuthenticationPort
 
@@ -183,10 +184,6 @@ class SecurityControllerTest: TestContext() {
 		verify(authenticationPort).getAuthenticationToken(body.authorizationCode!!, body.redirectUri!!, CODE_VERIFIER)
 	}
 
-	/**
-	 * The whole point of `state`: a callback that did not come from a sign-in this browser started is
-	 * refused, so a code obtained by someone else cannot be walked through a victim's session.
-	 */
 	@Test
 	fun `Should fetchToken refuse a state that does not match the browser`() {
 		// Act
@@ -270,10 +267,6 @@ class SecurityControllerTest: TestContext() {
 		verify(authenticationPort).refreshAuthenticationToken("refreshToken")
 	}
 
-	/**
-	 * The renewal credential is now the cookie, so a request without it is not a malformed request
-	 * but an expired session — hence 401 where the empty request body used to give 400.
-	 */
 	@Test
 	fun `Should refreshToken return 401 without the refresh cookie`() {
 		// Act
@@ -303,12 +296,8 @@ class SecurityControllerTest: TestContext() {
 		verify(mapper).toDto(any())
 	}
 
-	/**
-	 * The challenge must be remembered somewhere the callback can prove it came from here, and be out
-	 * of reach of script so a successful XSS cannot mint a matching `state` of its own.
-	 */
 	private fun assertChallengeCookies(result: WebTestClient.ResponseSpec) {
-		val cookies = result.returnResult(String::class.java).responseCookies
+		val cookies = result.returnResult<String>().responseCookies
 		val state = cookies.getFirst(STATE_COOKIE)!!
 		val verifier = cookies.getFirst(CODE_VERIFIER_COOKIE)!!
 
@@ -319,13 +308,8 @@ class SecurityControllerTest: TestContext() {
 		assertEquals(AUTHENTICATION_PATH, verifier.path)
 	}
 
-	/**
-	 * A browser drops a cookie only when the replacement matches its name, domain **and** path, so a
-	 * sign-out that clears them on the wrong path leaves the session alive while looking like it
-	 * worked. Asserting the paths is the only way to see the difference.
-	 */
 	private fun assertExpiredSessionCookies(result: WebTestClient.ResponseSpec) {
-		val cookies = result.returnResult(String::class.java).responseCookies
+		val cookies = result.returnResult<String>().responseCookies
 		val access = cookies.getFirst(ACCESS_TOKEN_COOKIE)!!
 		val refresh = cookies.getFirst(REFRESH_TOKEN_COOKIE)!!
 
@@ -337,12 +321,8 @@ class SecurityControllerTest: TestContext() {
 		assertEquals(REFRESH_TOKEN_PATH, refresh.path)
 	}
 
-	/**
-	 * Both cookies must be out of reach of any script, and the refresh one confined to its own path.
-	 * These attributes are the whole point of the change and nothing else in the response shows them.
-	 */
 	private fun assertSessionCookies(result: WebTestClient.ResponseSpec) {
-		val cookies = result.returnResult(String::class.java).responseCookies
+		val cookies = result.returnResult<String>().responseCookies
 		val access = cookies.getFirst(ACCESS_TOKEN_COOKIE)!!
 		val refresh = cookies.getFirst(REFRESH_TOKEN_COOKIE)!!
 

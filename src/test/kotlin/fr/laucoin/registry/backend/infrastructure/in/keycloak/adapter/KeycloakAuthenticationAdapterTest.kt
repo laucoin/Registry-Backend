@@ -1,17 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
-import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
@@ -19,12 +14,17 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.spy
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
-import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.Exceptions
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class KeycloakAuthenticationAdapterTest {
 	private val mockWebServer: MockWebServer = MockWebServer()
@@ -71,10 +71,10 @@ class KeycloakAuthenticationAdapterTest {
 		val redirectUri = REDIRECT_URI
 		val expected =
 			"${mockWebServer.url("/protocol/openid-connect/auth")}?response_type=code&client_id=clientId" +
-				"&scope=openid%20profile%20email%20offline_access" +
-				"&redirect_uri=https://app.test/auth/callback" +
-				"&state=aState&nonce=aNonce" +
-				"&code_challenge=${CHALLENGE.codeChallenge}&code_challenge_method=S256"
+					"&scope=openid%20profile%20email%20offline_access" +
+					"&redirect_uri=https://app.test/auth/callback" +
+					"&state=aState&nonce=aNonce" +
+					"&code_challenge=${CHALLENGE.codeChallenge}&code_challenge_method=S256"
 
 		// Act
 		val result = adapter.getLoginUri(redirectUri, CHALLENGE)
@@ -84,11 +84,6 @@ class KeycloakAuthenticationAdapterTest {
 		assertEquals(expected, result.uri)
 	}
 
-	/**
-	 * The redirect used to be concatenated into the URL unencoded, so an `&` in it added parameters
-	 * of the caller's choosing to the authorization request. Building through UriComponentsBuilder
-	 * escapes it, and the whole value stays one parameter.
-	 */
 	@Test
 	fun `Should not let a redirect URI inject extra authorization parameters`() {
 		// Arrange
@@ -169,13 +164,6 @@ class KeycloakAuthenticationAdapterTest {
 		assertEquals(18000, result.refreshExpiresIn)
 	}
 
-	/**
-	 * The response as Authentik actually sends it. Its `views/token.py` builds the body from
-	 * `access_token`, `token_type`, `scope`, `expires_in` and `id_token`, and adds `refresh_token`
-	 * only when `offline_access` was requested — `refresh_expires_in` is a Keycloak field it never
-	 * emits. Declaring either as required made every exchange fail to decode, which is why this
-	 * fixture is verbatim rather than tidied up.
-	 */
 	@Test
 	fun `Should accept a token response carrying neither refresh token nor refresh lifetime`() {
 		// Arrange

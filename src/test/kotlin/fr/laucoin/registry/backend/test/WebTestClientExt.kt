@@ -6,10 +6,6 @@ import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.ModelExt.userOidcId
-import java.net.URI
-import java.util.Objects
-import java.util.function.Function
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
@@ -25,6 +21,10 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.util.Objects
+import java.util.function.Function
+import kotlin.test.assertNotNull
 
 object WebTestClientExt {
 	private const val FIRST_NAME = "John"
@@ -40,14 +40,6 @@ object WebTestClientExt {
 
 	fun buildAuthority(authority: String): String = "${projectId}_$authority"
 
-	/**
-	 * Authenticates the client and attaches a valid CSRF token.
-	 *
-	 * The token is part of the contract for every mutating call now that sessions are carried by
-	 * cookies, so it belongs here rather than in each test: a test that forgets it would fail with a
-	 * 403 that says nothing about what it was actually verifying. Whether CSRF is enforced at all is
-	 * covered on its own in `SecurityCsrfTest`.
-	 */
 	fun WebTestClient.authenticate(vararg authorities: String): WebTestClient {
 		val currentUser = currentUser(*authorities)
 		authentication(currentUser)
@@ -88,7 +80,7 @@ object WebTestClientExt {
 	}
 
 	inline fun <reified T : Any> ResponseSpec.body(status: HttpStatus): T? {
-		val responseType = object: ParameterizedTypeReference<T>() {}
+		val responseType = object : ParameterizedTypeReference<T>() {}
 
 		return expectStatus().isEqualTo(status.value())
 			.expectBody(responseType)
