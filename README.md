@@ -89,10 +89,10 @@ no operational surface at all.
 | | API port | Management port |
 | --- | --- | --- |
 | `/api/v1/**` | ✅ | — |
-| `/actuator/health`, `/health/liveness`, `/health/readiness` | — | ✅ |
-| `/actuator/prometheus` | — | ✅ |
-| `/actuator/swagger-ui/index.html` | — | ✅ *(when documentation is enabled)* |
-| `/actuator/openapi/{group}` | — | ✅ *(when documentation is enabled)* |
+| `/health`, `/health/liveness`, `/health/readiness` | — | ✅ |
+| `/prometheus` | — | ✅ |
+| `/swagger-ui/index.html` | — | ✅ *(when documentation is enabled)* |
+| `/openapi/{group}` | — | ✅ *(when documentation is enabled)* |
 
 Point liveness and readiness probes, and the Prometheus scraper, at the management port.
 
@@ -105,7 +105,7 @@ configured for it:
   refused at the token endpoint for failing to authenticate. `external.oidc.swagger.client-id` should
   therefore name a client of its own, distinct from the backend's.
 - **The redirect URI is on the management port**, since that is where the UI now lives:
-  `http://<host>:<management-port>/actuator/swagger-ui/oauth2-redirect.html`.
+  `http://<host>:<management-port>/swagger-ui/oauth2-redirect.html`.
 - **Scopes `openid`, `profile` and `email`.** `email` is not optional — the backend refuses a token
   without it, so a session opened without that scope authenticates against the provider and is then
   rejected here, which reads as a broken API rather than a missing scope.
