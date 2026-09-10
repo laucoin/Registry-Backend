@@ -18,6 +18,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
+import java.time.Duration
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -116,6 +117,7 @@ class SecurityControllerTest: TestContext() {
 
 		// Assert
 		result.body<AuthenticationUriModel>(OK)
+		assertExpiredSessionCookies(result)
 		verify(authenticationPort).getLogoutUri(redirectUri)
 	}
 
@@ -250,6 +252,24 @@ class SecurityControllerTest: TestContext() {
 		// Assert
 		result.body<CurrentUserModel>(OK)
 		verify(mapper).toDto(any())
+	}
+
+	/**
+	 * A browser drops a cookie only when the replacement matches its name, domain **and** path, so a
+	 * sign-out that clears them on the wrong path leaves the session alive while looking like it
+	 * worked. Asserting the paths is the only way to see the difference.
+	 */
+	private fun assertExpiredSessionCookies(result: WebTestClient.ResponseSpec) {
+		val cookies = result.returnResult(String::class.java).responseCookies
+		val access = cookies.getFirst(ACCESS_TOKEN_COOKIE)!!
+		val refresh = cookies.getFirst(REFRESH_TOKEN_COOKIE)!!
+
+		assertEquals(Duration.ZERO, access.maxAge)
+		assertEquals(Duration.ZERO, refresh.maxAge)
+		assertEquals("", access.value)
+		assertEquals("", refresh.value)
+		assertEquals("/", access.path)
+		assertEquals(REFRESH_TOKEN_PATH, refresh.path)
 	}
 
 	/**

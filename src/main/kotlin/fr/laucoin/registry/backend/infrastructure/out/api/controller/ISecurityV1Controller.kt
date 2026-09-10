@@ -30,11 +30,15 @@ interface ISecurityV1Controller {
 	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
 
 	@Operation(
-		summary = "OAuth2 logout URI",
-		description = "Build and return the OAuth2 provider logout URI",
+		summary = "Close the session and return the provider logout URI",
+		description = "Expires the session cookies and returns the URL to send the browser to, so the "
+			+ "provider ends its own session too.",
 	)
 	@GetMapping("/logout/uri")
-	fun getLogoutUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
+	fun getLogoutUri(
+		exchange: ServerWebExchange,
+		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?,
+	): AuthenticationUriModel
 
 	@Operation(
 		summary = "Open a session from an authorization code",
