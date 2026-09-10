@@ -5,6 +5,15 @@ logging:
     org.springframework.security.oauth2: ${registry.server.logging-level}
     org.springframework.security.oauth2.client: ${registry.server.logging-level}
     org.flywaydb: ${registry.server.logging-level}
+    # springdoc registers its Swagger UI as @ControllerEndpoint(id = "swagger-ui"), and Spring Boot
+    # has rejected hyphens in an endpoint id since 2.2 — so every startup with documentation enabled
+    # warns about a name we do not choose and cannot change: the id is baked into a compiled
+    # annotation, with no property to override it. Still present in springdoc 3.1.1, the latest
+    # release at the time of writing, so an upgrade does not remove it either.
+    #
+    # This silences that one class. The cost is narrow but real: an endpoint of ours carrying an
+    # invalid id would now go unreported. Drop this entry when springdoc renames the endpoint.
+    org.springframework.boot.actuate.endpoint.EndpointId: ERROR
 
 server:
   port: ${registry.server.port}
