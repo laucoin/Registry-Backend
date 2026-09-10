@@ -131,11 +131,14 @@ class SecurityConfig(
 	private fun ServerHttpSecurity.addLocaleFilter() = addFilterBefore(headersHandler, FIRST)
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
-		if (documentationEnabled) {
-			it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui/**")
-				.permitAll()
-		}
-		if (observabilityEnabled) {
+		// Health, metrics and the API documentation are all served from the management port, under
+		// `/actuator`. This chain governs that port too — with the rule removed they answer 401, which
+		// is what a probe would then report as an outage — so the two features share one matcher.
+		//
+		// Left open because a liveness probe and a Prometheus scraper have no credentials to present.
+		// That is only safe as long as the management port stays off the public ingress, which is the
+		// whole reason for separating it; see the README.
+		if (observabilityEnabled || documentationEnabled) {
 			it.pathMatchers(GET, "/actuator/**").permitAll()
 		}
 		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
