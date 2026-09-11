@@ -73,15 +73,14 @@ fails the startup loudly instead of silently booting on something unintended.
 
 **Identity provider (OIDC)**
 
-| Variable                     | Default    | Description                                                                                               |
-|------------------------------|------------|-----------------------------------------------------------------------------------------------------------|
-| `OIDC_JWKS_URI`              | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                                          |
-| `OIDC_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                                              |
-| `OIDC_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                                                  |
-| `OIDC_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`                                   |
-| `OIDC_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`                          |
-| `OIDC_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                                          |
-| `OIDC_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger authenticates as, [distinct from the backend's](#swagger-and-the-identity-provider) |
+| Variable                    | Default    | Description                                                                      |
+|-----------------------------|------------|----------------------------------------------------------------------------------|
+| `IDP_JWKS_URI`              | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                 |
+| `IDP_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                     |
+| `IDP_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                         |
+| `IDP_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`          |
+| `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry` |
+| `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                 |
 
 **Server**
 
