@@ -6,10 +6,8 @@ import org.springframework.context.ConfigurableApplicationContext
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 
-class TestContainerDatabase: ApplicationContextInitializer<ConfigurableApplicationContext> {
+class TestContainerDatabase : ApplicationContextInitializer<ConfigurableApplicationContext> {
 	private companion object {
-		private const val CONFIG_PREFIX = "registry.datasource."
-
 		private const val DB_USERNAME = "backend"
 		private const val DB_PASSWORD = "test123"
 		private const val DB_REGISTRY = "registry"
@@ -29,11 +27,11 @@ class TestContainerDatabase: ApplicationContextInitializer<ConfigurableApplicati
 	override fun initialize(applicationContext: ConfigurableApplicationContext) {
 		container.start()
 		TestPropertyValues.of(
-			"${CONFIG_PREFIX}base-url=${dbUrl()}",
-			"${CONFIG_PREFIX}database=$DB_REGISTRY",
-			"${CONFIG_PREFIX}username=$DB_USERNAME",
-			"${CONFIG_PREFIX}password=$DB_PASSWORD",
-			"${CONFIG_PREFIX}schemas=$DB_SCHEMAS",
+			"DATASOURCE_BASE_URL=${dbUrl()}",
+			"DATASOURCE_DATABASE=$DB_REGISTRY",
+			"DATASOURCE_USERNAME=$DB_USERNAME",
+			"DATASOURCE_PASSWORD=$DB_PASSWORD",
+			"DATASOURCE_SCHEMAS=$DB_SCHEMAS",
 		).applyTo(applicationContext)
 	}
 

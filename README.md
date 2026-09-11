@@ -55,32 +55,48 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
     ```
 4. Enjoy the following commands 🎉
 
-##### JAVA_OPTS
+##### Configuration
 
-```
--Dregistry.datasource.schemas=<database-schemas> # For example: public
--Dregistry.datasource.base-url=<database-url> # For example: localhost:5432 (Without http(s)://)
--Dregistry.datasource.database=<database-name> # For example: postgres
--Dregistry.datasource.username=<database-username> # For example: postgres
--Dregistry.datasource.password=<database-username> # For example: postgres
--Dexternal.oidc.jwks-uri=<oidc-jwks-uri> # For example: http://localhost:9000/application/o/registry/jwks
--Dexternal.oidc.authorization-uri=<oidc-authorization-endpoint> # For example: http://localhost:9000/application/o/authorize
--Dexternal.oidc.token-uri=<oidc-token-endpoint> # For example: http://localhost:9000/application/o/token
--Dexternal.oidc.end-session-uri=<oidc-end-session-endpoint> # For example: http://localhost:9000/application/o/registry/end-session
--Dexternal.oidc.client-id=<oidc-provider-client-id> # For example: registry
--Dexternal.oidc.client-secret=<oidc-provider-client-secret> # For example: XXXX
--Dexternal.oidc.swagger.client-id=<oidc-provider-client-id> # For example: registry
--Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
--Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 9000 for the identity provider instance)
--Dregistry.feature.documentation.enabled=false # true only for development
--Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
-```
+The application reads its configuration from environment variables. A variable with a default may be left out; one
+without a default is **required** — `application.yml` declares it as a placeholder with no fallback, so a missing value
+fails the startup loudly instead of silently booting on something unintended.
 
-> [!IMPORTANT]
-> **Secrets** (`registry.datasource.password`, `external.oidc.client-secret`) must
-> be passed as JVM options or environment variables — **never committed** to any
-> `application*.yml`. The profile files reference them as placeholders so
-> startup fails loudly if they are missing.
+**Datasource**
+
+| Variable              | Default    | Description                                                                               |
+|-----------------------|------------|-------------------------------------------------------------------------------------------|
+| `DATASOURCE_BASE_URL` | *required* | Host and port of the PostgreSQL instance, without a scheme. For example: `localhost:5432` |
+| `DATASOURCE_DATABASE` | `registry` | Database name                                                                             |
+| `DATASOURCE_SCHEMA`   | `public`   | Schema the migrations and the application work in                                         |
+| `DATASOURCE_USERNAME` | `registry` | Database user                                                                             |
+| `DATASOURCE_PASSWORD` | *required* | Database password — a secret, see below                                                   |
+
+**Identity provider (OIDC)**
+
+| Variable                     | Default    | Description                                                                                               |
+|------------------------------|------------|-----------------------------------------------------------------------------------------------------------|
+| `OIDC_JWKS_URI`              | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                                          |
+| `OIDC_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                                              |
+| `OIDC_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                                                  |
+| `OIDC_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`                                   |
+| `OIDC_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`                          |
+| `OIDC_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                                          |
+| `OIDC_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger authenticates as, [distinct from the backend's](#swagger-and-the-identity-provider) |
+
+**Server**
+
+| Variable                 | Default    | Description                                                                                                                                                                                    |
+|--------------------------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SERVER_PORT`            | `8081`     | API port. `9000` is taken locally by the identity provider container                                                                                                                           |
+| `REGISTRY_LOGGING_LEVEL` | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                             |
+| `EXTERNAL_CORS_URLS`     | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
+
+**Features**
+
+| Variable                         | Default | Description                                                                              |
+|----------------------------------|---------|------------------------------------------------------------------------------------------|
+| `REGISTRY_DOCUMENTATION_ENABLED` | `false` | Swagger UI and the OpenAPI documents on the management port. `true` only for development |
+| `REGISTRY_OBSERVABILITY_ENABLED` | `true`  | Health probes and the Prometheus endpoint on the management port                         |
 
 #### Running the application in dev mode
 

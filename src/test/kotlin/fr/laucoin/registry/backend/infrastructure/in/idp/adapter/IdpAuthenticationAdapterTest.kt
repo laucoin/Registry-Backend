@@ -1,10 +1,10 @@
-package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
+package fr.laucoin.registry.backend.infrastructure.`in`.idp.adapter
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
+import fr.laucoin.registry.backend.infrastructure.`in`.idp.mapper.AuthenticationTokenEntityMapper
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import okhttp3.mockwebserver.MockResponse
@@ -20,10 +20,10 @@ import org.springframework.test.util.ReflectionTestUtils.setField
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.Exceptions
 
-class KeycloakAuthenticationAdapterTest {
+class IdpAuthenticationAdapterTest {
 	private val mockWebServer: MockWebServer = MockWebServer()
 	private val mapper: AuthenticationTokenEntityMapper = spy()
-	private val adapter: KeycloakAuthenticationAdapter = KeycloakAuthenticationAdapter(
+	private val adapter: IdpAuthenticationAdapter = IdpAuthenticationAdapter(
 		mapper,
 		authorizationUri = "authorizationUri",
 		tokenUri = "tokenUri",
@@ -36,9 +36,9 @@ class KeycloakAuthenticationAdapterTest {
 	fun setUp() {
 		mockWebServer.start()
 		setField(adapter, "http", WebClient.create())
-		setField(adapter, "authorizationUri", mockWebServer.url("/protocol/openid-connect/auth").toString())
-		setField(adapter, "tokenUri", mockWebServer.url("/protocol/openid-connect/token").toString())
-		setField(adapter, "endSessionUri", mockWebServer.url("/protocol/openid-connect/logout").toString())
+		setField(adapter, "authorizationUri", mockWebServer.url("/oauth2/authorize").toString())
+		setField(adapter, "tokenUri", mockWebServer.url("/oauth2/token").toString())
+		setField(adapter, "endSessionUri", mockWebServer.url("/oauth2/logout").toString())
 	}
 
 	@AfterEach
@@ -51,7 +51,7 @@ class KeycloakAuthenticationAdapterTest {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val expected =
-			"${mockWebServer.url("/protocol/openid-connect/auth")}?response_type=code&client_id=clientId&redirect_uri=redirectUri"
+			"${mockWebServer.url("/oauth2/authorize")}?response_type=code&client_id=clientId&redirect_uri=redirectUri"
 
 		// Act
 		val result = adapter.getLoginUri(redirectUri)
@@ -65,7 +65,7 @@ class KeycloakAuthenticationAdapterTest {
 	fun `Should getLogoutUri return built logout url`() {
 		// Arrange
 		val redirectUri = "redirectUri"
-		val expected = "${mockWebServer.url("/protocol/openid-connect/logout")}?redirect_uri=redirectUri"
+		val expected = "${mockWebServer.url("/oauth2/logout")}?redirect_uri=redirectUri"
 
 		// Act
 		val result = adapter.getLogoutUri(redirectUri)
@@ -76,7 +76,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should getAuthenticationToken call keycloak to fetch token 2xx`() {
+	fun `Should getAuthenticationToken call the IDP to fetch token 2xx`() {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val authorizationCode = "authorizationCode"
@@ -85,7 +85,6 @@ class KeycloakAuthenticationAdapterTest {
             "access_token": "accessToken",
             "refresh_token": "refreshToken",
             "expires_in": 3600,
-            "refresh_expires_in": 18000,
             "token_type": "Bearer"
         }"""
 		mockWebServer.enqueue(
@@ -104,11 +103,10 @@ class KeycloakAuthenticationAdapterTest {
 		assertEquals("accessToken", result.accessToken)
 		assertEquals("refreshToken", result.refreshToken)
 		assertEquals(3600, result.expiresIn)
-		assertEquals(18000, result.refreshExpiresIn)
 	}
 
 	@Test
-	fun `Should getAuthenticationToken call keycloak to fetch token 4xx`() {
+	fun `Should getAuthenticationToken call the IDP to fetch token 4xx`() {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val authorizationCode = "authorizationCode"
@@ -130,7 +128,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should getAuthenticationToken call keycloak to fetch token 5xx`() {
+	fun `Should getAuthenticationToken call the IDP to fetch token 5xx`() {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val authorizationCode = "authorizationCode"
@@ -152,7 +150,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should refreshAuthenticationToken call keycloak to refresh token 2xx`() {
+	fun `Should refreshAuthenticationToken call the IDP to refresh token 2xx`() {
 		// Arrange
 		val refreshToken = "refreshToken"
 
@@ -160,7 +158,6 @@ class KeycloakAuthenticationAdapterTest {
             "access_token": "accessToken",
             "refresh_token": "refreshToken",
             "expires_in": 3600,
-            "refresh_expires_in": 18000,
             "token_type": "Bearer"
         }"""
 		mockWebServer.enqueue(
@@ -179,11 +176,10 @@ class KeycloakAuthenticationAdapterTest {
 		assertEquals("accessToken", result.accessToken)
 		assertEquals("refreshToken", result.refreshToken)
 		assertEquals(3600, result.expiresIn)
-		assertEquals(18000, result.refreshExpiresIn)
 	}
 
 	@Test
-	fun `Should refreshAuthenticationToken call keycloak to refresh token 4xx`() {
+	fun `Should refreshAuthenticationToken call the IDP to refresh token 4xx`() {
 		// Arrange
 		val refreshToken = "refreshToken"
 
@@ -204,7 +200,7 @@ class KeycloakAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should refreshAuthenticationToken call keycloak to refresh token 5xx`() {
+	fun `Should refreshAuthenticationToken call the IDP to refresh token 5xx`() {
 		// Arrange
 		val refreshToken = "refreshToken"
 

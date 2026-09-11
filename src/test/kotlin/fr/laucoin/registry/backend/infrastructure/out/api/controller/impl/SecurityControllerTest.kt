@@ -147,7 +147,6 @@ class SecurityControllerTest: TestContext() {
 					refreshToken = "refreshToken",
 					expiresIn = 3600,
 					tokenType = "Bearer",
-					refreshExpiresIn = 18000,
 				)
 			)
 		)
@@ -197,7 +196,6 @@ class SecurityControllerTest: TestContext() {
 					refreshToken = "refreshToken",
 					expiresIn = 3600,
 					tokenType = "Bearer",
-					refreshExpiresIn = 18000,
 				)
 			)
 		)
