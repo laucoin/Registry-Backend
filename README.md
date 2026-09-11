@@ -101,6 +101,13 @@ fails the startup loudly instead of silently booting on something unintended.
 | `SERVER_MANAGEMENT_PORT` | `8082`     | Separate port serving Actuator (`/health`, `/prometheus`) and Swagger UI/OpenAPI docs, each gated by its feature flag below. **Not authenticated** — see warning below                         |
 | `REGISTRY_LOGGING_LEVEL` | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                             |
 | `EXTERNAL_CORS_URLS`     | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
+| `COOKIE_SECURE`          | `true`     | `Secure` flag on the `registry_access_token`/`registry_refresh_token` auth cookies. Set to `false` for local plain-HTTP dev — the `local` Spring profile already does this                    |
+
+> [!NOTE]
+> The browser app authenticates via two `HttpOnly`, `SameSite=Lax` cookies (`registry_access_token`, `registry_refresh_token`)
+> set by `/api/v1/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
+> still works — it's checked first, cookie as fallback — kept solely so Swagger UI's own OAuth2 "try it out" flow keeps
+> working; no other client should send it.
 
 > [!WARNING]
 > The management port has no application-level authentication: Spring Boot serves it from a separate embedded

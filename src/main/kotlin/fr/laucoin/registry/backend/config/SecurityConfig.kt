@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.config
 
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
+import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
@@ -43,6 +44,7 @@ class SecurityConfig(
 	private val tokenConverter: TokenConverterService,
 	private val authorizationErrorHandler: AuthorizationErrorHandler,
 	private val headersHandler: HeadersHandler,
+	private val cookieBearerTokenHandler: CookieBearerTokenHandler,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.server.management-port}")
@@ -87,6 +89,7 @@ class SecurityConfig(
 
 	private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
 		resourceServer.authenticationFailureHandler(authorizationErrorHandler)
+		resourceServer.bearerTokenConverter(cookieBearerTokenHandler)
 		resourceServer.jwt {
 			it.jwtAuthenticationConverter(tokenConverter)
 		}

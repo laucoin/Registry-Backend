@@ -133,6 +133,14 @@ class UserService(
 			.map { user }
 	}
 
+	override fun linkUserToOidcId(user: CurrentUserModel, oidcId: UUID): Mono<CurrentUserModel> {
+		log.info("Linking existing user \"{}\" to OIDC ID \"{}\"", user.id, oidcId)
+		user.oidcId = oidcId
+		user.lastLogin = ZonedDateTime.now()
+
+		return updateUser(serviceAccount, user).map { user }
+	}
+
 	private fun updateUser(currentUser: CurrentUserModel, user: UserModel): Mono<UserModel> {
 		return port.update(user.apply { update(currentUser) })
 	}

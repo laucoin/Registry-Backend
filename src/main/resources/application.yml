@@ -97,6 +97,8 @@ registry:
       url: https://doc.laucoin.fr/registry/
   security:
     default-role: USER
+    cookie:
+      secure: ${COOKIE_SECURE:true}
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
