@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/laucoin/Registry-Backend/compare/1.6.1...1.7.0) (2026-09-11)
+
+### 🧹 Improvements
+
+* **idp:** rename keycloak to IDP and small NPE mapper fix ([#39](https://github.com/laucoin/Registry-Backend/issues/39)) ([df90ca4](https://github.com/laucoin/Registry-Backend/commit/df90ca41143759651572def140c51c5d3bf31172))
+
 ## [1.6.1](https://github.com/laucoin/Registry-Backend/compare/1.6.0...1.6.1) (2026-09-05)
 
 ### 🐛 Bug Fixes
