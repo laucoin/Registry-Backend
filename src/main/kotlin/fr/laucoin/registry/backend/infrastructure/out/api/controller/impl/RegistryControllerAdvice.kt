@@ -27,14 +27,18 @@ import reactor.core.publisher.Mono
 @RestControllerAdvice
 class RegistryControllerAdvice(
 	private val translateService: ITranslateService,
-): IRegistryControllerAdvice, LoggerService() {
+) : IRegistryControllerAdvice, LoggerService() {
 	override fun handleRegistryException(exception: RegistryException): Mono<ResponseEntity<ErrorDto>> {
 		return buildError(exception.status, exception.code, exception.args?.toArray())
 	}
 
 	override fun handleWebExchangeBindException(exception: WebExchangeBindException): Mono<ResponseEntity<ErrorDto>> {
 		val error = exception.allErrors.first()
-		return buildError(status = BAD_REQUEST, code = error.defaultMessage!!, args = error.arguments ?: emptyArray())
+		return buildError(
+			status = BAD_REQUEST,
+			code = error.defaultMessage!!,
+			args = error.arguments?.drop(1)?.toTypedArray() ?: emptyArray(),
+		)
 	}
 
 	override fun handleServerWebInputException(exception: ServerWebInputException): Mono<ResponseEntity<ErrorDto>> {
@@ -47,10 +51,11 @@ class RegistryControllerAdvice(
 
 	override fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): Mono<ResponseEntity<ErrorDto>> {
 		val error: ParameterValidationResult = exception.valueResults.first()
+		val resolvable = error.resolvableErrors.first()
 		return buildError(
 			status = BAD_REQUEST,
-			code = error.resolvableErrors.first().defaultMessage!!,
-			args = arrayOf(error.argument).filterNotNull().toTypedArray(),
+			code = resolvable.defaultMessage!!,
+			args = resolvable.arguments?.drop(1)?.toTypedArray() ?: emptyArray(),
 		)
 	}
 
@@ -81,11 +86,11 @@ class RegistryControllerAdvice(
 			log.info("Return a status ${status.value()} with code $code", *args.orEmpty())
 		}
 
-		val title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}")
-		val message = translateService.getMessage(
+		val title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}")
+		val message = translateService.getError(
 			code = "$ERROR_MESSAGE_PREFIX$code",
 			args = args,
-			default = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR"),
+			default = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR"),
 		)
 
 		val body = ErrorDto(status.value(), status.name, code, title, message)

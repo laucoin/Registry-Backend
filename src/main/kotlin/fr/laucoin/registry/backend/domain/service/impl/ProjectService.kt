@@ -143,7 +143,9 @@ class ProjectService(
 				.handle { valid, handle ->
 					if (!valid) {
 						log.warn("Failed, {} is out of project range [{}, {}]", it, it.begin, it.end)
-						handle.error(RegistryException(CONFLICT, PROJECT_DATE_CONFLICT_WITH_ELEMENTS))
+						handle.error(
+							RegistryException(CONFLICT, PROJECT_DATE_CONFLICT_WITH_ELEMENTS, arrayListOf(it.name))
+						)
 					} else handle.next(it)
 				}
 		} else Mono.just(it)

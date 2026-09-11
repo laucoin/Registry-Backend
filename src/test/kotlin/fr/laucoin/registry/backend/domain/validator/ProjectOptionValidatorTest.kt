@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import jakarta.validation.ConstraintValidatorContext
 import java.util.stream.Stream
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -32,7 +31,7 @@ class ProjectOptionValidatorTest {
 
 		@JvmStatic
 		fun `Should isValid throw if Project options are invalid`(): Stream<Arguments> = Stream.of(
-			Arguments.of(listOf(COMMUNICATION), arrayListOf(ACTIVITY)),
+			Arguments.of(listOf(COMMUNICATION), COMMUNICATION, arrayListOf(ACTIVITY)),
 		)
 	}
 
@@ -56,7 +55,8 @@ class ProjectOptionValidatorTest {
 	@MethodSource
 	fun `Should isValid throw if Project options are invalid`(
 		projectOptions: List<ProjectOptionEnum>?,
-		expected: ArrayList<ProjectOptionEnum>,
+		expectedOption: ProjectOptionEnum,
+		expectedMissingOptions: ArrayList<ProjectOptionEnum>,
 	) {
 		// Arrange
 		val context: ConstraintValidatorContext = mock()
@@ -69,7 +69,8 @@ class ProjectOptionValidatorTest {
 		// Assert
 		assertEquals(BAD_REQUEST, result.status)
 		assertEquals(PROJECT_OPTIONS_MISSING, result.code)
-		assertEquals(expected.size, result.args?.size)
-		assertTrue(expected.map(ProjectOptionEnum::name).containsAll(result.args!!))
+		assertEquals(2, result.args?.size)
+		assertEquals(expectedOption, result.args?.get(0))
+		assertEquals(expectedMissingOptions.joinToString(", "), result.args?.get(1))
 	}
 }
