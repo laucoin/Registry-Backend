@@ -101,7 +101,7 @@ class TokenConverterService(
 						email,
 						oidcId
 					)
-					handle.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED))
+					handle.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
 				}
 			}
 			.flatMap { userService.createUser(oidcId, email, firstName, lastName) }

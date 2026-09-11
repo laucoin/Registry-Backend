@@ -30,8 +30,11 @@ management:
         include: health,prometheus,openapi,swagger-ui
   endpoint:
     health:
+      enabled: true
       probes:
         enabled: true
+    prometheus:
+      enabled: true
   metrics:
     distribution:
       percentiles-histogram:
@@ -125,6 +128,7 @@ spring:
     password: ${registry.datasource.password}
     locations:
       - classpath:db/migrations
+      - classpath:db/seed-test
   main:
     web-application-type: reactive
     banner-mode: off
@@ -139,6 +143,7 @@ spring:
           jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
+  use-management-port: true
   api-docs:
     enabled: ${registry.feature.documentation.enabled}
   swagger-ui:

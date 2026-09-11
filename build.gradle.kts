@@ -59,6 +59,9 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("io.micrometer:micrometer-registry-prometheus")
 
+	// Reactive context propagation (e.g. LocaleContext across WebFlux thread hops) 🔀
+	implementation("io.micrometer:context-propagation")
+
 	// Documentation 📚
 	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 

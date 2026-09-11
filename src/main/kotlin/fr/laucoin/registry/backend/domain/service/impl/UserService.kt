@@ -249,7 +249,7 @@ class UserService(
 	) = handle { it, handle ->
 		if (Objects.nonNull(role) && !eligibleRoles.contains(role)) {
 			log.warn("The role {} is not assignable by the user {}", role, currentUser.id)
-			handle.error(RegistryException(FORBIDDEN, error))
+			handle.error(RegistryException(FORBIDDEN, error, arrayListOf(role)))
 		} else handle.next(it)
 	}
 }

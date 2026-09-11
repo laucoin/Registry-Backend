@@ -43,6 +43,7 @@ class AuthorizationErrorHandler(
 					response,
 					exception.status,
 					exception.code,
+					exception.args?.toArray(),
 				)
 			)
 
@@ -80,6 +81,7 @@ class AuthorizationErrorHandler(
 		response: ServerHttpResponse,
 		status: HttpStatus,
 		errorCode: String,
+		args: Array<Any>? = null,
 	): Mono<DataBuffer> {
 		response.statusCode = status
 		response.headers.contentType = APPLICATION_JSON
@@ -88,8 +90,8 @@ class AuthorizationErrorHandler(
 			statusCode = status.value(),
 			statusName = status.name,
 			code = errorCode,
-			title = translateService.getMessage(code = "$ERROR_TITLE_PREFIX${status.value()}"),
-			message = translateService.getMessage(code = "$ERROR_MESSAGE_PREFIX$errorCode"),
+			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}"),
+			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode", args = args),
 		)
 
 		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))

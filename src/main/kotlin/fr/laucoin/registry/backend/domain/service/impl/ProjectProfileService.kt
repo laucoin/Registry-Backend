@@ -193,7 +193,13 @@ class ProjectProfileService(
 						"User \"{}\" tried to update project profile with a role higher up the breast.",
 						currentUser.id,
 					)
-					handle.error(RegistryException(FORBIDDEN, PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER))
+					handle.error(
+						RegistryException(
+							FORBIDDEN,
+							PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER,
+							arrayListOf(profile.role)
+						)
+					)
 				} else handle.next(profileToUpdate)
 			}
 	}
