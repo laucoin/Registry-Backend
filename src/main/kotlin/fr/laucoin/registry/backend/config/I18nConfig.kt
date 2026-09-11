@@ -1,18 +1,26 @@
 package fr.laucoin.registry.backend.config
 
-import java.util.Locale
+import io.micrometer.context.ContextRegistry
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.i18n.LocaleContextThreadLocalAccessor
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver
+import reactor.core.publisher.Hooks
+import java.util.Locale
 
 @Configuration
 class I18nConfig(
 	@param:Value($$"${registry.information.locale.default}") val defaultLocale: Locale,
 	@param:Value($$"${registry.information.locale.supported}") val supportedLocales: List<Locale>
 ) {
+
+	init {
+		Hooks.enableAutomaticContextPropagation()
+		ContextRegistry.getInstance().registerThreadLocalAccessor(LocaleContextThreadLocalAccessor())
+	}
 
 	@Bean(name = ["messagesSource"])
 	fun messagesSource(): MessageSource {

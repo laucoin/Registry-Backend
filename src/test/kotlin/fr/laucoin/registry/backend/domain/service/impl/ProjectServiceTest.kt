@@ -23,7 +23,6 @@ import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -464,7 +463,7 @@ class ProjectServiceTest {
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_DATE_CONFLICT_WITH_ELEMENTS, result.message)
-		assertNull(result.args)
+		assertEquals(arrayListOf(commonProject().name), result.args)
 
 		verify(port).findById(projectId, visibilitySearched = null)
 		verify(port).validDateTime(

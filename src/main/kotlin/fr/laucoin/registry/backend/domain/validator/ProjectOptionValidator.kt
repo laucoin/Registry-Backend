@@ -10,17 +10,15 @@ import org.springframework.http.HttpStatus.BAD_REQUEST
 
 class ProjectOptionValidator: ConstraintValidator<ProjectOptionDependencies, List<ProjectOptionEnum>> {
 	override fun isValid(options: List<ProjectOptionEnum>?, context: ConstraintValidatorContext): Boolean {
-		val missingOptions = mutableSetOf<ProjectOptionEnum>()
-		options?.forEach {
-			missingOptions.addAll(it.requiredOptions.minus(options))
-		}
-
-		if (missingOptions.isNotEmpty()) {
-			throw RegistryException(
-				BAD_REQUEST,
-				PROJECT_OPTIONS_MISSING,
-				arrayListOf(missingOptions.joinToString(", "))
-			)
+		options?.forEach { option ->
+			val missingOptions = option.requiredOptions.minus(options)
+			if (missingOptions.isNotEmpty()) {
+				throw RegistryException(
+					BAD_REQUEST,
+					PROJECT_OPTIONS_MISSING,
+					arrayListOf(option, missingOptions.joinToString(", "))
+				)
+			}
 		}
 
 		return true

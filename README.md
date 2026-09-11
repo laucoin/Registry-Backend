@@ -53,7 +53,17 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
     # Edit local-dev/.env to set secrets (PG_PASS, AU_SECRET_KEY, etc.)
     docker compose -f local-dev/compose.yml up -d
     ```
-4. Enjoy the following commands 🎉
+   Authentik auto-applies [`local-dev/authentik/blueprints/registry.yaml`](local-dev/authentik/blueprints/registry.yaml)
+   on startup, provisioning the backend's OAuth2 clients and six test accounts (`administrator`,
+   `coordinator`, `participant`, `blocked-user`, `blocked-profile`, `unverified`, all
+   `*@sgdf.fr`), sharing the `AU_PASS` password (default `dev123`).
+4. Run the backend with the `local` Spring profile active so its own database gets the matching seed rows (see [
+   `R__seed_dev_users.sql`](src/main/resources/db/seed/R__seed_dev_users.sql)) — without it, those Authentik accounts
+   have nothing to link to on first login:
+    ```shell script
+    SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+    ```
+5. Enjoy the following commands 🎉
 
 ##### Configuration
 
@@ -73,22 +83,29 @@ fails the startup loudly instead of silently booting on something unintended.
 
 **Identity provider (OIDC)**
 
-| Variable                    | Default    | Description                                                                      |
-|-----------------------------|------------|----------------------------------------------------------------------------------|
-| `IDP_JWKS_URI`              | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                 |
-| `IDP_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                     |
-| `IDP_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                         |
-| `IDP_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`          |
-| `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry` |
-| `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                 |
+| Variable                    | Default    | Description                                                                                |
+|-----------------------------|------------|--------------------------------------------------------------------------------------------|
+| `IDP_JWKS_URI`              | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                           |
+| `IDP_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                               |
+| `IDP_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                                   |
+| `IDP_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`                    |
+| `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`           |
+| `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                           |
+| `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (implicit flow). For example: `registry-swagger` |
 
 **Server**
 
 | Variable                 | Default    | Description                                                                                                                                                                                    |
 |--------------------------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `SERVER_PORT`            | `8081`     | API port. `9000` is taken locally by the identity provider container                                                                                                                           |
+| `SERVER_MANAGEMENT_PORT` | `8082`     | Separate port serving Actuator (`/health`, `/prometheus`) and Swagger UI/OpenAPI docs, each gated by its feature flag below. **Not authenticated** — see warning below                         |
 | `REGISTRY_LOGGING_LEVEL` | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                             |
 | `EXTERNAL_CORS_URLS`     | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
+
+> [!WARNING]
+> The management port has no application-level authentication: Spring Boot serves it from a separate embedded
+> server that the app's security filter never runs against. Never expose it outside a trusted/internal network —
+> no public ingress, firewalled from the internet — regardless of the feature flags below.
 
 **Features**
 

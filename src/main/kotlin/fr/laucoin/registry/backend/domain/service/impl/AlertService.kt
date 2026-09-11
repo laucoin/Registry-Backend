@@ -143,7 +143,7 @@ class AlertService(
 					val exception = RegistryException(
 						UNPROCESSABLE_CONTENT,
 						ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME,
-						arrayListOf(it)
+						arrayListOf(oldAlert.title)
 					)
 					log.warn("Existing communications are out the alert date", exception)
 					handle.error(exception)

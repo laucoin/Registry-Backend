@@ -28,6 +28,8 @@ import org.springframework.security.config.annotation.web.reactive.EnableWebFlux
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
@@ -43,10 +45,8 @@ class SecurityConfig(
 	private val headersHandler: HeadersHandler,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
-	@param:Value($$"${registry.feature.documentation.enabled:false}")
-	private val documentationEnabled: Boolean,
-	@param:Value($$"${registry.feature.observability.enabled:false}")
-	private val observabilityEnabled: Boolean,
+	@param:Value($$"${registry.server.management-port}")
+	private val managementPort: Int,
 ) {
 
 	@Bean
@@ -67,16 +67,14 @@ class SecurityConfig(
 	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
-		if (documentationEnabled) {
-			it.pathMatchers(GET, "/", "/swagger-ui.html", "/api-docs/**", "/webjars/swagger-ui/**", "/swagger-ui/**")
-				.permitAll()
-		}
-		if (observabilityEnabled) {
-			it.pathMatchers(GET, "/actuator/**").permitAll()
-		}
+		it.matchers(managementPortMatcher()).permitAll()
 		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
 		it.pathMatchers(POST, "/api/*/authentication/token", "/api/*/authentication/token/refresh").permitAll()
 		it.anyExchange().authenticated()
+	}
+
+	private fun managementPortMatcher() = ServerWebExchangeMatcher { exchange ->
+		if (exchange.request.localAddress?.port == managementPort) MatchResult.match() else MatchResult.notMatch()
 	}
 
 	private fun ServerHttpSecurity.disableAuthForm() = formLogin { it.disable() }

@@ -28,8 +28,8 @@ USER nonroot
 # Copy the application JAR file from the build stage
 COPY --from=build /usr/app/build/libs/registry-backend.jar /registry-backend.jar
 
-# Expose the port the application listens on
-EXPOSE 8081
+# Expose the ports the application listens on (API, then Actuator/Swagger management port)
+EXPOSE 8081 8082
 
 # Set the entry point for the container
 ENTRYPOINT ["java", "-jar", "/registry-backend.jar"]
