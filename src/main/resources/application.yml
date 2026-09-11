@@ -137,11 +137,6 @@ spring:
     url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
   use-management-port: true
