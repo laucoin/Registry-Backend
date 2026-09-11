@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
+package fr.laucoin.registry.backend.infrastructure.`in`.idp.adapter
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
@@ -7,8 +7,8 @@ import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
-import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.entity.KeycloakTokenEntity
-import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
+import fr.laucoin.registry.backend.infrastructure.`in`.idp.entity.IdpTokenEntity
+import fr.laucoin.registry.backend.infrastructure.`in`.idp.mapper.AuthenticationTokenEntityMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
@@ -19,19 +19,19 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 
 @Service
-class KeycloakAuthenticationAdapter(
+class IdpAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,
-	@param:Value($$"${external.oidc.authorization-uri}")
+	@param:Value($$"${external.idp.authorization-uri}")
 	private val authorizationUri: String,
-	@param:Value($$"${external.oidc.token-uri}")
+	@param:Value($$"${external.idp.token-uri}")
 	private val tokenUri: String,
-	@param:Value($$"${external.oidc.end-session-uri}")
+	@param:Value($$"${external.idp.end-session-uri}")
 	private val endSessionUri: String,
-	@param:Value($$"${external.oidc.client-id}")
+	@param:Value($$"${external.idp.client-id}")
 	private val clientId: String,
-	@param:Value($$"${external.oidc.client-secret}")
+	@param:Value($$"${external.idp.client-secret}")
 	private val clientSecret: String,
-): IAuthenticationPort {
+) : IAuthenticationPort {
 	private val http: WebClient = WebClient.create()
 
 	private companion object {
@@ -81,7 +81,7 @@ class KeycloakAuthenticationAdapter(
 			.onStatus(
 				{ it.is5xxServerError },
 				{ Mono.error(RegistryException(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
-			.bodyToMono(KeycloakTokenEntity::class.java)
+			.bodyToMono(IdpTokenEntity::class.java)
 			.map(mapper::toModel)
 	}
 }

@@ -53,7 +53,7 @@ different repositories.
     - `Step 1: Flyway migration + R2DBC entity & mapper + repository tests` (Testcontainers).
     - `Step 2: Domain model, port interface & service use-case + unit tests` (`StepVerifier`, `mockito-kotlin`).
     -
-    `Step 3: One controller contract interface + @PreAuthorize + writer/reader DTOs + one endpoint + WebTestClient contract & authorization test`.
+  `Step 3: One controller contract interface + @PreAuthorize + writer/reader DTOs + one endpoint + WebTestClient contract & authorization test`.
     - Cross-field validation constraints, option-gating, and each state-transition endpoint (`/disable`, `/enable`,
       `/block`, …) are their own steps.
 - **FORBIDDEN:** Do not touch `Registry-Backend` source or `.vitepress/config.*` during this phase.
@@ -103,7 +103,7 @@ Before marking any task or PR step as complete:
 - Update `README.md` and internal configuration files whenever an API, feature, configuration key, migration, or
   dependency changes.
 - The `README.md` MUST include an exhaustive **"How to install and use it? ⚙️"** section detailing:
-    - Prerequisites & runtime versions (JDK 25, Docker + Compose for PostgreSQL and the OIDC provider).
+    - Prerequisites & runtime versions (JDK 25, Docker + Compose for PostgreSQL and the ID provider).
     - Configuration keys (see §8) with defaults and descriptions.
     - Local setup & installation steps (`local-dev/compose.yml`, the `-D` VM options, `./gradlew bootRun`).
     - Build, run, test, and verification commands.
@@ -145,13 +145,13 @@ Before marking any task or PR step as complete:
 | Group                | Keys                                                                                                                                |
 |----------------------|-------------------------------------------------------------------------------------------------------------------------------------|
 | Datasource           | `registry.datasource.base-url` (host:port, no scheme), `.database`, `.schemas`, `.username`, `.password`                            |
-| OIDC                 | `external.oidc.jwks-uri`, `.authorization-uri`, `.token-uri`, `.end-session-uri`, `.client-id`, `.client-secret`                    |
+| IDP                  | `external.idp.jwks-uri`, `.authorization-uri`, `.token-uri`, `.end-session-uri`, `.client-id`, `.client-secret`                     |
 | CORS                 | `external.cors.urls` — comma-separated allow-list, **never** `*`                                                                    |
 | Server               | `registry.server.port` (8081), `registry.server.logging-level`                                                                      |
 | Features             | `registry.feature.documentation.enabled` (Swagger), `registry.feature.observability.enabled` (Prometheus)                           |
 | In `application.yml` | Per-picker `/search/**` result caps; `registry.feature.purge.*` — four cron expressions + four month thresholds (default 12 months) |
 
-Secrets (datasource password, OIDC client secret) are placeholders in `application.yml` — a missing one **must fail
+Secrets (datasource password, IDP client secret) are placeholders in `application.yml` — a missing one **must fail
 startup loudly**, never silently default.
 
 ## 9. Project Invariants
@@ -163,8 +163,8 @@ these:
   violation fails the build. The root package `fr.laucoin.registry.backend` contains only `config/`, `domain/`,
   `infrastructure/` — nothing else. (ADR 001)
 - **Inverted adapter naming.** `infrastructure/out/api` is the REST layer; `infrastructure/in/postgres` and
-  `infrastructure/in/keycloak` are the driven adapters. `infrastructure.out` must not depend on `infrastructure.in` —
-  the REST layer reaches persistence only through domain `port` interfaces.
+  `infrastructure/in/idp` are the driven adapters. `infrastructure.out` must not depend on `infrastructure.in` — the
+  REST layer reaches persistence only through domain `port` interfaces.
 - **Every `@RestController` implements a contract interface** that carries the `@RequestMapping`, `@PreAuthorize`,
   OpenAPI annotations and bean-validation constraints; the impl only maps DTOs and delegates. No endpoint ships without
   an authorization rule. (ADR 001)

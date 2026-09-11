@@ -10,16 +10,16 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.LabelDto
+import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.util.Objects
-import org.springframework.stereotype.Component
 
 @Component
 class PresenceStatusReaderDtoMapper(
 	private val translateService: ITranslateService,
-): GenericDurationReaderDtoMapper(translateService) {
+) : GenericDurationReaderDtoMapper(translateService) {
 	fun toDto(model: PresenceStatusEnum): LabelDto {
 		return LabelDto(
 			model.name,
@@ -56,7 +56,7 @@ class PresenceStatusReaderDtoMapper(
 				)
 			}
 
-			now.asStartIsAfterOther(startAvailability) -> {
+			Objects.nonNull(startAvailability) && now.asStartIsAfterOther(startAvailability) -> {
 				val interval = Duration.between(
 					now.toZonedDateTime(),
 					startAvailability?.toZonedDateTime(
@@ -70,7 +70,7 @@ class PresenceStatusReaderDtoMapper(
 				)
 			}
 
-			now.asEndIsBeforeOther(endAvailability) -> {
+			Objects.nonNull(endAvailability) && now.asEndIsBeforeOther(endAvailability) -> {
 				val interval = Duration.between(
 					endAvailability?.toZonedDateTime(
 						LocalTime.MAX, now.zone()!!
