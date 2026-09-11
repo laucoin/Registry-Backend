@@ -30,8 +30,11 @@ management:
         include: health,prometheus,openapi,swagger-ui
   endpoint:
     health:
+      enabled: ${registry.feature.observability.enabled}
       probes:
         enabled: true
+    prometheus:
+      enabled: ${registry.feature.observability.enabled}
   metrics:
     distribution:
       percentiles-histogram:
@@ -139,6 +142,7 @@ spring:
           jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
+  use-management-port: true
   api-docs:
     enabled: ${registry.feature.documentation.enabled}
   swagger-ui:
