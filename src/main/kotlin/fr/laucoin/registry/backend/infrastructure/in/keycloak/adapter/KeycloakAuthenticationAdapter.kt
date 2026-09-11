@@ -2,21 +2,29 @@ package fr.laucoin.registry.backend.infrastructure.`in`.keycloak.adapter
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel
+import fr.laucoin.registry.backend.domain.model.AuthorizationChallengeModel.Companion.CHALLENGE_METHOD
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.entity.KeycloakTokenEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.keycloak.mapper.AuthenticationTokenEntityMapper
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.BodyInserters.FormInserter
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.util.UriComponentsBuilder
 import reactor.core.publisher.Mono
+import java.net.URI
 
 @Service
 class KeycloakAuthenticationAdapter(
@@ -31,40 +39,70 @@ class KeycloakAuthenticationAdapter(
 	private val clientId: String,
 	@param:Value($$"${external.oidc.client-secret}")
 	private val clientSecret: String,
-): IAuthenticationPort {
+	@param:Value($$"${external.cors.urls}")
+	private val allowedOrigins: List<String>,
+) : IAuthenticationPort {
 	private val http: WebClient = WebClient.create()
+	private val log = LoggerFactory.getLogger(this::class.java)
 
 	private companion object {
 		private const val RESPONSE_TYPE = "code"
-
-		/**
-		 * Requested explicitly, because the provider grants nothing by default.
-		 *
-		 * `email` and `profile` carry the claims TokenConverterService requires — without them the
-		 * conversion fails on a missing email. `offline_access` is what makes Authentik issue a
-		 * refresh token at all; without it the session simply ends when the access token expires.
-		 */
 		private const val SCOPE = "openid profile email offline_access"
 	}
 
-	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
+	override fun getLoginUri(redirectUri: String, challenge: AuthorizationChallengeModel): AuthenticationUriModel {
+		validateRedirectUri(redirectUri)
 		return AuthenticationUriModel(
-			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId"
-				+ "&scope=${SCOPE.replace(" ", "%20")}&redirect_uri=$redirectUri"
+			uri = UriComponentsBuilder.fromUriString(authorizationUri)
+				.queryParam("response_type", RESPONSE_TYPE)
+				.queryParam("client_id", clientId)
+				.queryParam("scope", SCOPE)
+				.queryParam("redirect_uri", redirectUri)
+				.queryParam("state", challenge.state)
+				.queryParam("nonce", challenge.nonce)
+				.queryParam("code_challenge", challenge.codeChallenge)
+				.queryParam("code_challenge_method", CHALLENGE_METHOD)
+				.build()
+				.encode()
+				.toUriString()
 		)
 	}
 
 	override fun getLogoutUri(redirectUri: String): AuthenticationUriModel {
+		validateRedirectUri(redirectUri)
 		return AuthenticationUriModel(
-			uri = "$endSessionUri?redirect_uri=$redirectUri"
+			uri = UriComponentsBuilder.fromUriString(endSessionUri)
+				.queryParam("redirect_uri", redirectUri)
+				.build()
+				.encode()
+				.toUriString()
 		)
 	}
 
-	override fun getAuthenticationToken(authorizationCode: String, redirectUri: String): Mono<TokenModel> {
+	private fun validateRedirectUri(redirectUri: String) {
+		val origin = originOf(redirectUri)
+		if (origin == null || allowedOrigins.none { originOf(it) == origin }) {
+			log.warn("Refusing redirect URI \"{}\": its origin is not among {}", redirectUri, allowedOrigins)
+			throw RegistryException(BAD_REQUEST, REDIRECT_URI_NOT_ALLOWED)
+		}
+	}
+
+	private fun originOf(value: String): String? = runCatching {
+		val uri = URI(value.trim())
+		if (uri.scheme == null || uri.host == null) null
+		else "${uri.scheme.lowercase()}://${uri.host.lowercase()}${if (uri.port == -1) "" else ":${uri.port}"}"
+	}.getOrNull()
+
+	override fun getAuthenticationToken(
+		authorizationCode: String,
+		redirectUri: String,
+		codeVerifier: String,
+	): Mono<TokenModel> {
 		return fetchToken(
 			BodyInserters.fromFormData("grant_type", "authorization_code")
 				.with("code", authorizationCode)
-				.with("redirect_uri", redirectUri),
+				.with("redirect_uri", redirectUri)
+				.with("code_verifier", codeVerifier),
 			AUTHORIZATION_CODE_OUTDATED
 		)
 	}
@@ -91,7 +129,7 @@ class KeycloakAuthenticationAdapter(
 			.onStatus(
 				{ it.is5xxServerError },
 				{ Mono.error(RegistryException(FAILED_DEPENDENCY, AUTH_PROVIDER_FAILED)) })
-			.bodyToMono(KeycloakTokenEntity::class.java)
+			.bodyToMono<KeycloakTokenEntity>()
 			.map(mapper::toModel)
 	}
 }

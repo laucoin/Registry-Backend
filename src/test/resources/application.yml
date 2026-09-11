@@ -52,10 +52,10 @@ registry:
       projects:
         cron: 0 30 1 * * *
         months-threshold: 12
-        content: # Groupment of movements, communications and alerts
+        content:
           cron: 0 0 2 * * *
           months-threshold: 12
-        configuration: # Groupment of vehicles, activities, groups and participants
+        configuration:
           cron: 0 30 2 * * *
           months-threshold: 12
       users:
@@ -81,6 +81,7 @@ registry:
         last-name: "family_name"
   server:
     logging-level: DEBUG
+    management-port: 8082
 
 spring:
   application:
@@ -119,3 +120,7 @@ springdoc:
     oauth:
       client-id: ${registry.security.oauth2.client-id}
       client-secret: ${registry.security.oauth2.client-secret}
+
+management:
+  server:
+    port: ${registry.server.management-port}

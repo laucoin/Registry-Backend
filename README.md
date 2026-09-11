@@ -55,39 +55,121 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
     ```
 4. Enjoy the following commands 🎉
 
-##### JAVA_OPTS
+##### Configuration
 
-```
--Dregistry.datasource.schemas=<database-schemas> # For example: public
--Dregistry.datasource.base-url=<database-url> # For example: localhost:5432 (Without http(s)://)
--Dregistry.datasource.database=<database-name> # For example: postgres
--Dregistry.datasource.username=<database-username> # For example: postgres
--Dregistry.datasource.password=<database-username> # For example: postgres
--Dexternal.oidc.jwks-uri=<oidc-jwks-uri> # For example: http://localhost:9000/application/o/registry/jwks
--Dexternal.oidc.authorization-uri=<oidc-authorization-endpoint> # For example: http://localhost:9000/application/o/authorize
--Dexternal.oidc.token-uri=<oidc-token-endpoint> # For example: http://localhost:9000/application/o/token
--Dexternal.oidc.end-session-uri=<oidc-end-session-endpoint> # For example: http://localhost:9000/application/o/registry/end-session
--Dexternal.oidc.client-id=<oidc-provider-client-id> # For example: registry
--Dexternal.oidc.client-secret=<oidc-provider-client-secret> # For example: XXXX
--Dexternal.oidc.swagger.client-id=<oidc-provider-client-id> # For example: registry
--Dregistry.server.logging-level=DEBUG # Or INFO, WARN, ERROR, TRACE, FATAL (avoid using DEBUG for production)
--Dregistry.server.port=<port> # Commonly use 8081 (because docker compose use 9000 for the identity provider instance)
--Dregistry.feature.documentation.enabled=false # true only for development
--Dexternal.cors.urls=<cors-urls> # For example: http://localhost:4200 (With http(s):// separate with "," if multiple)
--Dexternal.cookie.domain=<cookie-domain> # Optional, host-only when unset. For example: registry.laucoin.fr — covers backend.registry.laucoin.fr without exposing the cookie to unrelated subdomains
--Dexternal.cookie.secure=true # Set to false ONLY for local development without TLS: a Secure cookie over plain http is dropped and every sign-in fails silently
--Dexternal.cookie.same-site=Lax # SameSite of the access cookie; the refresh cookie is always Strict
-```
+The application reads its configuration from environment variables. A variable with a default may be left out; one
+without a default is **required** — `application.yml` declares it as a placeholder with no fallback, so a missing value
+fails the startup loudly instead of silently booting on something unintended.
+
+**Datasource**
+
+| Variable              | Default    | Description                                                                               |
+|-----------------------|------------|-------------------------------------------------------------------------------------------|
+| `DATASOURCE_BASE_URL` | *required* | Host and port of the PostgreSQL instance, without a scheme. For example: `localhost:5432` |
+| `DATASOURCE_DATABASE` | `registry` | Database name                                                                             |
+| `DATASOURCE_SCHEMA`   | `public`   | Schema the migrations and the application work in                                         |
+| `DATASOURCE_USERNAME` | `registry` | Database user                                                                             |
+| `DATASOURCE_PASSWORD` | *required* | Database password — a secret, see below                                                   |
+
+**Identity provider (OIDC)**
+
+| Variable                     | Default    | Description                                                                                               |
+|------------------------------|------------|-----------------------------------------------------------------------------------------------------------|
+| `OIDC_JWKS_URI`              | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                                          |
+| `OIDC_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                                              |
+| `OIDC_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                                                  |
+| `OIDC_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`                                   |
+| `OIDC_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`                          |
+| `OIDC_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                                          |
+| `OIDC_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger authenticates as, [distinct from the backend's](#swagger-and-the-identity-provider) |
+
+**Server**
+
+| Variable                 | Default    | Description                                                                                                                                                                                                          |
+|--------------------------|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SERVER_PORT`            | `8081`     | API port. `9000` is taken locally by the identity provider container                                                                                                                                                 |
+| `SERVER_MANAGEMENT_PORT` | `8082`     | Health, metrics and the API documentation are served here, never on the API port — keep it off the public ingress                                                                                                    |
+| `REGISTRY_LOGGING_LEVEL` | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                                                   |
+| `EXTERNAL_CORS_URLS`     | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200,http://localhost:8082` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
+
+**Features**
+
+| Variable                         | Default | Description                                                                              |
+|----------------------------------|---------|------------------------------------------------------------------------------------------|
+| `REGISTRY_DOCUMENTATION_ENABLED` | `false` | Swagger UI and the OpenAPI documents on the management port. `true` only for development |
+| `REGISTRY_OBSERVABILITY_ENABLED` | `true`  | Health probes and the Prometheus endpoint on the management port                         |
+
+**Session cookies**
+
+| Variable                             | Default   | Description                                                                                                                                         |
+|--------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `REGISTRY_SECURITY_COOKIE_DOMAIN`    | *(unset)* | Host-only when unset. For example: `registry.laucoin.fr` — covers `backend.registry.laucoin.fr` without exposing the cookie to unrelated subdomains |
+| `REGISTRY_SECURITY_COOKIE_SECURE`    | `true`    | Set to `false` ONLY for local development without TLS: a `Secure` cookie over plain http is dropped and every sign-in fails silently                |
+| `REGISTRY_SECURITY_COOKIE_SAME_SITE` | `Lax`     | `SameSite` of the access cookie; the refresh cookie is always `Strict`                                                                              |
+
+Every variable above simply feeds a property in `application.yml`, so a JVM system property still wins over it when that
+is more convenient — `-Dregistry.server.port=8090` for instance. The environment variables are the supported interface;
+the image is immutable and configured no other way.
+
+### Management port
+
+The application listens on two ports. The API port serves the API and nothing else; health, metrics and the API
+documentation live on a separate management port, so the address exposed publicly carries no operational surface at all.
+
+|                                                                                               | API port | Management port                      |
+|-----------------------------------------------------------------------------------------------|----------|--------------------------------------|
+| `/api/v1/**`                                                                                  | ✅       | —                                    |
+| `/health`, `/health/liveness`, `/health/readiness`                                            | —        | ✅                                   |
+| `/prometheus`                                                                                 | —        | ✅                                   |
+| `/swagger-ui/index.html`                                                                      | —        | ✅ *(when documentation is enabled)* |
+| `/` — redirects to the Swagger UI when documentation is enabled, otherwise the Actuator index | —        | ✅                                   |
+| `/openapi/{group}`                                                                            | —        | ✅ *(when documentation is enabled)* |
+
+Point liveness and readiness probes, and the Prometheus scraper, at the management port.
+
+#### Swagger and the identity provider
+
+Swagger authenticates through the authorization code flow with PKCE, so its provider client must be configured for it:
+
+- **A public client.** Swagger runs in a browser and holds no secret; a confidential client would be refused at the
+  token endpoint for failing to authenticate. `OIDC_PUBLIC_CLIENT_ID` should therefore name a client of its own,
+  distinct from the backend's `OIDC_PRIVATE_CLIENT_ID`.
+- **The redirect URI is on the management port**, since that is where the UI now lives:
+  `http://<host>:<management-port>/swagger-ui/oauth2-redirect.html`.
+- **Scopes `openid`, `profile` and `email`.** `email` is not optional — the backend refuses a token without it, so a
+  session opened without that scope authenticates against the provider and is then rejected here, which reads as a
+  broken API rather than a missing scope.
+
+> [!NOTE]
+> **Swagger's calls to the API are cross-origin**, because the UI is served from the management port
+> while the API answers on its own. *Try it out* is refused until that origin appears in
+> `EXTERNAL_CORS_URLS` — locally `http://localhost:8082`, alongside the SPA's own origin.
+>
+> Be aware that this list does double duty: it is also what the OAuth `redirectUri` is validated
+> against, so an entry here is allowed both to **call the API** and to **receive an authorization
+> code**. That is harmless for the management port, which is this application's own, and Authentik
+> checks `redirect_uri` against the client's registered URIs regardless. It is worth a second thought
+> before adding an origin you do not control.
+
+> [!CAUTION]
+> **The management port is unauthenticated on purpose** — a liveness probe and a metrics scraper have
+> no credentials to present. That is only safe while the port stays off the public ingress, which is
+> the entire reason for separating it. Publish the API port; do not publish the management port.
+
+Both features remain individually switchable: `REGISTRY_OBSERVABILITY_ENABLED` and
+`REGISTRY_DOCUMENTATION_ENABLED`. With both off, the management port answers `401` — the endpoints are governed by the
+same security chain as the API.
 
 > [!IMPORTANT]
-> **Secrets** (`registry.datasource.password`, `external.oidc.client-secret`) must
-> be passed as JVM options or environment variables — **never committed** to any
-> `application*.yml`. The profile files reference them as placeholders so
-> startup fails loudly if they are missing.
+> **Secrets** (`DATASOURCE_PASSWORD`, `OIDC_PRIVATE_CLIENT_SECRET`) must be passed
+> through the environment — **never committed** to `application.yml`. It references
+> them as placeholders without a default, so startup fails loudly if they are
+> missing.
 
 #### Running the application in dev mode
 
-You can run your application in dev mode that enables live coding using (please add the VM options just after):
+You can run your application in dev mode that enables live coding using (with the environment variables above set in
+your shell or your run configuration):
 
 ```shell script
 ./gradlew bootRun
