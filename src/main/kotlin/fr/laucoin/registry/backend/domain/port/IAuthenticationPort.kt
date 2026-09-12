@@ -6,7 +6,7 @@ import reactor.core.publisher.Mono
 
 interface IAuthenticationPort {
 	fun getLoginUri(redirectUri: String): AuthenticationUriModel
-	fun getLogoutUri(redirectUri: String): AuthenticationUriModel
+	fun getLogoutUri(redirectUri: String, accessToken: String?, refreshToken: String?): Mono<AuthenticationUriModel>
 	fun getAuthenticationToken(authorizationCode: String, redirectUri: String): Mono<TokenModel>
 	fun refreshAuthenticationToken(refreshToken: String): Mono<TokenModel>
 }

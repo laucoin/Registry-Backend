@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
+import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.`in`.idp.entity.IdpTokenEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.idp.mapper.AuthenticationTokenEntityMapper
 import org.springframework.beans.factory.annotation.Value
@@ -27,11 +28,13 @@ class IdpAuthenticationAdapter(
 	private val tokenUri: String,
 	@param:Value($$"${external.idp.end-session-uri}")
 	private val endSessionUri: String,
+	@param:Value($$"${external.idp.revocation-uri}")
+	private val revocationUri: String,
 	@param:Value($$"${external.idp.client-id}")
 	private val clientId: String,
 	@param:Value($$"${external.idp.client-secret}")
 	private val clientSecret: String,
-) : IAuthenticationPort {
+) : IAuthenticationPort, LoggerService() {
 	private val http: WebClient = WebClient.create()
 
 	private companion object {
@@ -44,10 +47,33 @@ class IdpAuthenticationAdapter(
 		)
 	}
 
-	override fun getLogoutUri(redirectUri: String): AuthenticationUriModel {
-		return AuthenticationUriModel(
-			uri = "$endSessionUri?redirect_uri=$redirectUri"
-		)
+	override fun getLogoutUri(redirectUri: String, accessToken: String?, refreshToken: String?): Mono<AuthenticationUriModel> {
+		return Mono.`when`(
+			revokeToken(accessToken, "access_token"),
+			revokeToken(refreshToken, "refresh_token"),
+		).thenReturn(AuthenticationUriModel(uri = "$endSessionUri?redirect_uri=$redirectUri"))
+	}
+
+	/**
+	 * Best-effort: a revocation failure (IDP unreachable, already-expired token, …) must never
+	 * prevent the user from actually logging out, so errors are logged and swallowed rather than
+	 * propagated.
+	 */
+	private fun revokeToken(token: String?, tokenTypeHint: String): Mono<Void> {
+		if (token.isNullOrBlank()) return Mono.empty()
+
+		return http.post().uri(revocationUri)
+			.body(
+				BodyInserters.fromFormData("token", token)
+					.with("token_type_hint", tokenTypeHint)
+					.with("client_id", clientId)
+					.with("client_secret", clientSecret)
+			)
+			.retrieve()
+			.toBodilessEntity()
+			.doOnError { log.warn("Failed to revoke the {} at the identity provider during logout", tokenTypeHint, it) }
+			.onErrorResume { Mono.empty() }
+			.then()
 	}
 
 	override fun getAuthenticationToken(authorizationCode: String, redirectUri: String): Mono<TokenModel> {
