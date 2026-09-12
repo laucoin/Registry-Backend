@@ -91,25 +91,17 @@ class TokenConverterService(
 			.flatMap { matches ->
 				when {
 					matches.isEmpty() -> {
-						log.info(
-							"No user found with email \"{}\", creating a new user with OIDC ID \"{}\"",
-							email,
-							oidcId
-						)
+						log.info("No user found with the given email, creating a new user with OIDC ID \"{}\"", oidcId)
 						userService.createUser(oidcId, email, firstName, lastName)
 					}
 
 					matches.size == 1 -> {
-						log.info("Linking existing user with email \"{}\" to OIDC ID \"{}\"", email, oidcId)
+						log.info("Linking existing user with the given email to OIDC ID \"{}\"", oidcId)
 						userService.linkUserToOidcId(matches.first(), oidcId)
 					}
 
 					else -> {
-						log.warn(
-							"Multiple users found with email \"{}\", cannot link OIDC ID \"{}\"",
-							email,
-							oidcId
-						)
+						log.warn("Multiple users found with the given email, cannot link OIDC ID \"{}\"", oidcId)
 						Mono.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
 					}
 				}

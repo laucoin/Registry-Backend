@@ -1,17 +1,17 @@
 package fr.laucoin.registry.backend.config
 
 import com.nimbusds.jose.shaded.gson.Gson
-import java.time.Duration
 import fr.laucoin.registry.backend.domain.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
 import fr.laucoin.registry.backend.domain.handler.CsrfTokenHeaderHandler
-import fr.laucoin.registry.backend.domain.handler.HeadersHandler
+import fr.laucoin.registry.backend.domain.handler.LocaleContextHandler
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
 import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
+import java.time.Duration
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -52,7 +52,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 class SecurityConfig(
 	private val tokenConverter: TokenConverterService,
 	private val authorizationErrorHandler: AuthorizationErrorHandler,
-	private val headersHandler: HeadersHandler,
+	private val localeContextHandler: LocaleContextHandler,
 	private val cookieBearerTokenHandler: CookieBearerTokenHandler,
 	private val translateService: ITranslateService,
 	private val gson: Gson,
@@ -70,7 +70,7 @@ class SecurityConfig(
 	@Bean
 	fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
 		return http
-			.handleHeaders()
+			.resolveLocaleContext()
 			.configureSecurityHeaders()
 			.rateLimitAuthentication()
 			.exposeCsrfToken()
@@ -83,7 +83,7 @@ class SecurityConfig(
 			.build()
 	}
 
-	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
+	private fun ServerHttpSecurity.resolveLocaleContext() = addFilterBefore(localeContextHandler, FIRST)
 
 	// The API never renders HTML nor embeds third-party resources, so it gets the strictest possible
 	// CSP rather than the frontend's script/style-src allowances (which don't apply here and would
