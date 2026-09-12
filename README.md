@@ -102,6 +102,8 @@ fails the startup loudly instead of silently booting on something unintended.
 | `REGISTRY_LOGGING_LEVEL` | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                             |
 | `EXTERNAL_CORS_URLS`     | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
 | `COOKIE_SECURE`          | `true`     | `Secure` flag on the `registry_access_token`/`registry_refresh_token` auth cookies. Set to `false` for local plain-HTTP dev — the `local` Spring profile already does this                    |
+| `REGISTRY_AUTH_RATE_LIMIT_CAPACITY` | `10` | Max `POST` calls per client IP, per window, allowed on `/authentication/token` and `/token/refresh` — the only unauthenticated endpoints. In-memory (per instance, resets on restart) |
+| `REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Length in seconds of the rate-limit window above |
 
 > [!NOTE]
 > The browser app authenticates via two `HttpOnly`, `SameSite=Lax` cookies (`registry_access_token`, `registry_refresh_token`)

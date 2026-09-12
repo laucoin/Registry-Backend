@@ -1,8 +1,11 @@
 package fr.laucoin.registry.backend.config
 
+import com.nimbusds.jose.shaded.gson.Gson
+import fr.laucoin.registry.backend.domain.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
 import fr.laucoin.registry.backend.domain.handler.HeadersHandler
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.domain.service.impl.PermissionService
 import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
@@ -45,10 +48,16 @@ class SecurityConfig(
 	private val authorizationErrorHandler: AuthorizationErrorHandler,
 	private val headersHandler: HeadersHandler,
 	private val cookieBearerTokenHandler: CookieBearerTokenHandler,
+	private val translateService: ITranslateService,
+	private val gson: Gson,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.server.management-port}")
 	private val managementPort: Int,
+	@param:Value($$"${registry.security.rate-limit.auth.capacity}")
+	private val authRateLimitCapacity: Int,
+	@param:Value($$"${registry.security.rate-limit.auth.window-seconds}")
+	private val authRateLimitWindowSeconds: Long,
 ) {
 
 	@Bean
@@ -56,6 +65,7 @@ class SecurityConfig(
 		return http
 			.disableCsrf()
 			.handleHeaders()
+			.rateLimitAuthentication()
 			.configureResourceAccess()
 			.disableAuthForm()
 			.configureLogout()
@@ -67,6 +77,11 @@ class SecurityConfig(
 	private fun ServerHttpSecurity.disableCsrf() = csrf { it.disable() }
 
 	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
+
+	private fun ServerHttpSecurity.rateLimitAuthentication() = addFilterBefore(
+		AuthenticationRateLimitHandler(translateService, gson, authRateLimitCapacity, authRateLimitWindowSeconds),
+		FIRST,
+	)
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
 		it.matchers(managementPortMatcher()).permitAll()

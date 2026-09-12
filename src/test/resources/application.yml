@@ -99,6 +99,10 @@ registry:
     default-role: USER
     cookie:
       secure: false
+    rate-limit:
+      auth:
+        capacity: 10
+        window-seconds: 60
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
