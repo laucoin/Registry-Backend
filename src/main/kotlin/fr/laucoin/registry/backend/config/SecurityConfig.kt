@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.config
 
 import com.nimbusds.jose.shaded.gson.Gson
+import java.time.Duration
 import fr.laucoin.registry.backend.domain.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
@@ -70,6 +71,7 @@ class SecurityConfig(
 	fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
 		return http
 			.handleHeaders()
+			.configureSecurityHeaders()
 			.rateLimitAuthentication()
 			.exposeCsrfToken()
 			.configureCsrf()
@@ -82,6 +84,20 @@ class SecurityConfig(
 	}
 
 	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
+
+	// The API never renders HTML nor embeds third-party resources, so it gets the strictest possible
+	// CSP rather than the frontend's script/style-src allowances (which don't apply here and would
+	// only weaken this response surface). HSTS/Permissions-Policy mirror the frontend's nginx.conf
+	// values so both origins present the same policy to a browser.
+	private fun ServerHttpSecurity.configureSecurityHeaders() = headers { headerSpec ->
+		headerSpec.contentSecurityPolicy { it.policyDirectives(API_CONTENT_SECURITY_POLICY) }
+		headerSpec.permissionsPolicy { it.policy(PERMISSIONS_POLICY) }
+		headerSpec.hsts {
+			it.maxAge(Duration.ofDays(365))
+			it.includeSubdomains(true)
+			it.preload(true)
+		}
+	}
 
 	private fun ServerHttpSecurity.rateLimitAuthentication() = addFilterBefore(
 		AuthenticationRateLimitHandler(translateService, gson, authRateLimitCapacity, authRateLimitWindowSeconds),
@@ -110,6 +126,14 @@ class SecurityConfig(
 		val CSRF_SAFE_METHODS = setOf(GET, HEAD, OPTIONS, TRACE)
 
 		val CSRF_EXEMPT_PATHS = listOf("/api/*/authentication/token", "/api/*/authentication/token/refresh")
+
+		// Strictest possible policy: this API never returns HTML nor needs to load or be embedded as a
+		// sub-resource, unlike the frontend's CSP which must allow its own scripts/styles/fonts.
+		const val API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'"
+
+		// Mirrors nginx.conf's Permissions-Policy so both origins present the same policy to a browser.
+		const val PERMISSIONS_POLICY =
+			"geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
 	}
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
