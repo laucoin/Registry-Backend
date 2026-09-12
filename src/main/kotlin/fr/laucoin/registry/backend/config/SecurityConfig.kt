@@ -39,7 +39,6 @@ import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult
-import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
@@ -76,7 +75,7 @@ class SecurityConfig(
 			.configureCsrf()
 			.configureResourceAccess()
 			.disableAuthForm()
-			.configureLogout()
+			.disableDefaultLogout()
 			.configureOAuth2Server()
 			.handleException()
 			.build()
@@ -126,11 +125,11 @@ class SecurityConfig(
 
 	private fun ServerHttpSecurity.disableAuthForm() = formLogin { it.disable() }
 
-	private fun ServerHttpSecurity.configureLogout() = logout {
-		val logoutUrl = "/logout"
-		it.logoutUrl(logoutUrl)
-		it.requiresLogout(ServerWebExchangeMatchers.pathMatchers(GET, *arrayOf(logoutUrl)))
-	}
+	// Leaving logout {} unconfigured wouldn't remove it — Spring still applies its own default
+	// (a GET /logout endpoint) unless explicitly disabled. The app's real logout flow clears the
+	// auth cookies and revokes the tokens through /api/v1/authentication/logout/uri instead; this
+	// default has no notion of that and was never wired into the frontend.
+	private fun ServerHttpSecurity.disableDefaultLogout() = logout { it.disable() }
 
 	private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->
 		resourceServer.authenticationFailureHandler(authorizationErrorHandler)
