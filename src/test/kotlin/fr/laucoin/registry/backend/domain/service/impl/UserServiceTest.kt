@@ -295,6 +295,22 @@ class UserServiceTest {
 		verify(port).update(any())
 	}
 
+	@Test
+	fun `Should linkUserToOidcId update and return User`() {
+		// Arrange
+		val oidcId = UUID.randomUUID()
+		val user = CurrentUserModel(UserModel())
+
+		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
+
+		// Act
+		val result = service.linkUserToOidcId(user, oidcId).block()
+
+		// Assert
+		assertEquals(oidcId, result?.oidcId)
+		verify(port).update(any())
+	}
+
 	@ParameterizedTest
 	@MethodSource
 	fun `Should updateUserRoleById update and return User`(

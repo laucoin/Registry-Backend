@@ -25,6 +25,8 @@ interface IUserService {
 		lastName: String?
 	): Mono<CurrentUserModel>
 
+	fun linkUserToOidcId(user: CurrentUserModel, oidcId: UUID): Mono<CurrentUserModel>
+
 	fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel>
 	fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
 	fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
