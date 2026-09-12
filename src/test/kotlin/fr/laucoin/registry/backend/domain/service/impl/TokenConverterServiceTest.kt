@@ -33,6 +33,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.LOCKED
@@ -194,11 +195,12 @@ class TokenConverterServiceTest {
 	}
 
 	@Test
-	fun `Should throw when user already exist with the email`() {
+	fun `Should throw when multiple users already exist with the email`() {
 		// Arrange
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(CurrentUserModel()))
+		whenever(userService.findUserByEmail(any(), anyOrNull()))
+			.thenReturn(Flux.just(CurrentUserModel(), CurrentUserModel()))
 
 		// Act
 		val result = assertThrows(JwtConversionException::class.java) {
@@ -211,8 +213,50 @@ class TokenConverterServiceTest {
 
 		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).linkUserToOidcId(any(), any())
 		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
 		verifyNoInteractions(profilePort)
 		verifyNoInteractions(roleService)
+	}
+
+	@Test
+	fun `Should convert link an existing user found by email to the new OIDC ID`() {
+		// Arrange
+		val existingUser = currentUser().apply { role = USER_ROLE }
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+		whenever(userService.linkUserToOidcId(any(), any())).thenReturn(Mono.just(existingUser))
+
+		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.empty())
+		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
+
+		// Act
+		service.convert(jwt).block()
+
+		// Assert
+		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
+		verify(userService).linkUserToOidcId(existingUser, userOidcId)
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+	}
+
+	@Test
+	fun `Should convert map a duplicate email race to a clean conflict error`() {
+		// Arrange
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
+			.thenReturn(Mono.error(DataIntegrityViolationException("duplicate key value violates unique constraint")))
+
+		// Act
+		val result = assertThrows(JwtConversionException::class.java) {
+			service.convert(jwt).block()
+		}
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
 	}
 }

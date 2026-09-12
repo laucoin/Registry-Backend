@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.service.IUserService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.convert.converter.Converter
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.LOCKED
 import org.springframework.http.HttpStatus.UNAUTHORIZED
@@ -87,24 +88,35 @@ class TokenConverterService(
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
 		userService.findUserByEmail(email, visibilitySearched = null)
 			.collectList()
-			.handle { it, handle ->
-				if (it.isEmpty()) {
-					log.info(
-						"No user found with email \"{}\", creating a new user with OIDC ID \"{}\"",
-						email,
-						oidcId
-					)
-					handle.next(it)
-				} else {
-					log.warn(
-						"Multiple users found with email \"{}\", cannot create a new user with OIDC ID \"{}\"",
-						email,
-						oidcId
-					)
-					handle.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
+			.flatMap { matches ->
+				when {
+					matches.isEmpty() -> {
+						log.info(
+							"No user found with email \"{}\", creating a new user with OIDC ID \"{}\"",
+							email,
+							oidcId
+						)
+						userService.createUser(oidcId, email, firstName, lastName)
+					}
+
+					matches.size == 1 -> {
+						log.info("Linking existing user with email \"{}\" to OIDC ID \"{}\"", email, oidcId)
+						userService.linkUserToOidcId(matches.first(), oidcId)
+					}
+
+					else -> {
+						log.warn(
+							"Multiple users found with email \"{}\", cannot link OIDC ID \"{}\"",
+							email,
+							oidcId
+						)
+						Mono.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
+					}
 				}
 			}
-			.flatMap { userService.createUser(oidcId, email, firstName, lastName) }
+			.onErrorMap(DataIntegrityViolationException::class.java) {
+				JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email))
+			}
 	}
 
 	private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap {

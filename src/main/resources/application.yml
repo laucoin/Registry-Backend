@@ -97,6 +97,12 @@ registry:
       url: https://doc.laucoin.fr/registry/
   security:
     default-role: USER
+    cookie:
+      secure: ${COOKIE_SECURE:true}
+    rate-limit:
+      auth:
+        capacity: ${REGISTRY_AUTH_RATE_LIMIT_CAPACITY:10}
+        window-seconds: ${REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
@@ -135,11 +141,6 @@ spring:
     url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${registry.security.oauth2.jwks-uri}
 
 springdoc:
   use-management-port: true
