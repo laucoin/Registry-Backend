@@ -1,3 +1,14 @@
+## [1.7.0](https://github.com/laucoin/Registry-Backend/compare/1.6.1...1.7.0) (2026-09-12)
+
+### 🚀 Features
+
+* **auth:** Add possibilities to login with cookie ([#41](https://github.com/laucoin/Registry-Backend/issues/41)) ([e712169](https://github.com/laucoin/Registry-Backend/commit/e7121698d21b64a2f61218c1bd2505c7deada381))
+* **management:** Expose sensible informations on a dedicated port 8082 ([#40](https://github.com/laucoin/Registry-Backend/issues/40)) ([2902582](https://github.com/laucoin/Registry-Backend/commit/2902582e757f41bf23216c68ef99655eb59bfebf))
+
+### 🧹 Improvements
+
+* **idp:** rename keycloak to IDP and small NPE mapper fix ([#39](https://github.com/laucoin/Registry-Backend/issues/39)) ([df90ca4](https://github.com/laucoin/Registry-Backend/commit/df90ca41143759651572def140c51c5d3bf31172))
+
 ## [1.7.0](https://github.com/laucoin/Registry-Backend/compare/1.6.1...1.7.0) (2026-09-11)
 
 ### 🚀 Features
