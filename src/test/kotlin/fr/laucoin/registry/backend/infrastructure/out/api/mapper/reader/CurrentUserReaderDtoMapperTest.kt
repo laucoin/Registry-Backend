@@ -86,7 +86,7 @@ class CurrentUserReaderDtoMapperTest {
 
 	@BeforeEach
 	fun setup() {
-		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn(TRANSLATED)
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn(TRANSLATED)
 		whenever(preferenceMapper.toDto(any())).thenReturn(preferenceDto)
 	}
 

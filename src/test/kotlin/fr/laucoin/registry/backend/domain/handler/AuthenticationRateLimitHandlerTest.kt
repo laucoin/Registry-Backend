@@ -15,14 +15,18 @@ import org.springframework.http.HttpMethod.GET
 import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.TOO_MANY_REQUESTS
+import java.util.Locale
+import org.springframework.context.i18n.SimpleLocaleContext
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest
 import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilterChain
+import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
 class AuthenticationRateLimitHandlerTest {
 	private val translateService: ITranslateService = mock()
+	private val localeContextResolver: LocaleContextResolver = mock()
 	private val chainCalls = AtomicInteger(0)
 	private val chain = WebFilterChain {
 		chainCalls.incrementAndGet()
@@ -31,11 +35,12 @@ class AuthenticationRateLimitHandlerTest {
 	}
 
 	init {
-		whenever(translateService.getError(any(), anyOrNull(), anyOrNull())).thenReturn("")
+		whenever(translateService.getError(any(), anyOrNull(), anyOrNull(), any())).thenReturn("")
+		whenever(localeContextResolver.resolveLocaleContext(any())).thenReturn(SimpleLocaleContext(Locale.ENGLISH))
 	}
 
 	private fun filter(capacity: Int = 2, windowSeconds: Long = 60): AuthenticationRateLimitHandler =
-		AuthenticationRateLimitHandler(translateService, Gson(), capacity, windowSeconds)
+		AuthenticationRateLimitHandler(translateService, localeContextResolver, Gson(), capacity, windowSeconds)
 
 	private fun exchange(
 		path: String,

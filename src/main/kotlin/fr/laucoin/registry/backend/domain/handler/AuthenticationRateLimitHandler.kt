@@ -13,15 +13,18 @@ import org.springframework.util.AntPathMatcher
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilter
 import org.springframework.web.server.WebFilterChain
+import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReference
 
 class AuthenticationRateLimitHandler(
 	private val translateService: ITranslateService,
+	private val localeContextResolver: LocaleContextResolver,
 	private val gson: Gson,
 	private val capacity: Int,
 	private val windowSeconds: Long,
@@ -58,12 +61,13 @@ class AuthenticationRateLimitHandler(
 		response.headers.contentType = APPLICATION_JSON
 		response.headers.add(RETRY_AFTER, windowSeconds.toString())
 
+		val locale = localeContextResolver.resolveLocaleContext(exchange).locale ?: Locale.getDefault()
 		val error = ErrorDto(
 			statusCode = TOO_MANY_REQUESTS.value(),
 			statusName = TOO_MANY_REQUESTS.name,
 			code = TOO_MANY_REQUESTS.value().toString(),
-			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${TOO_MANY_REQUESTS.value()}"),
-			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX${TOO_MANY_REQUESTS.value()}"),
+			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${TOO_MANY_REQUESTS.value()}", locale = locale),
+			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX${TOO_MANY_REQUESTS.value()}", locale = locale),
 		)
 
 		return response.writeWith(Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray())))

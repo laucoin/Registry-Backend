@@ -20,7 +20,7 @@ class ProjectProfileStatusReaderDtoMapperTest {
 		// Arrange
 		val status = ACCEPTED
 		val translated = "translated"
-		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn(translated)
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn(translated)
 
 		// Act
 		val result = mapper.toDto(status)

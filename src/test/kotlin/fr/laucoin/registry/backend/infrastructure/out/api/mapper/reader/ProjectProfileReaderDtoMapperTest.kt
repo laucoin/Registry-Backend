@@ -110,7 +110,7 @@ class ProjectProfileReaderDtoMapperTest {
 		expectedUserCast: Int,
 	) {
 		// Arrange
-		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn("translated")
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn("translated")
 		whenever(projectMapper.toDto(any())).thenReturn(ProjectReaderDto())
 		whenever(partialUserMapper.toDto(any())).thenReturn(PartialUserReaderDto())
 

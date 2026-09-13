@@ -47,18 +47,17 @@ class IdpAuthenticationAdapter(
 		)
 	}
 
-	override fun getLogoutUri(redirectUri: String, accessToken: String?, refreshToken: String?): Mono<AuthenticationUriModel> {
+	override fun getLogoutUri(
+		redirectUri: String,
+		accessToken: String?,
+		refreshToken: String?
+	): Mono<AuthenticationUriModel> {
 		return Mono.`when`(
 			revokeToken(accessToken, "access_token"),
 			revokeToken(refreshToken, "refresh_token"),
 		).thenReturn(AuthenticationUriModel(uri = "$endSessionUri?redirect_uri=$redirectUri"))
 	}
 
-	/**
-	 * Best-effort: a revocation failure (IDP unreachable, already-expired token, …) must never
-	 * prevent the user from actually logging out, so errors are logged and swallowed rather than
-	 * propagated.
-	 */
 	private fun revokeToken(token: String?, tokenTypeHint: String): Mono<Void> {
 		if (token.isNullOrBlank()) return Mono.empty()
 

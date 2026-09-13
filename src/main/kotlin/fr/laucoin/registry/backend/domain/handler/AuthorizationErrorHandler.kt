@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TIT
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
+import java.util.Locale
 import org.springframework.context.annotation.Bean
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -25,21 +26,26 @@ import org.springframework.security.web.server.WebFilterExchange
 import org.springframework.security.web.server.authentication.ServerAuthenticationFailureHandler
 import org.springframework.security.web.server.authorization.ServerAccessDeniedHandler
 import org.springframework.stereotype.Component
+import org.springframework.web.server.ServerWebExchange
+import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
 @Component
 class AuthorizationErrorHandler(
 	private val translateService: ITranslateService,
+	private val localeContextResolver: LocaleContextResolver,
 	private val gson: Gson,
 ): ServerAuthenticationFailureHandler {
 	override fun onAuthenticationFailure(
 		webFilterExchange: WebFilterExchange,
 		exception: AuthenticationException
 	): Mono<Void> {
-		val response = webFilterExchange.exchange.response
+		val exchange = webFilterExchange.exchange
+		val response = exchange.response
 		return when (exception) {
 			is JwtConversionException -> response.writeWith(
 				buildBody(
+					exchange,
 					response,
 					exception.status,
 					exception.code,
@@ -49,6 +55,7 @@ class AuthorizationErrorHandler(
 
 			is InvalidBearerTokenException -> response.writeWith(
 				buildBody(
+					exchange,
 					response,
 					UNAUTHORIZED,
 					INVALID_TOKEN,
@@ -57,6 +64,7 @@ class AuthorizationErrorHandler(
 
 			else -> response.writeWith(
 				buildBody(
+					exchange,
 					response,
 					INTERNAL_SERVER_ERROR,
 					FAILED_TO_LOGIN_FOR_UNKNOWN_REASON,
@@ -68,16 +76,17 @@ class AuthorizationErrorHandler(
 	@Bean
 	fun unauthorizedHandler(): ServerAuthenticationEntryPoint = ServerAuthenticationEntryPoint { exchange, _ ->
 		val response = exchange.response
-		response.writeWith(buildBody(response, UNAUTHORIZED, NOT_AUTHENTICATED))
+		response.writeWith(buildBody(exchange, response, UNAUTHORIZED, NOT_AUTHENTICATED))
 	}
 
 	@Bean
 	fun accessDeniedHandler(): ServerAccessDeniedHandler = ServerAccessDeniedHandler { exchange, _ ->
 		val response = exchange.response
-		response.writeWith(buildBody(response, FORBIDDEN, NOT_ENOUGH_PERMISSION))
+		response.writeWith(buildBody(exchange, response, FORBIDDEN, NOT_ENOUGH_PERMISSION))
 	}
 
 	private fun buildBody(
+		exchange: ServerWebExchange,
 		response: ServerHttpResponse,
 		status: HttpStatus,
 		errorCode: String,
@@ -86,12 +95,13 @@ class AuthorizationErrorHandler(
 		response.statusCode = status
 		response.headers.contentType = APPLICATION_JSON
 
+		val locale = localeContextResolver.resolveLocaleContext(exchange).locale ?: Locale.getDefault()
 		val error = ErrorDto(
 			statusCode = status.value(),
 			statusName = status.name,
 			code = errorCode,
-			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}"),
-			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode", args = args),
+			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}", locale = locale),
+			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode", args = args, locale = locale),
 		)
 
 		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))

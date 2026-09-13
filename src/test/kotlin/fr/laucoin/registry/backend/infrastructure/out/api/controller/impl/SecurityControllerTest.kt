@@ -16,8 +16,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.Duration
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -35,8 +33,10 @@ import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
+import java.time.Duration
+import java.util.stream.Stream
 
-class SecurityControllerTest: TestContext() {
+class SecurityControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var authenticationPort: IAuthenticationPort
 
@@ -110,7 +110,11 @@ class SecurityControllerTest: TestContext() {
 	fun `Should getLogoutUri return 200`() {
 		// Arrange
 		val redirectUri = "redirectUri"
-		whenever(authenticationPort.getLogoutUri(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(AuthenticationUriModel("uri")))
+		whenever(authenticationPort.getLogoutUri(any(), anyOrNull(), anyOrNull())).thenReturn(
+			Mono.just(
+				AuthenticationUriModel("uri")
+			)
+		)
 
 		// Act
 		val result = webClient
@@ -129,13 +133,15 @@ class SecurityControllerTest: TestContext() {
 	fun `Should getLogoutUri forward the refresh token cookie to be revoked`() {
 		// Arrange
 		val redirectUri = "redirectUri"
-		whenever(authenticationPort.getLogoutUri(any(), anyOrNull(), any())).thenReturn(Mono.just(AuthenticationUriModel("uri")))
+		whenever(
+			authenticationPort.getLogoutUri(
+				any(),
+				anyOrNull(),
+				any()
+			)
+		).thenReturn(Mono.just(AuthenticationUriModel("uri")))
 
 		// Act
-		// Deliberately no access token cookie: any value there gets picked up by CookieBearerTokenHandler
-		// as a bearer token candidate, and a fake one fails JWT validation before this permitAll route
-		// is even reached. The access-token extraction is the same one-liner, covered by the "no cookies"
-		// case above plus AuthenticationCookieService's own tests.
 		val result = webClient
 			.get()
 			.uri(uriBuilder("$BASE_URL/logout/uri", emptyList(), listOf("redirectUri" to redirectUri)))
