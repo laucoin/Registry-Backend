@@ -1,3 +1,26 @@
+## [1.5.0](https://github.com/laucoin/Registry-Backend/compare/1.4.0...1.5.0) (2026-09-13)
+
+### 📦️ Other
+
+* **AI:** Add generated AGENTS.md from documentation ([#17](https://github.com/laucoin/Registry-Backend/issues/17)) ([fdf65c6](https://github.com/laucoin/Registry-Backend/commit/fdf65c69e11c5379b5a4cc6d8da44ed4aa88828e))
+* **ci:** Align backend and frontend conventional commit config ([#18](https://github.com/laucoin/Registry-Backend/issues/18)) ([0baddb5](https://github.com/laucoin/Registry-Backend/commit/0baddb58023c77b91a344a14701f97d2f48aff2a))
+
+### 🚀 Features
+
+* **auth:** Add possibilities to login with cookie ([#41](https://github.com/laucoin/Registry-Backend/issues/41)) ([c7d11d3](https://github.com/laucoin/Registry-Backend/commit/c7d11d3ef2e9c023170a0da7c688cdacd38f6fc7))
+* **management:** Expose sensible informations on a dedicated port 8082 ([#40](https://github.com/laucoin/Registry-Backend/issues/40)) ([5f93ab5](https://github.com/laucoin/Registry-Backend/commit/5f93ab5a15944894fdcae26c8b65a8d76663a809))
+
+### 🧹 Improvements
+
+* **idp:** rename keycloak to IDP and small NPE mapper fix ([#39](https://github.com/laucoin/Registry-Backend/issues/39)) ([6e79702](https://github.com/laucoin/Registry-Backend/commit/6e79702f9a33da5778262b422d9c405bc05ca06f))
+
+### 🐛 Bug Fixes
+
+* **communication:** Gate the search endpoints on their project option ([#15](https://github.com/laucoin/Registry-Backend/issues/15)) ([14906f5](https://github.com/laucoin/Registry-Backend/commit/14906f5da9b7578ae58aceafe81aedc396ce339d))
+* **logout:** improve logout pattern (revoke to the IdP) ([#42](https://github.com/laucoin/Registry-Backend/issues/42)) ([6385fd7](https://github.com/laucoin/Registry-Backend/commit/6385fd760f694c4b28f6d57cbc742787f6e4b770))
+* **participant:** Correct the inverted adult/minor filter ([#14](https://github.com/laucoin/Registry-Backend/issues/14)) ([a468252](https://github.com/laucoin/Registry-Backend/commit/a468252d3ceced5d4245534e9e09418ab3744fd6))
+* **purge:** Reject a purge threshold set in the future ([#21](https://github.com/laucoin/Registry-Backend/issues/21)) ([bc307ef](https://github.com/laucoin/Registry-Backend/commit/bc307eff902804c543b816fdced881e7fa09cb27))
+
 ## [1.7.0](https://github.com/laucoin/Registry-Backend/compare/1.6.1...1.7.0) (2026-09-13)
 
 ### 🚀 Features
