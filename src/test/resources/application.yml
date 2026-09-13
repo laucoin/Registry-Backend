@@ -4,6 +4,7 @@ external:
     authorization-uri: https://test.idp.com/authorize
     token-uri: https://test.idp.com/token
     end-session-uri: https://test.idp.com/logout
+    revocation-uri: https://test.idp.com/revoke
     client-id: client-test
     client-secret: secret-test
     swagger:

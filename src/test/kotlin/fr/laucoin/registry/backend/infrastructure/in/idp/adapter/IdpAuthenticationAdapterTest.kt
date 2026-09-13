@@ -28,6 +28,7 @@ class IdpAuthenticationAdapterTest {
 		authorizationUri = "authorizationUri",
 		tokenUri = "tokenUri",
 		endSessionUri = "endSessionUri",
+		revocationUri = "revocationUri",
 		clientId = "clientId",
 		clientSecret = "clientSecret",
 	)
@@ -39,6 +40,7 @@ class IdpAuthenticationAdapterTest {
 		setField(adapter, "authorizationUri", mockWebServer.url("/oauth2/authorize").toString())
 		setField(adapter, "tokenUri", mockWebServer.url("/oauth2/token").toString())
 		setField(adapter, "endSessionUri", mockWebServer.url("/oauth2/logout").toString())
+		setField(adapter, "revocationUri", mockWebServer.url("/oauth2/revoke").toString())
 	}
 
 	@AfterEach
@@ -62,18 +64,64 @@ class IdpAuthenticationAdapterTest {
 	}
 
 	@Test
-	fun `Should getLogoutUri return built logout url`() {
+	fun `Should getLogoutUri return built logout url without calling revocation when no token is provided`() {
 		// Arrange
 		val redirectUri = "redirectUri"
 		val expected = "${mockWebServer.url("/oauth2/logout")}?redirect_uri=redirectUri"
 
 		// Act
-		val result = adapter.getLogoutUri(redirectUri)
+		val result = adapter.getLogoutUri(redirectUri, accessToken = null, refreshToken = null).block()
 
 		// Assert
 		assertNotNull(result)
 		assertEquals(expected, result.uri)
+		assertEquals(0, mockWebServer.requestCount)
 	}
+
+	@Test
+	fun `Should getLogoutUri revoke both the access and refresh token when provided`() {
+		// Arrange
+		val redirectUri = "redirectUri"
+		mockWebServer.enqueue(MockResponse().setResponseCode(200))
+		mockWebServer.enqueue(MockResponse().setResponseCode(200))
+
+		// Act
+		val result = adapter.getLogoutUri(redirectUri, accessToken = "accessToken", refreshToken = "refreshToken").block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(2, mockWebServer.requestCount)
+		val bodies = listOf(mockWebServer.takeRequest().body.readUtf8(), mockWebServer.takeRequest().body.readUtf8())
+		assertEquals(true, bodies.any { it.contains("token=accessToken") && it.contains("token_type_hint=access_token") })
+		assertEquals(true, bodies.any { it.contains("token=refreshToken") && it.contains("token_type_hint=refresh_token") })
+	}
+
+	@Test
+	fun `Should getLogoutUri still succeed when revocation returns 4xx`() {
+		// Arrange
+		val redirectUri = "redirectUri"
+		mockWebServer.enqueue(MockResponse().setResponseCode(400))
+
+		// Act
+		val result = adapter.getLogoutUri(redirectUri, accessToken = "accessToken", refreshToken = null).block()
+
+		// Assert
+		assertNotNull(result)
+	}
+
+	@Test
+	fun `Should getLogoutUri still succeed when revocation returns 5xx`() {
+		// Arrange
+		val redirectUri = "redirectUri"
+		mockWebServer.enqueue(MockResponse().setResponseCode(500))
+
+		// Act
+		val result = adapter.getLogoutUri(redirectUri, accessToken = "accessToken", refreshToken = null).block()
+
+		// Assert
+		assertNotNull(result)
+	}
+
 
 	@Test
 	fun `Should getAuthenticationToken call the IDP to fetch token 2xx`() {

@@ -4,6 +4,7 @@ external:
     authorization-uri: ${IDP_AUTHORIZATION_URI}
     token-uri: ${IDP_TOKEN_URI}
     end-session-uri: ${IDP_END_SESSION_URI}
+    revocation-uri: ${IDP_REVOCATION_URI}
     client-id: ${IDP_PRIVATE_CLIENT_ID}
     client-secret: ${IDP_PRIVATE_CLIENT_SECRET}
     swagger:

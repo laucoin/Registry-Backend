@@ -20,7 +20,12 @@ class AuthenticationCookieService(
 		const val REFRESH_TOKEN_COOKIE = "registry_refresh_token"
 	}
 
-	private val refreshTokenPath: String get() = "$apiPrefix/v1/authentication/token"
+	/**
+	 * Scoped to the whole authentication sub-tree, not just `/token` — a cookie's path only covers
+	 * itself and its own sub-paths, so a narrower scope would silently exclude sibling routes like
+	 * `/logout/uri`, which needs this cookie to revoke the refresh token at the identity provider.
+	 */
+	private val refreshTokenPath: String get() = "$apiPrefix/v1/authentication"
 
 	fun setAuthCookies(response: ServerHttpResponse, token: TokenModel) {
 		response.addCookie(buildCookie(ACCESS_TOKEN_COOKIE, token.accessToken, apiPrefix, Duration.ofSeconds(token.expiresIn)))
@@ -31,6 +36,8 @@ class AuthenticationCookieService(
 		response.addCookie(buildCookie(ACCESS_TOKEN_COOKIE, "", apiPrefix, Duration.ZERO))
 		response.addCookie(buildCookie(REFRESH_TOKEN_COOKIE, "", refreshTokenPath, Duration.ZERO))
 	}
+
+	fun extractAccessToken(request: ServerHttpRequest): String? = request.cookies.getFirst(ACCESS_TOKEN_COOKIE)?.value
 
 	fun extractRefreshToken(request: ServerHttpRequest): String? = request.cookies.getFirst(REFRESH_TOKEN_COOKIE)?.value
 

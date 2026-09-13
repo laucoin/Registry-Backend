@@ -25,9 +25,11 @@ class SecurityV1Controller(
 		return authenticationPort.getLoginUri(redirectUri!!)
 	}
 
-	override fun getLogoutUri(redirectUri: String?, exchange: ServerWebExchange): AuthenticationUriModel {
+	override fun getLogoutUri(redirectUri: String?, exchange: ServerWebExchange): Mono<AuthenticationUriModel> {
+		val accessToken = cookieService.extractAccessToken(exchange.request)
+		val refreshToken = cookieService.extractRefreshToken(exchange.request)
 		cookieService.clearAuthCookies(exchange.response)
-		return authenticationPort.getLogoutUri(redirectUri!!)
+		return authenticationPort.getLogoutUri(redirectUri!!, accessToken, refreshToken)
 	}
 
 	override fun fetchToken(authenticationInfo: AuthenticationInfoModel, exchange: ServerWebExchange): Mono<Void> {
