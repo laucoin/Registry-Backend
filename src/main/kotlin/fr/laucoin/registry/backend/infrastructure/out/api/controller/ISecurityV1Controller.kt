@@ -37,7 +37,7 @@ interface ISecurityV1Controller {
 	fun getLogoutUri(
 		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?,
 		@Parameter(hidden = true) exchange: ServerWebExchange,
-	): AuthenticationUriModel
+	): Mono<AuthenticationUriModel>
 
 	@Operation(
 		summary = "Fetch token from code",

@@ -89,6 +89,7 @@ fails the startup loudly instead of silently booting on something unintended.
 | `IDP_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                               |
 | `IDP_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                                   |
 | `IDP_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`                    |
+| `IDP_REVOCATION_URI`        | *required* | RFC 7009 token revocation endpoint, called server-to-server on logout to invalidate the access/refresh token immediately instead of leaving them valid until they expire naturally. For example: `http://localhost:9000/application/o/revoke` |
 | `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`           |
 | `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                           |
 | `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (implicit flow). For example: `registry-swagger` |

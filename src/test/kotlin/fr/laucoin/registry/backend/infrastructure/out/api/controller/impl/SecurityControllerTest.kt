@@ -24,6 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
@@ -109,7 +110,7 @@ class SecurityControllerTest: TestContext() {
 	fun `Should getLogoutUri return 200`() {
 		// Arrange
 		val redirectUri = "redirectUri"
-		whenever(authenticationPort.getLogoutUri(any())).thenReturn(AuthenticationUriModel("uri"))
+		whenever(authenticationPort.getLogoutUri(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(AuthenticationUriModel("uri")))
 
 		// Act
 		val result = webClient
@@ -121,7 +122,29 @@ class SecurityControllerTest: TestContext() {
 		result.body<AuthenticationUriModel>(OK)
 		result.expectCookie().maxAge(ACCESS_TOKEN_COOKIE, Duration.ZERO)
 		result.expectCookie().maxAge(REFRESH_TOKEN_COOKIE, Duration.ZERO)
-		verify(authenticationPort).getLogoutUri(redirectUri)
+		verify(authenticationPort).getLogoutUri(redirectUri, null, null)
+	}
+
+	@Test
+	fun `Should getLogoutUri forward the refresh token cookie to be revoked`() {
+		// Arrange
+		val redirectUri = "redirectUri"
+		whenever(authenticationPort.getLogoutUri(any(), anyOrNull(), any())).thenReturn(Mono.just(AuthenticationUriModel("uri")))
+
+		// Act
+		// Deliberately no access token cookie: any value there gets picked up by CookieBearerTokenHandler
+		// as a bearer token candidate, and a fake one fails JWT validation before this permitAll route
+		// is even reached. The access-token extraction is the same one-liner, covered by the "no cookies"
+		// case above plus AuthenticationCookieService's own tests.
+		val result = webClient
+			.get()
+			.uri(uriBuilder("$BASE_URL/logout/uri", emptyList(), listOf("redirectUri" to redirectUri)))
+			.cookie(REFRESH_TOKEN_COOKIE, "refreshToken")
+			.exchange()
+
+		// Assert
+		result.body<AuthenticationUriModel>(OK)
+		verify(authenticationPort).getLogoutUri(redirectUri, null, "refreshToken")
 	}
 
 	@ParameterizedTest
