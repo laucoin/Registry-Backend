@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
 import fr.laucoin.registry.backend.domain.handler.CsrfTokenHeaderHandler
-import fr.laucoin.registry.backend.domain.handler.HeadersHandler
+import fr.laucoin.registry.backend.domain.handler.LocaleContextHandler
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
 import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.http.HttpHeaders.ACCEPT_LANGUAGE
 import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS
 import org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN
@@ -43,6 +44,8 @@ import org.springframework.util.AntPathMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+import org.springframework.web.server.i18n.LocaleContextResolver
+import java.time.Duration
 
 
 @Configuration
@@ -51,7 +54,8 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 class SecurityConfig(
 	private val tokenConverter: TokenConverterService,
 	private val authorizationErrorHandler: AuthorizationErrorHandler,
-	private val headersHandler: HeadersHandler,
+	private val localeContextHandler: LocaleContextHandler,
+	private val localeContextResolver: LocaleContextResolver,
 	private val cookieBearerTokenHandler: CookieBearerTokenHandler,
 	private val translateService: ITranslateService,
 	private val gson: Gson,
@@ -67,9 +71,33 @@ class SecurityConfig(
 ) {
 
 	@Bean
+	@Order(1)
+	fun documentationSecurityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+		return http
+			.securityMatcher(documentationMatcher())
+			.authorizeExchange { it.anyExchange().permitAll() }
+			.configureSecurityHeaders(DOCUMENTATION_CONTENT_SECURITY_POLICY)
+			// codeql[java/spring-disabled-csrf-protection]: this chain only serves static Swagger/OpenAPI
+			// docs (GET-only, permitAll, no state-changing request ever reaches it) — CSRF is not
+			// applicable here, the same reasoning that already exempts safe HTTP methods on the main chain.
+			.csrf { it.disable() }
+			.formLogin { it.disable() }
+			.logout { it.disable() }
+			.build()
+	}
+
+	private fun documentationMatcher() = ServerWebExchangeMatcher { exchange ->
+		val isManagementPort = exchange.request.localAddress?.port == managementPort
+		val isDocumentationPath = DOCUMENTATION_PATHS.any { pathMatcher.match(it, exchange.request.path.value()) }
+		if (isManagementPort && isDocumentationPath) MatchResult.match() else MatchResult.notMatch()
+	}
+
+	@Bean
+	@Order(2)
 	fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
 		return http
-			.handleHeaders()
+			.resolveLocaleContext()
+			.configureSecurityHeaders(API_CONTENT_SECURITY_POLICY)
 			.rateLimitAuthentication()
 			.exposeCsrfToken()
 			.configureCsrf()
@@ -81,10 +109,26 @@ class SecurityConfig(
 			.build()
 	}
 
-	private fun ServerHttpSecurity.handleHeaders() = addFilterBefore(headersHandler, FIRST)
+	private fun ServerHttpSecurity.resolveLocaleContext() = addFilterBefore(localeContextHandler, FIRST)
+
+	private fun ServerHttpSecurity.configureSecurityHeaders(contentSecurityPolicy: String) = headers { headerSpec ->
+		headerSpec.contentSecurityPolicy { it.policyDirectives(contentSecurityPolicy) }
+		headerSpec.permissionsPolicy { it.policy(PERMISSIONS_POLICY) }
+		headerSpec.hsts {
+			it.maxAge(Duration.ofDays(365))
+			it.includeSubdomains(true)
+			it.preload(true)
+		}
+	}
 
 	private fun ServerHttpSecurity.rateLimitAuthentication() = addFilterBefore(
-		AuthenticationRateLimitHandler(translateService, gson, authRateLimitCapacity, authRateLimitWindowSeconds),
+		AuthenticationRateLimitHandler(
+			translateService,
+			localeContextResolver,
+			gson,
+			authRateLimitCapacity,
+			authRateLimitWindowSeconds,
+		),
 		FIRST,
 	)
 
@@ -101,15 +145,24 @@ class SecurityConfig(
 		val request = exchange.request
 		val isSafeMethod = request.method in CSRF_SAFE_METHODS
 		val hasBearerAuth = request.headers.getFirst(AUTHORIZATION)?.startsWith("Bearer ") == true
-		val isExemptPath = CSRF_EXEMPT_PATHS.any { csrfPathMatcher.match(it, request.path.value()) }
+		val isExemptPath = CSRF_EXEMPT_PATHS.any { pathMatcher.match(it, request.path.value()) }
 		if (!isSafeMethod && !hasBearerAuth && !isExemptPath) MatchResult.match() else MatchResult.notMatch()
 	}
 
 	private companion object {
-		val csrfPathMatcher = AntPathMatcher()
+		val pathMatcher = AntPathMatcher()
 		val CSRF_SAFE_METHODS = setOf(GET, HEAD, OPTIONS, TRACE)
 
 		val CSRF_EXEMPT_PATHS = listOf("/api/*/authentication/token", "/api/*/authentication/token/refresh")
+
+		val DOCUMENTATION_PATHS = listOf("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+
+		const val API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'"
+
+		const val DOCUMENTATION_CONTENT_SECURITY_POLICY = "default-src 'self'; frame-ancestors 'none'"
+
+		const val PERMISSIONS_POLICY =
+			"geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
 	}
 
 	private fun ServerHttpSecurity.configureResourceAccess() = authorizeExchange {
@@ -125,10 +178,6 @@ class SecurityConfig(
 
 	private fun ServerHttpSecurity.disableAuthForm() = formLogin { it.disable() }
 
-	// Leaving logout {} unconfigured wouldn't remove it — Spring still applies its own default
-	// (a GET /logout endpoint) unless explicitly disabled. The app's real logout flow clears the
-	// auth cookies and revokes the tokens through /api/v1/authentication/logout/uri instead; this
-	// default has no notion of that and was never wired into the frontend.
 	private fun ServerHttpSecurity.disableDefaultLogout() = logout { it.disable() }
 
 	private fun ServerHttpSecurity.configureOAuth2Server() = oauth2ResourceServer { resourceServer ->

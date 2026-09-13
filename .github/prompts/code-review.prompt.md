@@ -26,7 +26,7 @@ Review the change I point you at (a diff, a file, or the current branch vs `main
 - Every endpoint has an explicit `@PreAuthorize` with the correct `hasPermission(...)` checks (option gate + operation CRUD permission); no missing or overly-broad authorization, no auth bypass.
 - Permissions use `ProjectPermissionConst`/`UserPermissionConst` constants, not inline literals.
 - Input validated before reaching the domain (`@Valid`, `@Min`/`@Max`, custom `domain/annotation` + `domain/validator`).
-- Stays stateless (no session/form-login regressions); CORS not widened to `*`; security headers stay in `HeadersHandler`.
+- Stays stateless (no session/form-login regressions); CORS not widened to `*`; security headers stay in `SecurityConfig`'s `.headers{}` block.
 - No tokens/credentials/PII logged; errors go through the advice/handlers and don't leak internals or stack traces.
 
 **API best practices (see AGENTS.md § API)**

@@ -62,7 +62,7 @@ class UserReaderDtoMapperTest {
 		expectedRoleTranslation: Int,
 	) {
 		// Arrange
-		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn("Administrator")
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn("Administrator")
 
 		// Act
 		val result = mapper.toDto(user)

@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono
 import reactor.util.context.Context
 
 @Component
-class HeadersHandler(private val localeContextResolver: LocaleContextResolver): WebFilter {
+class LocaleContextHandler(private val localeContextResolver: LocaleContextResolver): WebFilter {
 
 	override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
 		val localeContext = localeContextResolver.resolveLocaleContext(exchange)

@@ -23,7 +23,7 @@ class ProjectOptionReaderDtoMapperTest {
 		// Arrange
 		val option: ProjectOptionEnum = COMMUNICATION
 		val label = "translated"
-		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn(label)
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn(label)
 
 		// Act
 		val result = mapper.toDto(option)

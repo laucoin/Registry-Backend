@@ -20,7 +20,7 @@ class MovementTypeDtoMapperTest {
 		// Arrange
 		val type = IN
 		val translated = "translated"
-		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn(translated)
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn(translated)
 
 		// Act
 		val result = mapper.toDto(type)

@@ -66,7 +66,7 @@ class MovementReaderDtoMapperTest {
 		expectedProjectCast: Int,
 	) {
 		// Arrange
-		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull())).thenReturn("translated")
+		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenReturn("translated")
 		whenever(activityReasonMapper.toDto(any())).thenReturn(
 			MovementReasonsReaderDto(
 				value = "value",
