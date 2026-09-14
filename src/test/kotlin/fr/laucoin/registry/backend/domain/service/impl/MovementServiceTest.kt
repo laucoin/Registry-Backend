@@ -66,10 +66,6 @@ import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
@@ -93,6 +89,10 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
 
 class MovementServiceTest {
 	private val projectService: IProjectService = mock()
@@ -614,6 +614,7 @@ class MovementServiceTest {
 		val movement = commonMovement().apply { contentType = REGISTERED; content = listOf(participantContent) }
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(returnedParticipant)
+		whenever(vehiclePort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(commonVehicle()))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
