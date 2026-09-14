@@ -31,6 +31,9 @@ class IdpAuthenticationAdapterTest {
 		revocationUri = "revocationUri",
 		clientId = "clientId",
 		clientSecret = "clientSecret",
+		connectTimeoutMillis = 2000,
+		responseTimeoutMillis = 5000,
+		maxConnections = 20,
 	)
 
 	@BeforeEach

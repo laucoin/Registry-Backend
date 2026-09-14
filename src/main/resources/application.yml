@@ -7,6 +7,9 @@ external:
     revocation-uri: ${IDP_REVOCATION_URI}
     client-id: ${IDP_PRIVATE_CLIENT_ID}
     client-secret: ${IDP_PRIVATE_CLIENT_SECRET}
+    connect-timeout-millis: ${IDP_CONNECT_TIMEOUT_MILLIS:2000}
+    response-timeout-millis: ${IDP_RESPONSE_TIMEOUT_MILLIS:5000}
+    max-connections: ${IDP_MAX_CONNECTIONS:20}
     swagger:
       client-id: ${IDP_PUBLIC_CLIENT_ID}
   cors:

@@ -7,6 +7,9 @@ external:
     revocation-uri: https://test.idp.com/revoke
     client-id: client-test
     client-secret: secret-test
+    connect-timeout-millis: 2000
+    response-timeout-millis: 5000
+    max-connections: 20
     swagger:
       client-id: client-swagger
   cors:
