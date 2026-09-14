@@ -18,6 +18,7 @@ import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
@@ -35,6 +36,7 @@ class ProjectProfileService(
 	private val port: IProjectProfilePort,
 	private val roleService: IRoleService,
 	private val userPort: IUserPort,
+	private val principalCache: IPrincipalCacheService,
 	@param:Value($$"${registry.feature.profile.searched.max-user-result}")
 	private val maxUserResult: Int,
 ): IProjectProfileService, GenericProfileService(port) {
@@ -155,7 +157,7 @@ class ProjectProfileService(
 	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findProjectProfileById(projectId, id, visibilitySearched = null)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR)
-			.flatMap { port.deleteById(id) }
+			.flatMap { port.deleteById(id).doOnSuccess { _ -> principalCache.invalidate(it.user?.oidcId) } }
 	}
 
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
@@ -204,7 +206,9 @@ class ProjectProfileService(
 			}
 	}
 
-	private fun Mono<ProjectProfileModel>.updateProjectProfile(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+	private fun Mono<ProjectProfileModel>.updateProjectProfile(currentUser: CurrentUserModel) = flatMap { profile ->
+		val oidcId = profile.user?.oidcId
+		port.update(profile.apply { update(currentUser) })
+			.doOnNext { principalCache.invalidate(oidcId) }
 	}
 }

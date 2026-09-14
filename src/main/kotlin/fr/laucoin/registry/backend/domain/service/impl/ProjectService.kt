@@ -13,7 +13,9 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectPort
+import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
@@ -30,9 +32,11 @@ import reactor.core.publisher.Mono
 @Service
 class ProjectService(
 	private val port: IProjectPort,
+	private val profilePort: IProjectProfilePort,
 	private val userProjectProfileService: IUserProjectProfileService,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
+	private val principalCache: IPrincipalCacheService,
 ): IProjectService, GenericService() {
 	override fun findProjectsPage(
 		currentUser: CurrentUserModel,
@@ -129,8 +133,14 @@ class ProjectService(
 			.updateProject(currentUser)
 	}
 
-	private fun Mono<ProjectModel>.updateProject(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+	private fun Mono<ProjectModel>.updateProject(currentUser: CurrentUserModel) = flatMap { project ->
+		port.update(project.apply { update(currentUser) })
+			.flatMap { updated ->
+				profilePort.findOidcIdsByProjectId(project.id!!)
+					.collectList()
+					.doOnNext { principalCache.invalidateAll(it) }
+					.thenReturn(updated)
+			}
 	}
 
 	private fun Mono<ProjectModel>.validateDates(project: ProjectModel): Mono<ProjectModel> = flatMap {
@@ -165,7 +175,12 @@ class ProjectService(
 
 	override fun deleteProjectById(id: UUID): Mono<Unit> {
 		return findProjectById(id, visibilitySearched = null)
-			.flatMap { port.deleteById(id) }
+			.flatMap {
+				profilePort.findOidcIdsByProjectId(id).collectList()
+					.flatMap { oidcIds ->
+						port.deleteById(id).doOnSuccess { _ -> principalCache.invalidateAll(oidcIds) }
+					}
+			}
 	}
 
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {

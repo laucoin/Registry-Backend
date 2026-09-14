@@ -116,6 +116,9 @@ registry:
         email: email
         first-name: given_name
         last-name: family_name
+      cache:
+        principal:
+          ttl-seconds: ${REGISTRY_PRINCIPAL_CACHE_TTL_SECONDS:60}
   server:
     prefix: /api
     port: ${SERVER_PORT:8081}

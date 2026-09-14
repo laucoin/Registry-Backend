@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.P
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_PURGED
 import java.time.LocalDate
 import java.time.OffsetTime
@@ -42,6 +43,9 @@ data class ProjectProfileEntity(
 	@ReadOnlyProperty
 	@Column(PROJECT_PROFILE_USER_PURGED)
 	var userPurged: Boolean? = null,
+	@ReadOnlyProperty
+	@Column(PROJECT_PROFILE_USER_OIDC_ID)
+	var userOidcId: UUID? = null,
 
 	@Column(PROJECT_PROFILE_ROLE)
 	var role: String? = null,

@@ -31,6 +31,7 @@ class ProjectProfileEntityMapper(
 			userMapper.toModel(
 				UserEntity().apply {
 					id = it
+					oidcId = entity.userOidcId
 					firstName = entity.userFirstName
 					lastName = entity.userLastName
 					email = entity.userEmail

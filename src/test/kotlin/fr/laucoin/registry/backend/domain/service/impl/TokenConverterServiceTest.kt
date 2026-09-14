@@ -10,14 +10,13 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.ModelExt.userOidcId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -42,14 +41,17 @@ import org.springframework.security.oauth2.jwt.Jwt
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 
 class TokenConverterServiceTest {
 	private val roleService: IRoleService = mock()
 	private val userService: IUserService = mock()
 	private val profilePort: IProjectProfilePort = mock()
+	private val principalCache: IPrincipalCacheService = mock()
 	private val service = TokenConverterService(
-		userService, profilePort, roleService, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY
+		userService, profilePort, roleService, principalCache, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY
 	)
 
 	private val jwt = mock<Jwt>()
@@ -97,6 +99,11 @@ class TokenConverterServiceTest {
 	fun setup() {
 		whenever(jwt.claims).thenReturn(claims)
 		whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
+
+		whenever(principalCache.get(any(), any())).thenAnswer { invocation ->
+			@Suppress("UNCHECKED_CAST")
+			(invocation.arguments[1] as () -> Mono<CurrentUserModel>).invoke()
+		}
 	}
 
 	@ParameterizedTest

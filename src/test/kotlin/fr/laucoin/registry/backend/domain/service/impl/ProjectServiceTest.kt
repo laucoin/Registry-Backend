@@ -9,6 +9,8 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectPort
+import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
@@ -24,6 +26,7 @@ import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -47,15 +50,24 @@ import reactor.core.publisher.Mono
 
 class ProjectServiceTest {
 	private val port: IProjectPort = mock()
+	private val profilePort: IProjectProfilePort = mock()
 	private val projectProfileService: IUserProjectProfileService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
+	private val principalCache: IPrincipalCacheService = mock()
 	private val service: IProjectService = ProjectService(
 		port,
+		profilePort,
 		projectProfileService,
 		transactionalOperator,
-		roleService
+		roleService,
+		principalCache,
 	)
+
+	@BeforeEach
+	fun setup() {
+		whenever(profilePort.findOidcIdsByProjectId(any())).thenReturn(Flux.empty())
+	}
 
 	private companion object {
 		private val MIN_DATE = LocalDate.MIN

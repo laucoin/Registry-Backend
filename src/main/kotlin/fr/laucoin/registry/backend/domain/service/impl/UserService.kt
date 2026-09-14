@@ -21,6 +21,7 @@ import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
@@ -44,6 +45,7 @@ class UserService(
 	private val userProjectProfileService: IUserProjectProfileService,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
+	private val principalCache: IPrincipalCacheService,
 ): ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
 	private lateinit var serviceAccount: CurrentUserModel
 
@@ -118,19 +120,27 @@ class UserService(
 		firstName: String?,
 		lastName: String?
 	): Mono<CurrentUserModel> {
-		if (user.personalDataChanged(email, firstName, lastName)) {
-			log.info("Updating personal data for user \"{}\"", user.id)
-			user.email = email
-			user.firstName = firstName
-			user.lastName = lastName
+		if (!user.personalDataChanged(email, firstName, lastName)) {
+			return Mono.just(user)
 		}
 
-		val now: ZonedDateTime = ZonedDateTime.now()
-		log.info("Updating user \"{}\" last sign in date and time to {}", user.id, now)
-		user.lastLogin = now
+		log.info("Updating personal data for user \"{}\"", user.id)
+		user.email = email
+		user.firstName = firstName
+		user.lastName = lastName
 
 		return updateUser(serviceAccount, user)
 			.map { user }
+	}
+
+	override fun recordLoginByOidcId(oidcId: UUID): Mono<Void> {
+		return port.findByOidcId(oidcId, visibilitySearched = null)
+			.filter { isNotServiceAccount(it) }
+			.flatMap {
+				it.lastLogin = ZonedDateTime.now()
+				updateUser(serviceAccount, it)
+			}
+			.then()
 	}
 
 	override fun linkUserToOidcId(user: CurrentUserModel, oidcId: UUID): Mono<CurrentUserModel> {
@@ -143,6 +153,7 @@ class UserService(
 
 	private fun updateUser(currentUser: CurrentUserModel, user: UserModel): Mono<UserModel> {
 		return port.update(user.apply { update(currentUser) })
+			.doOnNext { principalCache.invalidate(it.oidcId) }
 	}
 
 	override fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel> {
@@ -201,7 +212,7 @@ class UserService(
 			.validateNotCurrentUser(currentUser, USER_DELETE_CURRENT_USER)
 			.validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
 			.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
-			.flatMap { port.deleteById(it.id!!) }
+			.flatMap { port.deleteById(it.id!!).doOnSuccess { _ -> principalCache.invalidate(it.oidcId) } }
 	}
 
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {

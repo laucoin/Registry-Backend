@@ -20,6 +20,7 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -53,8 +54,9 @@ class ProjectProfileServiceTest {
 	private val profileService: IUserProjectProfileService = mock()
 	private val roleService: IRoleService = mock()
 	private val userPort: IUserPort = mock()
+	private val principalCache: IPrincipalCacheService = mock()
 	private val maxUser: Int = 1
-	private val service = ProjectProfileService(profileService, port, roleService, userPort, maxUser)
+	private val service = ProjectProfileService(profileService, port, roleService, userPort, principalCache, maxUser)
 
 	private companion object {
 		@JvmStatic

@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import java.util.UUID
@@ -30,6 +31,7 @@ class TokenConverterService(
 	private val userService: IUserService,
 	private val profilePort: IProjectProfilePort,
 	private val roleService: IRoleService,
+	private val principalCache: IPrincipalCacheService,
 	@param:Value($$"${registry.security.oauth2.claims.user-id}")
 	private val userIdKey: String,
 	@param:Value($$"${registry.security.oauth2.claims.email}")
@@ -51,19 +53,20 @@ class TokenConverterService(
 		val firstName: String? = jwt.getClaimAsString(firstNameKey)
 		val lastName: String? = jwt.getClaimAsString(lastNameKey)
 
-		return Mono.justOrEmpty(jwt)
-			.fetchUser(oidcId)
+		return principalCache.get(oidcId) { resolveCurrentUser(oidcId, email, firstName, lastName) }
+			.map { UsernamePasswordAuthenticationToken(it, null, it.authorities) }
+	}
+
+	// Not cached on failure: Caffeine's AsyncCache drops an entry whose future completes
+	// exceptionally, so a blocked/purged user always fails fresh from the database.
+	private fun resolveCurrentUser(
+		oidcId: UUID, email: String, firstName: String?, lastName: String?
+	): Mono<CurrentUserModel> =
+		userService.findUserByOidcId(oidcId, visibilitySearched = null)
 			.throwOnBlockedUser()
 			.updateUserIfPersonalDataChanged(email, firstName, lastName)
 			.createNewUserOnNotFound(oidcId, email, firstName, lastName)
 			.buildAuthorities()
-			.map { UsernamePasswordAuthenticationToken(it, null, it.authorities) }
-	}
-
-	private fun Mono<Jwt>.fetchUser(oidcId: UUID): Mono<CurrentUserModel> =
-		flatMap {
-			userService.findUserByOidcId(oidcId, visibilitySearched = null)
-		}
 
 	private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { it, handle ->
 		if (it.isNotVisible()) {

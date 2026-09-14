@@ -116,6 +116,9 @@ registry:
         email: email
         first-name: given_name
         last-name: family_name
+      cache:
+        principal:
+          ttl-seconds: 60
   server:
     prefix: /api
     port: 8081

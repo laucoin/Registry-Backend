@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.User
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_PURGED
 
 object ProjectProfileFields {
@@ -12,6 +13,7 @@ object ProjectProfileFields {
 
 	private const val USER_PREFIX = "user_"
 	const val PROJECT_PROFILE_USER_ID = "$USER_PREFIX$ID"
+	const val PROJECT_PROFILE_USER_OIDC_ID = "$USER_PREFIX$USER_OIDC_ID"
 	const val PROJECT_PROFILE_USER_FIRST_NAME = "$USER_PREFIX$USER_FIRST_NAME"
 	const val PROJECT_PROFILE_USER_LAST_NAME = "$USER_PREFIX$USER_LAST_NAME"
 	const val PROJECT_PROFILE_USER_EMAIL = "$USER_PREFIX$USER_EMAIL"
