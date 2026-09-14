@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.handler
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
@@ -18,8 +20,6 @@ import reactor.core.publisher.Mono
 import java.time.Duration
 import java.time.Instant
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReference
 
 class AuthenticationRateLimitHandler(
@@ -30,7 +30,10 @@ class AuthenticationRateLimitHandler(
 	private val windowSeconds: Long,
 ) : WebFilter {
 	private val pathMatcher = AntPathMatcher()
-	private val counters = ConcurrentHashMap<String, SlidingWindowCounter>()
+
+	private val counters: Cache<String, SlidingWindowCounter> = Caffeine.newBuilder()
+		.expireAfterAccess(Duration.ofSeconds(windowSeconds * EXPIRY_GRACE_MULTIPLIER))
+		.build()
 
 	override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
 		val request = exchange.request
@@ -40,19 +43,11 @@ class AuthenticationRateLimitHandler(
 			?: return chain.filter(exchange)
 
 		val clientId = request.remoteAddress?.address?.hostAddress ?: return chain.filter(exchange)
-		val allowed = counters.computeIfAbsent("$clientId|$matchedPath") { newCounter() }.tryConsume()
+		val allowed = counters.get("$clientId|$matchedPath") {
+			SlidingWindowCounter(capacity, Duration.ofSeconds(windowSeconds))
+		}.tryConsume()
 
 		return if (allowed) chain.filter(exchange) else tooManyRequests(exchange)
-	}
-
-	private fun newCounter(): SlidingWindowCounter {
-		evictExpiredCountersOccasionally()
-		return SlidingWindowCounter(capacity, Duration.ofSeconds(windowSeconds))
-	}
-
-	private fun evictExpiredCountersOccasionally() {
-		if (ThreadLocalRandom.current().nextInt(EVICTION_SAMPLE_RATE) != 0) return
-		counters.entries.removeIf { it.value.isExpired() }
 	}
 
 	private fun tooManyRequests(exchange: ServerWebExchange): Mono<Void> {
@@ -66,8 +61,14 @@ class AuthenticationRateLimitHandler(
 			statusCode = TOO_MANY_REQUESTS.value(),
 			statusName = TOO_MANY_REQUESTS.name,
 			code = TOO_MANY_REQUESTS.value().toString(),
-			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${TOO_MANY_REQUESTS.value()}", locale = locale),
-			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX${TOO_MANY_REQUESTS.value()}", locale = locale),
+			title = translateService.getError(
+				code = "$ERROR_TITLE_PREFIX${TOO_MANY_REQUESTS.value()}",
+				locale = locale
+			),
+			message = translateService.getError(
+				code = "$ERROR_MESSAGE_PREFIX${TOO_MANY_REQUESTS.value()}",
+				locale = locale
+			),
 		)
 
 		return response.writeWith(Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray())))
@@ -91,18 +92,11 @@ class AuthenticationRateLimitHandler(
 			}
 		}
 
-		fun isExpired(): Boolean =
-			Duration.between(state.get().start, Instant.now()) >= window.multipliedBy(EXPIRY_GRACE_MULTIPLIER)
-
 		private data class WindowState(val start: Instant, val count: Int)
-
-		private companion object {
-			const val EXPIRY_GRACE_MULTIPLIER = 10L
-		}
 	}
 
 	private companion object {
 		val RATE_LIMITED_PATHS = listOf("/api/*/authentication/token", "/api/*/authentication/token/refresh")
-		const val EVICTION_SAMPLE_RATE = 1000
+		const val EXPIRY_GRACE_MULTIPLIER = 10L
 	}
 }

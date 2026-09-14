@@ -10,14 +10,19 @@ import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
 import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.`in`.idp.entity.IdpTokenEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.idp.mapper.AuthenticationTokenEntityMapper
+import io.netty.channel.ChannelOption
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
+import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.BodyInserters.FormInserter
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
+import reactor.netty.http.client.HttpClient
+import reactor.netty.resources.ConnectionProvider
+import java.time.Duration
 
 @Service
 class IdpAuthenticationAdapter(
@@ -34,11 +39,37 @@ class IdpAuthenticationAdapter(
 	private val clientId: String,
 	@param:Value($$"${external.idp.client-secret}")
 	private val clientSecret: String,
+	@param:Value($$"${external.idp.connect-timeout-millis}")
+	connectTimeoutMillis: Int,
+	@param:Value($$"${external.idp.response-timeout-millis}")
+	responseTimeoutMillis: Long,
+	@param:Value($$"${external.idp.max-connections}")
+	maxConnections: Int,
 ) : IAuthenticationPort, LoggerService() {
-	private val http: WebClient = WebClient.create()
+	private val http: WebClient = buildHttpClient(connectTimeoutMillis, responseTimeoutMillis, maxConnections)
 
 	private companion object {
 		private const val RESPONSE_TYPE = "code"
+		private const val CONNECTION_PROVIDER_NAME = "idp-http-client"
+
+		private fun buildHttpClient(
+			connectTimeoutMillis: Int,
+			responseTimeoutMillis: Long,
+			maxConnections: Int,
+		): WebClient {
+			val connectionProvider = ConnectionProvider.builder(CONNECTION_PROVIDER_NAME)
+				.maxConnections(maxConnections)
+				.pendingAcquireTimeout(Duration.ofMillis(responseTimeoutMillis))
+				.build()
+
+			val httpClient = HttpClient.create(connectionProvider)
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
+				.responseTimeout(Duration.ofMillis(responseTimeoutMillis))
+
+			return WebClient.builder()
+				.clientConnector(ReactorClientHttpConnector(httpClient))
+				.build()
+		}
 	}
 
 	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {

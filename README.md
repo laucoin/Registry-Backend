@@ -93,6 +93,9 @@ fails the startup loudly instead of silently booting on something unintended.
 | `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`           |
 | `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                           |
 | `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (implicit flow). For example: `registry-swagger` |
+| `IDP_CONNECT_TIMEOUT_MILLIS` | `2000` | TCP connect timeout for the backend's outbound calls to the IdP (login exchange, refresh, revocation) |
+| `IDP_RESPONSE_TIMEOUT_MILLIS` | `5000` | How long to wait for the IdP's response before failing; also used as the timeout for acquiring a pooled connection when the IdP is already saturated |
+| `IDP_MAX_CONNECTIONS`       | `20`       | Max concurrent connections to the IdP in the shared connection pool |
 
 **Server**
 
