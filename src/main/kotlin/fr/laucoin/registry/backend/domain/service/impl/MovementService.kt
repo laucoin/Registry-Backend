@@ -54,9 +54,6 @@ import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import java.time.LocalDate
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
@@ -72,6 +69,9 @@ import reactor.kotlin.core.util.function.component3
 import reactor.kotlin.core.util.function.component4
 import reactor.kotlin.core.util.function.component5
 import reactor.util.function.Tuple2
+import java.time.LocalDate
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class MovementService(
@@ -91,7 +91,7 @@ class MovementService(
 	private val maxVehicleResult: Int,
 	@param:Value($$"${registry.feature.movement.searched.max-activity-result}")
 	private val maxActivityResult: Int,
-): IMovementService, GenericService() {
+) : IMovementService, GenericService() {
 	override fun findMovementsPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -321,30 +321,30 @@ class MovementService(
 		movement: MovementModel,
 		newGuests: List<ParticipantModel>,
 	): Mono<MovementModel> {
-		return validateMovementDate(movement)
-			.flatMap { validateActivity(movement) }
-			.flatMap { saveGuestsIfNecessary(currentUser, movement, movement, newGuests) }
+		return Mono.zip(
+			validateMovementDate(movement),
+			validateActivity(movement),
+			saveGuestsIfNecessary(currentUser, movement, movement, newGuests),
+		)
 			.flatMap {
-				validateParticipants(
-					movement.project!!.id!!,
-					movement,
-					movement.content.mapNotNull { c -> c.participant!!.id },
-					movement.content.filter { c -> Objects.nonNull(c.vehicle) }.mapNotNull { c -> c.participant!!.id }
+				Mono.zip(
+					validateParticipantsIfAny(
+						movement.project!!.id!!,
+						movement,
+						movement.content.mapNotNull { c -> c.participant!!.id },
+						movement.content.filter { c -> Objects.nonNull(c.vehicle) }
+							.mapNotNull { c -> c.participant!!.id },
+					),
+					validateVehiclesIfAny(
+						movement.project!!.id!!,
+						movement,
+						movement.content.mapNotNull { c -> c.vehicle?.id },
+					),
 				)
 			}
 			.flatMap {
-				val newVehicleIds: List<UUID> = movement.content.mapNotNull { c -> c.vehicle?.id }
-				if (newVehicleIds.isEmpty()) Mono.just(it)
-				else validateVehicles(
-					movement.project!!.id!!,
-					movement,
-					newVehicleIds
-				)
-			}
-			.flatMap {
-				if (movement.isLastParticipantMovement()) {
-					updateParticipantsEndAvailability(it)
-				} else Mono.just(it)
+				if (movement.isLastParticipantMovement()) updateParticipantsEndAvailability(movement)
+				else Mono.just(movement)
 			}
 			.flatMap { port.create(movement.apply { create(currentUser) }) }
 			.`as`(transactionalOperator::transactional)
@@ -362,17 +362,26 @@ class MovementService(
 			.validateUpdatableMovementFields(movement)
 			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_UPDATED)
 			.flatMap { validateNoCommunicationConflict(movement, it) }
-			.flatMap { validateActivity(movement, it) }
-			.flatMap { saveGuestsIfNecessary(currentUser, movement, it, newGuests) }
-			.flatMap {
-				val newParticipantIds: List<UUID> = it.getNewContentParticipantIds(movement)
-				if (newParticipantIds.isEmpty()) Mono.just(it)
-				else validateParticipants(projectId, it, newParticipantIds, it.getNewContentDriverIds(movement))
+			.flatMap { oldMovement ->
+				Mono.zip(
+					validateActivity(movement, oldMovement),
+					saveGuestsIfNecessary(currentUser, movement, oldMovement, newGuests),
+				).thenReturn(oldMovement)
 			}
-			.flatMap {
-				val newVehicleIds: List<UUID> = it.getNewContentVehicleIds(movement)
-				if (newVehicleIds.isEmpty()) Mono.just(it)
-				else validateVehicles(projectId, it, newVehicleIds)
+			.flatMap { oldMovement ->
+				Mono.zip(
+					validateParticipantsIfAny(
+						projectId,
+						oldMovement,
+						oldMovement.getNewContentParticipantIds(movement),
+						oldMovement.getNewContentDriverIds(movement),
+					),
+					validateVehiclesIfAny(
+						projectId,
+						oldMovement,
+						oldMovement.getNewContentVehicleIds(movement),
+					),
+				).thenReturn(oldMovement)
 			}
 			.map {
 				it.apply {
@@ -385,6 +394,22 @@ class MovementService(
 			.updateMovement(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
+
+	private fun validateParticipantsIfAny(
+		projectId: UUID,
+		movement: MovementModel,
+		participantIds: List<UUID>,
+		driverIds: List<UUID>,
+	): Mono<MovementModel> =
+		if (participantIds.isEmpty()) Mono.just(movement)
+		else validateParticipants(projectId, movement, participantIds, driverIds)
+
+	private fun validateVehiclesIfAny(
+		projectId: UUID,
+		movement: MovementModel,
+		vehicleIds: List<UUID>,
+	): Mono<MovementModel> =
+		if (vehicleIds.isEmpty()) Mono.just(movement) else validateVehicles(projectId, movement, vehicleIds)
 
 	private fun Mono<MovementModel>.updateMovement(currentUser: CurrentUserModel) = flatMap {
 		port.update(it.apply { update(currentUser) })
