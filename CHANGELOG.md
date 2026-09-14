@@ -1,3 +1,9 @@
+## [1.12.0](https://github.com/laucoin/Registry-Backend/compare/1.11.0...1.12.0) (2026-09-14)
+
+### 🏎️ Improvements
+
+* **movement:** Improve movement creation data check ([#47](https://github.com/laucoin/Registry-Backend/issues/47)) ([d289ab8](https://github.com/laucoin/Registry-Backend/commit/d289ab8ca090faef50358b33c8a2ea90ace2eafe))
+
 ## [1.11.0](https://github.com/laucoin/Registry-Backend/compare/1.10.0...1.11.0) (2026-09-14)
 
 ### 📦️ Other
