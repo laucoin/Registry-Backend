@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/laucoin/Registry-Backend/compare/1.8.0...1.9.0) (2026-09-14)
+
+### 📝 Documentation
+
+* **changelog:** reconcile CHANGELOG.md and version.properties with actual release history ([b78f7ac](https://github.com/laucoin/Registry-Backend/commit/b78f7ac9a8123648ed92fc23ddc8e008910e1cf9)), closes [#39](https://github.com/laucoin/Registry-Backend/issues/39) [#40-43](https://github.com/laucoin/Registry-Backend/issues/40-43)
+
 ## [1.8.0](https://github.com/laucoin/Registry-Backend/compare/1.7.0...1.8.0) (2026-09-13)
 
 ### 🚀 Features
