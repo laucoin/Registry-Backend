@@ -21,6 +21,7 @@ version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 // External libraries 📚
 val apacheTextVersion = "1.15.0"
 val swaggerVersion = "3.1.0"
+val caffeineVersion = "3.2.4"
 
 // Testing 🧪
 val mockWebServer = "5.5.0"
@@ -68,6 +69,7 @@ dependencies {
 	// Data 💾
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("com.github.ben-manes.caffeine:caffeine:$caffeineVersion")
 	implementation("org.apache.commons:commons-text:$apacheTextVersion")
 	implementation("org.springframework.boot:spring-boot-flyway")
 	implementation("org.flywaydb:flyway-core")

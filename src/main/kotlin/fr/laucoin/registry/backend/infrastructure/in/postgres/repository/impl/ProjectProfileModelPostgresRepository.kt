@@ -112,6 +112,10 @@ class ProjectProfileModelPostgresRepository(
 		).map(roleMapper::toModel)
 	}
 
+	override fun findOidcIdsByProjectId(projectId: UUID): Flux<UUID> {
+		return repository.findOidcIdsByProjectId(projectId)
+	}
+
 	override fun findProjectProfileByUserIdAndId(
 		userId: UUID,
 		id: UUID,

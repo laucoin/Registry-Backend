@@ -16,6 +16,7 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_ROLE
@@ -58,8 +59,9 @@ class UserServiceTest {
 	private val userProjectProfileService: IUserProjectProfileService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
+	private val principalCache: IPrincipalCacheService = mock()
 	private val service = UserService(
-		port, preferencesService, userProjectProfileService, transactionalOperator, roleService
+		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, principalCache
 	)
 
 	private val serviceAccountId = UUID.randomUUID()

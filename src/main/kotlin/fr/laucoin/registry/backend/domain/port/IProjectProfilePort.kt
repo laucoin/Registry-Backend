@@ -36,6 +36,7 @@ interface IProjectProfilePort {
 	): Flux<UUID>
 
 	fun findProjectProfilesRolesByUserId(userId: UUID): Flux<ProjectProfileRoleModel>
+	fun findOidcIdsByProjectId(projectId: UUID): Flux<UUID>
 	fun findProjectProfileByUserIdAndId(userId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
 	fun findProjectProfileByProjectAndUserId(
 		projectId: UUID,

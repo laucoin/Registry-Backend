@@ -12,12 +12,14 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.P
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectFields.PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_EMAIL
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
@@ -29,7 +31,8 @@ object ProjectProfileQueries {
         $LINKED_USER_TABLE.$USER_LAST_NAME AS $PROJECT_PROFILE_USER_LAST_NAME,
         $LINKED_USER_TABLE.$USER_EMAIL AS $PROJECT_PROFILE_USER_EMAIL,
         $LINKED_USER_TABLE.$USER_LAST_LOGIN AS $PROJECT_PROFILE_USER_LAST_LOGIN,
-        $LINKED_USER_TABLE.$USER_PURGED AS $PROJECT_PROFILE_USER_PURGED
+        $LINKED_USER_TABLE.$USER_PURGED AS $PROJECT_PROFILE_USER_PURGED,
+        $LINKED_USER_TABLE.$USER_OIDC_ID AS $PROJECT_PROFILE_USER_OIDC_ID
     """
 	const val JOIN_USER =
 		"INNER JOIN $USER_TABLE $LINKED_USER_TABLE ON t.$PROJECT_PROFILE_USER_ID = $LINKED_USER_TABLE.$ID AND $LINKED_USER_TABLE.$VISIBLE IS TRUE"

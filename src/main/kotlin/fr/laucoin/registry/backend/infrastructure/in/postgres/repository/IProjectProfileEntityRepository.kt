@@ -33,6 +33,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.role.Role
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.role.RoleFields.PROJECT_ROLE_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.role.RoleFields.ROLE_LEVEL
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
@@ -154,6 +155,16 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		availabilitySearched: Boolean?,
 		statusSearched: List<ProfileStatusEnum>,
 	): Flux<ProjectProfileRoleEntity>
+
+	@Query(
+		"""
+        SELECT DISTINCT tu.$USER_OIDC_ID
+        FROM $PROJECT_PROFILE_TABLE t
+        INNER JOIN $USER_TABLE tu ON t.$PROJECT_PROFILE_USER_ID = tu.$ID
+        WHERE t.$LINKED_PROJECT_ID = :projectId AND tu.$USER_OIDC_ID IS NOT NULL
+        """
+	)
+	fun findOidcIdsByProjectId(projectId: UUID): Flux<UUID>
 
 	@Query(
 		"""
