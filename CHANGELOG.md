@@ -1,3 +1,9 @@
+## [1.11.0](https://github.com/laucoin/Registry-Backend/compare/1.10.0...1.11.0) (2026-09-14)
+
+### 📦️ Other
+
+* **IdP:** Add timeout on IdP calls ([#46](https://github.com/laucoin/Registry-Backend/issues/46)) ([c2f1bc0](https://github.com/laucoin/Registry-Backend/commit/c2f1bc037235d67a527a50022e913127c2fb6610))
+
 ## [1.10.0](https://github.com/laucoin/Registry-Backend/compare/1.9.0...1.10.0) (2026-09-14)
 
 ### 🏎️ Improvements
