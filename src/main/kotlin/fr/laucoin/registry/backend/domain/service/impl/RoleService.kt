@@ -9,32 +9,31 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.port.IRolePort
 import fr.laucoin.registry.backend.domain.service.IRoleService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Mono
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class RoleService(
 	private val port: IRolePort,
 	@param:Value($$"${registry.security.default-role}")
 	private val defaultUserRole: String,
-): ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
+) : ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
 	private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	private val userRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
 	private val projectRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
 
+	// Blocking is deliberate here: this runs once on the context-refresh thread
 	override fun onApplicationEvent(event: ContextRefreshedEvent) {
-		port.findUserRoles()
-			.doOnNext { userRoles[it.role] = Pair(it.level, it.permissions) }
-			.subscribe()
-
-		port.findProjectRoles()
-			.doOnNext { projectRoles[it.role] = Pair(it.level, it.permissions) }
-			.subscribe()
+		Mono.`when`(
+			port.findUserRoles().doOnNext { userRoles[it.role] = Pair(it.level, it.permissions) },
+			port.findProjectRoles().doOnNext { projectRoles[it.role] = Pair(it.level, it.permissions) },
+		).block()
 	}
 
 	override fun getLevelByUserRole(role: String?): Int? = userRoles[role]?.first
