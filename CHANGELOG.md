@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/laucoin/Registry-Backend/compare/1.9.0...1.10.0) (2026-09-14)
+
+### 🏎️ Improvements
+
+* **auth:** Add internal cache for authentication to increase response time ([#45](https://github.com/laucoin/Registry-Backend/issues/45)) ([c26e4b4](https://github.com/laucoin/Registry-Backend/commit/c26e4b4c13c9ca40137af34b81df12f7da933b09))
+
 ## [1.9.0](https://github.com/laucoin/Registry-Backend/compare/1.8.0...1.9.0) (2026-09-14)
 
 ### 📝 Documentation
