@@ -648,7 +648,7 @@ class MovementService(
 	override fun purgeMovementsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging movements older than {} and uncommented since {}", dateThreshold, dateThreshold)
 		return port.findOlderThanAndUncommentedSince(dateThreshold)
-			.flatMap {
+			.flatMap({
 				if (dryRun) {
 					log.info("[Dry run] movement {} would be deleted", it)
 					Mono.just(it)
@@ -658,6 +658,6 @@ class MovementService(
 						.doOnNext { e -> log.info("Movement {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge movement {}", it, err) }
 				}
-			}
+			}, PURGE_DELETE_CONCURRENCY)
 	}
 }

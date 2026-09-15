@@ -186,7 +186,7 @@ class ProjectService(
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging projects inactive since {}", dateThreshold)
 		return port.findProjectsEligibleForPurge(dateThreshold)
-			.flatMap {
+			.flatMap({
 				if (dryRun) {
 					log.info("[Dry run] project {} would be deleted", it)
 					Mono.just(it)
@@ -196,6 +196,6 @@ class ProjectService(
 						.doOnNext { e -> log.info("Project {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge project {}", it, err) }
 				}
-			}
+			}, PURGE_DELETE_CONCURRENCY)
 	}
 }

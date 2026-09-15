@@ -218,7 +218,7 @@ class UserService(
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging users inactive since {}", dateThreshold)
 		return port.findUserIdsOlderThanLastLogin(dateThreshold)
-			.flatMap {
+			.flatMap({
 				if (dryRun) {
 					log.info("[Dry run] user {} would be deleted", it)
 					Mono.just(it)
@@ -228,7 +228,7 @@ class UserService(
 						.doOnNext { e -> log.info("User {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge user {}", it, err) }
 				}
-			}
+			}, PURGE_DELETE_CONCURRENCY)
 	}
 
 	private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) =
