@@ -5,7 +5,9 @@ import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.GroupEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IGroupContentEntityRepository
@@ -29,26 +31,15 @@ class GroupModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: GroupSearchParamModel,
 	): Mono<PageModel<GroupModel>> {
-		return Mono.zip(
-			repository.countAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.presenceSearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.presenceSearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList(),
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			projectId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.presenceSearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, GroupEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findContent(

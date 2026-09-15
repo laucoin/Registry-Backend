@@ -4,7 +4,9 @@ import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.ICommunicationEntityRepository
 import java.util.UUID
@@ -22,26 +24,15 @@ class CommunicationPostgresRepository(
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel,
 	): Mono<PageModel<CommunicationModel>> {
-		return Mono.zip(
-			repository.countAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-			),
-			repository.findAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			projectId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findByMovementIdsWithLimit(
@@ -64,21 +55,16 @@ class CommunicationPostgresRepository(
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel
 	): Mono<PageModel<CommunicationModel>> {
-		return Mono.zip(
-			countAllByMovementId(projectId, movementId, searchParams),
-			repository.findAllByMovementId(
-				projectId,
-				movementId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAllByMovementId(
+			projectId,
+			movementId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findByAlertIdsWithLimit(
@@ -101,21 +87,16 @@ class CommunicationPostgresRepository(
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel
 	): Mono<PageModel<CommunicationModel>> {
-		return Mono.zip(
-			countAllByAlertId(projectId, alertId, searchParams),
-			repository.findAllByAlertId(
-				projectId,
-				alertId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAllByAlertId(
+			projectId,
+			alertId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findAllByIds(

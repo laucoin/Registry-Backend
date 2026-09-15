@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.role.RoleFields.ENTITY_ROLE_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.role.RoleFields.ROLE_LEVEL
@@ -35,21 +36,13 @@ import reactor.core.publisher.Mono
 interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAll(textSearched: String?, visibilitySearched: Boolean?, limit: Int, offset: Int): Flux<UserEntity>
-
-	@Query(
-		"""
-        SELECT COUNT(t.$ID) FROM $USER_TABLE t
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
-        """
-	)
-	fun countAll(textSearched: String?, visibilitySearched: Boolean?): Mono<Long>
 
 	@Query(
 		"""

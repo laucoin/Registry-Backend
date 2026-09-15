@@ -11,6 +11,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.Ale
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
@@ -34,7 +35,7 @@ import reactor.core.publisher.Mono
 interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ALERT_DATE_TIME DESC
@@ -51,22 +52,6 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 		limit: Int,
 		offset: Int,
 	): Flux<AlertEntity>
-
-	@Query(
-		"""
-        SELECT COUNT(t.$ID)
-        FROM $ALERT_TABLE t
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countAll(
-		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
 
 	@Query(
 		"""

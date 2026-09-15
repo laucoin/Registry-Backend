@@ -4,7 +4,9 @@ import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IActivityEntityRepository
 import java.time.LocalDate
@@ -23,26 +25,15 @@ class ActivityModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
 	): Mono<PageModel<ActivityModel>> {
-		return Mono.zip(
-			repository.countAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			projectId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, ActivityEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel> {

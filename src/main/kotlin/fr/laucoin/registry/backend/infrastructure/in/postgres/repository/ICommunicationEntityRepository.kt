@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communica
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationQueries.SELECT_COMMUNICATION_SEARCH
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationQueries.SELECT_LINKED_ALERT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationQueries.SELECT_LINKED_MOVEMENT
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
@@ -33,7 +34,7 @@ import reactor.core.publisher.Mono
 interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $COMMUNICATION_TEXT_SEARCH_CLAUSE AND $COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$COMMUNICATION_DATE_TIME DESC
@@ -49,21 +50,6 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
 		limit: Int,
 		offset: Int,
 	): Flux<CommunicationEntity>
-
-	@Query(
-		"""
-        SELECT COUNT(t.$ID)
-        FROM $COMMUNICATION_TABLE t
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $COMMUNICATION_TEXT_SEARCH_CLAUSE AND $COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countAll(
-		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
 
 	@Query(
 		"""
@@ -83,7 +69,7 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$COMMUNICATION_MOVEMENT_ID = :movementId AND $VISIBLE_CLAUSE AND $COMMUNICATION_TEXT_SEARCH_CLAUSE AND $COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$COMMUNICATION_DATE_TIME DESC
@@ -135,7 +121,7 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$COMMUNICATION_ALERT_ID = :alertId AND $VISIBLE_CLAUSE AND $COMMUNICATION_TEXT_SEARCH_CLAUSE AND $COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$COMMUNICATION_DATE_TIME DESC

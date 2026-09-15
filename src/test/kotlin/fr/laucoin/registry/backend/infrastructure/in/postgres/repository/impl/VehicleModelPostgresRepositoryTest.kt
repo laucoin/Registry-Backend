@@ -61,7 +61,7 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findPage call repository count and findPage`() {
+	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = VehicleSearchParamModel()
@@ -84,14 +84,6 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 			dateTimeSearched = null,
 			pageable.limit,
 			pageable.offset,
-		)
-		verify(postgresRepository).countAll(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

@@ -86,7 +86,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findPage call repository count and findPage`() {
+	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = GroupSearchParamModel()
@@ -108,13 +108,6 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			dateTimeSearched = null,
 			pageable.limit,
 			pageable.offset,
-		)
-		verify(postgresRepository).countAll(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

@@ -41,7 +41,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 	private lateinit var repository: IUserPort
 
 	@Test
-	fun `Should findPage call repository count and findPage`() {
+	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = UserSearchParamModel()
@@ -60,10 +60,6 @@ class UserModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 			pageable.limit,
 			pageable.offset,
-		)
-		verify(postgresRepository).countAll(
-			textSearched = null,
-			visibilitySearched = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

@@ -5,7 +5,9 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ParticipantEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IGroupContentEntityRepository
@@ -30,32 +32,18 @@ class ParticipantModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
 	): Mono<PageModel<ParticipantModel>> {
-		return Mono.zip(
-			repository.countAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.isMajor,
-				searchParams.typeSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.isMajor,
-				searchParams.typeSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			projectId,
+			searchParams.textSearched,
+			searchParams.isMajor,
+			searchParams.typeSearched,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.presenceSearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantModel> {
@@ -85,34 +73,19 @@ class ParticipantModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel
 	): Mono<PageModel<ParticipantModel>> {
-		return Mono.zip(
-			repository.countAllByGroupId(
-				projectId,
-				groupId,
-				searchParams.textSearched,
-				searchParams.isMajor,
-				searchParams.typeSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findAllByGroupId(
-				projectId,
-				groupId,
-				searchParams.textSearched,
-				searchParams.isMajor,
-				searchParams.typeSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.presenceSearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAllByGroupId(
+			projectId,
+			groupId,
+			searchParams.textSearched,
+			searchParams.isMajor,
+			searchParams.typeSearched,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.presenceSearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel> {

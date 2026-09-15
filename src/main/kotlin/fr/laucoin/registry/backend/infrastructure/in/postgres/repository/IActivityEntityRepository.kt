@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityQueries.ACTIVITY_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityQueries.DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.activity.ActivityQueries.SELECT_ACTIVITY_SEARCH
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_ID
@@ -33,7 +34,7 @@ import reactor.core.publisher.Mono
 interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
@@ -49,21 +50,6 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 		limit: Int,
 		offset: Int,
 	): Flux<ActivityEntity>
-
-	@Query(
-		"""
-        SELECT COUNT(t.$ID)
-        FROM $ACTIVITY_TABLE t
-        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countAll(
-		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
 
 	@Query(
 		"""

@@ -56,7 +56,7 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findPage call repository count and findPage`() {
+	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ProjectSearchParamModel()
@@ -77,16 +77,11 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 			pageable.limit,
 			pageable.offset,
 		)
-		verify(postgresRepository).countAll(
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
-		)
 		verify(mapper).toModel(any())
 	}
 
 	@Test
-	fun `Should findPage call repository countAllInProjectIds and findAllInProjectIds`() {
+	fun `Should findPage call repository findAllInProjectIds`() {
 		// Arrange
 		val ids = listOf(projectId)
 		val pageable = PageableModel(0, 10)
@@ -108,12 +103,6 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 			dateTimeSearched = null,
 			pageable.limit,
 			pageable.offset,
-		)
-		verify(postgresRepository).countAllInProjectIds(
-			ids,
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
 		)
 		verify(mapper).toModel(any())
 	}

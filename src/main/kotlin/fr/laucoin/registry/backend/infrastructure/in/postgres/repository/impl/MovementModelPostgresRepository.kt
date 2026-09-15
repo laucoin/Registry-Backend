@@ -6,7 +6,9 @@ import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentMod
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.MovementEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IMovementContentEntityRepository
@@ -31,28 +33,16 @@ class MovementModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>> {
-		return Mono.zip(
-			repository.countAll(
-				projectId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-			),
-			repository.findAll(
-				projectId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			projectId,
+			searchParams.visibilitySearched,
+			searchParams.linkedToActivity,
+			searchParams.typeSearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findCurrentPage(
@@ -111,30 +101,17 @@ class MovementModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
-		return Mono.zip(
-			repository.countAllByParticipantId(
-				projectId,
-				participantId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-			),
-			repository.findAllByParticipantId(
-				projectId,
-				participantId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAllByParticipantId(
+			projectId,
+			participantId,
+			searchParams.visibilitySearched,
+			searchParams.linkedToActivity,
+			searchParams.typeSearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPageByVehicleId(
@@ -143,30 +120,17 @@ class MovementModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
-		return Mono.zip(
-			repository.countAllByVehicleId(
-				projectId,
-				vehicleId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-			),
-			repository.findAllByVehicleId(
-				projectId,
-				vehicleId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAllByVehicleId(
+			projectId,
+			vehicleId,
+			searchParams.visibilitySearched,
+			searchParams.linkedToActivity,
+			searchParams.typeSearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPageByActivityId(
@@ -175,28 +139,16 @@ class MovementModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
-		return Mono.zip(
-			repository.countAllByActivityId(
-				projectId,
-				activityId,
-				searchParams.visibilitySearched,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-			),
-			repository.findAllByActivityId(
-				projectId,
-				activityId,
-				searchParams.visibilitySearched,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAllByActivityId(
+			projectId,
+			activityId,
+			searchParams.visibilitySearched,
+			searchParams.typeSearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findActivityWithLimit(

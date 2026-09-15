@@ -4,7 +4,9 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IProjectEntityRepository
 import java.time.LocalDate
@@ -23,22 +25,13 @@ class ProjectModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
-		return Mono.zip(
-			repository.countAll(
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findAll(
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList(),
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPage(
@@ -50,24 +43,14 @@ class ProjectModelPostgresRepository(
 			return Mono.just(PageModel(pageable, 0, emptyList()))
 		}
 
-		return Mono.zip(
-			repository.countAllInProjectIds(
-				projectIds,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findAllInProjectIds(
-				projectIds,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList(),
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAllInProjectIds(
+			projectIds,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
 	}
 
 	override fun validDateTime(id: UUID, begin: ZonedDateTime?, end: ZonedDateTime?): Mono<Boolean> {

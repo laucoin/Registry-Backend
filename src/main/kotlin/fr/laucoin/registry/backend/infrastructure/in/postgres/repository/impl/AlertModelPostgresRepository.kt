@@ -4,7 +4,9 @@ import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.AlertEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IAlertEntityRepository
 import java.time.LocalDate
@@ -23,28 +25,16 @@ class AlertModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel
 	): Mono<PageModel<AlertModel>> {
-		return Mono.zip(
-			repository.countAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.statusSearched,
-				searchParams.visibilitySearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-			),
-			repository.findAll(
-				projectId,
-				searchParams.textSearched,
-				searchParams.statusSearched,
-				searchParams.visibilitySearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			projectId,
+			searchParams.textSearched,
+			searchParams.statusSearched,
+			searchParams.visibilitySearched,
+			searchParams.startDateTimeSearched,
+			searchParams.endDateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, AlertEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findWithLimit(

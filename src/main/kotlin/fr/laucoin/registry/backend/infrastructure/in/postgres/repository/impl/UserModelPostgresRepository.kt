@@ -5,7 +5,9 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.UserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.IUserEntityRepository
@@ -22,20 +24,12 @@ class UserModelPostgresRepository(
 	private val currentUserMapper: CurrentUserEntityMapper,
 ): IUserPort {
 	override fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>> {
-		return Mono.zip(
-			repository.countAll(
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-			),
-			repository.findAll(
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findAll(
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, UserEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel> {
