@@ -38,18 +38,22 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.Gener
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Repository
-interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity, UUID> {
+interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntity, UUID> {
+	companion object {
+		private const val MAX_UNPAGINATED_RESULT = 1000
+	}
+
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
@@ -142,7 +146,11 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
 		"""
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND t.$PARTICIPANT_BIRTHDAY = CURRENT_DATE AND $VISIBLE_CLAUSE
+        WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE
+            AND EXTRACT(MONTH FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(DAY FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(DAY FROM CURRENT_DATE)
+            AND $VISIBLE_CLAUSE
+        LIMIT $MAX_UNPAGINATED_RESULT
         """
 	)
 	fun findAllWithBirthday(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantEntity>
@@ -168,6 +176,7 @@ interface IParticipantEntityRepository: ReactiveCrudRepository<ParticipantEntity
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_PURGED_CLAUSE AND $PROJECT_CLAUSE AND t.$PARTICIPANT_USER_ID = :userId
+        LIMIT $MAX_UNPAGINATED_RESULT
         """
 	)
 	fun findByUserId(projectId: UUID, userId: UUID, dateTimeSearched: ZonedDateTime?): Flux<ParticipantEntity>
