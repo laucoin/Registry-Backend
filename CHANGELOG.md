@@ -1,3 +1,19 @@
+## [1.13.0](https://github.com/laucoin/Registry-Backend/compare/1.12.0...1.13.0) (2026-09-15)
+
+### 📦️ Other
+
+* **error:** manage service account and role error ([#48](https://github.com/laucoin/Registry-Backend/issues/48)) ([84addbe](https://github.com/laucoin/Registry-Backend/commit/84addbe6c8e75c933708831119bea38325bbecde))
+
+### 🏎️ Improvements
+
+* **cardinality:** Stop loading an entire list for a simple cardinality test ([#49](https://github.com/laucoin/Registry-Backend/issues/49)) ([2a74e98](https://github.com/laucoin/Registry-Backend/commit/2a74e98a8256e5bfa13c9a344901d127a4880ce3))
+* **purge:** Add purge concurrency ([#50](https://github.com/laucoin/Registry-Backend/issues/50)) ([4768824](https://github.com/laucoin/Registry-Backend/commit/4768824560b97e907a2e8d62a0dce6774f466a6c))
+* **repository:** Avoid duplicate SQL request for search and pagination use COUNT(*) OVER() ([#51](https://github.com/laucoin/Registry-Backend/issues/51)) ([736684f](https://github.com/laucoin/Registry-Backend/commit/736684f1d3be75ee9d867505039ed9c287eea65f))
+
+### 🐛 Bug Fixes
+
+* **birthday:** Birthday was returned only if the year also match ^^' ([#52](https://github.com/laucoin/Registry-Backend/issues/52)) ([768d3ce](https://github.com/laucoin/Registry-Backend/commit/768d3ce53f8d10e16112985c43964cbf41fafe32))
+
 ## [1.12.0](https://github.com/laucoin/Registry-Backend/compare/1.11.0...1.12.0) (2026-09-14)
 
 ### 🏎️ Improvements
