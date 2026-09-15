@@ -20,7 +20,9 @@ import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -270,6 +272,67 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			dateTimeSearched = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Nested
+	@TestInstance(PER_CLASS)
+	@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+	inner class BirthdayTests {
+		private lateinit var matchingId: UUID
+		private lateinit var nonMatchingId: UUID
+
+		@Test
+		@Order(1)
+		fun `Should create a participant born today's month-day in a past year and one born on another day`() {
+			// Arrange
+			val bornToday = ParticipantModel().apply {
+				firstName = "birthday"
+				lastName = "match"
+				birthday = LocalDate.now().minusYears(30)
+				type = REGISTERED
+				project = ProjectModel().apply { id = projectId }
+				create(currentUser())
+			}
+			val bornAnotherDay = ParticipantModel().apply {
+				firstName = "birthday"
+				lastName = "no-match"
+				birthday = LocalDate.now().minusYears(30).minusDays(1)
+				type = REGISTERED
+				project = ProjectModel().apply { id = projectId }
+				create(currentUser())
+			}
+
+			// Act
+			matchingId = repository.create(bornToday).block()!!.id!!
+			nonMatchingId = repository.create(bornAnotherDay).block()!!.id!!
+
+			// Assert
+			assertNotNull(matchingId)
+			assertNotNull(nonMatchingId)
+		}
+
+		@Test
+		@Order(2)
+		fun `Should findBirthdays match on month-day regardless of birth year`() {
+			// Act
+			val result = repository.findBirthdays(projectId, visibilitySearched = null).collectList().block()!!
+
+			// Assert
+			assertTrue(result.any { it.id == matchingId })
+			assertFalse(result.any { it.id == nonMatchingId })
+		}
+
+		@Test
+		@Order(3)
+		fun `Should deleteById clean up the birthday test participants`() {
+			// Act
+			repository.deleteById(matchingId).block()
+			repository.deleteById(nonMatchingId).block()
+
+			// Assert
+			assertNull(repository.findById(projectId, matchingId, visibilitySearched = null).block())
+			assertNull(repository.findById(projectId, nonMatchingId, visibilitySearched = null).block())
+		}
 	}
 
 	@Nested
