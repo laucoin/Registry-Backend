@@ -25,10 +25,6 @@ import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.Objects
-import java.util.UUID
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.http.HttpStatus.CONFLICT
@@ -37,6 +33,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class UserService(
@@ -46,12 +46,12 @@ class UserService(
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
-): ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
+) : ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
 	private lateinit var serviceAccount: CurrentUserModel
 
+	// Blocking is deliberate: this runs once on the context-refresh thread
 	override fun onApplicationEvent(event: ContextRefreshedEvent) {
-		port.findServiceAccount()
-			.subscribe { serviceAccount = it }
+		serviceAccount = port.findServiceAccount().block()!!
 	}
 
 	override fun findUsersPage(
