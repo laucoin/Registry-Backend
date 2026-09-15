@@ -1,9 +1,12 @@
 package fr.laucoin.registry.backend.domain.extension
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.NOT_FOUND
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
@@ -19,6 +22,16 @@ object ReactiveExt {
 				code = NOT_FOUND_WITH_GIVEN_IDENTIFIER,
 				args = arrayListOf(identifier.toString()),
 			)
+		}
+	}
+
+	fun <E : Any, T> Flux<E>.toPageModel(
+		pageable: PageableModel,
+		fullCount: (E) -> Long?,
+		toModel: (E) -> T,
+	): Mono<PageModel<T>> {
+		return collectList().map { entities ->
+			PageModel(pageable, entities.firstOrNull()?.let(fullCount) ?: 0L, entities.map(toModel))
 		}
 	}
 }

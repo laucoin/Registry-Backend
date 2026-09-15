@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.project.P
 object GenericFields {
 	const val ID = "id"
 	const val VISIBLE = "visible"
+	const val FULL_COUNT = "full_count"
 
 	const val CREATED_AT = "created_date"
 	const val CREATOR_ID = "created_by"

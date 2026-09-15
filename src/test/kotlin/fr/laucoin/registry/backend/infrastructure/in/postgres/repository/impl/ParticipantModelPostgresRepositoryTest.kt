@@ -101,7 +101,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findPage call repository count and findPage`() {
+	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ParticipantSearchParamModel()
@@ -127,21 +127,11 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			pageable.limit,
 			pageable.offset,
 		)
-		verify(postgresRepository).countAll(
-			projectId,
-			textSearched = null,
-			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
-		)
 		verify(mapper, times(10)).toModel(any())
 	}
 
 	@Test
-	fun `Should findPageByGroupId call repository countAllByGroupId and findAllByGroupId`() {
+	fun `Should findPageByGroupId call repository findAllByGroupId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ParticipantSearchParamModel()
@@ -166,17 +156,6 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			dateTimeSearched = null,
 			pageable.limit,
 			pageable.offset,
-		)
-		verify(postgresRepository).countAllByGroupId(
-			projectId,
-			groupId,
-			textSearched = null,
-			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

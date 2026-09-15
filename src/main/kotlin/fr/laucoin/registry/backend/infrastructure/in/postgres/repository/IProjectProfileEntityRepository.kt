@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_NAME
@@ -56,7 +57,7 @@ import reactor.core.publisher.Mono
 interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfileEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$PROJECT_PROFILE_USER_ID = :userId AND $PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
         ORDER BY $LINKED_PROJECT_TABLE.$PROJECT_NAME
@@ -76,23 +77,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 
 	@Query(
 		"""
-        SELECT COUNT(t.$ID)
-        FROM $PROJECT_PROFILE_TABLE t $PROJECT_JOIN
-        WHERE t.$PROJECT_PROFILE_USER_ID = :userId AND $PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countByUserId(
-		userId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
-		dateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
-
-	@Query(
-		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_PROJECT_PROFILE_USER_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_PROJECT_PROFILE_USER_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$LINKED_PROJECT_ID = :projectId AND $PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, $LINKED_USER_TABLE.$USER_LAST_NAME
@@ -109,22 +94,6 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		limit: Int,
 		offset: Int,
 	): Flux<ProjectProfileEntity>
-
-	@Query(
-		"""
-        SELECT COUNT(t.$ID)
-        FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN
-        WHERE t.$LINKED_PROJECT_ID = :projectId AND $PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countByProjectId(
-		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
-		dateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
 
 	@Query(
 		"""

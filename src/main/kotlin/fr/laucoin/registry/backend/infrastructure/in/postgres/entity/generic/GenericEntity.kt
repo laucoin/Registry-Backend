@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.G
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.CREATOR_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.CREATOR_ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.CREATOR_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_EMAIL
@@ -52,4 +53,8 @@ abstract class GenericEntity(
 	@ReadOnlyProperty
 	@Column(LAST_MODIFIER_EMAIL)
 	var lastEditorEmail: String? = null,
+
+	@ReadOnlyProperty
+	@Column(FULL_COUNT)
+	var fullCount: Long? = null,
 )

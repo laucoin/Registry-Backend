@@ -8,7 +8,9 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.profile.ProjectProfileEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.mapper.ProjectProfileRoleEntityMapper
@@ -31,28 +33,16 @@ class ProjectProfileModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel
 	): Mono<PageModel<ProjectProfileModel>> {
-		return Mono.zip(
-			repository.countByUserId(
-				userId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.statusSearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findByUserId(
-				userId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.statusSearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList(),
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findByUserId(
+			userId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.statusSearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findProjectProfilesPageByProjectId(
@@ -60,28 +50,16 @@ class ProjectProfileModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
 	): Mono<PageModel<ProjectProfileModel>> {
-		return Mono.zip(
-			repository.countByProjectId(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.statusSearched,
-				searchParams.dateTimeSearched,
-			),
-			repository.findByProjectId(
-				projectId,
-				searchParams.textSearched,
-				searchParams.visibilitySearched,
-				searchParams.availabilitySearched,
-				searchParams.statusSearched,
-				searchParams.dateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList(),
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findByProjectId(
+			projectId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.statusSearched,
+			searchParams.dateTimeSearched,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findUserIdsWithProjectProfileForProjectWithProfileExclusion(

@@ -79,7 +79,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findPage call repository count and findPage`() {
+	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = MovementSearchParamModel(typeSearched = null)
@@ -103,19 +103,11 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			pageable.limit,
 			pageable.offset,
 		)
-		verify(postgresRepository).countAll(
-			projectId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
-		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
 
 	@Test
-	fun `Should findPageByParticipantId call repository countAllByParticipantId and findAllByParticipantId`() {
+	fun `Should findPageByParticipantId call repository findAllByParticipantId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = MovementSearchParamModel(typeSearched = null)
@@ -138,20 +130,11 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			pageable.limit,
 			pageable.offset,
 		)
-		verify(postgresRepository).countAllByParticipantId(
-			projectId,
-			participantId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
-		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
 
 	@Test
-	fun `Should findPageByVehicleId call repository countAllByVehicleId and findAllByVehicleId`() {
+	fun `Should findPageByVehicleId call repository findAllByVehicleId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = MovementSearchParamModel(typeSearched = null)
@@ -174,19 +157,10 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			pageable.limit,
 			pageable.offset,
 		)
-		verify(postgresRepository).countAllByVehicleId(
-			projectId,
-			vehicleId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
-		)
 	}
 
 	@Test
-	fun `Should findPageByActivityId call repository countAllByActivityId and findAllByActivityId`() {
+	fun `Should findPageByActivityId call repository findAllByActivityId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = MovementSearchParamModel(typeSearched = null)
@@ -207,14 +181,6 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			endDateTimeSearched = null,
 			pageable.limit,
 			pageable.offset,
-		)
-		verify(postgresRepository).countAllByActivityId(
-			projectId,
-			activityId,
-			visibilitySearched = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
 		)
 	}
 

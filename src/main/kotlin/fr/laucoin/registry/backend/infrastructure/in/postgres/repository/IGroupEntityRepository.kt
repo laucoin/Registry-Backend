@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.`in`.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
@@ -37,7 +38,7 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         ORDER BY t.$GROUP_NAME
@@ -53,21 +54,6 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 		limit: Int,
 		offset: Int,
 	): Flux<GroupEntity>
-
-	@Query(
-		"""
-        SELECT COUNT(t.$ID)
-        FROM $GROUP_TABLE t
-        WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countAll(
-		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
 
 	@Query(
 		"""

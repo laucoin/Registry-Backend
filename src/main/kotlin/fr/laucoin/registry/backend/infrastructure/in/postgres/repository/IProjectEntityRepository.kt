@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.Ale
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.alert.AlertFields.ALERT_TABLE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
+import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.`in`.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
@@ -58,7 +59,7 @@ import reactor.core.publisher.Mono
 interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE
         ORDER BY t.$PROJECT_NAME
         LIMIT :limit OFFSET :offset
@@ -74,19 +75,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 
 	@Query(
 		"""
-        SELECT COUNT(t.$ID) FROM $PROJECT_TABLE t
-        WHERE $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countAll(
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
-
-	@Query(
-		"""
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$ID IN (:projectIds) AND $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE
         ORDER BY t.$PROJECT_NAME
         LIMIT :limit OFFSET :offset
@@ -100,19 +89,6 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 		limit: Int,
 		offset: Int,
 	): Flux<ProjectEntity>
-
-	@Query(
-		"""
-        SELECT COUNT(t.$ID) FROM $PROJECT_TABLE t
-        WHERE t.$ID IN (:projectIds) AND $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countAllInProjectIds(
-		projectIds: List<UUID>,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
-	): Mono<Long>
 
 	@Query(
 		"""

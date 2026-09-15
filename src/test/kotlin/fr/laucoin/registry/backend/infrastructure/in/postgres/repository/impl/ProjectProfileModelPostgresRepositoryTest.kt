@@ -56,7 +56,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	private lateinit var repository: IProjectProfilePort
 
 	@Test
-	fun `Should findProjectProfilesPageByUserId call repository countByUserId and findByUserId`() {
+	fun `Should findProjectProfilesPageByUserId call repository findByUserId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ProjectProfileSearchParamModel(statusSearched = null)
@@ -80,19 +80,11 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			pageable.limit,
 			pageable.offset,
 		)
-		verify(postgresRepository).countByUserId(
-			currentUser().id!!,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			dateTimeSearched = null,
-		)
 		verify(mapper, times(1)).toModel(any())
 	}
 
 	@Test
-	fun `Should findProjectProfilesPageByProjectId call repository countByProjectId and findByProjectId`() {
+	fun `Should findProjectProfilesPageByProjectId call repository findByProjectId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ProjectProfileSearchParamModel(statusSearched = null)
@@ -115,14 +107,6 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			dateTimeSearched = null,
 			pageable.limit,
 			pageable.offset,
-		)
-		verify(postgresRepository).countByProjectId(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			dateTimeSearched = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
