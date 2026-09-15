@@ -37,11 +37,12 @@ object CommunicationQueries {
 	const val SELECT_COMMUNICATION_SEARCH = """
         CASE
             WHEN :textSearched IS NULL THEN 1
-            ELSE similarity(t.message, :textSearched)
+            ELSE similarity(t.search_text, :textSearched)
         END AS similarity_score
     """
 
-	const val COMMUNICATION_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.message, :textSearched) > 0)"
+	const val COMMUNICATION_TEXT_SEARCH_CLAUSE =
+		"(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 
 	private const val LINKED_MOVEMENT_TABLE = "movement_tb"
 	private const val LINKED_ACTIVITY_TABLE = "activity_tb"
