@@ -246,13 +246,12 @@ class UserService(
 		}
 
 		port.findByRoleLevel(roleLevel = 0, visibilitySearched = true)
-			.filter { userToUpdate.id !== it.id }
-			.collectList()
-			.handle { it, handle ->
-				if (it.isEmpty()) {
+			.any { userToUpdate.id !== it.id }
+			.flatMap { hasOtherAdministrator ->
+				if (!hasOtherAdministrator) {
 					log.warn("The user {} is the last administrator of the application", userToUpdate.id)
-					handle.error(RegistryException(CONFLICT, error))
-				} else handle.next(userToUpdate)
+					Mono.error(RegistryException(CONFLICT, error))
+				} else Mono.just(userToUpdate)
 			}
 	}
 

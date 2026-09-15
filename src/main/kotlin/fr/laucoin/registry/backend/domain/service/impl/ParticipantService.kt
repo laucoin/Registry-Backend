@@ -361,13 +361,12 @@ class ParticipantService(
 			participantToUpdate.groups.mapNotNull { it.id },
 			visibilitySearched = null
 		)
-			.filter { it.members.size == 1 }
-			.collectList()
-			.handle { it, handle ->
-				if (it.isNotEmpty()) {
+			.any { it.members.size == 1 }
+			.flatMap { isLastMemberOfAGroup ->
+				if (isLastMemberOfAGroup) {
 					log.warn("The participant {} is the last member of the group(s)", participantToUpdate.id)
-					handle.error(RegistryException(CONFLICT, error))
-				} else handle.next(participantToUpdate)
+					Mono.error(RegistryException(CONFLICT, error))
+				} else Mono.just(participantToUpdate)
 			}
 	}
 }
