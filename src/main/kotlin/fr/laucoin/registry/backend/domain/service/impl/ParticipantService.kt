@@ -253,7 +253,7 @@ class ParticipantService(
 	override fun purgeParticipantsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging participants unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
-			.flatMap {
+			.flatMap({
 				if (dryRun) {
 					log.info("[Dry run] participant {} would be deleted", it)
 					Mono.just(it)
@@ -263,7 +263,7 @@ class ParticipantService(
 						.doOnNext { e -> log.info("Participant {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge participant {}", it, err) }
 				}
-			}
+			}, PURGE_DELETE_CONCURRENCY)
 	}
 
 	private fun validateNoMovementConflict(

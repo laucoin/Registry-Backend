@@ -188,7 +188,7 @@ class AlertService(
 	override fun purgeAlertsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging alerts older than {} and uncommented since {}", dateThreshold, dateThreshold)
 		return port.findOlderThanAndUncommentedSince(dateThreshold)
-			.flatMap {
+			.flatMap({
 				if (dryRun) {
 					log.info("[Dry run] alert {} would be deleted", it)
 					Mono.just(it)
@@ -198,7 +198,7 @@ class AlertService(
 						.doOnNext { e -> log.info("Alert {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge alert {}", it, err) }
 				}
-			}
+			}, PURGE_DELETE_CONCURRENCY)
 	}
 
 	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->

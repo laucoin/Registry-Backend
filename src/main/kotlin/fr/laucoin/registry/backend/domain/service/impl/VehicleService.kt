@@ -107,7 +107,7 @@ class VehicleService(
 	override fun purgeVehiclesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging vehicles unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
-			.flatMap {
+			.flatMap({
 				if (dryRun) {
 					log.info("[Dry run] vehicle {} would be deleted", it)
 					Mono.just(it)
@@ -117,7 +117,7 @@ class VehicleService(
 						.doOnNext { e -> log.info("Vehicle {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge vehicle {}", it, err) }
 				}
-			}
+			}, PURGE_DELETE_CONCURRENCY)
 	}
 
 	private fun Mono<VehicleModel>.updateVehicle(currentUser: CurrentUserModel) = flatMap {

@@ -106,7 +106,7 @@ class ActivityService(
 	override fun purgeActivitiesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging activities unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
-			.flatMap {
+			.flatMap({
 				if (dryRun) {
 					log.info("[Dry run] activity {} would be deleted", it)
 					Mono.just(it)
@@ -116,7 +116,7 @@ class ActivityService(
 						.doOnNext { e -> log.info("Activity {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge activity {}", it, err) }
 				}
-			}
+			}, PURGE_DELETE_CONCURRENCY)
 	}
 
 	private fun Mono<ActivityModel>.updateActivity(currentUser: CurrentUserModel) = flatMap {
