@@ -1,12 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.ASC
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum.BRAND
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.VehicleEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IVehicleEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.VehicleJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
@@ -36,7 +40,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class VehicleModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IVehicleEntityRepository
+	private lateinit var postgresRepository: VehicleJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: VehicleEntityMapper
@@ -82,10 +86,30 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			presenceSearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage order by the requested sort field and direction`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val params = VehicleSearchParamModel()
+
+		// Act
+		val ascending = repository.findPage(projectId, pageable, params, listOf(SortModel(BRAND, ASC))).block()
+		val descending = repository.findPage(projectId, pageable, params, listOf(SortModel(BRAND, DESC))).block()
+
+		// Assert
+		assertNotNull(ascending)
+		assertNotNull(descending)
+		val ascendingBrands = ascending.content.mapNotNull { it.brand }
+		val descendingBrands = descending.content.mapNotNull { it.brand }
+		assertEquals(ascendingBrands.sorted(), ascendingBrands)
+		assertEquals(ascendingBrands.reversed(), descendingBrands)
 	}
 
 	@ParameterizedTest

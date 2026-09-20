@@ -1,14 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectJooqRepository
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -18,36 +20,46 @@ import reactor.core.publisher.Mono
 
 @Service
 class ProjectModelPostgresRepository(
-	private val repository: IProjectEntityRepository,
+	private val repository: ProjectJooqRepository,
 	private val mapper: ProjectEntityMapper,
 ): IProjectPort {
 	override fun findPage(
+		userId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
+		sortFields: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		return repository.findAll(
+			userId,
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.dateTimeSearched,
+			searchParams.favoriteSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPage(
+		userId: UUID,
 		projectIds: List<UUID>,
 		pageable: PageableModel,
-		searchParams: ProjectSearchParamModel
+		searchParams: ProjectSearchParamModel,
+		sortFields: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		if (projectIds.isEmpty()) {
 			return Mono.just(PageModel(pageable, 0, emptyList()))
 		}
 
 		return repository.findAllInProjectIds(
+			userId,
 			projectIds,
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.dateTimeSearched,
+			searchParams.favoriteSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
@@ -65,7 +77,6 @@ class ProjectModelPostgresRepository(
 	override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
 		return repository.findById(id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun create(element: ProjectModel): Mono<ProjectModel> {

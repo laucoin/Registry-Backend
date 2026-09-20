@@ -1,29 +1,34 @@
 package fr.laucoin.registry.backend.domain.port
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.time.ZonedDateTime
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IProjectProfilePort {
+	fun findAllByCreatorId(userId: UUID): Flux<ProjectProfileModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
 	fun findProjectProfilesPageByUserId(
 		userId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectProfileModel>>
 
 	fun findProjectProfilesPageByProjectId(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectProfileModel>>
 
 	fun findUserIdsWithProjectProfileForProjectWithProfileExclusion(

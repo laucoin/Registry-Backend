@@ -28,12 +28,18 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/users.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Users management", description = "API for Users-related operations")
 @RequestMapping("/api/v1/users")
 interface IUserV1Controller {
 	@Operation(
 		summary = "Find Users",
 		description = "Find or get paginated Users",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
 	@GetMapping
@@ -50,6 +56,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Find User",
 		description = "Find User by ID",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
 	@GetMapping("/{id}")
@@ -58,6 +66,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Get assignable Roles",
 		description = "Get all the roles you are allowed to assign",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_METADATA_R')")
 	@GetMapping("/roles")
@@ -68,6 +78,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Update User's role",
 		description = "Update a User's role",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
 	@PatchMapping("/{id}/role")
@@ -80,6 +92,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Block User",
 		description = "Prproject a User from logging in",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
 	@PatchMapping("/{id}/block")
@@ -91,6 +105,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Unblock User",
 		description = "Re-authorize a User to log in",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
 	@PatchMapping("/{id}/unblock")
@@ -102,6 +118,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Impersonate User",
 		description = "Impersonate all User data",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
 	@PatchMapping("/{id}/impersonate")
@@ -113,6 +131,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Impersonate Current User",
 		description = "Impersonate all Current User data",
+	
+		deprecated = true,
 	)
 	@PatchMapping("/impersonate")
 	fun impersonateCurrentUser(
@@ -122,6 +142,8 @@ interface IUserV1Controller {
 	@Operation(
 		summary = "Delete User",
 		description = "Delete all User data",
+	
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
 	@DeleteMapping("/{id}")

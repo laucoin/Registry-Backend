@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.domain.port
 
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import java.time.LocalDate
@@ -10,11 +12,13 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IVehiclePort {
+	fun findAllByCreatorId(userId: UUID): Flux<VehicleModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: VehicleSearchParamModel,
+		sortFields: List<SortModel<VehicleSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<VehicleModel>>
 
 	fun countAll(projectId: UUID, searchParams: VehicleSearchParamModel): Mono<Long>

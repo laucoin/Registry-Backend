@@ -9,9 +9,11 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -19,6 +21,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
@@ -37,6 +40,7 @@ import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -52,6 +56,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -62,9 +67,17 @@ class ParticipantServiceTest {
 	private val userPort: IUserPort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val groupPort: IGroupPort = mock()
+	private val communicationPort: ICommunicationPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IParticipantService = ParticipantService(
-		projectService, port, userPort, movementPort, groupPort, MAX_USERS, MAX_GROUPS
+		projectService, port, userPort, movementPort, groupPort, communicationPort, transactionalOperator,
+		MAX_USERS, MAX_GROUPS
 	)
+
+	@BeforeEach
+	fun setup() {
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
+	}
 
 	private companion object {
 		private const val MAX_USERS = 1
@@ -187,14 +200,14 @@ class ParticipantServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = ParticipantSearchParamModel()
 
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findParticipantsPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test
@@ -216,13 +229,37 @@ class ParticipantServiceTest {
 		// Arrange
 		val onlyVisible = true
 
-		whenever(port.findBirthdays(any(), any())).thenReturn(Flux.just(commonParticipant()))
+		whenever(port.findBirthdays(any(), any(), any())).thenReturn(Flux.just(commonParticipant()))
 
 		// Act
-		service.findBirthdays(projectId).blockFirst()
+		service.findBirthdays(projectId, limit = 1000).blockFirst()
 
 		// Assert
-		verify(port).findBirthdays(projectId, onlyVisible)
+		verify(port).findBirthdays(projectId, onlyVisible, 1000)
+	}
+
+	@Test
+	fun `Should findArrivingToday call port findArrivingToday`() {
+		// Arrange
+		whenever(port.findArrivingToday(any(), any(), any())).thenReturn(Flux.just(commonParticipant()))
+
+		// Act
+		service.findArrivingToday(projectId, limit = 5).blockFirst()
+
+		// Assert
+		verify(port).findArrivingToday(projectId, visibilitySearched = true, 5)
+	}
+
+	@Test
+	fun `Should findDepartingToday call port findDepartingToday`() {
+		// Arrange
+		whenever(port.findDepartingToday(any(), any(), any())).thenReturn(Flux.just(commonParticipant()))
+
+		// Act
+		service.findDepartingToday(projectId, limit = 5).blockFirst()
+
+		// Assert
+		verify(port).findDepartingToday(projectId, visibilitySearched = true, 5)
 	}
 
 	@Test
@@ -303,6 +340,37 @@ class ParticipantServiceTest {
 
 		// Assert
 		verify(movementPort).findPageByParticipantId(projectId, participantId, pageable, params)
+	}
+
+	@Test
+	fun `Should exportParticipantData gather participant, movements and communications`() {
+		// Arrange
+		val participant = commonParticipant()
+		val movement = MovementModel().apply { id = UUID.randomUUID() }
+		val communication = CommunicationModel()
+
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.findPageByParticipantId(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(0, 10_000, 1, 1, listOf(movement))))
+		whenever(communicationPort.findByMovementIdsWithLimit(any(), any(), any(), anyOrNull()))
+			.thenReturn(Flux.just(movement.id!! to listOf(communication)))
+
+		// Act
+		val result = service.exportParticipantData(projectId, participantId).block()
+
+		// Assert
+		assertEquals(participant, result?.participant)
+		assertEquals(listOf(movement), result?.movements)
+		assertEquals(listOf(communication), result?.communications)
+
+		verify(port).findById(projectId, participantId, null)
+		verify(movementPort).findPageByParticipantId(
+			eq(projectId),
+			eq(participantId),
+			eq(PageableModel(0, 10_000)),
+			eq(MovementSearchParamModel(visibilitySearched = null, typeSearched = null)),
+		)
+		verify(communicationPort).findByMovementIdsWithLimit(10_000, projectId, listOf(movement.id!!), null)
 	}
 
 	@ParameterizedTest

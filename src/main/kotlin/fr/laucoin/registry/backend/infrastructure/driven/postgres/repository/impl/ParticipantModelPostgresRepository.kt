@@ -1,36 +1,39 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ParticipantEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IParticipantEntityRepository
-import java.time.LocalDate
-import java.util.UUID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ParticipantJooqRepository
+import org.jooq.DSLContext
 import org.springframework.stereotype.Service
-import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class ParticipantModelPostgresRepository(
-	private val repository: IParticipantEntityRepository,
-	private val groupContentRepository: IGroupContentEntityRepository,
-	private val transactionalOperator: TransactionalOperator,
+	private val repository: ParticipantJooqRepository,
+	private val groupContentRepository: GroupContentJooqRepository,
+	private val dsl: DSLContext,
 	private val mapper: ParticipantEntityMapper,
 	private val groupContentMapper: GroupContentEntityMapper,
-): IParticipantPort {
+) : IParticipantPort {
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
+		sortFields: List<SortModel<ParticipantSortFieldEnum>>,
 	): Mono<PageModel<ParticipantModel>> {
 		return repository.findAll(
 			projectId,
@@ -41,14 +44,23 @@ class ParticipantModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.presenceSearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
-	override fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantModel> {
-		return repository.findAllWithBirthday(projectId, visibilitySearched)
+	override fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel> {
+		return repository.findAllWithBirthday(projectId, visibilitySearched, limit)
 			.map(mapper::toModel)
+	}
+
+	override fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel> {
+		return repository.findArrivingToday(projectId, visibilitySearched, limit).map(mapper::toModel)
+	}
+
+	override fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel> {
+		return repository.findDepartingToday(projectId, visibilitySearched, limit).map(mapper::toModel)
 	}
 
 	override fun countAll(
@@ -97,6 +109,10 @@ class ParticipantModelPostgresRepository(
 		return repository.findByUserId(projectId, userId, null).map(mapper::toModel)
 	}
 
+	override fun findAllByUserId(userId: UUID): Flux<ParticipantModel> {
+		return repository.findAllByUserId(userId).map(mapper::toModel)
+	}
+
 	override fun findWithLimit(
 		limit: Int,
 		projectId: UUID,
@@ -141,36 +157,43 @@ class ParticipantModelPostgresRepository(
 		return repository.findById(projectId, id, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
 	}
 
+	// Atomicity across the save + groups diff is the caller's responsibility (`TransactionalOperator`),
+	// not this repository's — see the jOOQ-vs-Spring-transaction note on `JooqConfig.dslContext()`.
 	override fun create(element: ParticipantModel): Mono<ParticipantModel> {
-		return save(element)
-			.saveNewGroups(element)
-			.`as`(transactionalOperator::transactional)
+		return save(dsl, element).saveNewGroups(dsl, element)
 	}
 
 	override fun update(element: ParticipantModel): Mono<ParticipantModel> {
-		return save(element)
-			.flatMap { findById(element.project!!.id!!, element.id!!, visibilitySearched = null) }
-			.saveNewGroups(element)
-			.removeDeletedGroups(element)
-			.`as`(transactionalOperator::transactional)
+		return save(dsl, element)
+			.flatMap { findById(dsl, element.project!!.id!!, element.id!!) }
+			.saveNewGroups(dsl, element)
+			.removeDeletedGroups(dsl, element)
 	}
 
-	fun Mono<ParticipantModel>.saveNewGroups(element: ParticipantModel): Mono<ParticipantModel> {
+	private fun findById(using: DSLContext, projectId: UUID, id: UUID): Mono<ParticipantModel> {
+		return repository.findById(projectId, id, visibilitySearched = null, dateTimeSearched = null, using = using)
+			.map(mapper::toModel)
+	}
+
+	fun Mono<ParticipantModel>.saveNewGroups(using: DSLContext, element: ParticipantModel): Mono<ParticipantModel> {
 		return flatMap { participant ->
 			val newGroups = participant.getNewGroups(element)
 			if (newGroups.isEmpty()) return@flatMap Mono.just(participant)
-			groupContentRepository.saveAll(newGroups.map { groupContentMapper.toEntity(it.id!!, participant) })
+			groupContentRepository.saveAll(newGroups.map { groupContentMapper.toEntity(it.id!!, participant) }, using)
 				.map(groupContentMapper::toModel)
 				.collectList()
 				.map { participant.apply { groups = groups.plus(newGroups) } }
 		}
 	}
 
-	fun Mono<ParticipantModel>.removeDeletedGroups(element: ParticipantModel): Mono<ParticipantModel> {
+	fun Mono<ParticipantModel>.removeDeletedGroups(
+		using: DSLContext,
+		element: ParticipantModel
+	): Mono<ParticipantModel> {
 		return flatMap { participant ->
 			val removedGroups = participant.getOldGroupIds(element)
 			if (removedGroups.isEmpty()) return@flatMap Mono.just(participant)
-			groupContentRepository.deleteAllByParticipantIdAndGroupIds(participant.id!!, removedGroups)
+			groupContentRepository.deleteAllByParticipantIdAndGroupIds(participant.id!!, removedGroups, using)
 				.then(Mono.fromCallable {
 					participant.apply {
 						groups = groups.filter { removedGroups.contains(it.id) }
@@ -179,8 +202,8 @@ class ParticipantModelPostgresRepository(
 		}
 	}
 
-	private fun save(element: ParticipantModel): Mono<ParticipantModel> {
-		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+	private fun save(using: DSLContext, element: ParticipantModel): Mono<ParticipantModel> {
+		return repository.save(mapper.toEntity(element), using).map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

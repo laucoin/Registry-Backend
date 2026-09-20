@@ -7,5 +7,4 @@ data class PreferencesModel(
 	var userId: UUID? = null,
 	var theme: ThemeEnum = ThemeEnum.SYSTEM,
 	var language: String? = null,
-	var selectedProfile: ProjectProfileModel? = null
 ): GenericModel()

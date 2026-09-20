@@ -168,7 +168,9 @@ these:
   persistence only through domain `port` interfaces.
 - **Every `@RestController` implements a contract interface** that carries the `@RequestMapping`, `@PreAuthorize`,
   OpenAPI annotations and bean-validation constraints; the impl only maps DTOs and delegates. No endpoint ships without
-  an authorization rule. (ADR 001)
+  an authorization rule, except `/api/v*/metadata/**`: global, static, tenant-free reference data (enum labels,
+  available options) with zero criticality, open to any authenticated user — `@PreAuthorize` is intentionally omitted
+  there and the global `authenticated()` filter is the only gate. (ADR 001)
 - **No entity crosses the API boundary.** Reader (response) / writer (request) DTOs only; Postgres `entity` classes are
   package-private to `infrastructure.driven.postgres` (ArchUnit).
 - **Non-blocking on the request path.** No `.block()`, `Thread.sleep`, or blocking JDBC/file IO. The only JDBC use is
@@ -191,10 +193,19 @@ these:
   `/logout/uri`, `/token`, `/token/refresh`); `GET /`, Swagger/`api-docs`, `/actuator/**` are permitted unauthenticated
   but serve content only when their feature flag is on. The JWT converter refuses blocked (`423`) and anonymized (`409`)
   accounts and JIT-provisions first-time users with the default `USER` role. (ADR 004)
-- **One API version: `/api/v1`.** There is no `/api/v2`. The irregular endpoints listed in `api-reference.md`
-  (`.../profiles/{id}/accept/{accepted}`, `.../alerts/{id}/status/{status}`, the `impersonate` naming) are **frozen** —
-  do not "fix" them with a breaking change.
-- **Retention purges are irreversible and gated.** `/api/v1/purge/**` requires `REGISTRY_JOB_C` (held only by
+- **`/api/v2` exists alongside `/api/v1` for every resource.** Each `IXxxV2Controller` follows the new conventions:
+  `page`/`size` + `sort`/`direction` instead of `pageNumber`/`pageSize` with no sorting, `q` instead of
+  `textSearched`, filter params without the `*Searched` suffix, `POST` instead of `PATCH` for
+  `disable`/`enable`/`block`/`unblock`, `201`+`Location` on create, `204` on delete, and no domain model (`PageModel`,
+  `PreferencesModel`, `ProjectStatusModel`, `VehicleStatusModel`, `AuthenticationUriModel`, `AuthenticationInfoModel`)
+  crossing the API boundary. Every `IXxxV1Controller` is marked `@Deprecated(level = WARNING)` with `deprecated = true`
+  added to each of its `@Operation`s — v1 keeps running unchanged, nothing is deleted. The previously "frozen" v1
+  irregularities (`.../profiles/{id}/accept/{accepted}` → separate `/accept` and `/reject`,
+  `.../alerts/{id}/status/{status}` → body-based `POST .../status`, the `impersonate` naming kept but `PATCH`→`POST`)
+  are unpacked in their v2 equivalents; the v1 endpoints themselves stay as they are. `@RateLimited(SENSITIVE|SEARCH)`
+  gates v2 mutation/search endpoints via `AnnotationRateLimitHandler`, mirroring the pre-existing
+  `AuthenticationRateLimitHandler` pattern.
+- **Retention purges are irreversible and gated.** `/api/v1/purge/**` and `/api/v2/purge/**` require `REGISTRY_JOB_C` (held only by
   `USER_ADMINISTRATOR` / the single `SERVICE_ACCOUNT`); `dryRun` **defaults to `true`**; thresholds are configuration,
   not code; the four sweeps are staggered content-before-configuration to respect delete dependencies. There is no
   export before deletion. (ADR 011)

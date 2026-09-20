@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
-import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_METADATA_R
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
@@ -37,12 +36,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/projects.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Projects management", description = "API for Projects-related operations")
 @RequestMapping("/api/v1/projects")
 interface IProjectV1Controller {
 	@Operation(
 		summary = "Find Projects",
 		description = "Find or get paginated Projects",
+		deprecated = true,
 	)
 	@GetMapping
 	fun findProjects(
@@ -63,6 +67,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Find Project",
 		description = "Find Project by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/{id}")
@@ -71,14 +76,15 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Get available Options",
 		description = "Get all the Options you are allowed to enable",
+		deprecated = true,
 	)
-	@PreAuthorize("hasAuthority('$REGISTRY_PROJECT_METADATA_R')")
 	@GetMapping("/options")
 	fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto>
 
 	@Operation(
 		summary = "Create Project",
 		description = "Create Project and Project Profile administration for the Current User",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_PROJECT_C')")
 	@PostMapping
@@ -90,6 +96,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Update Project",
 		description = "Update Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@PatchMapping("/{id}")
@@ -102,6 +109,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Disable Project",
 		description = "Disable Project access, obviously the related profile is no accessible anymore.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@PatchMapping("/{id}/disable")
@@ -113,6 +121,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Enable Project",
 		description = "Enable Project, obviously the profiles concerned are accessible again.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@PatchMapping("/{id}/enable")
@@ -124,6 +133,7 @@ interface IProjectV1Controller {
 	@Operation(
 		summary = "Delete Project",
 		description = "Delete all Project data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_D')")
 	@DeleteMapping("/{id}")

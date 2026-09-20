@@ -2,16 +2,20 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.OngoingActivityOutingModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
+import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IActivityService
@@ -28,13 +32,19 @@ class ActivityService(
 	private val projectService: IProjectService,
 	private val port: IActivityPort,
 	private val movementPort: IMovementPort,
+	private val communicationPort: ICommunicationPort,
 ): IActivityService, GenericService() {
+	private companion object {
+		private const val RECENT_COMMUNICATIONS_LIMIT = 3
+	}
+
 	override fun findActivitiesPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
+		sortFields: List<SortModel<ActivitySortFieldEnum>>,
 	): Mono<PageModel<ActivityModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
@@ -48,6 +58,26 @@ class ActivityService(
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
 		return movementPort.findPageByActivityId(projectId, id, pageable, searchParams)
+	}
+
+	override fun findOngoingActivityOutings(projectId: UUID, limit: Int): Flux<OngoingActivityOutingModel> {
+		return movementPort.findOngoingActivityOutings(projectId, limit)
+			.collectList()
+			.flatMapMany { movements ->
+				val movementIds = movements.mapNotNull { it.id }
+				communicationPort.findByMovementIdsWithLimit(RECENT_COMMUNICATIONS_LIMIT, projectId, movementIds, visibilitySearched = null)
+					.collectMap({ it.first }, { it.second })
+					.flatMapMany { commsByMovementId ->
+						Flux.fromIterable(
+							movements.map { movement ->
+								OngoingActivityOutingModel(
+									movement = movement,
+									recentCommunications = commsByMovementId[movement.id] ?: emptyList(),
+								)
+							}
+						)
+					}
+			}
 	}
 
 	override fun createActivity(currentUser: CurrentUserModel, activity: ActivityModel): Mono<ActivityModel> {

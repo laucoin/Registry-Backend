@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
@@ -7,6 +8,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -16,6 +18,7 @@ interface ICommunicationService {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel,
+		sortFields: List<SortModel<CommunicationSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<CommunicationModel>>
 
 	fun findCommunicationById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>

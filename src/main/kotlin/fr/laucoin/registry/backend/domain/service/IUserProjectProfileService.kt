@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -8,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.util.UUID
 import reactor.core.publisher.Mono
 
@@ -16,6 +18,7 @@ interface IUserProjectProfileService {
 		userId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectProfileModel>>
 
 	fun <T: GenericModel> validateNotLastProjectRoleLevel0(
@@ -37,5 +40,6 @@ interface IUserProjectProfileService {
 	): Mono<ProjectProfileModel>
 
 	fun createSupportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel>
+	fun toggleFavoriteProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
 	fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
 }

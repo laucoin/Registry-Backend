@@ -43,13 +43,10 @@ class RegistryControllerAdvice(
 		exception: WebExchangeBindException,
 		exchange: ServerWebExchange,
 	): Mono<ResponseEntity<ErrorDto>> {
-		val error = exception.allErrors.first()
-		return buildError(
-			exchange,
-			status = BAD_REQUEST,
-			code = error.defaultMessage!!,
-			args = error.arguments?.drop(1)?.toTypedArray() ?: emptyArray(),
-		)
+		val errors = exception.allErrors.map { error ->
+			error.defaultMessage!! to (error.arguments?.drop(1)?.toTypedArray() ?: emptyArray())
+		}
+		return buildError(exchange, status = BAD_REQUEST, errors = errors)
 	}
 
 	override fun handleServerWebInputException(
@@ -68,14 +65,12 @@ class RegistryControllerAdvice(
 		exception: HandlerMethodValidationException,
 		exchange: ServerWebExchange,
 	): Mono<ResponseEntity<ErrorDto>> {
-		val error: ParameterValidationResult = exception.valueResults.first()
-		val resolvable = error.resolvableErrors.first()
-		return buildError(
-			exchange,
-			status = BAD_REQUEST,
-			code = resolvable.defaultMessage!!,
-			args = resolvable.arguments?.drop(1)?.toTypedArray() ?: emptyArray(),
-		)
+		val errors = exception.valueResults.flatMap { result: ParameterValidationResult ->
+			result.resolvableErrors.map { resolvable ->
+				resolvable.defaultMessage!! to (resolvable.arguments?.drop(1)?.toTypedArray() ?: emptyArray())
+			}
+		}
+		return buildError(exchange, status = BAD_REQUEST, errors = errors)
 	}
 
 	override fun handleHandlerAuthorizationDeniedException(
@@ -105,15 +100,40 @@ class RegistryControllerAdvice(
 		status: HttpStatus,
 		code: String,
 		args: Array<Any>? = null,
-		exception: Exception? = null
+		exception: Exception? = null,
+	): Mono<ResponseEntity<ErrorDto>> = buildError(exchange, status, listOf(code to (args ?: emptyArray())), exception)
+
+	/**
+	 * [errors] holds one (code, args) pair per failed constraint. A single
+	 * entry keeps today's flat wire shape (`errors` stays absent); more than
+	 * one populates `errors` with every translated failure instead of
+	 * silently dropping all but the first, while the top-level `code`/
+	 * `title`/`message` still carry the first one for clients that only read
+	 * those.
+	 */
+	private fun buildError(
+		exchange: ServerWebExchange,
+		status: HttpStatus,
+		errors: List<Pair<String, Array<Any>>>,
+		exception: Exception? = null,
 	): Mono<ResponseEntity<ErrorDto>> {
-		if (status.is5xxServerError) {
-			log.error("An error (${status.value()}) occurred with code $code", *args.orEmpty(), exception)
-		} else {
-			log.info("Return a status ${status.value()} with code $code", *args.orEmpty())
-		}
+		errors.forEach { (code, args) -> logError(status, code, args, exception) }
 
 		val locale = localeContextResolver.resolveLocaleContext(exchange).locale ?: Locale.getDefault()
+		val translated = errors.map { (code, args) -> translateOne(status, code, args, locale) }
+		val body = if (translated.size > 1) translated.first().copy(errors = translated) else translated.first()
+		return Mono.just(ResponseEntity.status(status).body(body))
+	}
+
+	private fun logError(status: HttpStatus, code: String, args: Array<Any>, exception: Exception?) {
+		if (status.is5xxServerError) {
+			log.error("An error (${status.value()}) occurred with code $code", *args, exception)
+		} else {
+			log.info("Return a status ${status.value()} with code $code", *args)
+		}
+	}
+
+	private fun translateOne(status: HttpStatus, code: String, args: Array<Any>, locale: Locale): ErrorDto {
 		val title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}", locale = locale)
 		val message = translateService.getError(
 			code = "$ERROR_MESSAGE_PREFIX$code",
@@ -121,8 +141,6 @@ class RegistryControllerAdvice(
 			default = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$UNKNOWN_ERROR", locale = locale),
 			locale = locale,
 		)
-
-		val body = ErrorDto(status.value(), status.name, code, title, message)
-		return Mono.just(ResponseEntity.status(status).body(body))
+		return ErrorDto(status.value(), status.name, code, title, message)
 	}
 }

@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
@@ -34,7 +34,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class ProjectModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IProjectEntityRepository
+	private lateinit var postgresRepository: ProjectJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: ProjectEntityMapper
@@ -62,7 +62,7 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		val params = ProjectSearchParamModel()
 
 		// Act
-		val result = port.findPage(pageable, params).block()
+		val result = port.findPage(currentUser().id!!, pageable, params).block()
 
 		// Assert
 		assertNotNull(result)
@@ -71,11 +71,14 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
+			userId = currentUser().id!!,
 			textSearched = null,
 			visibilitySearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			favoriteSearched = null,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -88,7 +91,7 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		val params = ProjectSearchParamModel()
 
 		// Act
-		val result = port.findPage(ids, pageable, params).block()
+		val result = port.findPage(currentUser().id!!, ids, pageable, params).block()
 
 		// Assert
 		assertNotNull(result)
@@ -97,12 +100,15 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAllInProjectIds(
+			currentUser().id!!,
 			ids,
 			textSearched = null,
 			visibilitySearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			favoriteSearched = null,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}

@@ -9,4 +9,5 @@ data class ProjectReaderDto(
 	var begin: CustomDateTimeModel? = null,
 	var end: CustomDateTimeModel? = null,
 	var options: List<LabelDto>? = emptyList(),
+	var favorite: Boolean = false,
 ): GenericReaderDto()

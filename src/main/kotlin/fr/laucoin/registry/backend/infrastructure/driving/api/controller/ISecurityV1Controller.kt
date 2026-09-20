@@ -19,12 +19,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/authentication.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Security management", description = "API for security operations")
 @RequestMapping("/api/v1/authentication")
 interface ISecurityV1Controller {
 	@Operation(
 		summary = "OAuth2 auth URI",
 		description = "Build and return the OAuth2 provider authentication URI",
+		deprecated = true,
 	)
 	@GetMapping("/login/uri")
 	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
@@ -32,6 +37,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "OAuth2 logout URI",
 		description = "Build and return the OAuth2 provider logout URI, clearing the authentication cookies",
+		deprecated = true,
 	)
 	@GetMapping("/logout/uri")
 	fun getLogoutUri(
@@ -42,6 +48,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "Fetch token from code",
 		description = "Exchange an authorization code for an OAuth2 provider token, set as HttpOnly cookies",
+		deprecated = true,
 	)
 	@PostMapping("/token")
 	fun fetchToken(
@@ -52,6 +59,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "Fetch token from refresh token",
 		description = "Renew the OAuth2 provider token from the refresh token cookie, set as HttpOnly cookies",
+		deprecated = true,
 	)
 	@PostMapping("/token/refresh")
 	fun refreshToken(@Parameter(hidden = true) exchange: ServerWebExchange): Mono<Void>
@@ -59,6 +67,7 @@ interface ISecurityV1Controller {
 	@Operation(
 		summary = "Get Current User",
 		description = "Get the logged in User",
+		deprecated = true,
 	)
 	@GetMapping("/user/current")
 	fun findCurrentUser(

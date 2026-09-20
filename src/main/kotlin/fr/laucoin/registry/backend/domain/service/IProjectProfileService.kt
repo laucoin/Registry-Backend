@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import java.util.UUID
 import reactor.core.publisher.Flux
@@ -15,6 +17,7 @@ interface IProjectProfileService {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectProfileModel>>
 
 	fun findProjectProfileById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>

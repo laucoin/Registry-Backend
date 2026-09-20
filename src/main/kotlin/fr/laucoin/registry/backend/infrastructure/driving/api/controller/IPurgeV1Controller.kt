@@ -20,12 +20,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/purge.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Scheduled job management", description = "API for Scheduled job management")
 @RequestMapping("/api/v1/purge")
 interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge users",
 		description = "Purge users if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/users")
@@ -40,6 +45,7 @@ interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge projects",
 		description = "Purge projects if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/projects")
@@ -54,6 +60,7 @@ interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge projects contents",
 		description = "Purge projects contents (movements, communications and alerts) if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/projects/contents")
@@ -68,6 +75,7 @@ interface IPurgeV1Controller {
 	@Operation(
 		summary = "Purge projects configurations",
 		description = "Purge projects configurations (vehicles, activities, groups and participants) if necessary",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/projects/configurations")

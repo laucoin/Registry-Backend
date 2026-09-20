@@ -1,33 +1,41 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementEntityRepository
-import java.time.LocalDate
-import java.util.UUID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.MovementContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.MovementJooqRepository
+import org.jooq.DSLContext
 import org.springframework.stereotype.Service
-import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class MovementModelPostgresRepository(
-	private val repository: IMovementEntityRepository,
-	private val contentRepository: IMovementContentEntityRepository,
-	private val transactionalOperator: TransactionalOperator,
+	private val repository: MovementJooqRepository,
+	private val contentRepository: MovementContentJooqRepository,
+	private val dsl: DSLContext,
 	private val mapper: MovementEntityMapper,
 	private val contentMapper: MovementContentEntityMapper,
-): IMovementPort {
+) : IMovementPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<MovementModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
+	override fun findOngoingActivityOutings(projectId: UUID, limit: Int): Flux<MovementModel> {
+		return repository.findOngoingActivityOutings(projectId, limit).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -221,49 +229,63 @@ class MovementModelPostgresRepository(
 		return Mono.zip(
 			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
 			findContent(projectId, listOf(id)).collectList()
-				.handle<List<MovementContentModel>> { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
+				.handle<List<MovementContentModel>> { it, handle ->
+					if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(
+						it.first().second
+					)
+				}
 		).map {
 			it.t1.content = it.t2
 			it.t1
 		}
 	}
 
+	// Atomicity across the save + content diff is the caller's responsibility (`TransactionalOperator`),
+	// not this repository's — see the jOOQ-vs-Spring-transaction note on `JooqConfig.dslContext()`.
 	override fun create(element: MovementModel): Mono<MovementModel> {
-		return save(element)
-			.saveNewContent(element)
-			.`as`(transactionalOperator::transactional)
+		return save(dsl, element).saveNewContent(dsl, element)
 	}
 
 	override fun update(element: MovementModel): Mono<MovementModel> {
-		return save(element)
-			.flatMap { findById(element.project!!.id!!, element.id!!, visibilitySearched = null) }
-			.removeDeletedContent(element)
-			.saveNewContent(element)
-			.`as`(transactionalOperator::transactional)
+		return save(dsl, element)
+			.flatMap { findById(dsl, element.project!!.id!!, element.id!!) }
+			.removeDeletedContent(dsl, element)
+			.saveNewContent(dsl, element)
 	}
 
-	fun Mono<MovementModel>.saveNewContent(element: MovementModel): Mono<MovementModel> {
+	private fun findById(using: DSLContext, projectId: UUID, id: UUID): Mono<MovementModel> {
+		return Mono.zip(
+			repository.findById(projectId, id, visibilitySearched = null, using = using).map(mapper::toModel),
+			contentRepository.findAllByMovementIds(projectId, listOf(id), using = using).map(contentMapper::toModel)
+				.collectList(),
+		).map {
+			it.t1.content = it.t2
+			it.t1
+		}
+	}
+
+	fun Mono<MovementModel>.saveNewContent(using: DSLContext, element: MovementModel): Mono<MovementModel> {
 		return flatMap { movement ->
 			val newContent = movement.getNewContent(element)
 			if (newContent.isEmpty()) return@flatMap Mono.just(movement)
-			contentRepository.saveAll(newContent.map { contentMapper.toEntity(movement.id!!, it) })
+			contentRepository.saveAll(newContent.map { contentMapper.toEntity(movement.id!!, it) }, using)
 				.map(contentMapper::toModel)
 				.collectList()
 				.map { movement.apply { content = content.plus(it) } }
 		}
 	}
 
-	fun Mono<MovementModel>.removeDeletedContent(element: MovementModel): Mono<MovementModel> {
+	fun Mono<MovementModel>.removeDeletedContent(using: DSLContext, element: MovementModel): Mono<MovementModel> {
 		return flatMap { movement ->
 			val removedIds = movement.getOldContentIds(element)
 			if (removedIds.isEmpty()) return@flatMap Mono.just(movement)
-			contentRepository.deleteAllById(removedIds)
+			contentRepository.deleteAllById(removedIds, using)
 				.then(Mono.fromCallable { movement.apply { content = content.filter { !removedIds.contains(it.id) } } })
 		}
 	}
 
-	private fun save(element: MovementModel): Mono<MovementModel> {
-		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+	private fun save(using: DSLContext, element: MovementModel): Mono<MovementModel> {
+		return repository.save(mapper.toEntity(element), using).map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

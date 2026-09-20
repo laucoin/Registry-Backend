@@ -1,11 +1,14 @@
 package fr.laucoin.registry.backend.config
 
 import com.nimbusds.jose.shaded.gson.Gson
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
+import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
 import fr.laucoin.registry.backend.domain.handler.CsrfTokenHeaderHandler
 import fr.laucoin.registry.backend.domain.handler.LocaleContextHandler
+import fr.laucoin.registry.backend.domain.handler.RateLimitHandler
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
 import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
@@ -34,6 +37,7 @@ import org.springframework.security.access.expression.method.DefaultMethodSecuri
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
@@ -44,6 +48,7 @@ import org.springframework.util.AntPathMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping
 import org.springframework.web.server.i18n.LocaleContextResolver
 import java.time.Duration
 
@@ -60,6 +65,7 @@ class SecurityConfig(
 	private val translateService: ITranslateService,
 	private val gson: Gson,
 	private val csrfTokenService: CsrfTokenService,
+	private val requestMappingHandlerMapping: RequestMappingHandlerMapping,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.server.management-port}")
@@ -68,6 +74,14 @@ class SecurityConfig(
 	private val authRateLimitCapacity: Int,
 	@param:Value($$"${registry.security.rate-limit.auth.window-seconds}")
 	private val authRateLimitWindowSeconds: Long,
+	@param:Value($$"${registry.security.rate-limit.sensitive.capacity}")
+	private val sensitiveRateLimitCapacity: Int,
+	@param:Value($$"${registry.security.rate-limit.sensitive.window-seconds}")
+	private val sensitiveRateLimitWindowSeconds: Long,
+	@param:Value($$"${registry.security.rate-limit.search.capacity}")
+	private val searchRateLimitCapacity: Int,
+	@param:Value($$"${registry.security.rate-limit.search.window-seconds}")
+	private val searchRateLimitWindowSeconds: Long,
 ) {
 
 	@Bean
@@ -77,9 +91,6 @@ class SecurityConfig(
 			.securityMatcher(documentationMatcher())
 			.authorizeExchange { it.anyExchange().permitAll() }
 			.configureSecurityHeaders(DOCUMENTATION_CONTENT_SECURITY_POLICY)
-			// codeql[java/spring-disabled-csrf-protection]: this chain only serves static Swagger/OpenAPI
-			// docs (GET-only, permitAll, no state-changing request ever reaches it) — CSRF is not
-			// applicable here, the same reasoning that already exempts safe HTTP methods on the main chain.
 			.csrf { it.disable() }
 			.formLogin { it.disable() }
 			.logout { it.disable() }
@@ -99,6 +110,7 @@ class SecurityConfig(
 			.resolveLocaleContext()
 			.configureSecurityHeaders(API_CONTENT_SECURITY_POLICY)
 			.rateLimitAuthentication()
+			.rateLimitAnnotatedEndpoints()
 			.exposeCsrfToken()
 			.configureCsrf()
 			.configureResourceAccess()
@@ -130,6 +142,23 @@ class SecurityConfig(
 			authRateLimitWindowSeconds,
 		),
 		FIRST,
+	)
+
+	/**
+	 * Registered at [AUTHENTICATION] (not [FIRST] like [rateLimitAuthentication]) so it runs once the
+	 * bearer token has been validated — @RateLimited endpoints are reached only after authentication,
+	 * and counting by principal (not remote address) needs that to have already happened.
+	 */
+	private fun ServerHttpSecurity.rateLimitAnnotatedEndpoints() = addFilterAfter(
+		RateLimitHandler(
+			requestMappingHandlerMapping,
+			translateService,
+			localeContextResolver,
+			gson,
+			capacities = mapOf(SENSITIVE to sensitiveRateLimitCapacity, SEARCH to searchRateLimitCapacity),
+			windowSeconds = mapOf(SENSITIVE to sensitiveRateLimitWindowSeconds, SEARCH to searchRateLimitWindowSeconds),
+		),
+		AUTHENTICATION,
 	)
 
 	private fun ServerHttpSecurity.exposeCsrfToken() = addFilterBefore(CsrfTokenHeaderHandler(csrfTokenService), FIRST)

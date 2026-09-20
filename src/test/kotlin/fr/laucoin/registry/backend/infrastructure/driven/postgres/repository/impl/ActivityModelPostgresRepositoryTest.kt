@@ -1,12 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum.NAME
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.ASC
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IActivityEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ActivityJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.activityId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
@@ -36,7 +40,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class ActivityModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IActivityEntityRepository
+	private lateinit var postgresRepository: ActivityJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: ActivityEntityMapper
@@ -81,10 +85,30 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 			availabilitySearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage order by the requested sort field and direction`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val params = ActivitySearchParamModel()
+
+		// Act
+		val ascending = repository.findPage(projectId, pageable, params, listOf(SortModel(NAME, ASC))).block()
+		val descending = repository.findPage(projectId, pageable, params, listOf(SortModel(NAME, DESC))).block()
+
+		// Assert
+		assertNotNull(ascending)
+		assertNotNull(descending)
+		val ascendingNames = ascending.content.mapNotNull { it.name }
+		val descendingNames = descending.content.mapNotNull { it.name }
+		assertEquals(ascendingNames.sorted(), ascendingNames)
+		assertEquals(ascendingNames.reversed(), descendingNames)
 	}
 
 	@ParameterizedTest

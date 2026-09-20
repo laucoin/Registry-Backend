@@ -8,8 +8,8 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -33,18 +33,20 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import org.springframework.transaction.reactive.TransactionalOperator
 
 class GroupModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IGroupEntityRepository
+	private lateinit var postgresRepository: GroupJooqRepository
 
 	@MockitoSpyBean
-	private lateinit var contentPostgresRepository: IGroupContentEntityRepository
+	private lateinit var contentPostgresRepository: GroupContentJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: GroupEntityMapper
@@ -54,6 +56,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 
 	@Autowired
 	private lateinit var repository: IGroupPort
+
+	@Autowired
+	private lateinit var transactionalOperator: TransactionalOperator
 
 	private companion object {
 		@JvmStatic
@@ -106,8 +111,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 			presenceSearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -251,12 +257,12 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.create(group).block()
+			val result = repository.create(group).`as`(transactionalOperator::transactional).block()
 			uuid = result!!.id!!
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
+			verify(postgresRepository).save(any(), any())
 			verify(mapper).toEntity(any())
 			verify(mapper).toModel(any())
 		}
@@ -274,16 +280,17 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			repository.update(group).block()
+			repository.update(group).`as`(transactionalOperator::transactional).block()
 
 			// Assert
-			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+			verify(postgresRepository).save(any(), any())
+			verify(postgresRepository).findById(eq(projectId), eq(uuid), visibilitySearched = eq(null), using = any())
 			verify(contentPostgresRepository).findAllByGroupIds(
-				projectId,
-				listOf(uuid),
-				visibilitySearched = null,
-				availabilitySearched = null
+				eq(projectId),
+				eq(listOf(uuid)),
+				visibilitySearched = eq(null),
+				availabilitySearched = eq(null),
+				using = any(),
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
@@ -302,16 +309,17 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			repository.update(group).block()
+			repository.update(group).`as`(transactionalOperator::transactional).block()
 
 			// Assert
-			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+			verify(postgresRepository).save(any(), any())
+			verify(postgresRepository).findById(eq(projectId), eq(uuid), visibilitySearched = eq(null), using = any())
 			verify(contentPostgresRepository).findAllByGroupIds(
-				projectId,
-				listOf(uuid),
-				visibilitySearched = null,
-				availabilitySearched = null
+				eq(projectId),
+				eq(listOf(uuid)),
+				visibilitySearched = eq(null),
+				availabilitySearched = eq(null),
+				using = any(),
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())

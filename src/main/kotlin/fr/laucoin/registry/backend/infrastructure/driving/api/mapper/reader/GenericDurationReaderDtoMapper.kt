@@ -9,18 +9,9 @@ abstract class GenericDurationReaderDtoMapper(
 ) {
 	fun formatDuration(duration: Duration): String {
 		return when {
-			duration.seconds == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}second")
-			duration.seconds < 60 -> translateService.getMessage(
-				code = "${DURATION_PREFIX}seconds",
-				args = arrayOf(duration.seconds),
-			)
+			duration.seconds < 60 -> translateService.getMessage(code = "${DURATION_PREFIX}seconds")
 
-			duration.toMinutes() == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}minute")
-
-			duration.toMinutes() <= 60 -> translateService.getMessage(
-				code = "${DURATION_PREFIX}minutes",
-				args = arrayOf(duration.toMinutes()),
-			)
+			duration.toMinutes() <= 60 -> translateService.getMessage(code = "${DURATION_PREFIX}minutes")
 
 			duration.toHours() == 1L -> translateService.getMessage(code = "${DURATION_PREFIX}hour")
 			duration.toHours() < 24 -> translateService.getMessage(

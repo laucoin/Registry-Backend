@@ -1,8 +1,10 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import reactor.core.publisher.Flux
@@ -11,7 +13,11 @@ import java.time.LocalDate
 import java.util.UUID
 
 interface IUserService {
-	fun findUsersPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
+	fun findUsersPage(
+		pageable: PageableModel,
+		searchParams: UserSearchParamModel,
+		sortFields: List<SortModel<UserSortFieldEnum>> = emptyList(),
+	): Mono<PageModel<UserModel>>
 	fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel>
 	fun findUserByOidcId(id: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
 	fun findUserByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel>

@@ -27,12 +27,17 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/users/profiles.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "User's Profiles management", description = "API for User's Profiles-related operations")
 @RequestMapping("/api/v1/users/profiles")
 interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Find User's Profiles",
 		description = "Find or get paginated User's Profiles",
+		deprecated = true,
 	)
 	@GetMapping
 	fun findUserProjectProfiles(
@@ -52,6 +57,7 @@ interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Accept or Reject Project's invitation",
 		description = "Allow User to access the concerned Project if accepted",
+		deprecated = true,
 	)
 	@PostMapping("/{id}/accept/{accepted}")
 	fun manageUserProjectProfileAcceptance(
@@ -63,6 +69,7 @@ interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Create support Project's Profile",
 		description = "Support profile is a temporary Profile for an User to access an Project to help the administration",
+		deprecated = true,
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_PROFILE_C')")
 	@PostMapping("/{projectId}/support")
@@ -74,6 +81,7 @@ interface IUserProjectProfileV1Controller {
 	@Operation(
 		summary = "Delete User's Profile",
 		description = "Delete User's Profile",
+		deprecated = true,
 	)
 	@DeleteMapping("/{id}")
 	fun deleteUserProfileById(

@@ -11,11 +11,13 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMP
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
@@ -56,9 +58,10 @@ class UserService(
 
 	override fun findUsersPage(
 		pageable: PageableModel,
-		searchParams: UserSearchParamModel
+		searchParams: UserSearchParamModel,
+		sortFields: List<SortModel<UserSortFieldEnum>>,
 	): Mono<PageModel<UserModel>> {
-		return port.findPage(pageable, searchParams)
+		return port.findPage(pageable, searchParams, sortFields)
 	}
 
 	override fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {

@@ -1,14 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IActivityEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ActivityJooqRepository
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -17,13 +19,18 @@ import reactor.core.publisher.Mono
 
 @Service
 class ActivityModelPostgresRepository(
-	private val repository: IActivityEntityRepository,
+	private val repository: ActivityJooqRepository,
 	private val mapper: ActivityEntityMapper,
 ): IActivityPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<ActivityModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
+		sortFields: List<SortModel<ActivitySortFieldEnum>>,
 	): Mono<PageModel<ActivityModel>> {
 		return repository.findAll(
 			projectId,
@@ -31,6 +38,7 @@ class ActivityModelPostgresRepository(
 			searchParams.visibilitySearched,
 			searchParams.availabilitySearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ActivityEntity::fullCount, mapper::toModel)
@@ -63,7 +71,6 @@ class ActivityModelPostgresRepository(
 	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
 		return repository.findById(projectId, id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun create(element: ActivityModel): Mono<ActivityModel> {

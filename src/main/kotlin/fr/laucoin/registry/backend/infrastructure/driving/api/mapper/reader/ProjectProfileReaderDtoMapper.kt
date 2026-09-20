@@ -33,6 +33,7 @@ class ProjectProfileReaderDtoMapper(
 			status = buildStatus(model),
 			startAccess = model.startAccess,
 			endAccess = model.endAccess,
+			favorite = model.favorite,
 		).apply {
 			id = model.id
 			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)

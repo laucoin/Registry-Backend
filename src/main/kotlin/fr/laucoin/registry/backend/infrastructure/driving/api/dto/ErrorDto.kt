@@ -10,5 +10,6 @@ data class ErrorDto(
 	var code: String? = null,
 	var title: String? = null,
 	var message: String? = null,
+	var errors: List<ErrorDto>? = null,
 )
 
