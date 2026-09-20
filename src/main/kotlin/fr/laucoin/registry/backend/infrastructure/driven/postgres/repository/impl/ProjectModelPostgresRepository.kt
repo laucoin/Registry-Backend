@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectJooqRepository
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
 
 @Service
 class ProjectModelPostgresRepository(
-	private val repository: IProjectEntityRepository,
+	private val repository: ProjectJooqRepository,
 	private val mapper: ProjectEntityMapper,
 ): IProjectPort {
 	override fun findPage(
@@ -65,7 +65,6 @@ class ProjectModelPostgresRepository(
 	override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
 		return repository.findById(id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun create(element: ProjectModel): Mono<ProjectModel> {

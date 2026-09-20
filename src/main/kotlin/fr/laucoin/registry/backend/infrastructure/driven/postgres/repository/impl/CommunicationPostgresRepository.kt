@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ICommunicationEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.CommunicationJooqRepository
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 
 @Service
 class CommunicationPostgresRepository(
-	private val repository: ICommunicationEntityRepository,
+	private val repository: CommunicationJooqRepository,
 	private val mapper: CommunicationEntityMapper,
 ): ICommunicationPort {
 	override fun findPage(
@@ -153,7 +153,6 @@ class CommunicationPostgresRepository(
 	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel> {
 		return repository.findById(projectId, id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun create(element: CommunicationModel): Mono<CommunicationModel> {

@@ -39,11 +39,11 @@ class IdpAuthenticationAdapter(
 	private val clientId: String,
 	@param:Value($$"${external.idp.client-secret}")
 	private val clientSecret: String,
-	@param:Value($$"${external.idp.connect-timeout-millis}")
+	@Value($$"${external.idp.connect-timeout-millis}")
 	connectTimeoutMillis: Int,
-	@param:Value($$"${external.idp.response-timeout-millis}")
+	@Value($$"${external.idp.response-timeout-millis}")
 	responseTimeoutMillis: Long,
-	@param:Value($$"${external.idp.max-connections}")
+	@Value($$"${external.idp.max-connections}")
 	maxConnections: Int,
 ) : IAuthenticationPort, LoggerService() {
 	private val http: WebClient = buildHttpClient(connectTimeoutMillis, responseTimeoutMillis, maxConnections)

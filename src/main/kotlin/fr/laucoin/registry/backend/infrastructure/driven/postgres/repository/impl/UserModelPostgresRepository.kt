@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUserEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.UserJooqRepository
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono
 
 @Service
 class UserModelPostgresRepository(
-	private val repository: IUserEntityRepository,
+	private val repository: UserJooqRepository,
 	private val mapper: UserEntityMapper,
 	private val currentUserMapper: CurrentUserEntityMapper,
 ): IUserPort {
@@ -43,13 +43,11 @@ class UserModelPostgresRepository(
 	override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {
 		return repository.findById(id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel> {
 		return repository.findByOidcId(oidcId, visibilitySearched)
 			.map(currentUserMapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel> {

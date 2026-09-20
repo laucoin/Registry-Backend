@@ -14,7 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectProfileEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectProfileJooqRepository
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -23,7 +23,7 @@ import reactor.core.publisher.Mono
 
 @Service
 class ProjectProfileModelPostgresRepository(
-	private val repository: IProjectProfileEntityRepository,
+	private val repository: ProjectProfileJooqRepository,
 	private val mapper: ProjectProfileEntityMapper,
 	private val roleMapper: ProjectProfileRoleEntityMapper,
 	private val roleCountMapper: ProjectProfileRoleCountEntityMapper,
@@ -101,13 +101,11 @@ class ProjectProfileModelPostgresRepository(
 	): Mono<ProjectProfileModel> {
 		return repository.findByUserIdAndId(userId, id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel> {
 		return repository.findByProjectIdAndId(projectId, id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findProjectProfileByProjectAndUserId(
@@ -123,7 +121,6 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.statusSearched,
 		)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findLevel0ProjectProfileRoleByUserId(

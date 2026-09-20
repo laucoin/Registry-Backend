@@ -1,31 +1,31 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupEntityRepository
-import java.util.UUID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupJooqRepository
+import org.jooq.DSLContext
 import org.springframework.stereotype.Service
-import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 @Service
 class GroupModelPostgresRepository(
-	private val repository: IGroupEntityRepository,
-	private val contentRepository: IGroupContentEntityRepository,
-	private val transactionalOperator: TransactionalOperator,
+	private val repository: GroupJooqRepository,
+	private val contentRepository: GroupContentJooqRepository,
+	private val dsl: DSLContext,
 	private val mapper: GroupEntityMapper,
 	private val contentMapper: GroupContentEntityMapper,
-): IGroupPort {
+) : IGroupPort {
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -87,51 +87,66 @@ class GroupModelPostgresRepository(
 		return Mono.zip(
 			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
 			findContent(projectId, listOf(id), memberVisibilitySearched, memberAvailabilitySearched).collectList()
-				.handle<List<ParticipantModel>> { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
+				.handle<List<ParticipantModel>> { it, handle ->
+					if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(
+						it.first().second
+					)
+				}
 		).map {
 			it.t1.members = it.t2
 			it.t1
 		}
 	}
 
-	override fun create(element: GroupModel): Mono<GroupModel> {
-		return save(element)
-			.saveNewMembers(element)
-			.`as`(transactionalOperator::transactional)
+	override fun create(element: GroupModel): Mono<GroupModel> = Mono.from(
+		dsl.transactionPublisher { config ->
+			val txDsl = config.dsl()
+			save(txDsl, element).saveNewMembers(txDsl, element)
+		}
+	)
+
+	override fun update(element: GroupModel): Mono<GroupModel> = Mono.from(
+		dsl.transactionPublisher { config ->
+			val txDsl = config.dsl()
+			save(txDsl, element)
+				.flatMap { findByIdWithContent(txDsl, element.project!!.id!!, element.id!!) }
+				.removeDeletedMembers(txDsl, element)
+				.saveNewMembers(txDsl, element)
+		}
+	)
+
+	private fun findByIdWithContent(txDsl: DSLContext, projectId: UUID, id: UUID): Mono<GroupModel> {
+		return Mono.zip(
+			repository.findById(projectId, id, visibilitySearched = null, using = txDsl).map(mapper::toModel),
+			contentRepository.findAllByGroupIds(
+				projectId,
+				listOf(id),
+				visibilitySearched = null,
+				availabilitySearched = null,
+				using = txDsl,
+			).map(contentMapper::toModel).collectList(),
+		).map {
+			it.t1.members = it.t2
+			it.t1
+		}
 	}
 
-	override fun update(element: GroupModel): Mono<GroupModel> {
-		return save(element)
-			.flatMap {
-				findByIdWithContent(
-					element.project!!.id!!,
-					element.id!!,
-					visibilitySearched = null,
-					memberVisibilitySearched = null,
-					memberAvailabilitySearched = null,
-				)
-			}
-			.removeDeletedMembers(element)
-			.saveNewMembers(element)
-			.`as`(transactionalOperator::transactional)
-	}
-
-	fun Mono<GroupModel>.saveNewMembers(element: GroupModel): Mono<GroupModel> {
+	fun Mono<GroupModel>.saveNewMembers(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
 		return flatMap { group ->
 			val newMembers = group.getNewMembers(element)
 			if (newMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) })
+			contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) }, txDsl)
 				.map(contentMapper::toModel)
 				.collectList()
 				.map { group.apply { members = members.plus(it) } }
 		}
 	}
 
-	fun Mono<GroupModel>.removeDeletedMembers(element: GroupModel): Mono<GroupModel> {
+	fun Mono<GroupModel>.removeDeletedMembers(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
 		return flatMap { group ->
 			val removedMembers = group.getOldMemberIds(element)
 			if (removedMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers)
+			contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers, txDsl)
 				.then(Mono.fromCallable {
 					group.apply {
 						members = members.filter { !removedMembers.contains(it.id) }
@@ -140,8 +155,8 @@ class GroupModelPostgresRepository(
 		}
 	}
 
-	private fun save(element: GroupModel): Mono<GroupModel> {
-		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+	private fun save(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
+		return repository.save(mapper.toEntity(element), txDsl).map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

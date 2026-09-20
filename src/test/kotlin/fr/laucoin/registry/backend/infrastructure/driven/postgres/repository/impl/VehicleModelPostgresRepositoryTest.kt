@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.VehicleEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IVehicleEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.VehicleJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
@@ -36,7 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class VehicleModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IVehicleEntityRepository
+	private lateinit var postgresRepository: VehicleJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: VehicleEntityMapper

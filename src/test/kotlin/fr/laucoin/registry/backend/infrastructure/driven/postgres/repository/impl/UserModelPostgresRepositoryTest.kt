@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUserEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.UserJooqRepository
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
@@ -29,7 +29,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class UserModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IUserEntityRepository
+	private lateinit var postgresRepository: UserJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: UserEntityMapper

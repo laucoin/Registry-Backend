@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.AlertEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IAlertEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.AlertJooqRepository
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono
 
 @Service
 class AlertModelPostgresRepository(
-	private val repository: IAlertEntityRepository,
+	private val repository: AlertJooqRepository,
 	private val mapper: AlertEntityMapper,
 ): IAlertPort {
 	override fun findPage(

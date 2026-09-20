@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
@@ -34,7 +34,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class ProjectModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IProjectEntityRepository
+	private lateinit var postgresRepository: ProjectJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: ProjectEntityMapper

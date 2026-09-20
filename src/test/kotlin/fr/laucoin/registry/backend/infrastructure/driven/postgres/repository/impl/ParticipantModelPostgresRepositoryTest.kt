@@ -9,20 +9,13 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ParticipantEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IParticipantEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ParticipantJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -36,18 +29,26 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.LocalDate
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class ParticipantModelPostgresRepositoryTest: TestContext() {
+class ParticipantModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IParticipantEntityRepository
+	private lateinit var postgresRepository: ParticipantJooqRepository
 
 	@MockitoSpyBean
-	private lateinit var contentPostgresRepository: IGroupContentEntityRepository
+	private lateinit var contentPostgresRepository: GroupContentJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: ParticipantEntityMapper
@@ -70,9 +71,6 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			)
 		}
 
-		// The dataset gives every tenth participant a birthday between 1990 and
-		// today minus 18 years (adults), and all the others a birthday inside the
-		// last 18 years (minors) — so 5 adults and 45 minors out of the 50.
 		@JvmStatic
 		fun `Should findPage filter on adulthood`(): Stream<Arguments> {
 			return Stream.of(
@@ -339,7 +337,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
+			verify(postgresRepository).save(any(), any())
 			verify(mapper).toEntity(any())
 			verify(mapper).toModel(any())
 		}
@@ -365,9 +363,15 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
-			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>())
+			verify(postgresRepository).save(any(), any())
+			verify(postgresRepository).findById(
+				eq(projectId),
+				eq(uuid),
+				visibilitySearched = eq(null),
+				dateTimeSearched = eq(null),
+				using = any()
+			)
+			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>(), any())
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
 		}
@@ -392,9 +396,15 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
-			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(uuid, listOf(groupId))
+			verify(postgresRepository).save(any(), any())
+			verify(postgresRepository).findById(
+				eq(projectId),
+				eq(uuid),
+				visibilitySearched = eq(null),
+				dateTimeSearched = eq(null),
+				using = any()
+			)
+			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(eq(uuid), eq(listOf(groupId)), any())
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
 		}

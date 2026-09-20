@@ -77,9 +77,6 @@ class SecurityConfig(
 			.securityMatcher(documentationMatcher())
 			.authorizeExchange { it.anyExchange().permitAll() }
 			.configureSecurityHeaders(DOCUMENTATION_CONTENT_SECURITY_POLICY)
-			// codeql[java/spring-disabled-csrf-protection]: this chain only serves static Swagger/OpenAPI
-			// docs (GET-only, permitAll, no state-changing request ever reaches it) — CSRF is not
-			// applicable here, the same reasoning that already exempts safe HTTP methods on the main chain.
 			.csrf { it.disable() }
 			.formLogin { it.disable() }
 			.logout { it.disable() }

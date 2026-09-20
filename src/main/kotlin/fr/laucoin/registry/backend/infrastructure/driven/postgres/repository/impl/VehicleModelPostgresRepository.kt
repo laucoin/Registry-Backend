@@ -8,7 +8,7 @@ import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.VehicleEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IVehicleEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.VehicleJooqRepository
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono
 
 @Service
 class VehicleModelPostgresRepository(
-	private val repository: IVehicleEntityRepository,
+	private val repository: VehicleJooqRepository,
 	private val mapper: VehicleEntityMapper,
 ): IVehiclePort {
 	override fun findPage(
