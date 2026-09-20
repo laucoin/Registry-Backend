@@ -1,3 +1,9 @@
+## [1.15.0](https://github.com/laucoin/Registry-Backend/compare/1.14.0...1.15.0) (2026-09-20)
+
+### 🏎️ Improvements
+
+* **r2dbc:** Fix pool size ([#54](https://github.com/laucoin/Registry-Backend/issues/54)) ([190134a](https://github.com/laucoin/Registry-Backend/commit/190134aa62c7ee0a1e3405274e7b5c733d97860b))
+
 ## [1.14.0](https://github.com/laucoin/Registry-Backend/compare/1.13.0...1.14.0) (2026-09-20)
 
 ### 🏎️ Improvements
