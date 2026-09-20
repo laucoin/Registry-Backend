@@ -148,6 +148,11 @@ spring:
     url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
+    pool:
+      initial-size: ${DATASOURCE_POOL_INITIAL_SIZE:10}
+      max-size: ${DATASOURCE_POOL_MAX_SIZE:30}
+      max-idle-time: ${DATASOURCE_POOL_MAX_IDLE_TIME:30m}
+      max-acquire-time: ${DATASOURCE_POOL_MAX_ACQUIRE_TIME:5s}
 
 springdoc:
   use-management-port: true
