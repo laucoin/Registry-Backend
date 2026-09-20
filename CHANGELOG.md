@@ -1,3 +1,9 @@
+## [1.14.0](https://github.com/laucoin/Registry-Backend/compare/1.13.0...1.14.0) (2026-09-20)
+
+### 🏎️ Improvements
+
+* **search:** Increate search performance ([#53](https://github.com/laucoin/Registry-Backend/issues/53)) ([5a1e8cf](https://github.com/laucoin/Registry-Backend/commit/5a1e8cf168340c93317a251b376f8d2875f35675))
+
 ## [1.13.0](https://github.com/laucoin/Registry-Backend/compare/1.12.0...1.13.0) (2026-09-15)
 
 ### 📦️ Other
