@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.domain.validator
 
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CustomDateTimeWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
 import java.time.LocalDate
 import java.time.OffsetTime

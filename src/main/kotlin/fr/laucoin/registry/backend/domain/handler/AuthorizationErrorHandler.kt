@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MES
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
 import java.util.Locale
 import org.springframework.context.annotation.Bean
 import org.springframework.core.io.buffer.DataBuffer

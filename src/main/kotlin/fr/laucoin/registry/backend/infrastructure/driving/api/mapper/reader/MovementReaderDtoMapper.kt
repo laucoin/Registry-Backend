@@ -1,0 +1,42 @@
+package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
+
+import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_TYPE_PREFIX
+import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
+import java.util.Objects
+import java.util.Optional
+import org.springframework.stereotype.Component
+
+@Component
+class MovementReaderDtoMapper(
+	private val translateService: ITranslateService,
+	private val projectMapper: ProjectReaderDtoMapper,
+	private val activityReasonReaderDtoMapper: MovementActivityReasonReaderDtoMapper,
+	private val reasonReaderDtoMapper: MovementReasonReaderDtoMapper,
+	private val movementContentMapper: MovementContentReaderDtoMapper,
+): IGenericReaderDtoMapper<MovementModel, MovementReaderDto> {
+	override fun toDto(model: MovementModel): MovementReaderDto {
+		return MovementReaderDto(
+			dateTime = model.dateTime,
+			type = Optional.ofNullable(model.type).map {
+				LabelDto(
+					it.name,
+					translateService.getMessage(code = "$MOVEMENT_TYPE_PREFIX$it"),
+				)
+			}.orElse(null),
+			reason = if (Objects.nonNull(model.reason)) reasonReaderDtoMapper.toDto(model.reason!!)
+			else if (Objects.nonNull(model.activity)) activityReasonReaderDtoMapper.toDto(model.activity!!)
+			else null,
+			contentType = model.contentType,
+			content = movementContentMapper.toDtoList(model.content),
+		).apply {
+			id = model.id
+			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
+			visible = model.visible
+			creation = model.creation
+			lastEdition = model.lastEdition
+		}
+	}
+}

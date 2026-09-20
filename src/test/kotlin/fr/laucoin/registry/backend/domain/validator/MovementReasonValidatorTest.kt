@@ -8,8 +8,8 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.ParticipantMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
 import fr.laucoin.registry.backend.test.ModelExt.activityId
 import jakarta.validation.ConstraintValidatorContext
 import java.util.stream.Stream

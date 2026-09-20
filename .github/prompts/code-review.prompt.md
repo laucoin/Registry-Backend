@@ -20,7 +20,7 @@ Review the change I point you at (a diff, a file, or the current branch vs `main
 
 **Architecture (hexagonal — enforced by ArchUnit)**
 - `domain` stays free of Spring web / persistence types and talks to infra only via `port` interfaces.
-- `infrastructure/out` doesn't depend on `infrastructure/in`; nothing depends on `config`; postgres `entity` stays inside its package; controllers implement a contract interface.
+- `infrastructure/driving` doesn't depend on `infrastructure/driven`; nothing depends on `config`; postgres `entity` stays inside its package; controllers implement a contract interface.
 
 **Security — top priority (see AGENTS.md § Security)**
 - Every endpoint has an explicit `@PreAuthorize` with the correct `hasPermission(...)` checks (option gate + operation CRUD permission); no missing or overly-broad authorization, no auth bypass.

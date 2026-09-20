@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.test
 
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.ModelExt.userOidcId
