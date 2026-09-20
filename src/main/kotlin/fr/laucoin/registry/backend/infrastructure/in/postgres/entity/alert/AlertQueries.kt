@@ -7,11 +7,11 @@ object AlertQueries {
 	const val SELECT_ALERT_SEARCH = """
         CASE
             WHEN :textSearched IS NULL THEN 1
-            ELSE similarity(t.title, :textSearched)
+            ELSE similarity(t.search_text, :textSearched)
         END AS similarity_score
     """
 
-	const val ALERT_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.title, :textSearched) > 0)"
+	const val ALERT_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
 	const val ALERT_STATUS_SEARCH_CLAUSE = "(t.$ALERT_STATUS IN (:statusSearched))"
 
 	const val ALERT_DATE_IN_DATES_RANGE_CLAUSE = """
