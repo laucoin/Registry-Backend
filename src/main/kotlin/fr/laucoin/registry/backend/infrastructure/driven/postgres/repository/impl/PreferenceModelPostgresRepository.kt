@@ -3,14 +3,14 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.PreferencesEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IPreferencesEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.PreferencesJooqRepository
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
 @Service
 class PreferenceModelPostgresRepository(
-	private val repository: IPreferencesEntityRepository,
+	private val repository: PreferencesJooqRepository,
 	private val mapper: PreferencesEntityMapper,
 ): IPreferencesPort {
 	override fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesModel> {

@@ -20,7 +20,8 @@ Write or extend tests for the code I point you at, following this project's conv
 
 - Mirror the package of the class under test under `src/test/kotlin/...`; name the file `<Class>Test.kt`.
 - **Indent with tabs.**
-- **Unit tests (default for `domain/service`, `validator`, `extension`)**: construct the class directly, `mock()` its ports, no Spring context. Example shape (see `domain/service/impl/RoleServiceTest.kt`):
+- **Unit tests (default for `domain/service`, `validator`, `extension`)**: construct the class directly, `mock()` its
+  ports, no Spring context. Example shape (see `domain/service/impl/RoleServiceTest.kt`):
 
   ```kotlin
   class RoleServiceTest {
@@ -43,8 +44,11 @@ Write or extend tests for the code I point you at, following this project's conv
       .verifyComplete()
   ```
 
-- **Parameterized cases** — `@ParameterizedTest` + `@MethodSource`, with a `@JvmStatic` provider in a `companion object` returning `Stream<Arguments>`. Descriptive backtick test names (`fun \`Should ... \`()`).
-- **Integration tests** — extend/use `TestContext` (`@SpringBootTest(RANDOM_PORT)` + Testcontainers Postgres + `WebTestClient`). Use helpers in `test/` (`WebTestClientExt`, `ModelExt`, `TestContext`, `TestContainerDatabase`). Seed data via SQL under `src/test/resources/db/migrations`.
+- **Parameterized cases** — `@ParameterizedTest` + `@MethodSource`, with a `@JvmStatic` provider in a `companion object`
+  returning `Stream<Arguments>`. Descriptive backtick test names (`fun \`Should ... \` ()`).
+- **Integration tests** — extend/use `TestContext` (`@SpringBootTest(RANDOM_PORT)` + Testcontainers Postgres +
+  `WebTestClient`). Use helpers in `test/` (`WebTestClientExt`, `ModelExt`, `TestContext`, `TestContainerDatabase`).
+  Seed data via SQL under `src/test/resources/db/migrations`.
 - Use existing test helpers/extensions rather than re-inventing setup.
 
 ## Deliverable

@@ -9,8 +9,8 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ParticipantEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IParticipantEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ParticipantJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -36,6 +36,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -44,10 +45,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class ParticipantModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IParticipantEntityRepository
+	private lateinit var postgresRepository: ParticipantJooqRepository
 
 	@MockitoSpyBean
-	private lateinit var contentPostgresRepository: IGroupContentEntityRepository
+	private lateinit var contentPostgresRepository: GroupContentJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: ParticipantEntityMapper
@@ -339,7 +340,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
+			verify(postgresRepository).save(any(), any())
 			verify(mapper).toEntity(any())
 			verify(mapper).toModel(any())
 		}
@@ -365,9 +366,9 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
+			verify(postgresRepository).save(any(), any())
 			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
-			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>())
+			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>(), any())
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
 		}
@@ -392,9 +393,9 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
+			verify(postgresRepository).save(any(), any())
 			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
-			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(uuid, listOf(groupId))
+			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(eq(uuid), eq(listOf(groupId)), any())
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
 		}

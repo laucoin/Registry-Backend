@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IActivityEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ActivityJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.activityId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
@@ -36,7 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class ActivityModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IActivityEntityRepository
+	private lateinit var postgresRepository: ActivityJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: ActivityEntityMapper

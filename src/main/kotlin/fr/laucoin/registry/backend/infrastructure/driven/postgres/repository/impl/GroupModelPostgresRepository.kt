@@ -10,19 +10,19 @@ import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GroupJooqRepository
 import java.util.UUID
+import org.jooq.DSLContext
 import org.springframework.stereotype.Service
-import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Service
 class GroupModelPostgresRepository(
-	private val repository: IGroupEntityRepository,
-	private val contentRepository: IGroupContentEntityRepository,
-	private val transactionalOperator: TransactionalOperator,
+	private val repository: GroupJooqRepository,
+	private val contentRepository: GroupContentJooqRepository,
+	private val dsl: DSLContext,
 	private val mapper: GroupEntityMapper,
 	private val contentMapper: GroupContentEntityMapper,
 ): IGroupPort {
@@ -94,44 +94,47 @@ class GroupModelPostgresRepository(
 		}
 	}
 
-	override fun create(element: GroupModel): Mono<GroupModel> {
-		return save(element)
-			.saveNewMembers(element)
-			.`as`(transactionalOperator::transactional)
-	}
+	override fun create(element: GroupModel): Mono<GroupModel> = Mono.from(
+		dsl.transactionPublisher { config ->
+			val txDsl = config.dsl()
+			save(txDsl, element).saveNewMembers(txDsl, element)
+		}
+	)
 
-	override fun update(element: GroupModel): Mono<GroupModel> {
-		return save(element)
-			.flatMap {
-				findByIdWithContent(
-					element.project!!.id!!,
-					element.id!!,
-					visibilitySearched = null,
-					memberVisibilitySearched = null,
-					memberAvailabilitySearched = null,
-				)
-			}
-			.removeDeletedMembers(element)
-			.saveNewMembers(element)
-			.`as`(transactionalOperator::transactional)
-	}
+	override fun update(element: GroupModel): Mono<GroupModel> = Mono.from(
+		dsl.transactionPublisher { config ->
+			val txDsl = config.dsl()
+			save(txDsl, element)
+				.flatMap {
+					findByIdWithContent(
+						element.project!!.id!!,
+						element.id!!,
+						visibilitySearched = null,
+						memberVisibilitySearched = null,
+						memberAvailabilitySearched = null,
+					)
+				}
+				.removeDeletedMembers(txDsl, element)
+				.saveNewMembers(txDsl, element)
+		}
+	)
 
-	fun Mono<GroupModel>.saveNewMembers(element: GroupModel): Mono<GroupModel> {
+	fun Mono<GroupModel>.saveNewMembers(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
 		return flatMap { group ->
 			val newMembers = group.getNewMembers(element)
 			if (newMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) })
+			contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) }, txDsl)
 				.map(contentMapper::toModel)
 				.collectList()
 				.map { group.apply { members = members.plus(it) } }
 		}
 	}
 
-	fun Mono<GroupModel>.removeDeletedMembers(element: GroupModel): Mono<GroupModel> {
+	fun Mono<GroupModel>.removeDeletedMembers(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
 		return flatMap { group ->
 			val removedMembers = group.getOldMemberIds(element)
 			if (removedMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers)
+			contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers, txDsl)
 				.then(Mono.fromCallable {
 					group.apply {
 						members = members.filter { !removedMembers.contains(it.id) }
@@ -140,8 +143,8 @@ class GroupModelPostgresRepository(
 		}
 	}
 
-	private fun save(element: GroupModel): Mono<GroupModel> {
-		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+	private fun save(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
+		return repository.save(mapper.toEntity(element), txDsl).map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

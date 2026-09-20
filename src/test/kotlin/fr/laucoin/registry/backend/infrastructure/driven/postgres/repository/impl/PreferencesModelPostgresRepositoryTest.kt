@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.PreferencesEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IPreferencesEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.PreferencesJooqRepository
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import kotlin.test.assertNotNull
@@ -15,7 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class PreferencesModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IPreferencesEntityRepository
+	private lateinit var postgresRepository: PreferencesJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: PreferencesEntityMapper

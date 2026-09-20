@@ -83,35 +83,37 @@ fails the startup loudly instead of silently booting on something unintended.
 
 **Identity provider (OIDC)**
 
-| Variable                    | Default    | Description                                                                                |
-|-----------------------------|------------|--------------------------------------------------------------------------------------------|
-| `IDP_JWKS_URI`              | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                           |
-| `IDP_AUTHORIZATION_URI`     | *required* | For example: `http://localhost:9000/application/o/authorize`                               |
-| `IDP_TOKEN_URI`             | *required* | For example: `http://localhost:9000/application/o/token`                                   |
-| `IDP_END_SESSION_URI`       | *required* | For example: `http://localhost:9000/application/o/registry/end-session`                    |
-| `IDP_REVOCATION_URI`        | *required* | RFC 7009 token revocation endpoint, called server-to-server on logout to invalidate the access/refresh token immediately instead of leaving them valid until they expire naturally. For example: `http://localhost:9000/application/o/revoke` |
-| `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`           |
-| `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                           |
-| `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (implicit flow). For example: `registry-swagger` |
-| `IDP_CONNECT_TIMEOUT_MILLIS` | `2000` | TCP connect timeout for the backend's outbound calls to the IdP (login exchange, refresh, revocation) |
-| `IDP_RESPONSE_TIMEOUT_MILLIS` | `5000` | How long to wait for the IdP's response before failing; also used as the timeout for acquiring a pooled connection when the IdP is already saturated |
-| `IDP_MAX_CONNECTIONS`       | `20`       | Max concurrent connections to the IdP in the shared connection pool |
+| Variable                      | Default    | Description                                                                                                                                                                                                                                   |
+|-------------------------------|------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `IDP_JWKS_URI`                | *required* | For example: `http://localhost:9000/application/o/registry/jwks`                                                                                                                                                                              |
+| `IDP_AUTHORIZATION_URI`       | *required* | For example: `http://localhost:9000/application/o/authorize`                                                                                                                                                                                  |
+| `IDP_TOKEN_URI`               | *required* | For example: `http://localhost:9000/application/o/token`                                                                                                                                                                                      |
+| `IDP_END_SESSION_URI`         | *required* | For example: `http://localhost:9000/application/o/registry/end-session`                                                                                                                                                                       |
+| `IDP_REVOCATION_URI`          | *required* | RFC 7009 token revocation endpoint, called server-to-server on logout to invalidate the access/refresh token immediately instead of leaving them valid until they expire naturally. For example: `http://localhost:9000/application/o/revoke` |
+| `IDP_PRIVATE_CLIENT_ID`       | *required* | Confidential client the backend itself authenticates as. For example: `registry`                                                                                                                                                              |
+| `IDP_PRIVATE_CLIENT_SECRET`   | *required* | Its secret — a secret, see below                                                                                                                                                                                                              |
+| `IDP_PUBLIC_CLIENT_ID`        | *required* | Public client Swagger UI authenticates as (implicit flow). For example: `registry-swagger`                                                                                                                                                    |
+| `IDP_CONNECT_TIMEOUT_MILLIS`  | `2000`     | TCP connect timeout for the backend's outbound calls to the IdP (login exchange, refresh, revocation)                                                                                                                                         |
+| `IDP_RESPONSE_TIMEOUT_MILLIS` | `5000`     | How long to wait for the IdP's response before failing; also used as the timeout for acquiring a pooled connection when the IdP is already saturated                                                                                          |
+| `IDP_MAX_CONNECTIONS`         | `20`       | Max concurrent connections to the IdP in the shared connection pool                                                                                                                                                                           |
 
 **Server**
 
-| Variable                 | Default    | Description                                                                                                                                                                                    |
-|--------------------------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `SERVER_PORT`            | `8081`     | API port. `9000` is taken locally by the identity provider container                                                                                                                           |
-| `SERVER_MANAGEMENT_PORT` | `8082`     | Separate port serving Actuator (`/health`, `/prometheus`) and Swagger UI/OpenAPI docs, each gated by its feature flag below. **Not authenticated** — see warning below                         |
-| `REGISTRY_LOGGING_LEVEL` | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                             |
-| `EXTERNAL_CORS_URLS`     | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
-| `COOKIE_SECURE`          | `true`     | `Secure` flag on the `registry_access_token`/`registry_refresh_token` auth cookies. Set to `false` for local plain-HTTP dev — the `local` Spring profile already does this                    |
-| `REGISTRY_AUTH_RATE_LIMIT_CAPACITY` | `10` | Max `POST` calls per client IP, per window, allowed on `/authentication/token` and `/token/refresh` — the only unauthenticated endpoints. In-memory (per instance, resets on restart) |
-| `REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Length in seconds of the rate-limit window above |
+| Variable                                  | Default    | Description                                                                                                                                                                                    |
+|-------------------------------------------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SERVER_PORT`                             | `8081`     | API port. `9000` is taken locally by the identity provider container                                                                                                                           |
+| `SERVER_MANAGEMENT_PORT`                  | `8082`     | Separate port serving Actuator (`/health`, `/prometheus`) and Swagger UI/OpenAPI docs, each gated by its feature flag below. **Not authenticated** — see warning below                         |
+| `REGISTRY_LOGGING_LEVEL`                  | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                             |
+| `EXTERNAL_CORS_URLS`                      | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
+| `COOKIE_SECURE`                           | `true`     | `Secure` flag on the `registry_access_token`/`registry_refresh_token` auth cookies. Set to `false` for local plain-HTTP dev — the `local` Spring profile already does this                     |
+| `REGISTRY_AUTH_RATE_LIMIT_CAPACITY`       | `10`       | Max `POST` calls per client IP, per window, allowed on `/authentication/token` and `/token/refresh` — the only unauthenticated endpoints. In-memory (per instance, resets on restart)          |
+| `REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60`       | Length in seconds of the rate-limit window above                                                                                                                                               |
 
 > [!NOTE]
-> The browser app authenticates via two `HttpOnly`, `SameSite=Lax` cookies (`registry_access_token`, `registry_refresh_token`)
-> set by `/api/v1/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
+> The browser app authenticates via two `HttpOnly`, `SameSite=Lax` cookies (`registry_access_token`,
+`registry_refresh_token`)
+> set by `/api/v1/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer`
+header
 > still works — it's checked first, cookie as fallback — kept solely so Swagger UI's own OAuth2 "try it out" flow keeps
 > working; no other client should send it.
 
