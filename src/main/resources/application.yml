@@ -107,6 +107,12 @@ registry:
       auth:
         capacity: ${REGISTRY_AUTH_RATE_LIMIT_CAPACITY:10}
         window-seconds: ${REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+      sensitive:
+        capacity: ${REGISTRY_SENSITIVE_RATE_LIMIT_CAPACITY:30}
+        window-seconds: ${REGISTRY_SENSITIVE_RATE_LIMIT_WINDOW_SECONDS:60}
+      search:
+        capacity: ${REGISTRY_SEARCH_RATE_LIMIT_CAPACITY:60}
+        window-seconds: ${REGISTRY_SEARCH_RATE_LIMIT_WINDOW_SECONDS:60}
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}

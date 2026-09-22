@@ -1,8 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
@@ -23,10 +25,15 @@ class UserModelPostgresRepository(
 	private val mapper: UserEntityMapper,
 	private val currentUserMapper: CurrentUserEntityMapper,
 ): IUserPort {
-	override fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>> {
+	override fun findPage(
+		pageable: PageableModel,
+		searchParams: UserSearchParamModel,
+		sortFields: List<SortModel<UserSortFieldEnum>>,
+	): Mono<PageModel<UserModel>> {
 		return repository.findAll(
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, UserEntity::fullCount, mapper::toModel)

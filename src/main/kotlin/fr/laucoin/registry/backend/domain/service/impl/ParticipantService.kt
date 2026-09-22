@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -18,6 +19,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -57,8 +59,9 @@ class ParticipantService(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
+		sortFields: List<SortModel<ParticipantSortFieldEnum>>,
 	): Mono<PageModel<ParticipantModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findBirthdays(projectId: UUID): Flux<ParticipantModel> {

@@ -74,8 +74,9 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 			textSearched = null,
 			visibilitySearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -101,8 +102,9 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 			textSearched = null,
 			visibilitySearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}

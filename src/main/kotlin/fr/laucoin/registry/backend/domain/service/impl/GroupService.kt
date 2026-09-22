@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -15,6 +16,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -41,8 +43,9 @@ class GroupService(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: GroupSearchParamModel,
+		sortFields: List<SortModel<GroupSortFieldEnum>>,
 	): Mono<PageModel<GroupModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findGroupMembersPageByGroupId(

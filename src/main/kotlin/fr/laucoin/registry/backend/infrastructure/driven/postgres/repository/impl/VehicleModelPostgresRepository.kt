@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
@@ -24,6 +26,7 @@ class VehicleModelPostgresRepository(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: VehicleSearchParamModel,
+		sortFields: List<SortModel<VehicleSortFieldEnum>>,
 	): Mono<PageModel<VehicleModel>> {
 		return repository.findAll(
 			projectId,
@@ -32,6 +35,7 @@ class VehicleModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.presenceSearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, VehicleEntity::fullCount, mapper::toModel)

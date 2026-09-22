@@ -1,9 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
@@ -24,11 +26,13 @@ class ProjectModelPostgresRepository(
 	override fun findPage(
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
+		sortFields: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		return repository.findAll(
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
@@ -37,7 +41,8 @@ class ProjectModelPostgresRepository(
 	override fun findPage(
 		projectIds: List<UUID>,
 		pageable: PageableModel,
-		searchParams: ProjectSearchParamModel
+		searchParams: ProjectSearchParamModel,
+		sortFields: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		if (projectIds.isEmpty()) {
 			return Mono.just(PageModel(pageable, 0, emptyList()))
@@ -48,6 +53,7 @@ class ProjectModelPostgresRepository(
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)

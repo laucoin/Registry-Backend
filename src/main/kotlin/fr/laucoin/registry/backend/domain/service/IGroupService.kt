@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -7,6 +8,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -16,6 +18,7 @@ interface IGroupService {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: GroupSearchParamModel,
+		sortFields: List<SortModel<GroupSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<GroupModel>>
 
 	fun findGroupMembersPageByGroupId(

@@ -1,9 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
@@ -23,7 +25,8 @@ class AlertModelPostgresRepository(
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
-		searchParams: AlertSearchParamModel
+		searchParams: AlertSearchParamModel,
+		sortFields: List<SortModel<AlertSortFieldEnum>>,
 	): Mono<PageModel<AlertModel>> {
 		return repository.findAll(
 			projectId,
@@ -32,6 +35,7 @@ class AlertModelPostgresRepository(
 			searchParams.visibilitySearched,
 			searchParams.startDateTimeSearched,
 			searchParams.endDateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, AlertEntity::fullCount, mapper::toModel)

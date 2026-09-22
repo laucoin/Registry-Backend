@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -8,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import java.time.LocalDate
 import java.util.UUID
@@ -19,6 +21,7 @@ interface IParticipantService {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
+		sortFields: List<SortModel<ParticipantSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ParticipantModel>>
 
 	fun findBirthdays(projectId: UUID): Flux<ParticipantModel>

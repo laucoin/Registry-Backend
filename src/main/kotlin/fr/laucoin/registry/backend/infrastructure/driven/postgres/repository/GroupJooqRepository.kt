@@ -1,6 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum.NAME
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.unaccent2
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbProject
@@ -26,6 +32,7 @@ import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.JSON
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.SelectField
 import org.jooq.SelectOnConditionStep
@@ -229,12 +236,27 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 			.leftJoin(editor).on(TB_GROUP.LAST_MODIFIED_BY.eq(editor.ID))
 	}
 
+	private fun GroupSortFieldEnum.toJooqField(): Field<*> = when (this) {
+		NAME -> TB_GROUP.NAME
+		CREATED_DATE -> TB_GROUP.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_GROUP.LAST_MODIFIED_DATE
+	}
+
+	// TB_GROUP.NAME always stays as the final tiebreaker (v1's sole, implicit order).
+	private fun orderFields(sortFields: List<SortModel<GroupSortFieldEnum>>): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>()
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_GROUP.NAME
+		return fields
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,
 		visibilitySearched: Boolean?,
 		presenceSearched: Boolean?,
 		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<GroupSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<GroupEntity> {
@@ -244,16 +266,8 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			baseSelect(projectId, project, creator, editor, fullCount)
-				.where(
-					searchConditions(
-						projectId,
-						textSearched,
-						visibilitySearched,
-						presenceSearched,
-						dateTimeSearched
-					)
-				)
-				.orderBy(TB_GROUP.NAME)
+				.where(searchConditions(projectId, textSearched, visibilitySearched, presenceSearched, dateTimeSearched))
+				.orderBy(orderFields(sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(project, creator, editor, fullCount, includeCounts = true) }
 	}

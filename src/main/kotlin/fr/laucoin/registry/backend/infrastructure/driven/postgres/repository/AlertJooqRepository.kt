@@ -1,6 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum.DATE_TIME
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum.TITLE
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.similarity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbProject
@@ -19,6 +26,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.count
@@ -53,6 +61,25 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 		return DSL.and(conditions)
 	}
 
+	private fun AlertSortFieldEnum.toJooqField(): Field<*> = when (this) {
+		DATE_TIME -> TB_ALERT.DATE_TIME
+		TITLE -> TB_ALERT.TITLE
+		CREATED_DATE -> TB_ALERT.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_ALERT.LAST_MODIFIED_DATE
+	}
+
+	// similarityScore sorts first (a no-op constant when there's no text search), TB_ALERT.DATE_TIME
+	// (descending) always stays last as the final tiebreaker (v1's sole, implicit order).
+	private fun orderFields(
+		similarityScore: Field<Float>,
+		sortFields: List<SortModel<AlertSortFieldEnum>>,
+	): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>(similarityScore.desc())
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_ALERT.DATE_TIME.desc()
+		return fields
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,
@@ -60,6 +87,7 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 		visibilitySearched: Boolean?,
 		startDateTimeSearched: ZonedDateTime?,
 		endDateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<AlertSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<AlertEntity> {
@@ -103,7 +131,7 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 						endDateTimeSearched
 					)
 				)
-				.orderBy(similarityScore.desc(), TB_ALERT.DATE_TIME.desc())
+				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(creator, editor, project, fullCount) }
 	}

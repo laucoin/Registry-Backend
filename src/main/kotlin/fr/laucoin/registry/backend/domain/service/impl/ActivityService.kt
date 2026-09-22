@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -11,6 +12,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -33,8 +35,9 @@ class ActivityService(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
+		sortFields: List<SortModel<ActivitySortFieldEnum>>,
 	): Mono<PageModel<ActivityModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {

@@ -103,7 +103,7 @@ class UserControllerTest: TestContext() {
 			visibilitySearched = visibilitySearched,
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(UserModel()))
-		whenever(service.findUsersPage(any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findUsersPage(any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(UserReaderDto())),
 		)
@@ -130,7 +130,7 @@ class UserControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findUsersPage(pageable, searchParams)
+		verify(service).findUsersPage(pageable, searchParams, emptyList())
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(userRoleReaderMapper)
 	}

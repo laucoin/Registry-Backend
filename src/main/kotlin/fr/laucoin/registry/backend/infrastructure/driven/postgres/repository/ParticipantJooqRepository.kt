@@ -1,7 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum.BIRTHDAY
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum.FIRST_NAME
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum.LAST_NAME
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.similarity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbProject
@@ -28,6 +36,7 @@ import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.JSON
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.SelectField
 import org.jooq.SelectOnConditionStep
@@ -284,6 +293,24 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 			.leftJoin(editor).on(TB_PARTICIPANT.LAST_MODIFIED_BY.eq(editor.ID))
 	}
 
+	private fun ParticipantSortFieldEnum.toJooqField(): Field<*> = when (this) {
+		FIRST_NAME -> TB_PARTICIPANT.FIRST_NAME
+		LAST_NAME -> TB_PARTICIPANT.LAST_NAME
+		BIRTHDAY -> TB_PARTICIPANT.BIRTHDAY
+		CREATED_DATE -> TB_PARTICIPANT.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_PARTICIPANT.LAST_MODIFIED_DATE
+	}
+
+	private fun orderFields(
+		similarityScore: Field<Float>,
+		sortFields: List<SortModel<ParticipantSortFieldEnum>>,
+	): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>(similarityScore.desc())
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_PARTICIPANT.LAST_NAME
+		return fields
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,
@@ -293,6 +320,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		availabilitySearched: Boolean?,
 		presenceSearched: Boolean?,
 		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<ParticipantSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<ParticipantEntity> {
@@ -304,19 +332,8 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			fullSelect(projectId, dateTimeSearched, user, project, creator, editor, similarityScore, fullCount)
-				.where(
-					searchConditions(
-						projectId,
-						textSearched,
-						isMajor,
-						typeSearched,
-						visibilitySearched,
-						availabilitySearched,
-						presenceSearched,
-						dateTimeSearched
-					)
-				)
-				.orderBy(similarityScore.desc(), TB_PARTICIPANT.LAST_NAME)
+				.where(searchConditions(projectId, textSearched, isMajor, typeSearched, visibilitySearched, availabilitySearched, presenceSearched, dateTimeSearched))
+				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map {
 			it.toEntity(

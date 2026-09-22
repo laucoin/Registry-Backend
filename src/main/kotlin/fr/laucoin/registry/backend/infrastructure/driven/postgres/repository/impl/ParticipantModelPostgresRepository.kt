@@ -1,11 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
@@ -31,6 +33,7 @@ class ParticipantModelPostgresRepository(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
+		sortFields: List<SortModel<ParticipantSortFieldEnum>>,
 	): Mono<PageModel<ParticipantModel>> {
 		return repository.findAll(
 			projectId,
@@ -41,6 +44,7 @@ class ParticipantModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.presenceSearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)

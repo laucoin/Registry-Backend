@@ -1,12 +1,14 @@
 package fr.laucoin.registry.backend.domain.service
 
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
@@ -18,6 +20,7 @@ interface IProjectService {
 		pageable: PageableModel,
 		withProfile: Boolean,
 		searchParams: ProjectSearchParamModel,
+		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectModel>>
 
 	fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>

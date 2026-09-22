@@ -107,8 +107,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 			presenceSearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

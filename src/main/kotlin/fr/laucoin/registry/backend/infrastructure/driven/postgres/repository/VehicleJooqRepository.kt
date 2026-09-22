@@ -1,6 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum.BRAND
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum.LICENSE_PLATE
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum.MODEL
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.similarity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbProject
@@ -22,6 +30,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.count
@@ -114,6 +123,28 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 			dateTimeSearched
 		)
 
+	private fun VehicleSortFieldEnum.toJooqField(): Field<*> = when (this) {
+		BRAND -> TB_VEHICLE.BRAND
+		MODEL -> TB_VEHICLE.MODEL
+		LICENSE_PLATE -> TB_VEHICLE.LICENSE_PLATE
+		CREATED_DATE -> TB_VEHICLE.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_VEHICLE.LAST_MODIFIED_DATE
+	}
+
+	// similarityScore sorts first (a no-op constant when there's no text search — Postgres accepts
+	// ordering by a constant), TB_VEHICLE.BRAND always stays last as the final tiebreaker (v1's sole,
+	// implicit order), so pagination stays deterministic whether or not a v2 caller requested a sort,
+	// and a caller sorting by BRAND itself just repeats the same key harmlessly.
+	private fun orderFields(
+		similarityScore: Field<Float>,
+		sortFields: List<SortModel<VehicleSortFieldEnum>>,
+	): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>(similarityScore.desc())
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_VEHICLE.BRAND
+		return fields
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,
@@ -121,6 +152,7 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 		availabilitySearched: Boolean?,
 		presenceSearched: Boolean?,
 		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<VehicleSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<VehicleEntity> {
@@ -161,18 +193,8 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 				.join(project).on(TB_VEHICLE.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
 				.leftJoin(creator).on(TB_VEHICLE.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_VEHICLE.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(
-					searchConditions(
-						projectId,
-						textSearched,
-						visibilitySearched,
-						availabilitySearched,
-						presenceSearched,
-						dateTimeSearched,
-						lastMovementType
-					)
-				)
-				.orderBy(similarityScore.desc(), TB_VEHICLE.BRAND)
+				.where(searchConditions(projectId, textSearched, visibilitySearched, availabilitySearched, presenceSearched, dateTimeSearched, lastMovementType))
+				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(lastMovementType, lastMovementDateTime, creator, editor, project, fullCount) }
 	}

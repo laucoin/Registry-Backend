@@ -45,14 +45,14 @@ class ActivityServiceTest {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ActivitySearchParamModel()
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findActivitiesPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test

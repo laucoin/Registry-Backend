@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileErro
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -13,6 +14,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
@@ -44,9 +46,10 @@ class ProjectProfileService(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
 	): Mono<PageModel<ProjectProfileModel>> {
 		return port
-			.findProjectProfilesPageByProjectId(projectId, pageable, searchParams)
+			.findProjectProfilesPageByProjectId(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findProjectProfileById(

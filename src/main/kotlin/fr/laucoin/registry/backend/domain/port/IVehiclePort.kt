@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.domain.port
 
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import java.time.LocalDate
@@ -15,6 +17,7 @@ interface IVehiclePort {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: VehicleSearchParamModel,
+		sortFields: List<SortModel<VehicleSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<VehicleModel>>
 
 	fun countAll(projectId: UUID, searchParams: VehicleSearchParamModel): Mono<Long>

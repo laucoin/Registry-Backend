@@ -58,6 +58,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findAll(
 			textSearched = null,
 			visibilitySearched = null,
+			sortFields = emptyList(),
 			pageable.limit,
 			pageable.offset,
 		)

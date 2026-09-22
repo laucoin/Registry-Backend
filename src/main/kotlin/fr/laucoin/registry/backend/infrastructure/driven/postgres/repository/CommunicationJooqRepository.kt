@@ -1,5 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum.DATE_TIME
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.similarity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbActivity
@@ -22,6 +28,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.SelectField
 import org.jooq.SelectOnConditionStep
@@ -100,12 +107,31 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 		return afterStart.and(beforeEnd)
 	}
 
+	private fun CommunicationSortFieldEnum.toJooqField(): Field<*> = when (this) {
+		DATE_TIME -> TB_COMMUNICATION.DATE_TIME
+		CREATED_DATE -> TB_COMMUNICATION.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_COMMUNICATION.LAST_MODIFIED_DATE
+	}
+
+	// similarityScore sorts first (a no-op constant when there's no text search), TB_COMMUNICATION.DATE_TIME
+	// (descending) always stays last as the final tiebreaker (v1's sole, implicit order).
+	private fun orderFields(
+		similarityScore: Field<Float>,
+		sortFields: List<SortModel<CommunicationSortFieldEnum>>,
+	): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>(similarityScore.desc())
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_COMMUNICATION.DATE_TIME.desc()
+		return fields
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,
 		visibilitySearched: Boolean?,
 		startDateTimeSearched: ZonedDateTime?,
 		endDateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<CommunicationSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<CommunicationEntity> {
@@ -127,7 +153,7 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 						.and(searchCondition(textSearched))
 						.and(dateRangeCondition(startDateTimeSearched, endDateTimeSearched))
 				)
-				.orderBy(similarityScore.desc(), TB_COMMUNICATION.DATE_TIME.desc())
+				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(activity, alert, creator, editor, project, fullCount) }
 	}

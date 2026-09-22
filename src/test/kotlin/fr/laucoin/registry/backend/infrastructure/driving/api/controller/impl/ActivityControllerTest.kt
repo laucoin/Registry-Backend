@@ -48,6 +48,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -275,7 +276,7 @@ class ActivityControllerTest: TestContext() {
 			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ActivityModel()))
-		whenever(service.findActivitiesPage(any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findActivitiesPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ActivityReaderDto())),
 		)
@@ -304,7 +305,7 @@ class ActivityControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findActivitiesPage(projectId, pageable, searchParams)
+		verify(service).findActivitiesPage(projectId, pageable, searchParams, emptyList())
 		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -344,6 +345,36 @@ class ActivityControllerTest: TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, expectedMessage)
+
+		verifyNoInteractions(readerMapper)
+		verifyNoInteractions(movementReaderMapper)
+		verifyNoInteractions(writerMapper)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findActivities return 400 with every error when multiple query params are invalid`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.get()
+			.uri(
+				uriBuilder(
+					BASE_URL,
+					listOf(projectId),
+					listOf(Pair("pageNumber", -1), Pair("pageSize", 0)),
+				)
+			)
+			.exchange()
+
+		// Assert
+		val error = result.body<Map<*, *>>(BAD_REQUEST)
+		val errors = error?.get("errors") as? List<*>
+		assertEquals(2, errors?.size)
+		assertEquals(
+			setOf(PAGE_NUMBER_IS_LOWER_THAN_ZERO, PAGE_SIZE_IS_LOWER_THAN_ONE),
+			errors?.map { (it as Map<*, *>)["code"] }?.toSet(),
+		)
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementReaderMapper)
@@ -525,6 +556,40 @@ class ActivityControllerTest: TestContext() {
 		verifyNoInteractions(service)
 	}
 
+	@Test
+	fun `Should createActivity return 400 with every error when multiple body fields are invalid`() {
+		// Arrange
+		val activity = ActivityWriterDto(
+			name = "",
+			description = "This is an activity very interesting".repeat(60),
+			duration = "PT15M",
+			allowedParticipants = NumericRangeWriterDto(lower = 1, upper = 10),
+			startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+			endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(activity)
+			.exchange()
+
+		// Assert
+		val error = result.body<Map<*, *>>(BAD_REQUEST)
+		val errors = error?.get("errors") as? List<*>
+		assertEquals(2, errors?.size)
+		assertEquals(
+			setOf(ACTIVITY_NAME_NULL_OR_BLANK, ACTIVITY_DESCRIPTION_TOO_LONG),
+			errors?.map { (it as Map<*, *>)["code"] }?.toSet(),
+		)
+
+		verifyNoInteractions(readerMapper)
+		verifyNoInteractions(movementReaderMapper)
+		verifyNoInteractions(writerMapper)
+		verifyNoInteractions(service)
+	}
 
 	@Test
 	fun `Should updateActivity return 200`() {

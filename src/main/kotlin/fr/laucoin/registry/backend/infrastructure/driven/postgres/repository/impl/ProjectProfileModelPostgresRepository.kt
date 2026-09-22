@@ -2,12 +2,14 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileEntity
@@ -31,7 +33,8 @@ class ProjectProfileModelPostgresRepository(
 	override fun findProjectProfilesPageByUserId(
 		userId: UUID,
 		pageable: PageableModel,
-		searchParams: ProjectProfileSearchParamModel
+		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByUserId(
 			userId,
@@ -40,6 +43,7 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.statusSearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
@@ -49,6 +53,7 @@ class ProjectProfileModelPostgresRepository(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByProjectId(
 			projectId,
@@ -57,6 +62,7 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.statusSearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)

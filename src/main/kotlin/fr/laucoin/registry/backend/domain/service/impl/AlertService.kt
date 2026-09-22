@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DELETE_HAS_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_STATUS_IS_NOT_UPDATABLE
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -16,6 +17,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -39,9 +41,10 @@ class AlertService(
 	override fun findAlertsPage(
 		projectId: UUID,
 		pageable: PageableModel,
-		searchParams: AlertSearchParamModel
+		searchParams: AlertSearchParamModel,
+		sortFields: List<SortModel<AlertSortFieldEnum>>,
 	): Mono<PageModel<AlertModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findAlertById(

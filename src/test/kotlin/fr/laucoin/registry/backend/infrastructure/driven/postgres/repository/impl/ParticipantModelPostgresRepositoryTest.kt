@@ -124,8 +124,9 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			availabilitySearched = null,
 			presenceSearched = null,
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, times(10)).toModel(any())
 	}

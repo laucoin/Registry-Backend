@@ -95,14 +95,14 @@ class UserProjectProfileServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
 
-		whenever(port.findProjectProfilesPageByUserId(any(), any(), any()))
+		whenever(port.findProjectProfilesPageByUserId(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectProfilesPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findProjectProfilesPageByUserId(projectId, pageable, params)
+		verify(port).findProjectProfilesPageByUserId(projectId, pageable, params, emptyList())
 	}
 
 	@ParameterizedTest

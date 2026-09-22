@@ -77,6 +77,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
+			sortFields = emptyList(),
 			pageable.limit,
 			pageable.offset,
 		)
@@ -105,8 +106,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

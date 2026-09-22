@@ -213,7 +213,7 @@ class ParticipantControllerTest: TestContext() {
 			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
-		whenever(service.findParticipantsPage(any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findParticipantsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ParticipantReaderDto())),
 		)
@@ -242,7 +242,7 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findParticipantsPage(projectId, pageable, searchParams)
+		verify(service).findParticipantsPage(projectId, pageable, searchParams, emptyList())
 		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(movementReaderMapper)

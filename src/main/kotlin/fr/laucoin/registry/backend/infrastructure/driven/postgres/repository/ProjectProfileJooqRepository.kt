@@ -1,6 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum.USER_FIRST_NAME
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum.USER_LAST_NAME
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileRoleCountEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileRoleEntity
@@ -27,6 +34,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.SelectField
 import org.jooq.SelectOnConditionStep
@@ -147,6 +155,26 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		return endsAfterSearchStart.and(startsBeforeSearchEnd)
 	}
 
+	private fun ProjectProfileSortFieldEnum.toJooqField(user: TbUser): Field<*> = when (this) {
+		USER_LAST_NAME -> user.LAST_NAME
+		USER_FIRST_NAME -> user.FIRST_NAME
+		CREATED_DATE -> TB_PROJECT_PROFILE.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_PROJECT_PROFILE.LAST_MODIFIED_DATE
+	}
+
+	// tiebreaker stays last as the final, stable order (v1's sole, implicit order).
+	private fun orderFields(
+		user: TbUser,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
+		tiebreaker: OrderField<*>,
+		vararg leading: OrderField<*>,
+	): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>(*leading)
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField(user).desc() else it.field.toJooqField(user).asc() }
+		fields += tiebreaker
+		return fields
+	}
+
 	fun findByUserId(
 		userId: UUID,
 		textSearched: String?,
@@ -154,6 +182,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		availabilitySearched: Boolean?,
 		statusSearched: List<ProfileStatusEnum>,
 		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<ProjectProfileEntity> {
@@ -172,7 +201,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
 						.and(dateInRangeCondition(dateTimeSearched))
 				)
-				.orderBy(project.NAME)
+				.orderBy(orderFields(user, sortFields, tiebreaker = project.NAME))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(user, project, creator, editor, fullCount) }
 	}
@@ -184,6 +213,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		availabilitySearched: Boolean?,
 		statusSearched: List<ProfileStatusEnum>,
 		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<ProjectProfileEntity> {
@@ -206,7 +236,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
 						.and(dateInRangeCondition(dateTimeSearched))
 				)
-				.orderBy(similarityScore.desc(), user.LAST_NAME)
+				.orderBy(orderFields(user, sortFields, tiebreaker = user.LAST_NAME, leading = arrayOf(similarityScore.desc())))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(user, project, creator, editor, fullCount) }
 	}

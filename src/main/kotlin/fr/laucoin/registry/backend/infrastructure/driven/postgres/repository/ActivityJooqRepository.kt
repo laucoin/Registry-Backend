@@ -1,5 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum.NAME
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum.START_AVAILABILITY_DATE
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbProject
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbUser
@@ -22,6 +29,8 @@ import java.time.ZonedDateTime
 import java.util.UUID
 import org.jooq.Condition
 import org.jooq.DSLContext
+import org.jooq.Field
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.count
@@ -59,12 +68,33 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime): Condition =
 		activeAtCondition(TB_ACTIVITY.START_AVAILABILITY_DATE, TB_ACTIVITY.START_AVAILABILITY_TIME, TB_ACTIVITY.END_AVAILABILITY_DATE, TB_ACTIVITY.END_AVAILABILITY_TIME, dateTimeSearched)
 
+	private fun ActivitySortFieldEnum.toJooqField(): Field<*> = when (this) {
+		NAME -> TB_ACTIVITY.NAME
+		CREATED_DATE -> TB_ACTIVITY.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_ACTIVITY.LAST_MODIFIED_DATE
+		START_AVAILABILITY_DATE -> TB_ACTIVITY.START_AVAILABILITY_DATE
+	}
+
+	// similarityScore sorts first (a no-op constant when there's no text search), TB_ACTIVITY.NAME
+	// always stays last as the final tiebreaker (v1's sole, implicit order), so pagination stays
+	// deterministic whether or not a v2 caller requested a sort.
+	private fun orderFields(
+		similarityScore: Field<Float>,
+		sortFields: List<SortModel<ActivitySortFieldEnum>>,
+	): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>(similarityScore.desc())
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_ACTIVITY.NAME
+		return fields
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,
 		visibilitySearched: Boolean?,
 		availabilitySearched: Boolean?,
 		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<ActivitySortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<ActivityEntity> {
@@ -85,7 +115,7 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(creator).on(TB_ACTIVITY.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_ACTIVITY.LAST_MODIFIED_BY.eq(editor.ID))
 				.where(searchConditions(projectId, textSearched, visibilitySearched, availabilitySearched, dateTimeSearched))
-				.orderBy(similarityScore.desc(), TB_ACTIVITY.NAME)
+				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(creator, editor, project, fullCount) }
 	}

@@ -1,11 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.SortModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
@@ -30,6 +32,7 @@ class GroupModelPostgresRepository(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: GroupSearchParamModel,
+		sortFields: List<SortModel<GroupSortFieldEnum>>,
 	): Mono<PageModel<GroupModel>> {
 		return repository.findAll(
 			projectId,
@@ -37,6 +40,7 @@ class GroupModelPostgresRepository(
 			searchParams.visibilitySearched,
 			searchParams.presenceSearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, GroupEntity::fullCount, mapper::toModel)

@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileErro
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -14,6 +15,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
@@ -38,9 +40,10 @@ class UserProjectProfileService(
 		userId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
 	): Mono<PageModel<ProjectProfileModel>> {
 		return port
-			.findProjectProfilesPageByUserId(userId, pageable, searchParams)
+			.findProjectProfilesPageByUserId(userId, pageable, searchParams, sortFields)
 	}
 
 	override fun <T: GenericModel> validateNotLastProjectRoleLevel0(

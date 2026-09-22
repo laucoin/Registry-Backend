@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -9,6 +10,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
@@ -33,8 +35,9 @@ class VehicleService(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: VehicleSearchParamModel,
+		sortFields: List<SortModel<VehicleSortFieldEnum>>,
 	): Mono<PageModel<VehicleModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {

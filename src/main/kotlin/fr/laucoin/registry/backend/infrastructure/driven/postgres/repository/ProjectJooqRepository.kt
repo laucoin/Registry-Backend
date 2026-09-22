@@ -1,5 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum.NAME
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectRelationEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.unaccent2
@@ -23,6 +29,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.count
@@ -71,41 +78,37 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 		return DSL.and(conditions)
 	}
 
+	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime): Condition {
+		val date = dateTimeSearched.toLocalDate()
+		val time = dateTimeSearched.toOffsetDateTime().toOffsetTime()
+		val startsBefore = TB_PROJECT.BEGIN_DATE.isNull
+			.or(TB_PROJECT.BEGIN_DATE.lt(date))
+			.or(TB_PROJECT.BEGIN_DATE.eq(date).and(TB_PROJECT.BEGIN_TIME.isNull.or(TB_PROJECT.BEGIN_TIME.le(time))))
+		val endsAfter = TB_PROJECT.END_DATE.isNull
+			.or(TB_PROJECT.END_DATE.gt(date))
+			.or(TB_PROJECT.END_DATE.eq(date).and(TB_PROJECT.END_TIME.isNull.or(TB_PROJECT.END_TIME.ge(time))))
+		return startsBefore.and(endsAfter)
+	}
+
+	private fun ProjectSortFieldEnum.toJooqField(): Field<*> = when (this) {
+		NAME -> TB_PROJECT.NAME
+		CREATED_DATE -> TB_PROJECT.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_PROJECT.LAST_MODIFIED_DATE
+	}
+
+	// TB_PROJECT.NAME always stays as the final tiebreaker (v1's sole, implicit order).
+	private fun orderFields(sortFields: List<SortModel<ProjectSortFieldEnum>>): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>()
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_PROJECT.NAME
+		return fields
+	}
+
 	fun findAll(
 		textSearched: String?,
 		visibilitySearched: Boolean?,
 		dateTimeSearched: ZonedDateTime?,
-		limit: Int,
-		offset: Int
-	): Flux<ProjectEntity> {
-		val creator = creatorTable()
-		val editor = editorTable()
-		val fullCount = count().over().`as`("full_count")
-		return Flux.from(
-			dsl.select(
-				TB_PROJECT.asterisk(),
-				creator.FIRST_NAME,
-				creator.LAST_NAME,
-				creator.EMAIL,
-				editor.FIRST_NAME,
-				editor.LAST_NAME,
-				editor.EMAIL,
-				fullCount
-			)
-				.from(TB_PROJECT)
-				.leftJoin(creator).on(TB_PROJECT.CREATED_BY.eq(creator.ID))
-				.leftJoin(editor).on(TB_PROJECT.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(searchConditions(textSearched, visibilitySearched, dateTimeSearched))
-				.orderBy(TB_PROJECT.NAME)
-				.limit(limit).offset(offset)
-		).map { it.toEntity(creator, editor, fullCount) }
-	}
-
-	fun findAllInProjectIds(
-		projectIds: List<UUID>,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<ProjectEntity> {
@@ -126,11 +129,40 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 				.from(TB_PROJECT)
 				.leftJoin(creator).on(TB_PROJECT.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_PROJECT.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(
-					TB_PROJECT.ID.`in`(projectIds)
-						.and(searchConditions(textSearched, visibilitySearched, dateTimeSearched))
-				)
-				.orderBy(TB_PROJECT.NAME)
+				.where(searchConditions(textSearched, visibilitySearched, dateTimeSearched))
+				.orderBy(orderFields(sortFields))
+				.limit(limit).offset(offset)
+		).map { it.toEntity(creator, editor, fullCount) }
+	}
+
+	fun findAllInProjectIds(
+		projectIds: List<UUID>,
+		textSearched: String?,
+		visibilitySearched: Boolean?,
+		dateTimeSearched: ZonedDateTime?,
+		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
+		limit: Int,
+		offset: Int,
+	): Flux<ProjectEntity> {
+		val creator = creatorTable()
+		val editor = editorTable()
+		val fullCount = count().over().`as`("full_count")
+		return Flux.from(
+			dsl.select(
+				TB_PROJECT.asterisk(),
+				creator.FIRST_NAME,
+				creator.LAST_NAME,
+				creator.EMAIL,
+				editor.FIRST_NAME,
+				editor.LAST_NAME,
+				editor.EMAIL,
+				fullCount
+			)
+				.from(TB_PROJECT)
+				.leftJoin(creator).on(TB_PROJECT.CREATED_BY.eq(creator.ID))
+				.leftJoin(editor).on(TB_PROJECT.LAST_MODIFIED_BY.eq(editor.ID))
+				.where(TB_PROJECT.ID.`in`(projectIds).and(searchConditions(textSearched, visibilitySearched, dateTimeSearched)))
+				.orderBy(orderFields(sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(creator, editor, fullCount) }
 	}

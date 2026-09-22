@@ -43,12 +43,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/projects/{projectId}/participants.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Participants management", description = "API for Participants-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/participants")
 interface IParticipantV1Controller {
 	@Operation(
 		summary = "Find Participants",
 		description = "Find or get paginated Participants",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping
@@ -71,6 +76,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Find Participants",
 		description = "Find or get paginated Participants",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/birthday")
@@ -81,6 +87,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Find Participant",
 		description = "Find Participant by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/{id}")
@@ -92,6 +99,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Search Users",
 		description = "Search Users to link to a Participant",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
 	@GetMapping("/search/users")
@@ -103,6 +111,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Search Groups",
 		description = "Search Groups to add Participant in it",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
 	@GetMapping("/search/groups")
@@ -114,6 +123,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Find Participant Movements",
 		description = "Find or get paginated participant Movements",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')")
 	@GetMapping("/{id}/movements")
@@ -139,6 +149,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Create Participant",
 		description = "Create Participant linked to the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_C')")
 	@PostMapping
@@ -151,6 +162,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Update Participant",
 		description = "Update Participant",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@PatchMapping("/{id}")
@@ -165,6 +177,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Disable Participant",
 		description = "Disable Participant, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@PatchMapping("/{id}/disable")
@@ -177,6 +190,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Enable Participant",
 		description = "Enable Participant, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@PatchMapping("/{id}/enable")
@@ -189,6 +203,7 @@ interface IParticipantV1Controller {
 	@Operation(
 		summary = "Delete Participant",
 		description = "Delete all Participant data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_D')")
 	@DeleteMapping("/{id}")

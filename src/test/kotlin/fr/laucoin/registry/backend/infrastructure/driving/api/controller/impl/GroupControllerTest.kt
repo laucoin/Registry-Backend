@@ -187,7 +187,7 @@ class GroupControllerTest: TestContext() {
 			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(GroupModel()))
-		whenever(service.findGroupsPage(any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findGroupsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(lightReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(GroupReaderDto())),
 		)
@@ -216,7 +216,7 @@ class GroupControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findGroupsPage(projectId, pageable, searchParams)
+		verify(service).findGroupsPage(projectId, pageable, searchParams, emptyList())
 		verify(lightReaderMapper).toDtoPage(any())
 		verifyNoInteractions(participantReaderMapper)
 		verifyNoInteractions(writerMapper)

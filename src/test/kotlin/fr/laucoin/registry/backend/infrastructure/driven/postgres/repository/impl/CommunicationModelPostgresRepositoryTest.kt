@@ -84,8 +84,9 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 			startDateTimeSearched = null,
 			endDateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

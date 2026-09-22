@@ -1,6 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum.CREATED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum.EMAIL
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum.FIRST_NAME
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum.LAST_LOGIN
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum.LAST_MODIFIED_DATE
+import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum.LAST_NAME
 import fr.laucoin.registry.backend.domain.enumeration.UserTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.CurrentUserEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.similarity
@@ -19,6 +28,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
+import org.jooq.OrderField
 import org.jooq.Record
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.count
@@ -45,7 +55,31 @@ class UserJooqRepository(private val dsl: DSLContext) {
 	private fun searchCondition(textSearched: String?): Condition =
 		textSearched?.let { similarity(TB_USER.SEARCH_TEXT, DSL.`val`(it)).gt(0f) } ?: DSL.noCondition()
 
-	fun findAll(textSearched: String?, visibilitySearched: Boolean?, limit: Int, offset: Int): Flux<UserEntity> {
+	private fun UserSortFieldEnum.toJooqField(): Field<*> = when (this) {
+		FIRST_NAME -> TB_USER.FIRST_NAME
+		LAST_NAME -> TB_USER.LAST_NAME
+		EMAIL -> TB_USER.EMAIL
+		LAST_LOGIN -> TB_USER.LAST_LOGIN
+		CREATED_DATE -> TB_USER.CREATED_DATE
+		LAST_MODIFIED_DATE -> TB_USER.LAST_MODIFIED_DATE
+	}
+
+	// similarityScore sorts first (a no-op constant when there's no text search), TB_USER.LAST_NAME
+	// always stays last as the final tiebreaker (v1's sole, implicit order).
+	private fun orderFields(similarityScore: Field<Float>, sortFields: List<SortModel<UserSortFieldEnum>>): List<OrderField<*>> {
+		val fields = mutableListOf<OrderField<*>>(similarityScore.desc())
+		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
+		fields += TB_USER.LAST_NAME
+		return fields
+	}
+
+	fun findAll(
+		textSearched: String?,
+		visibilitySearched: Boolean?,
+		sortFields: List<SortModel<UserSortFieldEnum>> = emptyList(),
+		limit: Int,
+		offset: Int,
+	): Flux<UserEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
@@ -68,11 +102,8 @@ class UserJooqRepository(private val dsl: DSLContext) {
 				.from(TB_USER)
 				.leftJoin(creator).on(TB_USER.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_USER.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(
-					notPurgedAndNotServiceAccount().and(searchCondition(textSearched))
-						.and(visibleCondition(TB_USER.VISIBLE, visibilitySearched))
-				)
-				.orderBy(similarityScore.desc(), TB_USER.LAST_NAME)
+				.where(notPurgedAndNotServiceAccount().and(searchCondition(textSearched)).and(visibleCondition(TB_USER.VISIBLE, visibilitySearched)))
+				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(creator, editor, fullCount) }
 	}

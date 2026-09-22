@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.ActivitySortFieldEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -7,6 +8,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
@@ -17,6 +19,7 @@ interface IActivityService {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
+		sortFields: List<SortModel<ActivitySortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ActivityModel>>
 
 	fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel>
