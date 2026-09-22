@@ -6,7 +6,7 @@ import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.ErrorDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
 import org.springframework.http.HttpHeaders.RETRY_AFTER
 import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.TOO_MANY_REQUESTS

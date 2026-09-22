@@ -145,7 +145,7 @@ spring:
     web-application-type: reactive
     banner-mode: off
   r2dbc:
-    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    url: r2dbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
     pool:

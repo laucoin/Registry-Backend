@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.domain.validator
 import fr.laucoin.registry.backend.domain.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.CustomDateTimeWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
 import java.time.LocalDate
 import java.time.ZonedDateTime

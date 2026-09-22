@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.annotation.MovementGuestContent
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNotEmpty
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNullOrEmpty
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import jakarta.validation.ConstraintValidatorContext
 
 class MovementGuestContentValidator: GenericValidator<MovementGuestContent, GuestMovementWriterDto>() {

@@ -2,9 +2,9 @@ package fr.laucoin.registry.backend.domain.validator
 
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.GuestMovementWriterDto.GuestWriterDto
-import fr.laucoin.registry.backend.infrastructure.out.api.dto.writer.MovementContentWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto.GuestWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.MovementContentWriterDto
 import jakarta.validation.ConstraintValidatorContext
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals

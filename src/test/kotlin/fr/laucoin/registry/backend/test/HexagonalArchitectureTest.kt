@@ -33,23 +33,23 @@ class HexagonalArchitectureTest {
 		.check(classes)
 
 	@ArchTest
-	fun `Infrastructure out should not depend on infrastructure in`(classes: JavaClasses) = noClasses()
+	fun `Infrastructure driving should not depend on infrastructure driven`(classes: JavaClasses) = noClasses()
 		.that()
-		.resideInAPackage("$INFRASTRUCTURE.out..")
+		.resideInAPackage("$INFRASTRUCTURE.driving..")
 		.should()
 		.dependOnClassesThat()
-		.resideInAnyPackage("$INFRASTRUCTURE.in..")
+		.resideInAnyPackage("$INFRASTRUCTURE.driven..")
 		.check(classes)
 
 	@ArchTest
 	fun `Postgres sub folder can access entity`(classes: JavaClasses) =
 		noClasses()
 			.that()
-			.resideInAPackage("$INFRASTRUCTURE.in.postgres..entity..")
+			.resideInAPackage("$INFRASTRUCTURE.driven.postgres..entity..")
 			.should()
 			.onlyBeAccessed()
 			.byClassesThat()
-			.resideOutsideOfPackages("$INFRASTRUCTURE.in.postgres..")
+			.resideOutsideOfPackages("$INFRASTRUCTURE.driven.postgres..")
 			.check(classes)
 
 	@ArchTest
@@ -58,7 +58,7 @@ class HexagonalArchitectureTest {
 			.that()
 			.areAnnotatedWith(RestController::class.java)
 			.should()
-			.notImplement(resideInAnyPackage("$INFRASTRUCTURE.out.api.."))
+			.notImplement(resideInAnyPackage("$INFRASTRUCTURE.driving.api.."))
 			.check(classes)
 
 	@ArchTest
@@ -67,7 +67,7 @@ class HexagonalArchitectureTest {
 			.that()
 			.areAnnotatedWith(Repository::class.java)
 			.should()
-			.resideOutsideOfPackages("$INFRASTRUCTURE.in.postgres..")
+			.resideOutsideOfPackages("$INFRASTRUCTURE.driven.postgres..")
 			.check(classes)
 
 	@ArchTest
@@ -78,8 +78,8 @@ class HexagonalArchitectureTest {
 			.should()
 			.resideOutsideOfPackages(
 				"$DOMAIN.service..",
-				"$INFRASTRUCTURE.in.postgres..",
-				"$INFRASTRUCTURE.in..adapter.."
+				"$INFRASTRUCTURE.driven.postgres..",
+				"$INFRASTRUCTURE.driven..adapter.."
 			)
 			.check(classes)
 
@@ -91,8 +91,8 @@ class HexagonalArchitectureTest {
 			.should()
 			.resideOutsideOfPackages(
 				"$DOMAIN.service..",
-				"$INFRASTRUCTURE.in.postgres..repository.impl..",
-				"$INFRASTRUCTURE.in..adapter..",
+				"$INFRASTRUCTURE.driven.postgres..repository.impl..",
+				"$INFRASTRUCTURE.driven..adapter..",
 			)
 			.check(classes)
 
@@ -206,7 +206,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Entity Repository should end with EntityRepository`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$INFRASTRUCTURE.in.postgres..repository..")
+		.resideInAPackage("$INFRASTRUCTURE.driven.postgres..repository..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Repository")
@@ -219,7 +219,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Adapter should end with Adapter`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$INFRASTRUCTURE.in..adapter..")
+		.resideInAPackage("$INFRASTRUCTURE.driven..adapter..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Adapter")
@@ -228,7 +228,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Controller should end with Controller`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$INFRASTRUCTURE.out.api.controller..")
+		.resideInAPackage("$INFRASTRUCTURE.driving.api.controller..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveNameMatching(".*Controller(Advice)?")
@@ -237,7 +237,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Dto should end with Dto`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$INFRASTRUCTURE.out.api.dto..")
+		.resideInAPackage("$INFRASTRUCTURE.driving.api.dto..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Dto")
@@ -246,7 +246,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `DtoMapper should end with DtoMapper`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$INFRASTRUCTURE.out.api.mapper..")
+		.resideInAPackage("$INFRASTRUCTURE.driving.api.mapper..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("DtoMapper")

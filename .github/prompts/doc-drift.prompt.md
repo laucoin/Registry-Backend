@@ -25,7 +25,7 @@ ADRs). Use that split for steps 2 and 3 below. If the real structure differs, ad
 
 Compare the Technical documentation against what the backend actually does:
 
-- Hexagonal layering (`domain` / `port` / `infrastructure/in` / `infrastructure/out`) and whether it still matches
+- Hexagonal layering (`domain` / `port` / `infrastructure/driving` / `infrastructure/driven`) and whether it still matches
   what's documented.
 - Reactive stack (WebFlux/R2DBC) claims vs actual code.
 - API contracts: versions (`/api/v1`, `/api/v2`, sort-direction grammar, etc.), resource shapes, status codes,

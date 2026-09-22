@@ -162,14 +162,15 @@ these:
 - **Hexagonal boundaries are build-enforced.** `HexagonalArchitectureTest` (ArchUnit) runs on every `./gradlew build`; a
   violation fails the build. The root package `fr.laucoin.registry.backend` contains only `config/`, `domain/`,
   `infrastructure/` — nothing else. (ADR 001)
-- **Inverted adapter naming.** `infrastructure/out/api` is the REST layer; `infrastructure/in/postgres` and
-  `infrastructure/in/idp` are the driven adapters. `infrastructure.out` must not depend on `infrastructure.in` — the
-  REST layer reaches persistence only through domain `port` interfaces.
+- **Driving/driven adapter split.** `infrastructure/driving/api` is the REST layer (driving adapter — called by the
+  outside world); `infrastructure/driven/postgres` and `infrastructure/driven/idp` are the driven adapters (called by
+  the application). `infrastructure.driving` must not depend on `infrastructure.driven` — the REST layer reaches
+  persistence only through domain `port` interfaces.
 - **Every `@RestController` implements a contract interface** that carries the `@RequestMapping`, `@PreAuthorize`,
   OpenAPI annotations and bean-validation constraints; the impl only maps DTOs and delegates. No endpoint ships without
   an authorization rule. (ADR 001)
 - **No entity crosses the API boundary.** Reader (response) / writer (request) DTOs only; Postgres `entity` classes are
-  package-private to `infrastructure.in.postgres` (ArchUnit).
+  package-private to `infrastructure.driven.postgres` (ArchUnit).
 - **Non-blocking on the request path.** No `.block()`, `Thread.sleep`, or blocking JDBC/file IO. The only JDBC use is
   Flyway at boot. Push filtering, sorting and pagination into SQL. Multi-step writes run inside
   `transactionalOperator::transactional`. (ADR 002)
