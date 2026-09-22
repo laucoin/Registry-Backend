@@ -1,3 +1,9 @@
+## [1.16.0](https://github.com/laucoin/Registry-Backend/compare/1.15.0...1.16.0) (2026-09-22)
+
+### 🧹 Improvements
+
+* **architecture:** Make infrastructure in and out folder more readable ([#55](https://github.com/laucoin/Registry-Backend/issues/55)) ([65ef791](https://github.com/laucoin/Registry-Backend/commit/65ef791805165e83fb29e0e502cf5c830d5f1d09))
+
 ## [1.15.0](https://github.com/laucoin/Registry-Backend/compare/1.14.0...1.15.0) (2026-09-20)
 
 ### 🏎️ Improvements
