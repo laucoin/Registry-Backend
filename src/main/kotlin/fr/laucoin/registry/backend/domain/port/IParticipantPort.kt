@@ -21,7 +21,9 @@ interface IParticipantPort {
 		sortFields: List<SortModel<ParticipantSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ParticipantModel>>
 
-	fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantModel>
+	fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel>
+	fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel>
+	fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel>
 	fun countAll(projectId: UUID, searchParams: ParticipantSearchParamModel): Mono<Long>
 	fun findPageByGroupId(
 		projectId: UUID,

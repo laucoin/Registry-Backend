@@ -2,11 +2,16 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
+import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
+import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_HISTORY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
@@ -16,11 +21,14 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.OngoingActivityOutingReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
@@ -37,6 +45,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -89,6 +98,19 @@ interface IActivityV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<MovementReaderDto>>
+
+	@Operation(
+		summary = "Find ongoing Activity outings",
+		description = "Activities whose last Movement is an outing (OUT), each with their 3 most recent Communications for a contextualized preview; capped at \"limit\" rows",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
+	@GetMapping("/ongoing")
+	fun findOngoingActivityOutings(
+		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		limit: Int,
+	): Flux<OngoingActivityOutingReaderDto>
 
 	@Operation(
 		summary = "Create Activity",

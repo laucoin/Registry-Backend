@@ -2,6 +2,10 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
+import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
+import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
@@ -27,6 +31,8 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
@@ -72,13 +78,42 @@ interface IParticipantV2Controller {
 	): Mono<PageReaderDto<ParticipantReaderDto>>
 
 	@Operation(
-		summary = "Find Participants",
-		description = "Find or get paginated Participants",
+		summary = "Find Participants with a birthday today",
+		description = "Participants whose birthday is today; capped at \"limit\" rows",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/birthday")
 	fun findBirthdays(
 		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		limit: Int,
+	): Flux<ParticipantReaderDto>
+
+	@Operation(
+		summary = "Find Participants arriving today",
+		description = "Participants whose presence window opens today; capped at \"limit\" rows",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
+	@GetMapping("/arrivals-today")
+	fun findArrivingToday(
+		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		limit: Int,
+	): Flux<ParticipantReaderDto>
+
+	@Operation(
+		summary = "Find Participants departing today",
+		description = "Participants whose presence window closes today; capped at \"limit\" rows",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
+	@GetMapping("/departures-today")
+	fun findDepartingToday(
+		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		limit: Int,
 	): Flux<ParticipantReaderDto>
 
 	@Operation(

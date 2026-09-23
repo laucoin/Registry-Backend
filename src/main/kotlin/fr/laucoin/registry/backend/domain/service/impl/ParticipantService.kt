@@ -71,8 +71,16 @@ class ParticipantService(
 		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
-	override fun findBirthdays(projectId: UUID): Flux<ParticipantModel> {
-		return port.findBirthdays(projectId, visibilitySearched = true)
+	override fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findBirthdays(projectId, visibilitySearched = true, limit)
+	}
+
+	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findArrivingToday(projectId, visibilitySearched = true, limit)
+	}
+
+	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findDepartingToday(projectId, visibilitySearched = true, limit)
 	}
 
 	override fun findParticipantsByIds(

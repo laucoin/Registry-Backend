@@ -220,13 +220,37 @@ class ParticipantServiceTest {
 		// Arrange
 		val onlyVisible = true
 
-		whenever(port.findBirthdays(any(), any())).thenReturn(Flux.just(commonParticipant()))
+		whenever(port.findBirthdays(any(), any(), any())).thenReturn(Flux.just(commonParticipant()))
 
 		// Act
-		service.findBirthdays(projectId).blockFirst()
+		service.findBirthdays(projectId, limit = 1000).blockFirst()
 
 		// Assert
-		verify(port).findBirthdays(projectId, onlyVisible)
+		verify(port).findBirthdays(projectId, onlyVisible, 1000)
+	}
+
+	@Test
+	fun `Should findArrivingToday call port findArrivingToday`() {
+		// Arrange
+		whenever(port.findArrivingToday(any(), any(), any())).thenReturn(Flux.just(commonParticipant()))
+
+		// Act
+		service.findArrivingToday(projectId, limit = 5).blockFirst()
+
+		// Assert
+		verify(port).findArrivingToday(projectId, visibilitySearched = true, 5)
+	}
+
+	@Test
+	fun `Should findDepartingToday call port findDepartingToday`() {
+		// Arrange
+		whenever(port.findDepartingToday(any(), any(), any())).thenReturn(Flux.just(commonParticipant()))
+
+		// Act
+		service.findDepartingToday(projectId, limit = 5).blockFirst()
+
+		// Assert
+		verify(port).findDepartingToday(projectId, visibilitySearched = true, 5)
 	}
 
 	@Test

@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.model.OngoingAlertModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -38,6 +39,10 @@ class AlertService(
 	private val communicationPort: ICommunicationPort,
 	private val transactionalOperator: TransactionalOperator,
 ): IAlertService, GenericService() {
+	private companion object {
+		private const val RECENT_COMMUNICATIONS_LIMIT = 3
+	}
+
 	override fun findAlertsPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -45,6 +50,26 @@ class AlertService(
 		sortFields: List<SortModel<AlertSortFieldEnum>>,
 	): Mono<PageModel<AlertModel>> {
 		return port.findPage(projectId, pageable, searchParams, sortFields)
+	}
+
+	override fun findOngoingAlerts(projectId: UUID, limit: Int): Flux<OngoingAlertModel> {
+		return port.findWithLimit(limit, projectId, AlertSearchParamModel(statusSearched = IN_PROGRESS))
+			.collectList()
+			.flatMapMany { alerts ->
+				val alertIds = alerts.mapNotNull { it.id }
+				communicationPort.findByAlertIdsWithLimit(RECENT_COMMUNICATIONS_LIMIT, projectId, alertIds, visibilitySearched = null)
+					.collectMap({ it.first }, { it.second })
+					.flatMapMany { commsByAlertId ->
+						Flux.fromIterable(
+							alerts.map { alert ->
+								OngoingAlertModel(
+									alert = alert,
+									recentCommunications = commsByAlertId[alert.id] ?: emptyList(),
+								)
+							}
+						)
+					}
+			}
 	}
 
 	override fun findAlertById(

@@ -74,8 +74,16 @@ class ParticipantV2Controller(
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
-	override fun findBirthdays(projectId: UUID): Flux<ParticipantReaderDto> {
-		return service.findBirthdays(projectId).map(readerMapper::toDto)
+	override fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantReaderDto> {
+		return service.findBirthdays(projectId, limit).map(readerMapper::toDto)
+	}
+
+	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantReaderDto> {
+		return service.findArrivingToday(projectId, limit).map(readerMapper::toDto)
+	}
+
+	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantReaderDto> {
+		return service.findDepartingToday(projectId, limit).map(readerMapper::toDto)
 	}
 
 	override fun findParticipantById(projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {

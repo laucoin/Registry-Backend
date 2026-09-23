@@ -50,9 +50,17 @@ class ParticipantModelPostgresRepository(
 		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
-	override fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantModel> {
-		return repository.findAllWithBirthday(projectId, visibilitySearched)
+	override fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel> {
+		return repository.findAllWithBirthday(projectId, visibilitySearched, limit)
 			.map(mapper::toModel)
+	}
+
+	override fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel> {
+		return repository.findArrivingToday(projectId, visibilitySearched, limit).map(mapper::toModel)
+	}
+
+	override fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel> {
+		return repository.findDepartingToday(projectId, visibilitySearched, limit).map(mapper::toModel)
 	}
 
 	override fun countAll(

@@ -73,6 +73,28 @@ class AlertServiceTest {
 	}
 
 	@Test
+	fun `Should findOngoingAlerts gather the last 3 communications per alert`() {
+		// Arrange
+		val alert = commonAlert()
+		val communication = CommunicationModel()
+
+		whenever(port.findWithLimit(any(), any(), any())).thenReturn(Flux.just(alert))
+		whenever(communicationPort.findByAlertIdsWithLimit(any(), any(), any(), anyOrNull()))
+			.thenReturn(Flux.just(alert.id!! to listOf(communication)))
+
+		// Act
+		val result = service.findOngoingAlerts(projectId, limit = 5).collectList().block()!!
+
+		// Assert
+		assertEquals(1, result.size)
+		assertEquals(alert, result.first().alert)
+		assertEquals(listOf(communication), result.first().recentCommunications)
+
+		verify(port).findWithLimit(5, projectId, AlertSearchParamModel(statusSearched = IN_PROGRESS))
+		verify(communicationPort).findByAlertIdsWithLimit(3, projectId, listOf(alert.id!!), null)
+	}
+
+	@Test
 	fun `Should findAlertById call port findById`() {
 		// Arrange
 		val onlyVisible = true

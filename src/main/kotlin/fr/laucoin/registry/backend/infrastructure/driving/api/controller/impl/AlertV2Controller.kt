@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.OngoingAlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertStatusWriterDto
@@ -20,6 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.PageQueryDt
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.OngoingAlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
@@ -28,6 +30,7 @@ import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
@@ -35,6 +38,7 @@ class AlertV2Controller(
 	private val service: IAlertService,
 	private val readerMapper: AlertReaderDtoMapper,
 	private val communicationReaderMapper: CommunicationReaderDtoMapper,
+	private val ongoingAlertReaderMapper: OngoingAlertReaderDtoMapper,
 	private val writerMapper: AlertWriterDtoMapper,
 	private val creationWriterMapper: AlertCreationWriterDtoMapper,
 	private val pageQueryMapper: PageQueryDtoMapper,
@@ -78,6 +82,10 @@ class AlertV2Controller(
 
 		return service.findAlertCommunicationsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, communicationReaderMapper::toDto) }
+	}
+
+	override fun findOngoingAlerts(projectId: UUID, limit: Int): Flux<OngoingAlertReaderDto> {
+		return service.findOngoingAlerts(projectId, limit).map(ongoingAlertReaderMapper::toDto)
 	}
 
 	override fun createAlert(

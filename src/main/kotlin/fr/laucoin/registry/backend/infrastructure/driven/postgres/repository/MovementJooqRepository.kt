@@ -260,6 +260,77 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(activity, project, creator, editor, fullCount) }
 	}
 
+	private fun lastMovementPerActivityCte(): CommonTableExpression<*> {
+		val plmDateTime = field(name("plm", "last_movement_date_time"), ZonedDateTime::class.java)
+		val plmActivityId = field(name("plm", "activity_id"), UUID::class.java)
+		return name("last_activity_movement").`as`(
+			dsl.select(TB_MOVEMENT.ID, plmActivityId)
+				.from(TB_MOVEMENT)
+				.join(
+					dsl.select(
+						max(TB_MOVEMENT.DATE_TIME).`as`("last_movement_date_time"),
+						TB_MOVEMENT.ACTIVITY_ID,
+					)
+						.from(TB_MOVEMENT)
+						.where(TB_MOVEMENT.VISIBLE.isTrue.and(TB_MOVEMENT.ACTIVITY_ID.isNotNull))
+						.groupBy(TB_MOVEMENT.ACTIVITY_ID)
+						.asTable("plm")
+				).on(plmDateTime.eq(TB_MOVEMENT.DATE_TIME).and(plmActivityId.eq(TB_MOVEMENT.ACTIVITY_ID)))
+		)
+	}
+
+	fun findOngoingActivityOutings(projectId: UUID, limit: Int): Flux<MovementEntity> {
+		val activity = activityTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		val lastActivityMovement = lastMovementPerActivityCte()
+		val lastActivityMovementId = field(name("last_activity_movement", "id"), UUID::class.java)
+		return Flux.from(
+			dsl.with(lastActivityMovement)
+				.select(
+					listOf(
+						TB_MOVEMENT.asterisk(),
+						activity.ID,
+						activity.NAME,
+						activity.DESCRIPTION,
+						activity.DURATION,
+						activity.MIN_ALLOWED_PARTICIPANTS,
+						activity.MAX_ALLOWED_PARTICIPANTS,
+						activity.START_AVAILABILITY_DATE,
+						activity.START_AVAILABILITY_TIME,
+						activity.END_AVAILABILITY_DATE,
+						activity.END_AVAILABILITY_TIME,
+						project.NAME,
+						project.BEGIN_DATE,
+						project.BEGIN_TIME,
+						project.END_DATE,
+						project.END_TIME,
+						project.OPTIONS,
+						creator.FIRST_NAME,
+						creator.LAST_NAME,
+						creator.EMAIL,
+						editor.FIRST_NAME,
+						editor.LAST_NAME,
+						editor.EMAIL,
+					)
+				)
+				.from(TB_MOVEMENT)
+				.join(lastActivityMovement).on(lastActivityMovementId.eq(TB_MOVEMENT.ID))
+				.join(activity).on(TB_MOVEMENT.ACTIVITY_ID.eq(activity.ID))
+				.join(project).on(TB_MOVEMENT.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
+				.leftJoin(creator).on(TB_MOVEMENT.CREATED_BY.eq(creator.ID))
+				.leftJoin(editor).on(TB_MOVEMENT.LAST_MODIFIED_BY.eq(editor.ID))
+				.where(
+					TB_MOVEMENT.PROJECT_ID.eq(projectId)
+						.and(TB_MOVEMENT.TYPE.eq(MovementTypeEnum.OUT))
+						.and(TB_MOVEMENT.VISIBLE.isTrue)
+				)
+				.orderBy(TB_MOVEMENT.DATE_TIME.desc())
+				.limit(limit)
+		).map { it.toEntity(activity, project, creator, editor) }
+	}
+
 	fun findAllByCreatorId(userId: UUID): Flux<MovementEntity> {
 		val activity = activityTable()
 		val project = projectTable()

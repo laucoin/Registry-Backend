@@ -431,7 +431,91 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		}
 	}
 
-	fun findAllWithBirthday(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantEntity> {
+	fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity> {
+		val user = userTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		return Flux.from(
+			dsl.select(
+				listOf(
+					TB_PARTICIPANT.asterisk(),
+					user.FIRST_NAME,
+					user.LAST_NAME,
+					user.EMAIL,
+					project.NAME,
+					project.BEGIN_DATE,
+					project.BEGIN_TIME,
+					project.END_DATE,
+					project.END_TIME,
+					project.OPTIONS,
+					creator.FIRST_NAME,
+					creator.LAST_NAME,
+					creator.EMAIL,
+					editor.FIRST_NAME,
+					editor.LAST_NAME,
+					editor.EMAIL,
+				)
+			)
+				.from(TB_PARTICIPANT)
+				.leftJoin(user).on(TB_PARTICIPANT.USER_ID.eq(user.ID).and(user.PURGED.isFalse).and(user.VISIBLE.isTrue))
+				.join(project).on(TB_PARTICIPANT.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
+				.leftJoin(creator).on(TB_PARTICIPANT.CREATED_BY.eq(creator.ID))
+				.leftJoin(editor).on(TB_PARTICIPANT.LAST_MODIFIED_BY.eq(editor.ID))
+				.where(
+					TB_PARTICIPANT.PURGED.isFalse
+						.and(TB_PARTICIPANT.PROJECT_ID.eq(projectId))
+						.and(TB_PARTICIPANT.START_AVAILABILITY_DATE.eq(DSL.currentLocalDate()))
+						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
+				)
+				.orderBy(TB_PARTICIPANT.START_AVAILABILITY_TIME)
+				.limit(limit)
+		).map { it.toEntity(user, project, creator, editor) }
+	}
+
+	fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity> {
+		val user = userTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		return Flux.from(
+			dsl.select(
+				listOf(
+					TB_PARTICIPANT.asterisk(),
+					user.FIRST_NAME,
+					user.LAST_NAME,
+					user.EMAIL,
+					project.NAME,
+					project.BEGIN_DATE,
+					project.BEGIN_TIME,
+					project.END_DATE,
+					project.END_TIME,
+					project.OPTIONS,
+					creator.FIRST_NAME,
+					creator.LAST_NAME,
+					creator.EMAIL,
+					editor.FIRST_NAME,
+					editor.LAST_NAME,
+					editor.EMAIL,
+				)
+			)
+				.from(TB_PARTICIPANT)
+				.leftJoin(user).on(TB_PARTICIPANT.USER_ID.eq(user.ID).and(user.PURGED.isFalse).and(user.VISIBLE.isTrue))
+				.join(project).on(TB_PARTICIPANT.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
+				.leftJoin(creator).on(TB_PARTICIPANT.CREATED_BY.eq(creator.ID))
+				.leftJoin(editor).on(TB_PARTICIPANT.LAST_MODIFIED_BY.eq(editor.ID))
+				.where(
+					TB_PARTICIPANT.PURGED.isFalse
+						.and(TB_PARTICIPANT.PROJECT_ID.eq(projectId))
+						.and(TB_PARTICIPANT.END_AVAILABILITY_DATE.eq(DSL.currentLocalDate()))
+						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
+				)
+				.orderBy(TB_PARTICIPANT.END_AVAILABILITY_TIME)
+				.limit(limit)
+		).map { it.toEntity(user, project, creator, editor) }
+	}
+
+	fun findAllWithBirthday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -479,7 +563,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 						)
 						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
 				)
-				.limit(MAX_UNPAGINATED_RESULT)
+				.limit(limit)
 		).map { it.toEntity(user, project, creator, editor) }
 	}
 

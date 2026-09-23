@@ -32,6 +32,10 @@ class MovementModelPostgresRepository(
 		return repository.findAllByCreatorId(userId).map(mapper::toModel)
 	}
 
+	override fun findOngoingActivityOutings(projectId: UUID, limit: Int): Flux<MovementModel> {
+		return repository.findOngoingActivityOutings(projectId, limit).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

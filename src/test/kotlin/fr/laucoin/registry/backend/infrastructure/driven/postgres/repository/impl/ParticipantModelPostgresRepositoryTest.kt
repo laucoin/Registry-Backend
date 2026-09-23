@@ -293,7 +293,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		@Order(2)
 		fun `Should findBirthdays match on month-day regardless of birth year`() {
 			// Act
-			val result = repository.findBirthdays(projectId, visibilitySearched = null).collectList().block()!!
+			val result = repository.findBirthdays(projectId, visibilitySearched = null, limit = 1000).collectList().block()!!
 
 			// Assert
 			assertTrue(result.any { it.id == matchingId })

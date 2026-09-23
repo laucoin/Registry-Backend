@@ -13,15 +13,18 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRES
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
+import fr.laucoin.registry.backend.domain.model.OngoingAlertModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.OngoingAlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertStatusWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.OngoingAlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -49,6 +52,7 @@ import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class AlertV2ControllerTest: TestContext() {
@@ -60,6 +64,9 @@ class AlertV2ControllerTest: TestContext() {
 
 	@MockitoBean
 	private lateinit var communicationReaderMapper: CommunicationReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var ongoingAlertReaderMapper: OngoingAlertReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var writerMapper: AlertWriterDtoMapper
@@ -166,6 +173,24 @@ class AlertV2ControllerTest: TestContext() {
 		// Assert
 		result.body<Map<*, *>>(OK)
 		verify(service).findAlertCommunicationsPage(eq(projectId), eq(uuid), eq(pageable), any())
+	}
+
+	@Test
+	fun `Should findOngoingAlerts return 200`() {
+		// Arrange
+		whenever(service.findOngoingAlerts(any(), any())).thenReturn(Flux.just(OngoingAlertModel()))
+		whenever(ongoingAlertReaderMapper.toDto(any())).thenReturn(OngoingAlertReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.get()
+			.uri(uriBuilder("$BASE_URL/ongoing", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(service).findOngoingAlerts(projectId, 5)
 	}
 
 	@Test

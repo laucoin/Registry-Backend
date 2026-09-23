@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_HISTORY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
@@ -17,11 +18,14 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.OngoingActivityOutingModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.OngoingActivityOutingReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.OngoingActivityOutingReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ActivityWriterDtoMapper
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -48,6 +52,7 @@ import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class ActivityV2ControllerTest: TestContext() {
@@ -59,6 +64,9 @@ class ActivityV2ControllerTest: TestContext() {
 
 	@MockitoBean
 	private lateinit var movementReaderMapper: MovementReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var ongoingOutingReaderMapper: OngoingActivityOutingReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var writerMapper: ActivityWriterDtoMapper
@@ -180,6 +188,24 @@ class ActivityV2ControllerTest: TestContext() {
 		verify(movementReaderMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should findOngoingActivityOutings return 200`() {
+		// Arrange
+		whenever(service.findOngoingActivityOutings(any(), any())).thenReturn(Flux.just(OngoingActivityOutingModel()))
+		whenever(ongoingOutingReaderMapper.toDto(any())).thenReturn(OngoingActivityOutingReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY), buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/ongoing", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(service).findOngoingActivityOutings(projectId, 5)
 	}
 
 	@Test

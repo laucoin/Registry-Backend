@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.OngoingAlertModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.SortModel
@@ -31,6 +32,8 @@ interface IAlertService {
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel,
 	): Mono<PageModel<CommunicationModel>>
+
+	fun findOngoingAlerts(projectId: UUID, limit: Int): Flux<OngoingAlertModel>
 
 	fun createAlert(currentUser: CurrentUserModel, alert: AlertModel): Mono<AlertModel>
 	fun updateAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, alert: AlertModel): Mono<AlertModel>

@@ -12,12 +12,14 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.OngoingActivityOutingReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.OngoingActivityOutingReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ActivityWriterDtoMapper
 import java.net.URI
@@ -25,6 +27,7 @@ import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
@@ -32,6 +35,7 @@ class ActivityV2Controller(
 	private val service: IActivityService,
 	private val readerMapper: ActivityReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
+	private val ongoingOutingReaderMapper: OngoingActivityOutingReaderDtoMapper,
 	private val writerMapper: ActivityWriterDtoMapper,
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
@@ -73,6 +77,10 @@ class ActivityV2Controller(
 
 		return service.findActivityMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }
+	}
+
+	override fun findOngoingActivityOutings(projectId: UUID, limit: Int): Flux<OngoingActivityOutingReaderDto> {
+		return service.findOngoingActivityOutings(projectId, limit).map(ongoingOutingReaderMapper::toDto)
 	}
 
 	override fun createActivity(

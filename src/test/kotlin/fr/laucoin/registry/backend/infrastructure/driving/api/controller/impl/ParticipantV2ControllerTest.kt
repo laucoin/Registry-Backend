@@ -142,7 +142,7 @@ class ParticipantV2ControllerTest: TestContext() {
 	@Test
 	fun `Should findBirthdays return 200`() {
 		// Arrange
-		whenever(service.findBirthdays(any())).thenReturn(Flux.just(ParticipantModel()))
+		whenever(service.findBirthdays(any(), any())).thenReturn(Flux.just(ParticipantModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
@@ -154,7 +154,43 @@ class ParticipantV2ControllerTest: TestContext() {
 
 		// Assert
 		result.body<List<*>>(OK)
-		verify(service).findBirthdays(projectId)
+		verify(service).findBirthdays(projectId, 5)
+	}
+
+	@Test
+	fun `Should findArrivingToday return 200`() {
+		// Arrange
+		whenever(service.findArrivingToday(any(), any())).thenReturn(Flux.just(ParticipantModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/arrivals-today", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(service).findArrivingToday(projectId, 5)
+	}
+
+	@Test
+	fun `Should findDepartingToday return 200`() {
+		// Arrange
+		whenever(service.findDepartingToday(any(), any())).thenReturn(Flux.just(ParticipantModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/departures-today", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(service).findDepartingToday(projectId, 5)
 	}
 
 	@Test

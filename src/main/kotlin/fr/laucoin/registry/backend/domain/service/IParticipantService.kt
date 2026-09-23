@@ -25,7 +25,9 @@ interface IParticipantService {
 		sortFields: List<SortModel<ParticipantSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ParticipantModel>>
 
-	fun findBirthdays(projectId: UUID): Flux<ParticipantModel>
+	fun findBirthdays(projectId: UUID, limit: Int = 1000): Flux<ParticipantModel>
+	fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
+	fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
 
 	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
 	fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
