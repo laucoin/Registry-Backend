@@ -88,6 +88,7 @@ interface IUserProjectProfileV2Controller {
 		summary = "Toggle favorite on User's Profile",
 		description = "Star or unstar the Project behind this Profile on the caller's home dashboard",
 	)
+	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/favorite")
 	fun toggleFavoriteUserProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

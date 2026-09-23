@@ -176,7 +176,10 @@ interface IParticipantV2Controller {
 		summary = "Export Participant data",
 		description = "Export all personal data held about a Participant (GDPR access/portability request), gathered on their behalf by a project administrator",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
+	@PreAuthorize(
+		"hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R') " +
+			"&& hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')",
+	)
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/data-export")
 	fun exportParticipantDataById(

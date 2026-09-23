@@ -17,11 +17,11 @@ import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
-import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IUserDataExportService
 import fr.laucoin.registry.backend.test.ModelExt.commonParticipant
 import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
@@ -30,14 +30,16 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class UserDataExportServiceTest {
 	private val userPort: IUserPort = mock()
-	private val preferencesPort: IPreferencesPort = mock()
+	private val preferencesService: IPreferencesService = mock()
 	private val projectProfilePort: IProjectProfilePort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val communicationPort: ICommunicationPort = mock()
@@ -49,7 +51,7 @@ class UserDataExportServiceTest {
 	private val participantService: IParticipantService = mock()
 	private val service: IUserDataExportService = UserDataExportService(
 		userPort,
-		preferencesPort,
+		preferencesService,
 		projectProfilePort,
 		movementPort,
 		communicationPort,
@@ -76,9 +78,10 @@ class UserDataExportServiceTest {
 		val group = GroupModel()
 		val linkedParticipant = commonParticipant()
 		val linkedParticipantExport = ParticipantDataExportModel(participant = linkedParticipant)
+		val currentUser = currentUser()
 
-		whenever(userPort.findById(any(), any())).thenReturn(Mono.just(user))
-		whenever(preferencesPort.findByUserId(any(), any())).thenReturn(Mono.just(preferences))
+		whenever(userPort.findById(any(), anyOrNull())).thenReturn(Mono.just(user))
+		whenever(preferencesService.findByUser(any())).thenReturn(Mono.just(preferences))
 		whenever(projectProfilePort.findProjectProfilesPageByUserId(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(PageableModel(0, 10_000), 1, listOf(ownProfile))))
 		whenever(projectProfilePort.findAllByCreatorId(any())).thenReturn(Flux.just(createdProfile))
@@ -92,11 +95,12 @@ class UserDataExportServiceTest {
 		whenever(participantService.exportParticipantData(any(), any())).thenReturn(Mono.just(linkedParticipantExport))
 
 		// Act
-		val result = service.exportCurrentUserData(currentUser()).block()
+		val result = service.exportCurrentUserData(currentUser).block()
 
 		// Assert
 		assertEquals(user, result?.user)
 		assertEquals(preferences, result?.preferences)
+		verify(preferencesService).findByUser(currentUser)
 		assertEquals(listOf(ownProfile), result?.projectProfiles)
 		assertEquals(listOf(createdProfile), result?.createdProjectProfiles)
 		assertEquals(listOf(movement), result?.movements)

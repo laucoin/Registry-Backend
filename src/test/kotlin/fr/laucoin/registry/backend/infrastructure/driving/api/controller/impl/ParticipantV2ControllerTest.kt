@@ -278,7 +278,7 @@ class ParticipantV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/data-export", listOf(projectId, uuid), emptyList()))
 			.exchange()

@@ -260,7 +260,7 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(activity, project, creator, editor, fullCount) }
 	}
 
-	private fun lastMovementPerActivityCte(): CommonTableExpression<*> {
+	private fun lastMovementPerActivityCte(projectId: UUID): CommonTableExpression<*> {
 		val plmDateTime = field(name("plm", "last_movement_date_time"), ZonedDateTime::class.java)
 		val plmActivityId = field(name("plm", "activity_id"), UUID::class.java)
 		return name("last_activity_movement").`as`(
@@ -272,7 +272,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 						TB_MOVEMENT.ACTIVITY_ID,
 					)
 						.from(TB_MOVEMENT)
-						.where(TB_MOVEMENT.VISIBLE.isTrue.and(TB_MOVEMENT.ACTIVITY_ID.isNotNull))
+						.where(
+							TB_MOVEMENT.PROJECT_ID.eq(projectId)
+								.and(TB_MOVEMENT.VISIBLE.isTrue)
+								.and(TB_MOVEMENT.ACTIVITY_ID.isNotNull)
+						)
 						.groupBy(TB_MOVEMENT.ACTIVITY_ID)
 						.asTable("plm")
 				).on(plmDateTime.eq(TB_MOVEMENT.DATE_TIME).and(plmActivityId.eq(TB_MOVEMENT.ACTIVITY_ID)))
@@ -284,7 +288,7 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val lastActivityMovement = lastMovementPerActivityCte()
+		val lastActivityMovement = lastMovementPerActivityCte(projectId)
 		val lastActivityMovementId = field(name("last_activity_movement", "id"), UUID::class.java)
 		return Flux.from(
 			dsl.with(lastActivityMovement)
