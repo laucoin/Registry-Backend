@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPreferencesV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferencesReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PreferencesReaderDtoMapper
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
@@ -21,13 +20,5 @@ class PreferencesV2Controller(
 
 	override fun updateLanguage(currentUser: CurrentUserModel, language: String): Mono<PreferencesReaderDto> {
 		return service.updateLanguage(currentUser, language).map(readerMapper::toDto)
-	}
-
-	override fun updateSelectedProjectProfile(currentUser: CurrentUserModel, profileId: UUID?): Mono<PreferencesReaderDto> {
-		return service.updateUserPreferenceSelectedProjectProfileById(currentUser, profileId).map(readerMapper::toDto)
-	}
-
-	override fun updateSelectedProjectProfileWithProjectId(currentUser: CurrentUserModel, projectId: UUID): Mono<PreferencesReaderDto> {
-		return service.updateUserPreferenceSelectedProjectProfileByProjectId(currentUser, projectId).map(readerMapper::toDto)
 	}
 }

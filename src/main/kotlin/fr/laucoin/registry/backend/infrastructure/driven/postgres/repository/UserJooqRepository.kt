@@ -15,8 +15,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.similarity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbUser
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PREFERENCES
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PROJECT
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PROJECT_PROFILE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_USER
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.GenericColumns
@@ -211,20 +209,6 @@ class UserJooqRepository(private val dsl: DSLContext) {
 			TB_PREFERENCES.ID,
 			TB_PREFERENCES.THEME,
 			TB_PREFERENCES.LANGUAGE,
-			TB_PREFERENCES.SELECTED_PROFILE_ID,
-			TB_PROJECT.ID,
-			TB_PROJECT.NAME,
-			TB_PROJECT.BEGIN_DATE,
-			TB_PROJECT.BEGIN_TIME,
-			TB_PROJECT.END_DATE,
-			TB_PROJECT.END_TIME,
-			TB_PROJECT.OPTIONS,
-			TB_PROJECT_PROFILE.ROLE,
-			TB_PROJECT_PROFILE.STATUS,
-			TB_PROJECT_PROFILE.START_ACCESS_DATE,
-			TB_PROJECT_PROFILE.START_ACCESS_TIME,
-			TB_PROJECT_PROFILE.END_ACCESS_DATE,
-			TB_PROJECT_PROFILE.END_ACCESS_TIME,
 			creator.FIRST_NAME,
 			creator.LAST_NAME,
 			creator.EMAIL,
@@ -236,9 +220,6 @@ class UserJooqRepository(private val dsl: DSLContext) {
 			.leftJoin(creator).on(TB_USER.CREATED_BY.eq(creator.ID))
 			.leftJoin(editor).on(TB_USER.LAST_MODIFIED_BY.eq(editor.ID))
 			.leftJoin(TB_PREFERENCES).on(TB_USER.ID.eq(TB_PREFERENCES.USER_ID).and(TB_PREFERENCES.VISIBLE.isTrue))
-			.leftJoin(TB_PROJECT_PROFILE)
-			.on(TB_PREFERENCES.SELECTED_PROFILE_ID.eq(TB_PROJECT_PROFILE.ID).and(TB_PROJECT_PROFILE.VISIBLE.isTrue))
-			.leftJoin(TB_PROJECT).on(TB_PROJECT_PROFILE.PROJECT_ID.eq(TB_PROJECT.ID).and(TB_PROJECT.VISIBLE.isTrue))
 
 	fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserEntity> {
 		val creator = creatorTable()
@@ -333,20 +314,6 @@ class UserJooqRepository(private val dsl: DSLContext) {
 			preferenceId = if (includesPreferences) get(TB_PREFERENCES.ID) else null,
 			preferenceTheme = if (includesPreferences) get(TB_PREFERENCES.THEME) else null,
 			preferenceLanguage = if (includesPreferences) get(TB_PREFERENCES.LANGUAGE) else null,
-			preferenceSelectedProfileId = if (includesPreferences) get(TB_PREFERENCES.SELECTED_PROFILE_ID) else null,
-			preferenceSelectedProfileRole = if (includesPreferences) get(TB_PROJECT_PROFILE.ROLE) else null,
-			preferenceSelectedProfileStatus = if (includesPreferences) get(TB_PROJECT_PROFILE.STATUS) else null,
-			preferenceSelectedProfileStartAccessDate = if (includesPreferences) get(TB_PROJECT_PROFILE.START_ACCESS_DATE) else null,
-			preferenceSelectedProfileStartAccessTime = if (includesPreferences) get(TB_PROJECT_PROFILE.START_ACCESS_TIME) else null,
-			preferenceSelectedProfileEndAccessDate = if (includesPreferences) get(TB_PROJECT_PROFILE.END_ACCESS_DATE) else null,
-			preferenceSelectedProfileEndAccessTime = if (includesPreferences) get(TB_PROJECT_PROFILE.END_ACCESS_TIME) else null,
-			preferenceSelectedProfileProjectId = if (includesPreferences) get(TB_PROJECT.ID) else null,
-			preferenceSelectedProfileProjectName = if (includesPreferences) get(TB_PROJECT.NAME) else null,
-			preferenceSelectedProfileProjectStartDate = if (includesPreferences) get(TB_PROJECT.BEGIN_DATE) else null,
-			preferenceSelectedProfileProjectStartTime = if (includesPreferences) get(TB_PROJECT.BEGIN_TIME) else null,
-			preferenceSelectedProfileProjectEndDate = if (includesPreferences) get(TB_PROJECT.END_DATE) else null,
-			preferenceSelectedProfileProjectEndTime = if (includesPreferences) get(TB_PROJECT.END_TIME) else null,
-			preferenceSelectedProfileProjectOptions = if (includesPreferences) get(TB_PROJECT.OPTIONS) else null,
 		).apply {
 			oidcId = get(TB_USER.OIDC_ID)
 			type = get(TB_USER.TYPE)

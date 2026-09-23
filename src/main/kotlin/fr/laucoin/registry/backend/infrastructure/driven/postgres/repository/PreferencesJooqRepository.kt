@@ -57,7 +57,6 @@ class PreferencesJooqRepository(private val dsl: DSLContext) {
 		entity.userId?.let { record.set(TB_PREFERENCES.USER_ID, it) }
 		record.set(TB_PREFERENCES.THEME, entity.theme)
 		entity.language?.let { record.set(TB_PREFERENCES.LANGUAGE, it) }
-		entity.selectedProfileId?.let { record.set(TB_PREFERENCES.SELECTED_PROFILE_ID, it) }
 		return Mono.from(dsl.insertInto(TB_PREFERENCES).set(record).returning()).map { it.toEntity() }
 	}
 
@@ -67,7 +66,6 @@ class PreferencesJooqRepository(private val dsl: DSLContext) {
 			.set(TB_PREFERENCES.USER_ID, entity.userId)
 			.set(TB_PREFERENCES.THEME, entity.theme)
 			.set(TB_PREFERENCES.LANGUAGE, entity.language)
-			.set(TB_PREFERENCES.SELECTED_PROFILE_ID, entity.selectedProfileId)
 			.where(TB_PREFERENCES.ID.eq(entity.id))
 			.returning()
 	).map { it.toEntity() }
@@ -77,7 +75,6 @@ class PreferencesJooqRepository(private val dsl: DSLContext) {
 			userId = get(TB_PREFERENCES.USER_ID),
 			theme = get(TB_PREFERENCES.THEME) ?: ThemeEnum.SYSTEM,
 			language = get(TB_PREFERENCES.LANGUAGE),
-			selectedProfileId = get(TB_PREFERENCES.SELECTED_PROFILE_ID),
 		).apply {
 			fillGeneric(this, columns, creator, editor)
 		}

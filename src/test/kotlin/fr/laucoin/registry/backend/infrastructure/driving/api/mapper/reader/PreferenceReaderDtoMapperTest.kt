@@ -1,55 +1,26 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
-import java.util.stream.Stream
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import kotlin.test.assertEquals
+import org.junit.jupiter.api.Test
 
 class PreferenceReaderDtoMapperTest {
-	private val profileMapper: ProjectProfileReaderDtoMapper = mock()
-	private val mapper: PreferenceReaderDtoMapper = PreferenceReaderDtoMapper(profileMapper)
+	private val mapper = PreferenceReaderDtoMapper()
 
-	private companion object {
-		@JvmStatic
-		fun `Should toDto convert PreferencesModel to PreferenceReaderDto`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(
-					PreferencesModel(),
-					0,
-				),
-				Arguments.of(
-					PreferencesModel().apply {
-						selectedProfile = ProjectProfileModel()
-					},
-					1,
-				),
-			)
-		}
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should toDto convert PreferencesModel to PreferenceReaderDto`(
-		preferences: PreferencesModel,
-		expectedProfileCast: Int,
-	) {
+	@Test
+	fun `Should toDto convert PreferencesModel to PreferenceReaderDto`() {
 		// Arrange
-		whenever(profileMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		val preferences = PreferencesModel().apply {
+			theme = DARK
+			language = "fr-FR"
+		}
 
 		// Act
-		mapper.toDto(preferences)
+		val result = mapper.toDto(preferences)
 
 		// Assert
-		verify(profileMapper, times(expectedProfileCast)).toDto(
-			preferences.selectedProfile ?: ProjectProfileModel(),
-		)
+		assertEquals(DARK, result.theme)
+		assertEquals("fr-FR", result.language)
 	}
 }
