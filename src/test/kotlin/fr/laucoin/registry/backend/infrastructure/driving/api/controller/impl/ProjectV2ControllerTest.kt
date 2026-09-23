@@ -97,6 +97,33 @@ class ProjectV2ControllerTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findProjects thread favorite query param to search params`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val page = PageModel(pageable, totalElements = 1, listOf(ProjectModel()))
+		whenever(service.findProjectsPage(any(), any(), any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("favorite", true))))
+			.exchange()
+
+		// Assert
+		result.body<Map<*, *>>(OK)
+
+		verify(service).findProjectsPage(
+			any(),
+			eq(pageable),
+			eq(true),
+			eq(ProjectSearchParamModel(textSearched = null, visibilitySearched = null, dateTimeSearched = null, favoriteSearched = true)),
+			eq(emptyList()),
+		)
+	}
+
+	@Test
 	fun `Should findProjects return 403 when withProfile is false without REGISTRY_PROJECT_R`() {
 		// Act
 		val result = webClient

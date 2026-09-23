@@ -5,6 +5,7 @@ import java.time.ZonedDateTime
 data class ProjectSearchParamModel(
 	var visibilitySearched: Boolean? = null,
 	var dateTimeSearched: ZonedDateTime? = null,
+	var favoriteSearched: Boolean? = null,
 ) {
 	var textSearched: String? = null
 
@@ -12,7 +13,8 @@ data class ProjectSearchParamModel(
 		textSearched: String? = null,
 		visibilitySearched: Boolean? = null,
 		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, dateTimeSearched) {
+		favoriteSearched: Boolean? = null,
+	): this(visibilitySearched, dateTimeSearched, favoriteSearched) {
 		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
 	}
 }

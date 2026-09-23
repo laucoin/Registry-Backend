@@ -48,8 +48,9 @@ class ProjectService(
 		sortFields: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		return if (!withProfile) {
-			port.findPage(pageable, searchParams, sortFields)
+			port.findPage(currentUser.id!!, pageable, searchParams, sortFields)
 		} else port.findPage(
+			currentUser.id!!,
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),
 			pageable,
 			searchParams,

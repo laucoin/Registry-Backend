@@ -233,15 +233,15 @@ class ProjectServiceTest {
 		val withProfile = false
 
 		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(listOf(REGISTRY_PROJECT_R))
-		whenever(port.findPage(any<PageableModel>(), any(), any()))
+		whenever(port.findPage(any<UUID>(), any<PageableModel>(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), pageable, withProfile, params).block()
 
 		// Assert
-		verify(port).findPage(pageable, params, emptyList())
-		verify(port, never()).findPage(any(), any(), any(), any())
+		verify(port).findPage(currentUser(REGISTRY_PROJECT_R).id!!, pageable, params, emptyList())
+		verify(port, never()).findPage(any(), any(), any(), any(), any())
 	}
 
 	@Test
@@ -253,15 +253,15 @@ class ProjectServiceTest {
 
 		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
 		whenever(roleService.getProjectIdsFromCurrentUserProfiles(any())).thenReturn(emptyList())
-		whenever(port.findPage(any(), any(), any(), any()))
+		whenever(port.findPage(any<UUID>(), any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectsPage(currentUser(), pageable, withProfile, params).block()
 
 		// Assert
-		verify(port).findPage(emptyList(), pageable, params, emptyList())
-		verify(port, never()).findPage(any<PageableModel>(), any(), any())
+		verify(port).findPage(currentUser().id!!, emptyList(), pageable, params, emptyList())
+		verify(port, never()).findPage(any<UUID>(), any<PageableModel>(), any(), any())
 	}
 
 	@Test

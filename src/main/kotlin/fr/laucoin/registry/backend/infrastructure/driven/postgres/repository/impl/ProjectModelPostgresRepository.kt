@@ -24,14 +24,17 @@ class ProjectModelPostgresRepository(
 	private val mapper: ProjectEntityMapper,
 ): IProjectPort {
 	override fun findPage(
+		userId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
 		sortFields: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		return repository.findAll(
+			userId,
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.dateTimeSearched,
+			searchParams.favoriteSearched,
 			sortFields,
 			pageable.limit,
 			pageable.offset,
@@ -39,6 +42,7 @@ class ProjectModelPostgresRepository(
 	}
 
 	override fun findPage(
+		userId: UUID,
 		projectIds: List<UUID>,
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
@@ -49,10 +53,12 @@ class ProjectModelPostgresRepository(
 		}
 
 		return repository.findAllInProjectIds(
+			userId,
 			projectIds,
 			searchParams.textSearched,
 			searchParams.visibilitySearched,
 			searchParams.dateTimeSearched,
+			searchParams.favoriteSearched,
 			sortFields,
 			pageable.limit,
 			pageable.offset,

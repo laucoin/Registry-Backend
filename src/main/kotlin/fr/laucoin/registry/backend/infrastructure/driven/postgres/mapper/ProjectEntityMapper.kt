@@ -17,6 +17,7 @@ class ProjectEntityMapper: IEntityMapper<ProjectModel, ProjectEntity> {
 			end = mapCustomDateTime(entity.endDate, entity.endTime)
 			status = buildStatus()
 			options = entity.options
+			favorite = entity.favorite ?: false
 		}.fillWithEntity(entity)
 	}
 

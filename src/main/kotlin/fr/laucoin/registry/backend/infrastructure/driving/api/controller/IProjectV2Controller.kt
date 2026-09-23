@@ -59,6 +59,8 @@ interface IProjectV2Controller {
 		@RequestParam(required = false, defaultValue = "true") withProfile: Boolean,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
+		@Parameter(description = "Only relevant with \"withProfile\" true, since it filters on the caller's own Profile.")
+		@RequestParam(required = false) favorite: Boolean?,
 	): Mono<PageReaderDto<ProjectReaderDto>>
 
 	@Operation(

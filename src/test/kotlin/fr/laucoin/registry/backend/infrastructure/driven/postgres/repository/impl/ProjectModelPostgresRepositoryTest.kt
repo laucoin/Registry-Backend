@@ -62,7 +62,7 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		val params = ProjectSearchParamModel()
 
 		// Act
-		val result = port.findPage(pageable, params).block()
+		val result = port.findPage(currentUser().id!!, pageable, params).block()
 
 		// Assert
 		assertNotNull(result)
@@ -71,9 +71,11 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
+			userId = currentUser().id!!,
 			textSearched = null,
 			visibilitySearched = null,
 			dateTimeSearched = null,
+			favoriteSearched = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -89,7 +91,7 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		val params = ProjectSearchParamModel()
 
 		// Act
-		val result = port.findPage(ids, pageable, params).block()
+		val result = port.findPage(currentUser().id!!, ids, pageable, params).block()
 
 		// Assert
 		assertNotNull(result)
@@ -98,10 +100,12 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAllInProjectIds(
+			currentUser().id!!,
 			ids,
 			textSearched = null,
 			visibilitySearched = null,
 			dateTimeSearched = null,
+			favoriteSearched = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,

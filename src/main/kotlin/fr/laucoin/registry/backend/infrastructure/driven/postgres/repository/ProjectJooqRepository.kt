@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectRelationEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.unaccent2
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbProjectProfile
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbUser
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_ALERT
@@ -104,16 +105,21 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 		return fields
 	}
 
+	private fun callerProfileTable() = TB_PROJECT_PROFILE.`as`("caller_profile")
+
 	fun findAll(
+		userId: UUID,
 		textSearched: String?,
 		visibilitySearched: Boolean?,
 		dateTimeSearched: ZonedDateTime?,
+		favoriteSearched: Boolean?,
 		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<ProjectEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
+		val callerProfile = callerProfileTable()
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			dsl.select(
@@ -124,28 +130,36 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 				editor.FIRST_NAME,
 				editor.LAST_NAME,
 				editor.EMAIL,
+				callerProfile.FAVORITE,
 				fullCount
 			)
 				.from(TB_PROJECT)
 				.leftJoin(creator).on(TB_PROJECT.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_PROJECT.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(searchConditions(textSearched, visibilitySearched, dateTimeSearched))
+				.leftJoin(callerProfile).on(callerProfile.PROJECT_ID.eq(TB_PROJECT.ID).and(callerProfile.USER_ID.eq(userId)))
+				.where(
+					searchConditions(textSearched, visibilitySearched, dateTimeSearched)
+						.and(visibleCondition(callerProfile.FAVORITE, favoriteSearched))
+				)
 				.orderBy(orderFields(sortFields))
 				.limit(limit).offset(offset)
-		).map { it.toEntity(creator, editor, fullCount) }
+		).map { it.toEntity(creator, editor, callerProfile, fullCount) }
 	}
 
 	fun findAllInProjectIds(
+		userId: UUID,
 		projectIds: List<UUID>,
 		textSearched: String?,
 		visibilitySearched: Boolean?,
 		dateTimeSearched: ZonedDateTime?,
+		favoriteSearched: Boolean?,
 		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<ProjectEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
+		val callerProfile = callerProfileTable()
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			dsl.select(
@@ -156,15 +170,21 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 				editor.FIRST_NAME,
 				editor.LAST_NAME,
 				editor.EMAIL,
+				callerProfile.FAVORITE,
 				fullCount
 			)
 				.from(TB_PROJECT)
 				.leftJoin(creator).on(TB_PROJECT.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_PROJECT.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(TB_PROJECT.ID.`in`(projectIds).and(searchConditions(textSearched, visibilitySearched, dateTimeSearched)))
+				.leftJoin(callerProfile).on(callerProfile.PROJECT_ID.eq(TB_PROJECT.ID).and(callerProfile.USER_ID.eq(userId)))
+				.where(
+					TB_PROJECT.ID.`in`(projectIds)
+						.and(searchConditions(textSearched, visibilitySearched, dateTimeSearched))
+						.and(visibleCondition(callerProfile.FAVORITE, favoriteSearched))
+				)
 				.orderBy(orderFields(sortFields))
 				.limit(limit).offset(offset)
-		).map { it.toEntity(creator, editor, fullCount) }
+		).map { it.toEntity(creator, editor, callerProfile, fullCount) }
 	}
 
 	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectEntity> {
@@ -426,6 +446,7 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 	private fun Record.toEntity(
 		creator: TbUser? = null,
 		editor: TbUser? = null,
+		callerProfile: TbProjectProfile? = null,
 		fullCount: Field<Int>? = null
 	): ProjectEntity = ProjectEntity(
 		name = get(TB_PROJECT.NAME),
@@ -434,6 +455,7 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 		endDate = get(TB_PROJECT.END_DATE),
 		endTime = get(TB_PROJECT.END_TIME),
 		options = get(TB_PROJECT.OPTIONS),
+		favorite = callerProfile?.let { get(it.FAVORITE) },
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
 	}

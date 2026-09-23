@@ -46,6 +46,7 @@ class ProjectV2Controller(
 		visible: Boolean?,
 		withProfile: Boolean,
 		dateTime: ZonedDateTime?,
+		favorite: Boolean?,
 	): Mono<PageReaderDto<ProjectReaderDto>> {
 		if (!currentUser.hasAuthority(REGISTRY_PROJECT_R) && !withProfile) {
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
@@ -55,7 +56,7 @@ class ProjectV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ProjectSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ProjectSearchParamModel(q, visible, dateTime)
+		val searchParams = ProjectSearchParamModel(q, visible, dateTime, favorite)
 
 		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }

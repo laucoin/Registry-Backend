@@ -15,12 +15,14 @@ import reactor.core.publisher.Mono
 interface IProjectPort {
 	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
 	fun findPage(
+		userId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
 		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectModel>>
 
 	fun findPage(
+		userId: UUID,
 		projectIds: List<UUID>,
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
