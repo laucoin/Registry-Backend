@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantDataExportModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
@@ -37,6 +38,8 @@ interface IParticipantService {
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>>
+
+	fun exportParticipantData(projectId: UUID, id: UUID): Mono<ParticipantDataExportModel>
 
 	fun createParticipant(currentUser: CurrentUserModel, participant: ParticipantModel): Mono<ParticipantModel>
 	fun updateParticipantById(

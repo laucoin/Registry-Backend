@@ -15,12 +15,15 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ParticipantDataExportModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantWriterDtoMapper
@@ -67,6 +70,9 @@ class ParticipantV2ControllerTest: TestContext() {
 
 	@MockitoBean
 	private lateinit var movementReaderMapper: MovementReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var dataExportReaderMapper: ParticipantDataExportReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var writerMapper: ParticipantWriterDtoMapper
@@ -225,6 +231,25 @@ class ParticipantV2ControllerTest: TestContext() {
 		// Assert
 		result.body<Map<*, *>>(OK)
 		verify(service).findParticipantMovementsPage(projectId, uuid, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should exportParticipantDataById return 200`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.exportParticipantData(any(), any())).thenReturn(Mono.just(ParticipantDataExportModel()))
+		whenever(dataExportReaderMapper.toDto(any())).thenReturn(ParticipantDataExportReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.post()
+			.uri(uriBuilder("$BASE_URL/{id}/data-export", listOf(projectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ParticipantDataExportReaderDto>(OK)
+		verify(service).exportParticipantData(projectId, uuid)
 	}
 
 	@Test

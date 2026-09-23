@@ -19,6 +19,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQuer
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
@@ -135,6 +136,18 @@ interface IParticipantV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<MovementReaderDto>>
+
+	@Operation(
+		summary = "Export Participant data",
+		description = "Export all personal data held about a Participant (GDPR access/portability request), gathered on their behalf by a project administrator",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
+	@RateLimited(SENSITIVE)
+	@PostMapping("/{id}/data-export")
+	fun exportParticipantDataById(
+		@PathVariable projectId: UUID,
+		@PathVariable id: UUID,
+	): Mono<ParticipantDataExportReaderDto>
 
 	@Operation(
 		summary = "Create Participant",

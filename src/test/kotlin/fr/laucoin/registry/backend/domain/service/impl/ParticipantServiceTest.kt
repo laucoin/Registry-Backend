@@ -9,9 +9,11 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -19,6 +21,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
@@ -62,8 +65,9 @@ class ParticipantServiceTest {
 	private val userPort: IUserPort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val groupPort: IGroupPort = mock()
+	private val communicationPort: ICommunicationPort = mock()
 	private val service: IParticipantService = ParticipantService(
-		projectService, port, userPort, movementPort, groupPort, MAX_USERS, MAX_GROUPS
+		projectService, port, userPort, movementPort, groupPort, communicationPort, MAX_USERS, MAX_GROUPS
 	)
 
 	private companion object {
@@ -303,6 +307,37 @@ class ParticipantServiceTest {
 
 		// Assert
 		verify(movementPort).findPageByParticipantId(projectId, participantId, pageable, params)
+	}
+
+	@Test
+	fun `Should exportParticipantData gather participant, movements and communications`() {
+		// Arrange
+		val participant = commonParticipant()
+		val movement = MovementModel().apply { id = UUID.randomUUID() }
+		val communication = CommunicationModel()
+
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.findPageByParticipantId(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(0, 10_000, 1, 1, listOf(movement))))
+		whenever(communicationPort.findByMovementIdsWithLimit(any(), any(), any(), anyOrNull()))
+			.thenReturn(Flux.just(movement.id!! to listOf(communication)))
+
+		// Act
+		val result = service.exportParticipantData(projectId, participantId).block()
+
+		// Assert
+		assertEquals(participant, result?.participant)
+		assertEquals(listOf(movement), result?.movements)
+		assertEquals(listOf(communication), result?.communications)
+
+		verify(port).findById(projectId, participantId, null)
+		verify(movementPort).findPageByParticipantId(
+			eq(projectId),
+			eq(participantId),
+			eq(PageableModel(0, 10_000)),
+			eq(MovementSearchParamModel(visibilitySearched = null, typeSearched = null)),
+		)
+		verify(communicationPort).findByMovementIdsWithLimit(10_000, projectId, listOf(movement.id!!), null)
 	}
 
 	@ParameterizedTest

@@ -18,6 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQuer
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
@@ -26,6 +27,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDt
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantWriterDtoMapper
@@ -46,6 +48,7 @@ class ParticipantV2Controller(
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
 	private val groupReaderMapper: GroupWithoutMemberReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
+	private val dataExportReaderMapper: ParticipantDataExportReaderDtoMapper,
 	private val writerMapper: ParticipantWriterDtoMapper,
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
@@ -107,6 +110,10 @@ class ParticipantV2Controller(
 
 		return service.findParticipantMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }
+	}
+
+	override fun exportParticipantDataById(projectId: UUID, id: UUID): Mono<ParticipantDataExportReaderDto> {
+		return service.exportParticipantData(projectId, id).map(dataExportReaderMapper::toDto)
 	}
 
 	override fun createParticipant(
