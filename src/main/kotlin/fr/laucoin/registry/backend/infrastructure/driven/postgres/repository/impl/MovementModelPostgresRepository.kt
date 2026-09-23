@@ -28,6 +28,10 @@ class MovementModelPostgresRepository(
 	private val mapper: MovementEntityMapper,
 	private val contentMapper: MovementContentEntityMapper,
 ) : IMovementPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<MovementModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

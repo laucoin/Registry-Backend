@@ -125,6 +125,19 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 		return fields
 	}
 
+	fun findAllByCreatorId(userId: UUID): Flux<CommunicationEntity> {
+		val activity = activityAlias()
+		val alert = alertAlias()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		return Flux.from(
+			baseSelect(activity, alert, project, creator, editor)
+				.where(TB_COMMUNICATION.CREATED_BY.eq(userId))
+				.orderBy(TB_COMMUNICATION.DATE_TIME.desc())
+		).map { it.toEntity(activity, alert, creator, editor, project) }
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,

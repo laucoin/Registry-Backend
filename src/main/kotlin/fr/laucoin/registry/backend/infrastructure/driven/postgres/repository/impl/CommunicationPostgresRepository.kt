@@ -21,6 +21,10 @@ class CommunicationPostgresRepository(
 	private val repository: CommunicationJooqRepository,
 	private val mapper: CommunicationEntityMapper,
 ): ICommunicationPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<CommunicationModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

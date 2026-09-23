@@ -22,6 +22,10 @@ class AlertModelPostgresRepository(
 	private val repository: AlertJooqRepository,
 	private val mapper: AlertEntityMapper,
 ): IAlertPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<AlertModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

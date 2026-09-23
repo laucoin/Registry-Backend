@@ -9,10 +9,14 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.UserDataExportModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import fr.laucoin.registry.backend.domain.service.IUserDataExportService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
@@ -43,7 +47,13 @@ class UserV2ControllerTest: TestContext() {
 	private lateinit var service: IUserService
 
 	@MockitoBean
+	private lateinit var dataExportService: IUserDataExportService
+
+	@MockitoBean
 	private lateinit var readerMapper: UserReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var dataExportReaderMapper: UserDataExportReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var userRoleReaderMapper: UserRoleReaderDtoMapper
@@ -257,6 +267,24 @@ class UserV2ControllerTest: TestContext() {
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).impersonateUserById(any(), any())
+	}
+
+	@Test
+	fun `Should exportCurrentUserData use POST and return 200`() {
+		// Arrange
+		whenever(dataExportService.exportCurrentUserData(any())).thenReturn(Mono.just(UserDataExportModel()))
+		whenever(dataExportReaderMapper.toDto(any())).thenReturn(UserDataExportReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/me/data-export", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<UserDataExportReaderDto>(OK)
+		verify(dataExportService).exportCurrentUserData(any())
 	}
 
 	@Test

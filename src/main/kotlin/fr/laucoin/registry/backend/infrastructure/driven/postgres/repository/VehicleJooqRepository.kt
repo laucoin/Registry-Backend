@@ -145,6 +145,35 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 		return fields
 	}
 
+	fun findAllByCreatorId(userId: UUID): Flux<VehicleEntity> {
+		val creator = creatorTable()
+		val editor = editorTable()
+		val project = projectTable()
+		return Flux.from(
+			dsl.select(
+				TB_VEHICLE.asterisk(),
+				project.NAME,
+				project.BEGIN_DATE,
+				project.BEGIN_TIME,
+				project.END_DATE,
+				project.END_TIME,
+				project.OPTIONS,
+				creator.FIRST_NAME,
+				creator.LAST_NAME,
+				creator.EMAIL,
+				editor.FIRST_NAME,
+				editor.LAST_NAME,
+				editor.EMAIL,
+			)
+				.from(TB_VEHICLE)
+				.join(project).on(TB_VEHICLE.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
+				.leftJoin(creator).on(TB_VEHICLE.CREATED_BY.eq(creator.ID))
+				.leftJoin(editor).on(TB_VEHICLE.LAST_MODIFIED_BY.eq(editor.ID))
+				.where(TB_VEHICLE.CREATED_BY.eq(userId))
+				.orderBy(TB_VEHICLE.BRAND)
+		).map { it.toEntity(creator = creator, editor = editor, project = project) }
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,

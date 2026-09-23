@@ -12,6 +12,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IVehiclePort {
+	fun findAllByCreatorId(userId: UUID): Flux<VehicleModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
 	fun findPage(
 		projectId: UUID,

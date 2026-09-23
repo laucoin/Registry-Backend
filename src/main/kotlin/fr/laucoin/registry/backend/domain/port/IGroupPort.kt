@@ -12,6 +12,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IGroupPort {
+	fun findAllByCreatorId(userId: UUID): Flux<GroupModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

@@ -3,15 +3,18 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import fr.laucoin.registry.backend.domain.service.IUserDataExportService
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
 import java.util.UUID
@@ -22,7 +25,9 @@ import reactor.core.publisher.Mono
 @RestController
 class UserV2Controller(
 	private val service: IUserService,
+	private val dataExportService: IUserDataExportService,
 	private val readerMapper: UserReaderDtoMapper,
+	private val dataExportReaderMapper: UserDataExportReaderDtoMapper,
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
@@ -65,6 +70,10 @@ class UserV2Controller(
 
 	override fun impersonateCurrentUser(currentUser: CurrentUserModel): Mono<UserReaderDto> {
 		return service.impersonateUserById(currentUser, currentUser.id!!).map(readerMapper::toDto)
+	}
+
+	override fun exportCurrentUserData(currentUser: CurrentUserModel): Mono<UserDataExportReaderDto> {
+		return dataExportService.exportCurrentUserData(currentUser).map(dataExportReaderMapper::toDto)
 	}
 
 	override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {

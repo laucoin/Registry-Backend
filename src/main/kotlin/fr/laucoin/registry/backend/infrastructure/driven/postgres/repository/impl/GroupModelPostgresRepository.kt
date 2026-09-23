@@ -28,6 +28,10 @@ class GroupModelPostgresRepository(
 	private val mapper: GroupEntityMapper,
 	private val contentMapper: GroupContentEntityMapper,
 ) : IGroupPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<GroupModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

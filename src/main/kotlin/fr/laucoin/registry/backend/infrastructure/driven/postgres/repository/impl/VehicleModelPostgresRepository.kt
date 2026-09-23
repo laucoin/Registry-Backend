@@ -22,6 +22,10 @@ class VehicleModelPostgresRepository(
 	private val repository: VehicleJooqRepository,
 	private val mapper: VehicleEntityMapper,
 ): IVehiclePort {
+	override fun findAllByCreatorId(userId: UUID): Flux<VehicleModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

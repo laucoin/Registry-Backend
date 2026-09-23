@@ -22,6 +22,10 @@ class ActivityModelPostgresRepository(
 	private val repository: ActivityJooqRepository,
 	private val mapper: ActivityEntityMapper,
 ): IActivityPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<ActivityModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

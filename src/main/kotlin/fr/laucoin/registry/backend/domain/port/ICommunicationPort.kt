@@ -11,6 +11,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface ICommunicationPort {
+	fun findAllByCreatorId(userId: UUID): Flux<CommunicationModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
 	fun findPage(
 		projectId: UUID,

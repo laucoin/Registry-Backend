@@ -15,6 +15,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IProjectProfilePort {
+	fun findAllByCreatorId(userId: UUID): Flux<ProjectProfileModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
 	fun findProjectProfilesPageByUserId(
 		userId: UUID,

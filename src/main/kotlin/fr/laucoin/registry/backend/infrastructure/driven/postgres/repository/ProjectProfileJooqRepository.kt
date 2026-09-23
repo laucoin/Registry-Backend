@@ -175,6 +175,17 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		return fields
 	}
 
+	fun findAllByCreatorId(userId: UUID): Flux<ProjectProfileEntity> {
+		val user = userTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		return Flux.from(
+			baseSelect(user, project, creator, editor)
+				.where(TB_PROJECT_PROFILE.CREATED_BY.eq(userId))
+		).map { it.toEntity(user, project, creator, editor) }
+	}
+
 	fun findByUserId(
 		userId: UUID,
 		textSearched: String?,

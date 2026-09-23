@@ -260,6 +260,18 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(activity, project, creator, editor, fullCount) }
 	}
 
+	fun findAllByCreatorId(userId: UUID): Flux<MovementEntity> {
+		val activity = activityTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		return Flux.from(
+			baseSelect(activity, project, creator, editor)
+				.where(TB_MOVEMENT.CREATED_BY.eq(userId))
+				.orderBy(TB_MOVEMENT.DATE_TIME.desc())
+		).map { it.toEntity(activity, project, creator, editor) }
+	}
+
 	fun findCurrent(
 		projectId: UUID,
 		visibilitySearched: Boolean?,

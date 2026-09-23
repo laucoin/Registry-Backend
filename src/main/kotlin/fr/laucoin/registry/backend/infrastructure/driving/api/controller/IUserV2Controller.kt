@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -124,6 +125,16 @@ interface IUserV2Controller {
 	fun impersonateCurrentUser(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 	): Mono<UserReaderDto>
+
+	@Operation(
+		summary = "Export Current User data",
+		description = "Export all personal data held about the caller's own account (GDPR access/portability request): account, preferences, project memberships, content authored across every project, and any linked Participant's data",
+	)
+	@RateLimited(SENSITIVE)
+	@PostMapping("/me/data-export")
+	fun exportCurrentUserData(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+	): Mono<UserDataExportReaderDto>
 
 	@Operation(
 		summary = "Delete User",

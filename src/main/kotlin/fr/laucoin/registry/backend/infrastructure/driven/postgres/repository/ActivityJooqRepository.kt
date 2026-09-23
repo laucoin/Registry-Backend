@@ -88,6 +88,25 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		return fields
 	}
 
+	fun findAllByCreatorId(userId: UUID): Flux<ActivityEntity> {
+		val creator = creatorTable()
+		val editor = editorTable()
+		val project = projectTable()
+		return Flux.from(
+			dsl.select(
+				TB_ACTIVITY.asterisk(),
+				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
+				creator.FIRST_NAME, creator.LAST_NAME, creator.EMAIL, editor.FIRST_NAME, editor.LAST_NAME, editor.EMAIL,
+			)
+				.from(TB_ACTIVITY)
+				.join(project).on(TB_ACTIVITY.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
+				.leftJoin(creator).on(TB_ACTIVITY.CREATED_BY.eq(creator.ID))
+				.leftJoin(editor).on(TB_ACTIVITY.LAST_MODIFIED_BY.eq(editor.ID))
+				.where(TB_ACTIVITY.CREATED_BY.eq(userId))
+				.orderBy(TB_ACTIVITY.NAME)
+		).map { it.toEntity(creator, editor, project) }
+	}
+
 	fun findAll(
 		projectId: UUID,
 		textSearched: String?,

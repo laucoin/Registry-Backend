@@ -505,6 +505,39 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(user, project, creator, editor, includeGroups = true, includeLastMovement = true) }
 	}
 
+	fun findAllByUserId(userId: UUID): Flux<ParticipantEntity> {
+		val user = userTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		return Flux.from(
+			dsl.select(
+				TB_PARTICIPANT.asterisk(),
+				user.FIRST_NAME,
+				user.LAST_NAME,
+				user.EMAIL,
+				project.NAME,
+				project.BEGIN_DATE,
+				project.BEGIN_TIME,
+				project.END_DATE,
+				project.END_TIME,
+				project.OPTIONS,
+				creator.FIRST_NAME,
+				creator.LAST_NAME,
+				creator.EMAIL,
+				editor.FIRST_NAME,
+				editor.LAST_NAME,
+				editor.EMAIL,
+			)
+				.from(TB_PARTICIPANT)
+				.leftJoin(user).on(TB_PARTICIPANT.USER_ID.eq(user.ID))
+				.join(project).on(TB_PARTICIPANT.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
+				.leftJoin(creator).on(TB_PARTICIPANT.CREATED_BY.eq(creator.ID))
+				.leftJoin(editor).on(TB_PARTICIPANT.LAST_MODIFIED_BY.eq(editor.ID))
+				.where(TB_PARTICIPANT.PURGED.isFalse.and(TB_PARTICIPANT.USER_ID.eq(userId)))
+		).map { it.toEntity(user, project, creator, editor) }
+	}
+
 	fun findByUserId(projectId: UUID, userId: UUID, dateTimeSearched: ZonedDateTime?): Flux<ParticipantEntity> {
 		val user = userTable()
 		val project = projectTable()

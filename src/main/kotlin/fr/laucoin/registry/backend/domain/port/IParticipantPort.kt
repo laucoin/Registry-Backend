@@ -32,6 +32,7 @@ interface IParticipantPort {
 
 	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
 	fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel>
+	fun findAllByUserId(userId: UUID): Flux<ParticipantModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
 	fun updateAllEndAvailability(ids: List<UUID>, endAvailability: CustomDateTimeModel): Flux<ParticipantModel>
 	fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel>

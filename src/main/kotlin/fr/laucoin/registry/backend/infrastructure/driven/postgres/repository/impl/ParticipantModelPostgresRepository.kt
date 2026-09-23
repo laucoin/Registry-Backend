@@ -101,6 +101,10 @@ class ParticipantModelPostgresRepository(
 		return repository.findByUserId(projectId, userId, null).map(mapper::toModel)
 	}
 
+	override fun findAllByUserId(userId: UUID): Flux<ParticipantModel> {
+		return repository.findAllByUserId(userId).map(mapper::toModel)
+	}
+
 	override fun findWithLimit(
 		limit: Int,
 		projectId: UUID,

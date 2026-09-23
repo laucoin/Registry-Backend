@@ -12,6 +12,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IActivityPort {
+	fun findAllByCreatorId(userId: UUID): Flux<ActivityModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel>
 	fun findPage(
 		projectId: UUID,

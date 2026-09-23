@@ -30,6 +30,10 @@ class ProjectProfileModelPostgresRepository(
 	private val roleMapper: ProjectProfileRoleEntityMapper,
 	private val roleCountMapper: ProjectProfileRoleCountEntityMapper,
 ): IProjectProfilePort {
+	override fun findAllByCreatorId(userId: UUID): Flux<ProjectProfileModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findProjectProfilesPageByUserId(
 		userId: UUID,
 		pageable: PageableModel,
