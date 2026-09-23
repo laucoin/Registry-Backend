@@ -47,6 +47,7 @@ interface IUserProjectProfileV2Controller {
 		@RequestParam(required = false) status: ProfileStatusEnum?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
+		@RequestParam(required = false) favorite: Boolean?,
 	): Mono<PageReaderDto<ProjectProfileReaderDto>>
 
 	@Operation(
@@ -81,6 +82,16 @@ interface IUserProjectProfileV2Controller {
 	fun createSupportProjectProfile(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
+	): Mono<ProjectProfileReaderDto>
+
+	@Operation(
+		summary = "Toggle favorite on User's Profile",
+		description = "Star or unstar the Project behind this Profile on the caller's home dashboard",
+	)
+	@PostMapping("/{id}/favorite")
+	fun toggleFavoriteUserProjectProfileById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable id: UUID,
 	): Mono<ProjectProfileReaderDto>
 
 	@Operation(

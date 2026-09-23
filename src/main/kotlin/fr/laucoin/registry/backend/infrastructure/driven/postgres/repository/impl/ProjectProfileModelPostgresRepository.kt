@@ -43,6 +43,7 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.statusSearched,
 			searchParams.dateTimeSearched,
+			searchParams.favoriteSearched,
 			sortFields,
 			pageable.limit,
 			pageable.offset,

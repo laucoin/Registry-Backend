@@ -301,6 +301,42 @@ class UserProjectProfileServiceTest {
 	}
 
 	@Test
+	fun `Should toggleFavoriteProjectProfileById flip the favorite flag`() {
+		// Arrange
+		val profile = commonProjectProfile().apply { favorite = false }
+
+		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
+		whenever(port.update(any())).thenReturn(Mono.just(profile))
+
+		// Act
+		service.toggleFavoriteProjectProfileById(currentUser(), projectProfileId).block()
+
+		// Assert
+		assertEquals(true, profile.favorite)
+
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
+		verify(port).update(profile)
+	}
+
+	@Test
+	fun `Should toggleFavoriteProjectProfileById throw RegistryException when Profile not found`() {
+		// Arrange
+		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.toggleFavoriteProjectProfileById(currentUser(), projectProfileId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
+		assertEquals(projectProfileId.toString(), result.args?.first())
+
+		verify(port, never()).update(any())
+	}
+
+	@Test
 	fun `Should deleteUserProjectProfileById delete Profile`() {
 		// Arrange
 		val profile = commonProjectProfile().apply { user = currentUser() }

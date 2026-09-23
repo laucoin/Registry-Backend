@@ -96,6 +96,16 @@ class UserProjectProfileService(
 			}
 	}
 
+	override fun toggleFavoriteProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
+			.notFoundIfEmpty(id)
+			.flatMap { profile ->
+				profile.favorite = !profile.favorite
+				profile.update(currentUser)
+				port.update(profile)
+			}
+	}
+
 	private fun Mono<ProjectProfileModel>.updateSelectedProfile(currentUser: CurrentUserModel): Mono<ProjectProfileModel> =
 		flatMap { newProfile ->
 			preferencesPort.findByUserId(currentUser.id!!, visibilitySearched = null)

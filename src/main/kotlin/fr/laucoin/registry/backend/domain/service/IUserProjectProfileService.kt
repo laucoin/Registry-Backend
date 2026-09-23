@@ -40,5 +40,6 @@ interface IUserProjectProfileService {
 	): Mono<ProjectProfileModel>
 
 	fun createSupportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel>
+	fun toggleFavoriteProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
 	fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
 }

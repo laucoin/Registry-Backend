@@ -182,6 +182,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		availabilitySearched: Boolean?,
 		statusSearched: List<ProfileStatusEnum>,
 		dateTimeSearched: ZonedDateTime?,
+		favoriteSearched: Boolean?,
 		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -200,6 +201,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 						.and(usableCondition(availabilitySearched))
 						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
 						.and(dateInRangeCondition(dateTimeSearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.FAVORITE, favoriteSearched))
 				)
 				.orderBy(orderFields(user, sortFields, tiebreaker = project.NAME))
 				.limit(limit).offset(offset)
@@ -440,6 +442,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		entity.startAccessTime?.let { record.set(TB_PROJECT_PROFILE.START_ACCESS_TIME, it) }
 		entity.endAccessDate?.let { record.set(TB_PROJECT_PROFILE.END_ACCESS_DATE, it) }
 		entity.endAccessTime?.let { record.set(TB_PROJECT_PROFILE.END_ACCESS_TIME, it) }
+		entity.favorite?.let { record.set(TB_PROJECT_PROFILE.FAVORITE, it) }
 		return Mono.from(dsl.insertInto(TB_PROJECT_PROFILE).set(record).returning()).map { it.toEntity() }
 	}
 
@@ -454,6 +457,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			.set(TB_PROJECT_PROFILE.START_ACCESS_TIME, entity.startAccessTime)
 			.set(TB_PROJECT_PROFILE.END_ACCESS_DATE, entity.endAccessDate)
 			.set(TB_PROJECT_PROFILE.END_ACCESS_TIME, entity.endAccessTime)
+			.set(TB_PROJECT_PROFILE.FAVORITE, entity.favorite)
 			.where(TB_PROJECT_PROFILE.ID.eq(entity.id))
 			.returning()
 	).map { it.toEntity() }
@@ -481,6 +485,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		startAccessTime = get(TB_PROJECT_PROFILE.START_ACCESS_TIME),
 		endAccessDate = get(TB_PROJECT_PROFILE.END_ACCESS_DATE),
 		endAccessTime = get(TB_PROJECT_PROFILE.END_ACCESS_TIME),
+		favorite = get(TB_PROJECT_PROFILE.FAVORITE),
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
 		fillGenericProject(this, TB_PROJECT_PROFILE.PROJECT_ID, project)

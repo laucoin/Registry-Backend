@@ -35,12 +35,13 @@ class UserProjectProfileV2Controller(
 		available: Boolean?,
 		status: ProfileStatusEnum?,
 		dateTime: ZonedDateTime?,
+		favorite: Boolean?,
 	): Mono<PageReaderDto<ProjectProfileReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ProjectProfileSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ProjectProfileSearchParamModel(q, available, status, dateTime)
+		val searchParams = ProjectProfileSearchParamModel(q, available, status, dateTime, favorite)
 
 		return service.findProjectProfilesPage(currentUser.id!!, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -56,6 +57,10 @@ class UserProjectProfileV2Controller(
 
 	override fun createSupportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileReaderDto> {
 		return service.createSupportProjectProfile(currentUser, projectId).map(readerMapper::toDto)
+	}
+
+	override fun toggleFavoriteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileReaderDto> {
+		return service.toggleFavoriteProjectProfileById(currentUser, id).map(readerMapper::toDto)
 	}
 
 	override fun deleteUserProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {

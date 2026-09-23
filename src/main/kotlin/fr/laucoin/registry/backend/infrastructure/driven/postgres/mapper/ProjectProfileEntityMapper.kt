@@ -23,6 +23,7 @@ class ProjectProfileEntityMapper(
 			endAccess = mapCustomDateTime(entity.endAccessDate, entity.endAccessTime)
 			status = entity.status
 			availabilityStatus = buildStatus()
+			favorite = entity.favorite ?: false
 		}.fillWithProjectAndEntity(entity)
 	}
 
@@ -51,6 +52,7 @@ class ProjectProfileEntityMapper(
 			startAccessTime = model.startAccess?.time
 			endAccessDate = model.endAccess?.date
 			endAccessTime = model.endAccess?.time
+			favorite = model.favorite
 		}.fillWithProjectAndModel(model)
 	}
 }

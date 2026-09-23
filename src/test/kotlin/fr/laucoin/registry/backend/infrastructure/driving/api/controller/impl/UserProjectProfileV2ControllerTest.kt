@@ -77,6 +77,32 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findUserProjectProfiles thread favorite query param to search params`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
+		whenever(service.findProjectProfilesPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("favorite", true))))
+			.exchange()
+
+		// Assert
+		result.body<Map<*, *>>(OK)
+
+		verify(service).findProjectProfilesPage(
+			currentUser().id!!,
+			pageable,
+			ProjectProfileSearchParamModel(textSearched = null, availabilitySearched = null, statusSearched = null, dateTimeSearched = null, favoriteSearched = true),
+			emptyList(),
+		)
+	}
+
+	@Test
 	fun `Should findUserProjectProfiles return 400 when a query param is invalid`() {
 		// Act
 		val result = webClient
@@ -159,6 +185,25 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 		result.body<ProjectProfileReaderDto>(OK)
 		verify(readerMapper).toDto(any())
 		verify(service).createSupportProjectProfile(any(), eq(projectId))
+	}
+
+	@Test
+	fun `Should toggleFavoriteUserProjectProfileById return 200`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.toggleFavoriteProjectProfileById(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/{id}/favorite", listOf(uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ProjectProfileReaderDto>(OK)
+		verify(service).toggleFavoriteProjectProfileById(any(), eq(uuid))
 	}
 
 	@Test

@@ -22,4 +22,5 @@ data class ProjectProfileEntity(
 	var startAccessTime: OffsetTime? = null,
 	var endAccessDate: LocalDate? = null,
 	var endAccessTime: OffsetTime? = null,
+	var favorite: Boolean? = null,
 ): GenericProjectEntity()

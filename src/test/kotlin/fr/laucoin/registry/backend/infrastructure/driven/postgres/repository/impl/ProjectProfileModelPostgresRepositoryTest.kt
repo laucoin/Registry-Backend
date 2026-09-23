@@ -77,6 +77,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
+			favoriteSearched = null,
 			sortFields = emptyList(),
 			pageable.limit,
 			pageable.offset,
