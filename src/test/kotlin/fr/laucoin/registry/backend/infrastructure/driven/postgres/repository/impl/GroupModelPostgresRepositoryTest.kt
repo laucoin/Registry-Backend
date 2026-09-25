@@ -39,6 +39,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import org.springframework.transaction.reactive.TransactionalOperator
 
 class GroupModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
@@ -55,6 +56,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 
 	@Autowired
 	private lateinit var repository: IGroupPort
+
+	@Autowired
+	private lateinit var transactionalOperator: TransactionalOperator
 
 	private companion object {
 		@JvmStatic
@@ -253,7 +257,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.create(group).block()
+			val result = repository.create(group).`as`(transactionalOperator::transactional).block()
 			uuid = result!!.id!!
 
 			// Assert
@@ -276,7 +280,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			repository.update(group).block()
+			repository.update(group).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			verify(postgresRepository).save(any(), any())
@@ -305,7 +309,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			repository.update(group).block()
+			repository.update(group).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			verify(postgresRepository).save(any(), any())

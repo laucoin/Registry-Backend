@@ -11,13 +11,11 @@ import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
 import java.net.URI
@@ -26,14 +24,12 @@ import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
 class ProjectV2Controller(
 	private val service: IProjectService,
 	private val readerMapper: ProjectReaderDtoMapper,
-	private val optionsReaderMapper: ProjectOptionsReaderDtoMapper,
 	private val writerMapper: ProjectWriterDtoMapper,
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
@@ -66,11 +62,10 @@ class ProjectV2Controller(
 		return service.findProjectById(id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
-	override fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto> {
-		return service.availableProjectOptions().map(optionsReaderMapper::toDto)
-	}
-
-	override fun createProject(currentUser: CurrentUserModel, project: ProjectWriterDto): Mono<ResponseEntity<ProjectReaderDto>> {
+	override fun createProject(
+		currentUser: CurrentUserModel,
+		project: ProjectWriterDto
+	): Mono<ResponseEntity<ProjectReaderDto>> {
 		val projectModel = writerMapper.toModel(project)
 		return service.createProject(currentUser, projectModel).map(readerMapper::toDto).map {
 			ResponseEntity.created(URI.create("$API_V2/projects/${it.id}")).body(it)

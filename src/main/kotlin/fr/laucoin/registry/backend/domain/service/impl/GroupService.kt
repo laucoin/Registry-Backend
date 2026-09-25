@@ -28,6 +28,7 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -36,6 +37,7 @@ class GroupService(
 	private val projectService: IProjectService,
 	private val port: IGroupPort,
 	private val participantPort: IParticipantPort,
+	private val transactionalOperator: TransactionalOperator,
 	@param:Value($$"${registry.feature.group.searched.max-participant-result}")
 	private val maxParticipantResult: Int,
 ): IGroupService, GenericService() {
@@ -89,6 +91,14 @@ class GroupService(
 		)
 	}
 
+	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<GroupModel> {
+		return port.findArrivingToday(projectId, limit)
+	}
+
+	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<GroupModel> {
+		return port.findDepartingToday(projectId, limit)
+	}
+
 	override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
 		return projectService.validateDateTimes(
 			group.project!!.id!!,
@@ -98,6 +108,7 @@ class GroupService(
 		)
 			.flatMap { validateMembers(group.project!!.id!!, group, group.members.mapNotNull { p -> p.id }) }
 			.flatMap { port.create(group.apply { create(currentUser) }) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun updateGroupById(
@@ -203,7 +214,7 @@ class GroupService(
 
 	private fun Mono<GroupModel>.updateGroup(currentUser: CurrentUserModel) = flatMap {
 		port.update(it.apply { update(currentUser) })
-	}
+	}.`as`(transactionalOperator::transactional)
 
 	private fun validateMembers(projectId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
 		return participantPort.findAllByIds(projectId, newMemberIds, visibilitySearched = null)

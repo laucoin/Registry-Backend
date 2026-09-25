@@ -7,13 +7,11 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
-import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_METADATA_R
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -36,10 +34,9 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
+import reactor.core.publisher.Mono
 
 @Tag(name = "Projects management", description = "API for Projects-related operations")
 @RequestMapping("$API_V2/projects")
@@ -70,14 +67,6 @@ interface IProjectV2Controller {
 	@PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/{id}")
 	fun findProjectById(@PathVariable id: UUID): Mono<ProjectReaderDto>
-
-	@Operation(
-		summary = "Get available Options",
-		description = "Get all the Options you are allowed to enable",
-	)
-	@PreAuthorize("hasAuthority('$REGISTRY_PROJECT_METADATA_R')")
-	@GetMapping("/options")
-	fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto>
 
 	@Operation(
 		summary = "Create Project",

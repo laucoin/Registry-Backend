@@ -35,6 +35,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import org.springframework.transaction.reactive.TransactionalOperator
 import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
@@ -55,6 +56,9 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 
 	@Autowired
 	private lateinit var repository: IParticipantPort
+
+	@Autowired
+	private lateinit var transactionalOperator: TransactionalOperator
 
 	private companion object {
 		@JvmStatic
@@ -333,7 +337,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			}
 
 			// Act
-			val result = repository.create(participant).block()
+			val result = repository.create(participant).`as`(transactionalOperator::transactional).block()
 			uuid = result!!.id!!
 
 			// Assert
@@ -360,7 +364,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			}
 
 			// Act
-			val result = repository.update(participant).block()
+			val result = repository.update(participant).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			assertNotNull(result)
@@ -393,7 +397,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			}
 
 			// Act
-			val result = repository.update(participant).block()
+			val result = repository.update(participant).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			assertNotNull(result)

@@ -80,6 +80,14 @@ class GroupModelPostgresRepository(
 		).map(mapper::toModel)
 	}
 
+	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<GroupModel> {
+		return repository.findArrivingToday(projectId, limit).map(mapper::toModel)
+	}
+
+	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<GroupModel> {
+		return repository.findDepartingToday(projectId, limit).map(mapper::toModel)
+	}
+
 	override fun findEmpty(participantToExclude: List<UUID>): Flux<UUID> {
 		return if (participantToExclude.isEmpty()) Flux.empty()
 		else repository.findEmpty(participantToExclude)
@@ -106,32 +114,28 @@ class GroupModelPostgresRepository(
 		}
 	}
 
-	override fun create(element: GroupModel): Mono<GroupModel> = Mono.from(
-		dsl.transactionPublisher { config ->
-			val txDsl = config.dsl()
-			save(txDsl, element).saveNewMembers(txDsl, element)
-		}
-	)
+	// Atomicity across the save + members diff is the caller's responsibility (`TransactionalOperator`),
+	// not this repository's — see the jOOQ-vs-Spring-transaction note on `JooqConfig.dslContext()`.
+	override fun create(element: GroupModel): Mono<GroupModel> {
+		return save(dsl, element).saveNewMembers(dsl, element)
+	}
 
-	override fun update(element: GroupModel): Mono<GroupModel> = Mono.from(
-		dsl.transactionPublisher { config ->
-			val txDsl = config.dsl()
-			save(txDsl, element)
-				.flatMap { findByIdWithContent(txDsl, element.project!!.id!!, element.id!!) }
-				.removeDeletedMembers(txDsl, element)
-				.saveNewMembers(txDsl, element)
-		}
-	)
+	override fun update(element: GroupModel): Mono<GroupModel> {
+		return save(dsl, element)
+			.flatMap { findByIdWithContent(dsl, element.project!!.id!!, element.id!!) }
+			.removeDeletedMembers(dsl, element)
+			.saveNewMembers(dsl, element)
+	}
 
-	private fun findByIdWithContent(txDsl: DSLContext, projectId: UUID, id: UUID): Mono<GroupModel> {
+	private fun findByIdWithContent(using: DSLContext, projectId: UUID, id: UUID): Mono<GroupModel> {
 		return Mono.zip(
-			repository.findById(projectId, id, visibilitySearched = null, using = txDsl).map(mapper::toModel),
+			repository.findById(projectId, id, visibilitySearched = null, using = using).map(mapper::toModel),
 			contentRepository.findAllByGroupIds(
 				projectId,
 				listOf(id),
 				visibilitySearched = null,
 				availabilitySearched = null,
-				using = txDsl,
+				using = using,
 			).map(contentMapper::toModel).collectList(),
 		).map {
 			it.t1.members = it.t2
@@ -139,22 +143,22 @@ class GroupModelPostgresRepository(
 		}
 	}
 
-	fun Mono<GroupModel>.saveNewMembers(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
+	fun Mono<GroupModel>.saveNewMembers(using: DSLContext, element: GroupModel): Mono<GroupModel> {
 		return flatMap { group ->
 			val newMembers = group.getNewMembers(element)
 			if (newMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) }, txDsl)
+			contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) }, using)
 				.map(contentMapper::toModel)
 				.collectList()
 				.map { group.apply { members = members.plus(it) } }
 		}
 	}
 
-	fun Mono<GroupModel>.removeDeletedMembers(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
+	fun Mono<GroupModel>.removeDeletedMembers(using: DSLContext, element: GroupModel): Mono<GroupModel> {
 		return flatMap { group ->
 			val removedMembers = group.getOldMemberIds(element)
 			if (removedMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers, txDsl)
+			contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers, using)
 				.then(Mono.fromCallable {
 					group.apply {
 						members = members.filter { !removedMembers.contains(it.id) }
@@ -163,8 +167,8 @@ class GroupModelPostgresRepository(
 		}
 	}
 
-	private fun save(txDsl: DSLContext, element: GroupModel): Mono<GroupModel> {
-		return repository.save(mapper.toEntity(element), txDsl).map(mapper::toModel)
+	private fun save(using: DSLContext, element: GroupModel): Mono<GroupModel> {
+		return repository.save(mapper.toEntity(element), using).map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

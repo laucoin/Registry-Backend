@@ -29,6 +29,7 @@ import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -43,6 +44,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -51,8 +53,14 @@ class GroupServiceTest {
 	private val projectService: IProjectService = mock()
 	private val port: IGroupPort = mock()
 	private val participantPort: IParticipantPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IGroupService =
-		GroupService(projectService, port, participantPort, MAX_PARTICIPANTS)
+		GroupService(projectService, port, participantPort, transactionalOperator, MAX_PARTICIPANTS)
+
+	@BeforeEach
+	fun setup() {
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
+	}
 
 	private companion object {
 		private const val MAX_PARTICIPANTS = 1
@@ -93,6 +101,30 @@ class GroupServiceTest {
 
 		// Assert
 		verify(port).findPage(projectId, pageable, params, emptyList())
+	}
+
+	@Test
+	fun `Should findArrivingToday call port findArrivingToday`() {
+		// Arrange
+		whenever(port.findArrivingToday(any(), any())).thenReturn(Flux.just(commonGroup()))
+
+		// Act
+		service.findArrivingToday(projectId, limit = 5).blockFirst()
+
+		// Assert
+		verify(port).findArrivingToday(projectId, 5)
+	}
+
+	@Test
+	fun `Should findDepartingToday call port findDepartingToday`() {
+		// Arrange
+		whenever(port.findDepartingToday(any(), any())).thenReturn(Flux.just(commonGroup()))
+
+		// Act
+		service.findDepartingToday(projectId, limit = 5).blockFirst()
+
+		// Assert
+		verify(port).findDepartingToday(projectId, 5)
 	}
 
 	@Test

@@ -168,7 +168,9 @@ these:
   persistence only through domain `port` interfaces.
 - **Every `@RestController` implements a contract interface** that carries the `@RequestMapping`, `@PreAuthorize`,
   OpenAPI annotations and bean-validation constraints; the impl only maps DTOs and delegates. No endpoint ships without
-  an authorization rule. (ADR 001)
+  an authorization rule, except `/api/v*/metadata/**`: global, static, tenant-free reference data (enum labels,
+  available options) with zero criticality, open to any authenticated user — `@PreAuthorize` is intentionally omitted
+  there and the global `authenticated()` filter is the only gate. (ADR 001)
 - **No entity crosses the API boundary.** Reader (response) / writer (request) DTOs only; Postgres `entity` classes are
   package-private to `infrastructure.driven.postgres` (ArchUnit).
 - **Non-blocking on the request path.** No `.block()`, `Thread.sleep`, or blocking JDBC/file IO. The only JDBC use is

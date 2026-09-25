@@ -157,33 +157,29 @@ class ParticipantModelPostgresRepository(
 		return repository.findById(projectId, id, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
 	}
 
-	override fun create(element: ParticipantModel): Mono<ParticipantModel> = Mono.from(
-		dsl.transactionPublisher { config ->
-			val txDsl = config.dsl()
-			save(txDsl, element).saveNewGroups(txDsl, element)
-		}
-	)
+	// Atomicity across the save + groups diff is the caller's responsibility (`TransactionalOperator`),
+	// not this repository's — see the jOOQ-vs-Spring-transaction note on `JooqConfig.dslContext()`.
+	override fun create(element: ParticipantModel): Mono<ParticipantModel> {
+		return save(dsl, element).saveNewGroups(dsl, element)
+	}
 
-	override fun update(element: ParticipantModel): Mono<ParticipantModel> = Mono.from(
-		dsl.transactionPublisher { config ->
-			val txDsl = config.dsl()
-			save(txDsl, element)
-				.flatMap { findById(txDsl, element.project!!.id!!, element.id!!) }
-				.saveNewGroups(txDsl, element)
-				.removeDeletedGroups(txDsl, element)
-		}
-	)
+	override fun update(element: ParticipantModel): Mono<ParticipantModel> {
+		return save(dsl, element)
+			.flatMap { findById(dsl, element.project!!.id!!, element.id!!) }
+			.saveNewGroups(dsl, element)
+			.removeDeletedGroups(dsl, element)
+	}
 
-	private fun findById(txDsl: DSLContext, projectId: UUID, id: UUID): Mono<ParticipantModel> {
-		return repository.findById(projectId, id, visibilitySearched = null, dateTimeSearched = null, using = txDsl)
+	private fun findById(using: DSLContext, projectId: UUID, id: UUID): Mono<ParticipantModel> {
+		return repository.findById(projectId, id, visibilitySearched = null, dateTimeSearched = null, using = using)
 			.map(mapper::toModel)
 	}
 
-	fun Mono<ParticipantModel>.saveNewGroups(txDsl: DSLContext, element: ParticipantModel): Mono<ParticipantModel> {
+	fun Mono<ParticipantModel>.saveNewGroups(using: DSLContext, element: ParticipantModel): Mono<ParticipantModel> {
 		return flatMap { participant ->
 			val newGroups = participant.getNewGroups(element)
 			if (newGroups.isEmpty()) return@flatMap Mono.just(participant)
-			groupContentRepository.saveAll(newGroups.map { groupContentMapper.toEntity(it.id!!, participant) }, txDsl)
+			groupContentRepository.saveAll(newGroups.map { groupContentMapper.toEntity(it.id!!, participant) }, using)
 				.map(groupContentMapper::toModel)
 				.collectList()
 				.map { participant.apply { groups = groups.plus(newGroups) } }
@@ -191,13 +187,13 @@ class ParticipantModelPostgresRepository(
 	}
 
 	fun Mono<ParticipantModel>.removeDeletedGroups(
-		txDsl: DSLContext,
+		using: DSLContext,
 		element: ParticipantModel
 	): Mono<ParticipantModel> {
 		return flatMap { participant ->
 			val removedGroups = participant.getOldGroupIds(element)
 			if (removedGroups.isEmpty()) return@flatMap Mono.just(participant)
-			groupContentRepository.deleteAllByParticipantIdAndGroupIds(participant.id!!, removedGroups, txDsl)
+			groupContentRepository.deleteAllByParticipantIdAndGroupIds(participant.id!!, removedGroups, using)
 				.then(Mono.fromCallable {
 					participant.apply {
 						groups = groups.filter { removedGroups.contains(it.id) }
@@ -206,8 +202,8 @@ class ParticipantModelPostgresRepository(
 		}
 	}
 
-	private fun save(txDsl: DSLContext, element: ParticipantModel): Mono<ParticipantModel> {
-		return repository.save(mapper.toEntity(element), txDsl).map(mapper::toModel)
+	private fun save(using: DSLContext, element: ParticipantModel): Mono<ParticipantModel> {
+		return repository.save(mapper.toEntity(element), using).map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

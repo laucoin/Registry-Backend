@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
-import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_METADATA_R
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
@@ -79,7 +78,6 @@ interface IProjectV1Controller {
 		description = "Get all the Options you are allowed to enable",
 		deprecated = true,
 	)
-	@PreAuthorize("hasAuthority('$REGISTRY_PROJECT_METADATA_R')")
 	@GetMapping("/options")
 	fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto>
 

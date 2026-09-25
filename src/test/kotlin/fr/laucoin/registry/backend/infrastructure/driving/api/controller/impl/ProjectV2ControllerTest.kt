@@ -16,7 +16,6 @@ import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -54,9 +53,6 @@ class ProjectV2ControllerTest: TestContext() {
 
 	@MockitoBean
 	private lateinit var readerMapper: ProjectReaderDtoMapper
-
-	@MockitoBean
-	private lateinit var optionsReaderMapper: ProjectOptionsReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var writerMapper: ProjectWriterDtoMapper

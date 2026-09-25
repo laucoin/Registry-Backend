@@ -153,6 +153,18 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 			.groupBy(TB_GROUP_CONTENT.GROUP_ID)
 	)
 
+	// Members whose presence is inherited from the Group (no Participant-level date overriding it).
+	private fun membersWithoutOverrideCte(
+		overrideDate: Field<LocalDate?>,
+		using: DSLContext = dsl,
+	): CommonTableExpression<*> = name("members_without_override").`as`(
+		using.select(TB_GROUP_CONTENT.GROUP_ID, count(TB_GROUP_CONTENT.PARTICIPANT_ID).`as`("members_count"))
+			.from(TB_GROUP_CONTENT)
+			.join(TB_PARTICIPANT).on(TB_GROUP_CONTENT.PARTICIPANT_ID.eq(TB_PARTICIPANT.ID))
+			.where(TB_PARTICIPANT.VISIBLE.isTrue.and(overrideDate.isNull))
+			.groupBy(TB_GROUP_CONTENT.GROUP_ID)
+	)
+
 	private fun searchConditions(
 		projectId: UUID,
 		textSearched: String?,
@@ -342,6 +354,72 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(project, creator, editor, includeCounts = true) }
 	}
 
+	// Groups whose own presence window opens/closes today, and that actually govern at least one
+	// Participant's presence (i.e. a member with no individual date overriding the Group's).
+	private fun findOnDate(
+		projectId: UUID,
+		dateColumn: Field<LocalDate?>,
+		timeColumn: Field<OffsetTime?>,
+		overrideDate: Field<LocalDate?>,
+		limit: Int,
+	): Flux<GroupEntity> {
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		val membersWithoutOverride = membersWithoutOverrideCte(overrideDate)
+		val mwoGroupId = field(name("members_without_override", "group_id"), UUID::class.java)
+		val mwoCount = field(name("members_without_override", "members_count"), Long::class.java)
+		return Flux.from(
+			dsl.with(membersWithoutOverride)
+				.select(
+					listOf(
+						TB_GROUP.asterisk(),
+						mwoCount.`as`("full_members_count"),
+						project.NAME,
+						project.BEGIN_DATE,
+						project.BEGIN_TIME,
+						project.END_DATE,
+						project.END_TIME,
+						project.OPTIONS,
+						creator.FIRST_NAME,
+						creator.LAST_NAME,
+						creator.EMAIL,
+						editor.FIRST_NAME,
+						editor.LAST_NAME,
+						editor.EMAIL,
+					)
+				)
+					.from(TB_GROUP)
+					.join(membersWithoutOverride).on(mwoGroupId.eq(TB_GROUP.ID))
+					.join(project).on(TB_GROUP.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
+					.leftJoin(creator).on(TB_GROUP.CREATED_BY.eq(creator.ID))
+					.leftJoin(editor).on(TB_GROUP.LAST_MODIFIED_BY.eq(editor.ID))
+					.where(
+						TB_GROUP.VISIBLE.isTrue
+							.and(TB_GROUP.PROJECT_ID.eq(projectId))
+							.and(dateColumn.eq(DSL.currentLocalDate()))
+					)
+					.orderBy(timeColumn)
+					.limit(limit)
+		).map { it.toArrivalDepartureEntity(project, creator, editor, mwoCount) }
+	}
+
+	fun findArrivingToday(projectId: UUID, limit: Int): Flux<GroupEntity> = findOnDate(
+		projectId,
+		TB_GROUP.START_AVAILABILITY_DATE,
+		TB_GROUP.START_AVAILABILITY_TIME,
+		TB_PARTICIPANT.START_AVAILABILITY_DATE,
+		limit,
+	)
+
+	fun findDepartingToday(projectId: UUID, limit: Int): Flux<GroupEntity> = findOnDate(
+		projectId,
+		TB_GROUP.END_AVAILABILITY_DATE,
+		TB_GROUP.END_AVAILABILITY_TIME,
+		TB_PARTICIPANT.END_AVAILABILITY_DATE,
+		limit,
+	)
+
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupEntity> =
 		findById(projectId, id, visibilitySearched, dsl)
 
@@ -405,6 +483,24 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 	).map { it.toEntity() }
 
 	fun deleteById(id: UUID): Mono<Unit> = Mono.from(dsl.deleteFrom(TB_GROUP).where(TB_GROUP.ID.eq(id))).map { }
+
+	// Members count here is scoped to the query (e.g. members without an individual date override), not the Group's total.
+	private fun Record.toArrivalDepartureEntity(
+		project: TbProject,
+		creator: TbUser,
+		editor: TbUser,
+		membersCount: Field<Long>,
+	): GroupEntity = GroupEntity(
+		name = get(TB_GROUP.NAME),
+		startAvailabilityDate = get(TB_GROUP.START_AVAILABILITY_DATE),
+		startAvailabilityTime = get(TB_GROUP.START_AVAILABILITY_TIME),
+		endAvailabilityDate = get(TB_GROUP.END_AVAILABILITY_DATE),
+		endAvailabilityTime = get(TB_GROUP.END_AVAILABILITY_TIME),
+		members = get(membersCount),
+	).apply {
+		fillGeneric(this, columns, creator, editor)
+		fillGenericProject(this, TB_GROUP.PROJECT_ID, project)
+	}
 
 	private fun Record.toEntity(
 		project: TbProject? = null,

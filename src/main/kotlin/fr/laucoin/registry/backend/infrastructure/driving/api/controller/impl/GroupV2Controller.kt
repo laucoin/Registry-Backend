@@ -65,6 +65,14 @@ class GroupV2Controller(
 			.map { pageReaderMapper.toDto(it, readerLightMapper::toDto) }
 	}
 
+	override fun findGroupsArrivingToday(projectId: UUID, limit: Int): Flux<GroupWithoutMemberReaderDto> {
+		return service.findArrivingToday(projectId, limit).map(readerLightMapper::toDto)
+	}
+
+	override fun findGroupsDepartingToday(projectId: UUID, limit: Int): Flux<GroupWithoutMemberReaderDto> {
+		return service.findDepartingToday(projectId, limit).map(readerLightMapper::toDto)
+	}
+
 	override fun findGroupMembersByGroupId(
 		projectId: UUID,
 		id: UUID,

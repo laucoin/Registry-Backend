@@ -2,7 +2,11 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
+import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
+import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_EMPTY
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
@@ -24,6 +28,8 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GroupWr
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotEmpty
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.format.annotation.DateTimeFormat
@@ -65,6 +71,34 @@ interface IGroupV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<GroupWithoutMemberReaderDto>>
+
+	@Operation(
+		summary = "Find Groups arriving today",
+		description = "Groups whose own presence window opens today and governs at least one Participant's presence " +
+			"(i.e. a member with no individual date overriding the Group's); capped at \"limit\" rows",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
+	@GetMapping("/arrivals-today")
+	fun findGroupsArrivingToday(
+		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		limit: Int,
+	): Flux<GroupWithoutMemberReaderDto>
+
+	@Operation(
+		summary = "Find Groups departing today",
+		description = "Groups whose own presence window closes today and governs at least one Participant's presence " +
+			"(i.e. a member with no individual date overriding the Group's); capped at \"limit\" rows",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
+	@GetMapping("/departures-today")
+	fun findGroupsDepartingToday(
+		@PathVariable projectId: UUID,
+		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		limit: Int,
+	): Flux<GroupWithoutMemberReaderDto>
 
 	@Operation(
 		summary = "Find Group Members",

@@ -240,27 +240,23 @@ class MovementModelPostgresRepository(
 		}
 	}
 
-	override fun create(element: MovementModel): Mono<MovementModel> = Mono.from(
-		dsl.transactionPublisher { config ->
-			val txDsl = config.dsl()
-			save(txDsl, element).saveNewContent(txDsl, element)
-		}
-	)
+	// Atomicity across the save + content diff is the caller's responsibility (`TransactionalOperator`),
+	// not this repository's — see the jOOQ-vs-Spring-transaction note on `JooqConfig.dslContext()`.
+	override fun create(element: MovementModel): Mono<MovementModel> {
+		return save(dsl, element).saveNewContent(dsl, element)
+	}
 
-	override fun update(element: MovementModel): Mono<MovementModel> = Mono.from(
-		dsl.transactionPublisher { config ->
-			val txDsl = config.dsl()
-			save(txDsl, element)
-				.flatMap { findById(txDsl, element.project!!.id!!, element.id!!) }
-				.removeDeletedContent(txDsl, element)
-				.saveNewContent(txDsl, element)
-		}
-	)
+	override fun update(element: MovementModel): Mono<MovementModel> {
+		return save(dsl, element)
+			.flatMap { findById(dsl, element.project!!.id!!, element.id!!) }
+			.removeDeletedContent(dsl, element)
+			.saveNewContent(dsl, element)
+	}
 
-	private fun findById(txDsl: DSLContext, projectId: UUID, id: UUID): Mono<MovementModel> {
+	private fun findById(using: DSLContext, projectId: UUID, id: UUID): Mono<MovementModel> {
 		return Mono.zip(
-			repository.findById(projectId, id, visibilitySearched = null, using = txDsl).map(mapper::toModel),
-			contentRepository.findAllByMovementIds(projectId, listOf(id), using = txDsl).map(contentMapper::toModel)
+			repository.findById(projectId, id, visibilitySearched = null, using = using).map(mapper::toModel),
+			contentRepository.findAllByMovementIds(projectId, listOf(id), using = using).map(contentMapper::toModel)
 				.collectList(),
 		).map {
 			it.t1.content = it.t2
@@ -268,28 +264,28 @@ class MovementModelPostgresRepository(
 		}
 	}
 
-	fun Mono<MovementModel>.saveNewContent(txDsl: DSLContext, element: MovementModel): Mono<MovementModel> {
+	fun Mono<MovementModel>.saveNewContent(using: DSLContext, element: MovementModel): Mono<MovementModel> {
 		return flatMap { movement ->
 			val newContent = movement.getNewContent(element)
 			if (newContent.isEmpty()) return@flatMap Mono.just(movement)
-			contentRepository.saveAll(newContent.map { contentMapper.toEntity(movement.id!!, it) }, txDsl)
+			contentRepository.saveAll(newContent.map { contentMapper.toEntity(movement.id!!, it) }, using)
 				.map(contentMapper::toModel)
 				.collectList()
 				.map { movement.apply { content = content.plus(it) } }
 		}
 	}
 
-	fun Mono<MovementModel>.removeDeletedContent(txDsl: DSLContext, element: MovementModel): Mono<MovementModel> {
+	fun Mono<MovementModel>.removeDeletedContent(using: DSLContext, element: MovementModel): Mono<MovementModel> {
 		return flatMap { movement ->
 			val removedIds = movement.getOldContentIds(element)
 			if (removedIds.isEmpty()) return@flatMap Mono.just(movement)
-			contentRepository.deleteAllById(removedIds, txDsl)
+			contentRepository.deleteAllById(removedIds, using)
 				.then(Mono.fromCallable { movement.apply { content = content.filter { !removedIds.contains(it.id) } } })
 		}
 	}
 
-	private fun save(txDsl: DSLContext, element: MovementModel): Mono<MovementModel> {
-		return repository.save(mapper.toEntity(element), txDsl).map(mapper::toModel)
+	private fun save(using: DSLContext, element: MovementModel): Mono<MovementModel> {
+		return repository.save(mapper.toEntity(element), using).map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

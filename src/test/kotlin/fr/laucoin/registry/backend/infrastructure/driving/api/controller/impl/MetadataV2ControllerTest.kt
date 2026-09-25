@@ -1,9 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AvailabilityStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PresenceStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -22,6 +25,9 @@ import org.springframework.test.web.reactive.server.WebTestClient
 
 class MetadataV2ControllerTest: TestContext() {
 	@MockitoBean
+	private lateinit var optionsReaderMapper: ProjectOptionsReaderDtoMapper
+
+	@MockitoBean
 	private lateinit var movementTypeReaderMapper: MovementTypeReaderDtoMapper
 
 	@MockitoBean
@@ -38,6 +44,27 @@ class MetadataV2ControllerTest: TestContext() {
 
 	private companion object {
 		private const val BASE_URL = "/api/v2/metadata"
+	}
+
+	@Test
+	fun `Should getAvailableProjectOptions return 200`() {
+		// Arrange
+		whenever(optionsReaderMapper.toDto(any())).thenReturn(
+			ProjectOptionsReaderDto(ACTIVITY, "label", "question", emptyList())
+		)
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder("$BASE_URL/projects/options", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(optionsReaderMapper, atLeastOnce()).toDto(any())
+		verifyNoInteractions(movementTypeReaderMapper)
+		verifyNoInteractions(profileStatusReaderMapper)
 	}
 
 	@Test

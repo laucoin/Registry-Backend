@@ -42,6 +42,7 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -53,6 +54,7 @@ class ParticipantService(
 	private val movementPort: IMovementPort,
 	private val groupPort: IGroupPort,
 	private val communicationPort: ICommunicationPort,
+	private val transactionalOperator: TransactionalOperator,
 	@param:Value($$"${registry.feature.participant.searched.max-user-result}")
 	private val maxUserResult: Int,
 	@param:Value($$"${registry.feature.participant.searched.max-group-result}")
@@ -169,6 +171,7 @@ class ParticipantService(
 				} else Mono.just(participant)
 			}
 			.flatMap { port.create(participant.apply { create(currentUser) }) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun validateNoParticipantForUser(projectId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
@@ -261,7 +264,7 @@ class ParticipantService(
 
 	private fun Mono<ParticipantModel>.updateParticipant(currentUser: CurrentUserModel) = flatMap {
 		port.update(it.apply { update(currentUser) })
-	}
+	}.`as`(transactionalOperator::transactional)
 
 	override fun disableParticipantById(
 		currentUser: CurrentUserModel,

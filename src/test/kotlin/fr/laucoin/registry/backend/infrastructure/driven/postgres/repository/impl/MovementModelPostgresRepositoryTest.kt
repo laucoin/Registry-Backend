@@ -48,6 +48,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import org.springframework.transaction.reactive.TransactionalOperator
 
 class MovementModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
@@ -64,6 +65,9 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 
 	@Autowired
 	private lateinit var repository: IMovementPort
+
+	@Autowired
+	private lateinit var transactionalOperator: TransactionalOperator
 
 	private companion object {
 		@JvmStatic
@@ -394,7 +398,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.create(movement).block()
+			val result = repository.create(movement).`as`(transactionalOperator::transactional).block()
 			uuid = result!!.id!!
 
 			// Assert
@@ -420,7 +424,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.update(movement).block()
+			val result = repository.update(movement).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			assertNotNull(result)
@@ -445,7 +449,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.update(movement).block()
+			val result = repository.update(movement).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			assertNotNull(result)

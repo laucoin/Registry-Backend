@@ -40,6 +40,7 @@ import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -55,6 +56,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -66,9 +68,16 @@ class ParticipantServiceTest {
 	private val movementPort: IMovementPort = mock()
 	private val groupPort: IGroupPort = mock()
 	private val communicationPort: ICommunicationPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IParticipantService = ParticipantService(
-		projectService, port, userPort, movementPort, groupPort, communicationPort, MAX_USERS, MAX_GROUPS
+		projectService, port, userPort, movementPort, groupPort, communicationPort, transactionalOperator,
+		MAX_USERS, MAX_GROUPS
 	)
+
+	@BeforeEach
+	fun setup() {
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
+	}
 
 	private companion object {
 		private const val MAX_USERS = 1

@@ -6,13 +6,16 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMetadataV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AvailabilityStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PresenceStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import java.security.Principal
 import org.springframework.web.bind.annotation.RestController
@@ -20,6 +23,7 @@ import reactor.core.publisher.Flux
 
 @RestController
 class MetadataV2Controller(
+	private val optionsReaderMapper: ProjectOptionsReaderDtoMapper,
 	private val presenceStatusMapper: PresenceStatusReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val profileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper,
@@ -27,6 +31,10 @@ class MetadataV2Controller(
 	private val participantTypeReaderMapper: ParticipantTypeReaderDtoMapper,
 	private val alertStatusReaderMapper: AlertStatusReaderDtoMapper,
 ): IMetadataV2Controller {
+	override fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto> {
+		return Flux.fromIterable(ProjectOptionEnum.entries).map(optionsReaderMapper::toDto)
+	}
+
 	override fun getPresencesStatus(principal: Principal): Flux<LabelDto> {
 		return Flux.fromIterable(PresenceStatusEnum.entries).map(presenceStatusMapper::toDto)
 	}

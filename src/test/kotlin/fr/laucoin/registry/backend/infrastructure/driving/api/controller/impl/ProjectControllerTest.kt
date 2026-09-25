@@ -11,7 +11,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
-import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
@@ -305,7 +304,7 @@ class ProjectControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(REGISTRY_PROJECT_METADATA_R)
+			.authenticate()
 			.get()
 			.uri(uriBuilder("$BASE_URL/options", listOf(projectId), emptyList()))
 			.exchange()

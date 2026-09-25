@@ -1,7 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.SORT_FIELD_IS_UNKNOWN
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
@@ -32,9 +35,13 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.util.UUID
+import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
@@ -44,6 +51,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -75,6 +83,14 @@ class GroupV2ControllerTest: TestContext() {
 
 	private companion object {
 		private const val BASE_URL = "/api/v2/projects/{projectId}/groups"
+
+		@JvmStatic
+		fun `Should findGroupsArrivingToday and findGroupsDepartingToday return 400 on an invalid limit`(): Stream<Arguments> {
+			return Stream.of(
+				Arguments.of(0, PAGE_SIZE_IS_LOWER_THAN_ONE),
+				Arguments.of(51, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+			)
+		}
 	}
 
 	@Test
@@ -129,6 +145,94 @@ class GroupV2ControllerTest: TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PAGE_NUMBER_IS_LOWER_THAN_ZERO)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findGroupsArrivingToday return 200`() {
+		// Arrange
+		whenever(service.findArrivingToday(any(), any())).thenReturn(Flux.just(GroupModel()))
+		whenever(readerLightMapper.toDto(any())).thenReturn(GroupWithoutMemberReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/arrivals-today", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(service).findArrivingToday(projectId, 5)
+	}
+
+	@Test
+	fun `Should findGroupsDepartingToday return 200`() {
+		// Arrange
+		whenever(service.findDepartingToday(any(), any())).thenReturn(Flux.just(GroupModel()))
+		whenever(readerLightMapper.toDto(any())).thenReturn(GroupWithoutMemberReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/departures-today", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(service).findDepartingToday(projectId, 5)
+	}
+
+	@Test
+	fun `Should findGroupsArrivingToday return 403 without REGISTRY_PROJECT_GROUP_R`() {
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder("$BASE_URL/arrivals-today", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findGroupsDepartingToday return 403 without REGISTRY_PROJECT_GROUP_R`() {
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder("$BASE_URL/departures-today", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+		verifyNoInteractions(service)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findGroupsArrivingToday and findGroupsDepartingToday return 400 on an invalid limit`(
+		limit: Int,
+		expectedCode: String,
+	) {
+		// Act
+		val arriving = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/arrivals-today", listOf(projectId), listOf(Pair("limit", limit))))
+			.exchange()
+		val departing = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/departures-today", listOf(projectId), listOf(Pair("limit", limit))))
+			.exchange()
+
+		// Assert
+		arriving.assertError(BAD_REQUEST, expectedCode)
+		departing.assertError(BAD_REQUEST, expectedCode)
 		verifyNoInteractions(service)
 	}
 
