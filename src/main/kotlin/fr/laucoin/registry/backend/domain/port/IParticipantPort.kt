@@ -12,6 +12,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [ParticipantModel]: CRUD, paginated/filtered search, group-scoped listing,
+ * dashboard queries (birthdays, arriving/departing today), bulk Guest creation/availability updates,
+ * and the retention lookup used by the purge job. Implemented by the jOOQ Postgres adapter.
+ */
 interface IParticipantPort {
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
 	fun findPage(

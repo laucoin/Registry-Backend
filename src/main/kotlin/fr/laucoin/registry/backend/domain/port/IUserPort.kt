@@ -12,6 +12,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [UserModel]/[CurrentUserModel]: CRUD, paginated/filtered search, lookup by
+ * OIDC ID/email/service-account/role level, and the retention lookup used by the purge job.
+ * Implemented by the jOOQ Postgres adapter.
+ */
 interface IUserPort {
 	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel>
 	fun findPage(

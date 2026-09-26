@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.UserProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -32,6 +33,11 @@ object ModelExt {
 	fun commonProjectProfile() = ProjectProfileModel().apply {
 		id = projectProfileId
 		user = commonUser()
+	}.also { it.projectId = projectId }
+
+	fun commonUserProjectProfile() = UserProjectProfileModel().apply {
+		id = projectProfileId
+		user = commonUser()
 		project = commonProject()
 	}
 
@@ -40,26 +46,23 @@ object ModelExt {
 		lastLogin = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
 	}
 
-	fun commonGroup() = GroupModel().apply { id = groupId; project = commonProject() }
+	fun commonGroup() = GroupModel().apply { id = groupId }.also { it.projectId = projectId }
 	fun commonAlert() = AlertModel().apply {
 		id = alertId
 		dateTime = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
-		project = commonProject()
-	}
+	}.also { it.projectId = projectId }
 
 	fun commonMovement() = MovementModel().apply {
 		id = movementId
 		dateTime = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
-		project = commonProject()
-	}
+	}.also { it.projectId = projectId }
 
-	fun commonParticipant() = ParticipantModel().apply { id = participantId; project = commonProject() }
-	fun commonActivity() = ActivityModel().apply { id = activityId; project = commonProject() }
+	fun commonParticipant() = ParticipantModel().apply { id = participantId }.also { it.projectId = projectId }
+	fun commonActivity() = ActivityModel().apply { id = activityId }.also { it.projectId = projectId }
 	fun commonCommunication() = CommunicationModel().apply {
 		id = communicationId
 		dateTime = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
-		project = commonProject()
-	}
+	}.also { it.projectId = projectId }
 
-	fun commonVehicle() = VehicleModel().apply { id = vehicleId; project = commonProject() }
+	fun commonVehicle() = VehicleModel().apply { id = vehicleId }.also { it.projectId = projectId }
 }

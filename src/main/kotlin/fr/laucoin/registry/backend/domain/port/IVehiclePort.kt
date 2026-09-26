@@ -11,6 +11,10 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [VehicleModel]: CRUD, paginated/filtered search, counts, and the retention
+ * lookup used by the purge job. Implemented by the jOOQ Postgres adapter.
+ */
 interface IVehiclePort {
 	fun findAllByCreatorId(userId: UUID): Flux<VehicleModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>

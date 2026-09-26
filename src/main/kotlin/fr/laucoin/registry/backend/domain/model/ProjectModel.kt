@@ -10,8 +10,18 @@ data class ProjectModel(
 	var begin: CustomDateTimeModel? = null,
 	var end: CustomDateTimeModel? = null,
 	var options: List<ProjectOptionEnum>? = emptyList(),
-	var favorite: Boolean = false,
-): GenericModel() {
+	var counts: ProjectCountsModel? = null,
+	var activeProfile: ProjectProfileModel? = null,
+) : GenericModel() {
+	data class ProjectCountsModel(
+		var participants: Long = 0,
+		var vehicles: Long = 0,
+		var groups: Long = 0,
+		var activities: Long = 0,
+		var profiles: Long = 0,
+		var ongoingAlerts: Long = 0,
+	)
+
 	fun isNotInRange(dateTime: CustomDateTimeModel?): Boolean {
 		return dateTime.isInRange(begin, end).not()
 	}

@@ -11,4 +11,4 @@ data class ProjectProfileReaderDto(
 	var startAccess: CustomDateTimeModel? = null,
 	var endAccess: CustomDateTimeModel? = null,
 	var favorite: Boolean = false,
-): GenericProjectReaderDto()
+): GenericReaderDto()

@@ -1,6 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum.CREATED_DATE
 import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum.LAST_MODIFIED_DATE
@@ -15,10 +18,15 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.routines.references.unaccent2
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbProject
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.TbUser
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_ACTIVITY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_ALERT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_GROUP
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PARTICIPANT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PROJECT_PROFILE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PROJECT_ROLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_USER
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_VEHICLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.GenericColumns
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.activeAtCondition
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.activeNowCondition
@@ -26,9 +34,11 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.editorTable
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.fillGeneric
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.fillGenericProject
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.notEndedCondition
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.projectTable
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.setGeneric
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.setGenericProject
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.notStartedCondition
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.startedCondition
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericJooqQueries.visibleCondition
 import org.jooq.Condition
@@ -48,6 +58,12 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_PROJECT_PROFILE`: CRUD (single and bulk), similarity-ranked/filtered/
+ * sorted/paginated search scoped to a User or a Project, the invitation-conflict lookup, and the
+ * level-0-administrator queries backing the last-administrator safeguard. Consumed by
+ * [ProjectProfileModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(
@@ -60,6 +76,78 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 	)
 
 	private fun userTable() = TB_USER.`as`("user_tb")
+
+	/**
+	 * Scalar subqueries counting, for one Project row, its visible participants/vehicles/groups/
+	 * activities/accepted-profiles and IN_PROGRESS alerts — correlated on [project]'s id so they ride
+	 * along in the same query as the Project(Profile) row instead of a separate round trip per count.
+	 */
+	private class ProjectCountsFields(
+		val participants: Field<Int>,
+		val vehicles: Field<Int>,
+		val groups: Field<Int>,
+		val activities: Field<Int>,
+		val profiles: Field<Int>,
+		val ongoingAlerts: Field<Int>,
+	) {
+		fun toSelectFields(): Array<SelectField<*>> = arrayOf(participants, vehicles, groups, activities, profiles, ongoingAlerts)
+	}
+
+	// The gated counts (vehicles/activities/ongoingAlerts) fold the "is this option enabled" check into the
+	// subquery's WHERE rather than a CASE expression: if the option isn't in project.options, the WHERE
+	// matches no row and COUNT(*) naturally comes back 0, mirroring the pre-SQL decorateWithCounts behavior.
+	private fun hasOptionCondition(project: TbProject, option: ProjectOptionEnum): Condition =
+		DSL.condition("{0} @> ARRAY[{1}]::text[]", project.OPTIONS, DSL.inline(option.name))
+
+	// Postgres can't reference a SELECT-list alias from WHERE/ORDER BY, so callers needing the ongoing-alerts
+	// count in a condition (e.g. findAcceptedByUserId) must build their own instance via this function rather
+	// than reuse ProjectCountsFields.ongoingAlerts — jOOQ re-embeds the full subquery at each usage site.
+	private fun ongoingAlertsCountField(project: TbProject): Field<Int> = DSL.field(
+		dsl.select(count(TB_ALERT.ID)).from(TB_ALERT)
+			.where(
+				TB_ALERT.PROJECT_ID.eq(project.ID)
+					.and(TB_ALERT.VISIBLE.isTrue)
+					.and(TB_ALERT.STATUS.eq(IN_PROGRESS))
+					.and(hasOptionCondition(project, ProjectOptionEnum.ALERT))
+			)
+	)
+
+	private fun projectCountsFields(project: TbProject): ProjectCountsFields {
+		val countProfile = TB_PROJECT_PROFILE.`as`("counts_profile_tb")
+		val countUser = TB_USER.`as`("counts_profile_user_tb")
+		return ProjectCountsFields(
+			participants = DSL.field(
+				dsl.select(count(TB_PARTICIPANT.ID)).from(TB_PARTICIPANT)
+					.where(TB_PARTICIPANT.PROJECT_ID.eq(project.ID).and(TB_PARTICIPANT.PURGED.isFalse).and(TB_PARTICIPANT.VISIBLE.isTrue))
+			).`as`("participants_count"),
+			vehicles = DSL.field(
+				dsl.select(count(TB_VEHICLE.ID)).from(TB_VEHICLE)
+					.where(
+						TB_VEHICLE.PROJECT_ID.eq(project.ID)
+							.and(TB_VEHICLE.VISIBLE.isTrue)
+							.and(hasOptionCondition(project, ProjectOptionEnum.VEHICLE))
+					)
+			).`as`("vehicles_count"),
+			groups = DSL.field(
+				dsl.select(count(TB_GROUP.ID)).from(TB_GROUP)
+					.where(TB_GROUP.PROJECT_ID.eq(project.ID).and(TB_GROUP.VISIBLE.isTrue))
+			).`as`("groups_count"),
+			activities = DSL.field(
+				dsl.select(count(TB_ACTIVITY.ID)).from(TB_ACTIVITY)
+					.where(
+						TB_ACTIVITY.PROJECT_ID.eq(project.ID)
+							.and(TB_ACTIVITY.VISIBLE.isTrue)
+							.and(hasOptionCondition(project, ProjectOptionEnum.ACTIVITY))
+					)
+			).`as`("activities_count"),
+			profiles = DSL.field(
+				dsl.select(count(countProfile.ID)).from(countProfile)
+					.join(countUser).on(countProfile.USER_ID.eq(countUser.ID).and(countUser.VISIBLE.isTrue))
+					.where(countProfile.PROJECT_ID.eq(project.ID).and(countProfile.VISIBLE.isTrue).and(countProfile.STATUS.eq(ACCEPTED)))
+			).`as`("profiles_count"),
+			ongoingAlerts = ongoingAlertsCountField(project).`as`("ongoing_alerts_count"),
+		)
+	}
 
 	private fun baseSelect(
 		user: TbUser,
@@ -77,12 +165,6 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 				user.LAST_LOGIN,
 				user.PURGED,
 				user.OIDC_ID,
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -115,6 +197,12 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			TB_PROJECT_PROFILE.END_ACCESS_TIME
 		)
 		return if (availabilitySearched) isUsable else isUsable.not()
+	}
+
+	private fun upcomingCondition(project: TbProject, upcomingSearched: Boolean?): Condition {
+		if (upcomingSearched == null) return DSL.noCondition()
+		val isUpcoming = notStartedCondition(project.BEGIN_DATE, project.BEGIN_TIME)
+		return if (upcomingSearched) isUpcoming else isUpcoming.not()
 	}
 
 	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime?): Condition =
@@ -194,17 +282,24 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		statusSearched: List<ProfileStatusEnum>,
 		dateTimeSearched: ZonedDateTime?,
 		favoriteSearched: Boolean?,
+		upcomingSearched: Boolean?,
 		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
+		includeCounts: Boolean = false,
 	): Flux<ProjectProfileEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
 		val fullCount = count().over().`as`("full_count")
+		val counts = if (includeCounts) projectCountsFields(project) else null
 		return Flux.from(
-			baseSelect(user, project, creator, editor, fullCount)
+			baseSelect(
+				user, project, creator, editor, fullCount,
+				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
+				*(counts?.toSelectFields() ?: emptyArray()),
+			)
 				.where(
 					TB_PROJECT_PROFILE.USER_ID.eq(userId)
 						.and(textProjectSearchCondition(project, textSearched))
@@ -213,10 +308,36 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
 						.and(dateInRangeCondition(dateTimeSearched))
 						.and(visibleCondition(TB_PROJECT_PROFILE.FAVORITE, favoriteSearched))
+						.and(upcomingCondition(project, upcomingSearched))
 				)
 				.orderBy(orderFields(user, sortFields, tiebreaker = project.NAME))
 				.limit(limit).offset(offset)
-		).map { it.toEntity(user, project, creator, editor, fullCount) }
+		).map { it.toEntity(user, project, creator, editor, fullCount, counts, includeProjectDetails = true) }
+	}
+
+	fun findAcceptedByUserId(userId: UUID, limit: Int): Flux<ProjectProfileEntity> {
+		val user = userTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		val counts = projectCountsFields(project)
+		val ongoingAlertsFilter = ongoingAlertsCountField(project)
+		return Flux.from(
+			baseSelect(
+				user, project, creator, editor,
+				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
+				*counts.toSelectFields(),
+			)
+				.where(
+					TB_PROJECT_PROFILE.USER_ID.eq(userId)
+						.and(TB_PROJECT_PROFILE.VISIBLE.isTrue)
+						.and(TB_PROJECT_PROFILE.STATUS.eq(ProfileStatusEnum.ACCEPTED))
+						.and(notEndedCondition(project.END_DATE, project.END_TIME))
+						.and(ongoingAlertsFilter.gt(0))
+				)
+				.orderBy(ongoingAlertsFilter.desc(), project.NAME.asc())
+				.limit(limit)
+		).map { it.toEntity(user, project, creator, editor, counts = counts, includeProjectDetails = true) }
 	}
 
 	fun findByProjectId(
@@ -330,6 +451,30 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(user, project, creator, editor) }
 	}
 
+	fun findProjectProfilesByProjectIdsAndUserId(
+		projectIds: List<UUID>,
+		userId: UUID,
+		visibilitySearched: Boolean?,
+		availabilitySearched: Boolean?,
+		statusSearched: List<ProfileStatusEnum>,
+	): Flux<ProjectProfileEntity> {
+		if (projectIds.isEmpty()) return Flux.empty()
+		val user = userTable()
+		val project = projectTable()
+		val creator = creatorTable()
+		val editor = editorTable()
+		return Flux.from(
+			baseSelect(user, project, creator, editor)
+				.where(
+					TB_PROJECT_PROFILE.USER_ID.eq(userId)
+						.and(TB_PROJECT_PROFILE.PROJECT_ID.`in`(projectIds))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
+						.and(usableCondition(availabilitySearched))
+						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
+				)
+		).map { it.toEntity(user, project, creator, editor) }
+	}
+
 	fun findLevel0ProjectProfileRoleByUserId(
 		userId: UUID,
 		visibilitySearched: Boolean?
@@ -414,12 +559,15 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Mono.from(
-			baseSelect(user, project, creator, editor)
+			baseSelect(
+				user, project, creator, editor,
+				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
+			)
 				.where(
 					TB_PROJECT_PROFILE.USER_ID.eq(userId).and(TB_PROJECT_PROFILE.ID.eq(id))
 						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
 				)
-		).map { it.toEntity(user, project, creator, editor) }
+		).map { it.toEntity(user, project, creator, editor, includeProjectDetails = true) }
 	}
 
 	fun findByProjectIdAndId(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileEntity> {
@@ -482,6 +630,8 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		creator: TbUser? = null,
 		editor: TbUser? = null,
 		fullCount: Field<Int>? = null,
+		counts: ProjectCountsFields? = null,
+		includeProjectDetails: Boolean = false,
 	): ProjectProfileEntity = ProjectProfileEntity(
 		userId = get(TB_PROJECT_PROFILE.USER_ID),
 		userFirstName = user?.let { get(it.FIRST_NAME) },
@@ -497,8 +647,14 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		endAccessDate = get(TB_PROJECT_PROFILE.END_ACCESS_DATE),
 		endAccessTime = get(TB_PROJECT_PROFILE.END_ACCESS_TIME),
 		favorite = get(TB_PROJECT_PROFILE.FAVORITE),
+		participantsCount = counts?.let { get(it.participants) },
+		vehiclesCount = counts?.let { get(it.vehicles) },
+		groupsCount = counts?.let { get(it.groups) },
+		activitiesCount = counts?.let { get(it.activities) },
+		profilesCount = counts?.let { get(it.profiles) },
+		ongoingAlertsCount = counts?.let { get(it.ongoingAlerts) },
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_PROJECT_PROFILE.PROJECT_ID, project)
+		fillGenericProject(this, TB_PROJECT_PROFILE.PROJECT_ID, if (includeProjectDetails) project else null)
 	}
 }

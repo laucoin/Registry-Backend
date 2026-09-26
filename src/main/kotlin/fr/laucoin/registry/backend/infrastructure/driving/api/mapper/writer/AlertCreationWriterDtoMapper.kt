@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRES
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import java.util.Optional
 import java.util.UUID
@@ -26,10 +25,8 @@ class AlertCreationWriterDtoMapper: IGenericProjectWriterDtoMapper<AlertModel, A
 					message = dto.message
 					movement = Optional.ofNullable(dto.movementId).map { MovementModel().apply { id = dto.movementId } }
 						.orElse(null)
-					project = ProjectModel().apply { id = projectId }
-				}
+				}.also { it.projectId = projectId }
 			)
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

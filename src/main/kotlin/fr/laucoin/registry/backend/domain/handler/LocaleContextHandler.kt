@@ -9,6 +9,11 @@ import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 import reactor.util.context.Context
 
+/**
+ * Resolves the request's locale once and writes it into the Reactor [Context] for the rest of the
+ * chain, so [LocaleContextThreadLocalAccessor]-based propagation (wired in [I18nConfig]) makes it
+ * available wherever `LocaleContextHolder`/[ITranslateService] read the ambient locale downstream.
+ */
 @Component
 class LocaleContextHandler(private val localeContextResolver: LocaleContextResolver): WebFilter {
 

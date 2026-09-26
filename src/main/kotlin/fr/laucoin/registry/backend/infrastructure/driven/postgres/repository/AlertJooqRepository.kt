@@ -40,6 +40,11 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_ALERT`: CRUD, similarity-ranked/filtered/sorted/paginated search, and the
+ * "older than and uncommented since" lookup for the purge job. Consumed by
+ * [AlertModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class AlertJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(TB_ALERT.ID, TB_ALERT.VISIBLE, TB_ALERT.CREATED_DATE, TB_ALERT.CREATED_BY, TB_ALERT.LAST_MODIFIED_DATE, TB_ALERT.LAST_MODIFIED_BY)
@@ -87,12 +92,6 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 		return Flux.from(
 			dsl.select(
 				TB_ALERT.asterisk(),
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -132,12 +131,6 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 			dsl.select(
 				TB_ALERT.asterisk(),
 				similarityScore,
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -185,12 +178,6 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 			dsl.select(
 				TB_ALERT.asterisk(),
 				similarityScore,
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -224,12 +211,6 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 		return Mono.from(
 			dsl.select(
 				TB_ALERT.asterisk(),
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -305,6 +286,6 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 		status = get(TB_ALERT.STATUS),
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_ALERT.PROJECT_ID, project)
+		fillGenericProject(this, TB_ALERT.PROJECT_ID)
 	}
 }

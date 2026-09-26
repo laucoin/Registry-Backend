@@ -16,49 +16,55 @@ interface IMetadataV2Controller {
 
 	@Operation(
 		summary = "Get available Options",
-		description = "Get all the Options you are allowed to enable",
+		description = """
+			List every Project option (VEHICLE, ACTIVITY, COMMUNICATION, ALERT) the caller is allowed to enable when
+			creating or updating a Project, including each option's required dependencies (e.g. ALERT requires ACTIVITY and COMMUNICATION).
+		""",
 	)
 	@GetMapping("/projects/options")
 	fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto>
 
 	@Operation(
 		summary = "Get presence element's status",
-		description = "Get all presence element's status",
+		description = "List the presence statuses (e.g. IN, OUT, UNAVAILABLE) with their labels, localized for the caller.",
 	)
 	@GetMapping("/presences/status")
 	fun getPresencesStatus(principal: Principal): Flux<LabelDto>
 
 	@Operation(
 		summary = "Get availabilities status",
-		description = "Get all availabilities status",
+		description = """
+			List the availability statuses used to describe whether a Participant, Group or Vehicle is currently allowed
+			to be present, with their labels localized for the caller.
+		""",
 	)
 	@GetMapping("/availabilities/status")
 	fun getAvailabilitiesStatus(): Flux<LabelDto>
 
 	@Operation(
 		summary = "Get profile's status",
-		description = "Get all profile's status",
+		description = "List the Project Profile statuses (INVITED, ACCEPTED, REJECTED, BLOCKED) with their labels localized for the caller.",
 	)
 	@GetMapping("/profiles/status")
 	fun getProjectProfileStatus(): Flux<LabelDto>
 
 	@Operation(
 		summary = "Get Movement Type",
-		description = "Get all movement type",
+		description = "List the Movement types (IN, OUT) with their labels localized for the caller.",
 	)
 	@GetMapping("/movements/types")
 	fun getMovementTypes(): Flux<LabelDto>
 
 	@Operation(
 		summary = "Get Participant Type",
-		description = "Get all participant type",
+		description = "List the Participant types (REGISTERED, GUEST) with their labels localized for the caller.",
 	)
 	@GetMapping("/participants/types")
 	fun getParticipantTypes(): Flux<LabelDto>
 
 	@Operation(
 		summary = "Get Alert Status",
-		description = "Get all alert status",
+		description = "List the Alert statuses (IN_PROGRESS, RESOLVED, CANCELED) with their labels localized for the caller.",
 	)
 	@GetMapping("/alerts/status")
 	fun getAlertStatus(): Flux<LabelDto>

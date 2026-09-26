@@ -17,6 +17,10 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IActivityPort] implementation: translates every call to [ActivityJooqRepository] and maps
+ * [ActivityEntity] ↔ [ActivityModel] via [ActivityEntityMapper]. No business logic of its own.
+ */
 @Service
 class ActivityModelPostgresRepository(
 	private val repository: ActivityJooqRepository,

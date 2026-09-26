@@ -11,6 +11,12 @@ import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
+/**
+ * [IPrincipalCacheService] implementation backed by a Caffeine [AsyncCache], time-based eviction
+ * only (`ttl-seconds`): avoids re-resolving the same OIDC principal on every request, at the cost of
+ * authorities staying stale for up to the TTL after a mid-session change — callers must call
+ * [invalidate]/[invalidateAll] explicitly when that would be unacceptable.
+ */
 @Service
 class PrincipalCacheService(
 	@Value($$"${registry.security.oauth2.cache.principal.ttl-seconds}")

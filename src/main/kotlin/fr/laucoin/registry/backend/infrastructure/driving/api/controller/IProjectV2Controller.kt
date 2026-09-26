@@ -2,6 +2,10 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.annotation.RateLimited
 import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
+import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
+import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
@@ -18,6 +22,8 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
@@ -34,23 +40,28 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
-import reactor.core.publisher.Mono
 
 @Tag(name = "Projects management", description = "API for Projects-related operations")
 @RequestMapping("$API_V2/projects")
 interface IProjectV2Controller {
 	@Operation(
 		summary = "Find Projects",
-		description = "Find or get paginated Projects",
+		description = """
+			Search and list Projects, with pagination and sorting. Combine `q` (free-text search), `visible`,
+			`withProfile` (only Projects the caller has a Profile on, true by default) and `dateTime` to narrow the results.
+			`favorite` filters on the caller's own Profile and is only meaningful together with `withProfile=true`.
+		""",
 	)
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
 	@GetMapping
 	fun findProjects(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@ParameterObject @Valid page: SortedPageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@Parameter(description = "\"false\" value will be considered only if you have REGISTRY_PROJECT_R authority.")
 		@RequestParam(required = false, defaultValue = "true") withProfile: Boolean,
@@ -61,16 +72,42 @@ interface IProjectV2Controller {
 	): Mono<PageReaderDto<ProjectReaderDto>>
 
 	@Operation(
+		summary = "Find Projects requiring attention",
+		description = """
+			Dashboard widget: the caller's ACCEPTED Projects that are still in progress (no end date, or an end
+			date/time that hasn't passed yet) and currently have at least one ongoing (IN_PROGRESS) Alert, sorted by that
+			count descending. Each row carries its counts and the caller's own `activeProfile`. Results are capped at
+			"limit" rows (default $DEFAULT_DASHBOARD_LIMIT, max $MAX_DASHBOARD_LIMIT).
+		""",
+	)
+	@GetMapping("/attention")
+	fun findProjectsRequiringAttention(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+			MAX_DASHBOARD_LIMIT,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		)
+		limit: Int,
+	): Flux<ProjectReaderDto>
+
+	@Operation(
 		summary = "Find Project",
-		description = "Find Project by ID",
+		description = "Get a single Project by its ID.",
 	)
 	@PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/{id}")
-	fun findProjectById(@PathVariable id: UUID): Mono<ProjectReaderDto>
+	fun findProjectById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable id: UUID,
+	): Mono<ProjectReaderDto>
 
 	@Operation(
 		summary = "Create Project",
-		description = "Create Project and Project Profile administration for the Current User",
+		description = """
+			Create a new Project with its schedule and enabled options (VEHICLE, ACTIVITY, COMMUNICATION, ALERT; note
+			some options require others, e.g. ALERT requires ACTIVITY and COMMUNICATION), and grant the caller an administration Profile on it.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_PROJECT_C')")
 	@RateLimited(SENSITIVE)
@@ -82,7 +119,7 @@ interface IProjectV2Controller {
 
 	@Operation(
 		summary = "Update Project",
-		description = "Update Project",
+		description = "Update the Project's name, schedule and enabled options (same shape as creation).",
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@RateLimited(SENSITIVE)
@@ -95,7 +132,7 @@ interface IProjectV2Controller {
 
 	@Operation(
 		summary = "Disable Project",
-		description = "Disable Project access, obviously the related profile is no accessible anymore.",
+		description = "Soft-delete the Project: it is kept but no longer accessible, and every Profile on it loses access.",
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@RateLimited(SENSITIVE)
@@ -107,7 +144,7 @@ interface IProjectV2Controller {
 
 	@Operation(
 		summary = "Enable Project",
-		description = "Enable Project, obviously the profiles concerned are accessible again.",
+		description = "Reverse a disable: the Project and the Profiles on it become accessible again.",
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
 	@RateLimited(SENSITIVE)
@@ -119,7 +156,10 @@ interface IProjectV2Controller {
 
 	@Operation(
 		summary = "Delete Project",
-		description = "Delete all Project data.",
+		description = """
+			Permanently delete the Project and all its data (configuration, Profiles, content). This cannot be undone;
+			prefer disabling it if it may be needed again.
+		""",
 	)
 	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_D')")
 	@RateLimited(SENSITIVE)

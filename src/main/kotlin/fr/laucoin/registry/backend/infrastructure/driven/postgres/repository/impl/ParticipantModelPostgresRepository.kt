@@ -21,6 +21,12 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
 
+/**
+ * [IParticipantPort] implementation: translates every call to [ParticipantJooqRepository]/
+ * [GroupContentJooqRepository] and diffs a Participant's Group memberships on create/update through a
+ * single passed-through [DSLContext] so the save and the diff share the caller's transaction. No
+ * business rule validation of its own.
+ */
 @Service
 class ParticipantModelPostgresRepository(
 	private val repository: ParticipantJooqRepository,
@@ -165,7 +171,7 @@ class ParticipantModelPostgresRepository(
 
 	override fun update(element: ParticipantModel): Mono<ParticipantModel> {
 		return save(dsl, element)
-			.flatMap { findById(dsl, element.project!!.id!!, element.id!!) }
+			.flatMap { findById(dsl, element.projectId!!, element.id!!) }
 			.saveNewGroups(dsl, element)
 			.removeDeletedGroups(dsl, element)
 	}

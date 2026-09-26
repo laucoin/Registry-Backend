@@ -25,15 +25,15 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Grou
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GroupWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class GroupV2Controller(
@@ -46,11 +46,11 @@ class GroupV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IGroupV2Controller {
+) : IGroupV2Controller {
 	override fun findGroups(
 		projectId: UUID,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
 		present: Boolean?,
 		dateTime: ZonedDateTime?,
@@ -59,7 +59,7 @@ class GroupV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			GroupSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = GroupSearchParamModel(q, visible, present, dateTime)
+		val searchParams = GroupSearchParamModel(query, visible, present, dateTime)
 
 		return service.findGroupsPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerLightMapper::toDto) }
@@ -77,7 +77,7 @@ class GroupV2Controller(
 		projectId: UUID,
 		id: UUID,
 		page: PageQueryDto,
-		q: String?,
+		query: String?,
 		isMajor: Boolean?,
 		type: ParticipantTypeEnum?,
 		visible: Boolean?,
@@ -85,7 +85,7 @@ class GroupV2Controller(
 		dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<ParticipantReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = ParticipantSearchParamModel(q, isMajor, type, visible, status, dateTime)
+		val searchParams = ParticipantSearchParamModel(query, isMajor, type, visible, status, dateTime)
 
 		return service.findGroupMembersPageByGroupId(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, participantReaderMapper::toDto) }
@@ -101,8 +101,8 @@ class GroupV2Controller(
 		).map(readerMapper::toDto)
 	}
 
-	override fun searchParticipants(projectId: UUID, q: String?): Flux<ParticipantReaderDto> {
-		return service.searchParticipantsByText(projectId, q).map(participantReaderMapper::toDto)
+	override fun searchParticipants(projectId: UUID, query: String?): Flux<ParticipantReaderDto> {
+		return service.searchParticipantsByText(projectId, query).map(participantReaderMapper::toDto)
 	}
 
 	override fun createGroup(

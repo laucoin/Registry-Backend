@@ -13,6 +13,12 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for Communications: search/read (scoped to a Project, a Movement or an
+ * Alert), the picker searches used to attach a new one, the create/update/disable/enable/delete
+ * lifecycle, and orphan cleanup for the purge job. Callers go through this contract, never the
+ * [ICommunicationPort] directly.
+ */
 interface ICommunicationService {
 	fun findCommunicationPage(
 		projectId: UUID,

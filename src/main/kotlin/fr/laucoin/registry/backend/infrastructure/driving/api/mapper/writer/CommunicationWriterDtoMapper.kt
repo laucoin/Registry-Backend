@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CommunicationWriterDto
 import java.util.Optional
 import java.util.UUID
@@ -17,7 +16,6 @@ class CommunicationWriterDtoMapper: IGenericProjectWriterDtoMapper<Communication
 			message = dto.message
 			movement = Optional.ofNullable(dto.movementId).map { MovementModel().apply { id = it } }.orElse(null)
 			alert = Optional.ofNullable(dto.alertId).map { AlertModel().apply { id = it } }.orElse(null)
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

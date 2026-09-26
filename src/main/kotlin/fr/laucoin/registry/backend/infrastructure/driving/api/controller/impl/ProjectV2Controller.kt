@@ -18,13 +18,14 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDt
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class ProjectV2Controller(
@@ -34,11 +35,11 @@ class ProjectV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IProjectV2Controller {
+) : IProjectV2Controller {
 	override fun findProjects(
 		currentUser: CurrentUserModel,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
 		withProfile: Boolean,
 		dateTime: ZonedDateTime?,
@@ -52,14 +53,18 @@ class ProjectV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ProjectSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ProjectSearchParamModel(q, visible, dateTime, favorite)
+		val searchParams = ProjectSearchParamModel(query, visible, dateTime, favorite)
 
 		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
-	override fun findProjectById(id: UUID): Mono<ProjectReaderDto> {
-		return service.findProjectById(id, visibilitySearched = null).map(readerMapper::toDto)
+	override fun findProjectsRequiringAttention(currentUser: CurrentUserModel, limit: Int): Flux<ProjectReaderDto> {
+		return service.findProjectsRequiringAttention(currentUser, limit).map(readerMapper::toDto)
+	}
+
+	override fun findProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectReaderDto> {
+		return service.findProjectById(id, visibilitySearched = null, currentUser).map(readerMapper::toDto)
 	}
 
 	override fun createProject(

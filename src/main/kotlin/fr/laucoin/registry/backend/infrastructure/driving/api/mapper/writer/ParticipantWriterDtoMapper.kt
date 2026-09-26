@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import java.util.Optional
@@ -28,7 +27,6 @@ class ParticipantWriterDtoMapper(
 			groups =
 				Optional.ofNullable(dto.groupIds).map { groups -> groups.map { GroupModel().apply { id = it } } }
 					.orElse(emptyList())
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

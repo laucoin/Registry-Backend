@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * [IPreferencesService] implementation: lazily creates a default [PreferencesModel] on first read,
+ * and only persists a theme/language change when it actually differs from the stored value.
+ * Delegates persistence to [IPreferencesPort].
+ */
 @Service
 class PreferencesService(
 	private val port: IPreferencesPort,

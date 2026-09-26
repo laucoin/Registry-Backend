@@ -41,6 +41,11 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * jOOQ queries against `TB_ACTIVITY`: CRUD, similarity-ranked/filtered/sorted/paginated search, and
+ * the "unused since" lookup for the purge job. Consumed by [ActivityModelPostgresRepository], never
+ * by the domain directly.
+ */
 @Repository
 class ActivityJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(TB_ACTIVITY.ID, TB_ACTIVITY.VISIBLE, TB_ACTIVITY.CREATED_DATE, TB_ACTIVITY.CREATED_BY, TB_ACTIVITY.LAST_MODIFIED_DATE, TB_ACTIVITY.LAST_MODIFIED_BY)
@@ -95,7 +100,6 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		return Flux.from(
 			dsl.select(
 				TB_ACTIVITY.asterisk(),
-				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
 				creator.FIRST_NAME, creator.LAST_NAME, creator.EMAIL, editor.FIRST_NAME, editor.LAST_NAME, editor.EMAIL,
 			)
 				.from(TB_ACTIVITY)
@@ -125,7 +129,6 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		return Flux.from(
 			dsl.select(
 				TB_ACTIVITY.asterisk(), similarityScore,
-				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
 				creator.FIRST_NAME, creator.LAST_NAME, creator.EMAIL, editor.FIRST_NAME, editor.LAST_NAME, editor.EMAIL,
 				fullCount,
 			)
@@ -147,7 +150,6 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		return Flux.from(
 			dsl.select(
 				TB_ACTIVITY.asterisk(),
-				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
 				creator.FIRST_NAME, creator.LAST_NAME, creator.EMAIL, editor.FIRST_NAME, editor.LAST_NAME, editor.EMAIL,
 			)
 				.from(TB_ACTIVITY)
@@ -173,7 +175,6 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		return Flux.from(
 			dsl.select(
 				TB_ACTIVITY.asterisk(), similarityScore,
-				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
 				creator.FIRST_NAME, creator.LAST_NAME, creator.EMAIL, editor.FIRST_NAME, editor.LAST_NAME, editor.EMAIL,
 			)
 				.from(TB_ACTIVITY)
@@ -193,7 +194,6 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		return Mono.from(
 			dsl.select(
 				TB_ACTIVITY.asterisk(),
-				project.NAME, project.BEGIN_DATE, project.BEGIN_TIME, project.END_DATE, project.END_TIME, project.OPTIONS,
 				creator.FIRST_NAME, creator.LAST_NAME, creator.EMAIL, editor.FIRST_NAME, editor.LAST_NAME, editor.EMAIL,
 			)
 				.from(TB_ACTIVITY)
@@ -276,6 +276,6 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		endAvailabilityTime = get(TB_ACTIVITY.END_AVAILABILITY_TIME),
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_ACTIVITY.PROJECT_ID, project)
+		fillGenericProject(this, TB_ACTIVITY.PROJECT_ID)
 	}
 }

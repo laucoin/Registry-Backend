@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IAlertV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
@@ -25,13 +26,12 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Ongo
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.util.UUID
 
 @RestController
 class AlertV2Controller(
@@ -44,21 +44,20 @@ class AlertV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IAlertV2Controller {
+) : IAlertV2Controller {
 	override fun findAlerts(
 		projectId: UUID,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
 		status: AlertStatusEnum?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<AlertReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			AlertSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = AlertSearchParamModel(q, visible, status, startDateTime, endDateTime)
+		val searchParams = AlertSearchParamModel(query, visible, status, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findAlertsPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -72,13 +71,12 @@ class AlertV2Controller(
 		projectId: UUID,
 		id: UUID,
 		page: PageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = CommunicationSearchParamModel(q, visible, startDateTime, endDateTime)
+		val searchParams = CommunicationSearchParamModel(query, visible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findAlertCommunicationsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, communicationReaderMapper::toDto) }

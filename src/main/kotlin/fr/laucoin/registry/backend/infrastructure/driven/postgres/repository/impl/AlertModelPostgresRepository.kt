@@ -17,6 +17,10 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IAlertPort] implementation: translates every call to [AlertJooqRepository] and maps
+ * [AlertEntity] ↔ [AlertModel] via [AlertEntityMapper]. No business logic of its own.
+ */
 @Service
 class AlertModelPostgresRepository(
 	private val repository: AlertJooqRepository,

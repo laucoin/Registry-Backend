@@ -7,6 +7,10 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Rol
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 
+/**
+ * [IRolePort] implementation: translates every call to [RoleJooqRepository] and maps the entity ↔
+ * [RoleModel] via [RoleEntityMapper]. No business logic of its own.
+ */
 @Service
 class RoleModelPostgresRepository(
 	private val repository: RoleJooqRepository,

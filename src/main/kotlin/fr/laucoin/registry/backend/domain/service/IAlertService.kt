@@ -16,6 +16,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for Alerts: search/read, its Communications thread and ongoing-alerts
+ * dashboard, the create/update/status-change/disable/enable/delete lifecycle, and the retention purge
+ * sweep. Callers go through this contract, never the [IAlertPort] directly.
+ */
 interface IAlertService {
 	fun findAlertsPage(
 		projectId: UUID,

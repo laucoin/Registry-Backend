@@ -11,6 +11,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [GroupModel]: CRUD, paginated/filtered search, member-content loading,
+ * dashboard queries (arriving/departing today), and empty-group detection for cleanup. Implemented by
+ * the jOOQ Postgres adapter; the domain only depends on this contract.
+ */
 interface IGroupPort {
 	fun findAllByCreatorId(userId: UUID): Flux<GroupModel>
 	fun findPage(

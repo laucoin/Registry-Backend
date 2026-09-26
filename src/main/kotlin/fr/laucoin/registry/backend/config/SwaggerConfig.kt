@@ -19,7 +19,11 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.util.*
 
-
+/**
+ * Wires springdoc/Swagger when `registry.feature.documentation.enabled` is on: OAuth2 login for the
+ * "Try it out" UI, filtering exposed paths to the configured API prefix, and one [GroupedOpenApi] per
+ * resource family so the UI lists endpoints by domain rather than as one flat list.
+ */
 @Configuration
 @ConditionalOnProperty(value = ["registry.feature.documentation.enabled"], havingValue = "true", matchIfMissing = false)
 @OpenAPIDefinition(

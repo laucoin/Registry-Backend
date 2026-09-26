@@ -12,6 +12,11 @@ import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 
+/**
+ * Contract for the app-wide `@ExceptionHandler`s that turn every uncaught exception reaching the API
+ * — domain errors, validation failures, authorization denials, unhandled ones — into the standard
+ * [ErrorDto] JSON body, so no internal message or stack trace ever reaches the client.
+ */
 interface IRegistryControllerAdvice {
 	@ExceptionHandler(RegistryException::class)
 	fun handleRegistryException(exception: RegistryException, exchange: ServerWebExchange): Mono<ResponseEntity<ErrorDto>>

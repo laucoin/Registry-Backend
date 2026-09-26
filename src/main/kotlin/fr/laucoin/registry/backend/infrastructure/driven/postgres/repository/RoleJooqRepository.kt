@@ -10,6 +10,11 @@ import org.jooq.impl.DSL.arrayAgg
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 
+/**
+ * jOOQ queries against `TB_USER_ROLE`/`TB_PROJECT_ROLE` (and their permission join tables): loads
+ * every role's level and permission list, read once at startup by [RoleService]. Consumed by
+ * [RoleModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class RoleJooqRepository(private val dsl: DSLContext) {
 	fun findUserRoles(): Flux<RoleEntity> = Flux.from(

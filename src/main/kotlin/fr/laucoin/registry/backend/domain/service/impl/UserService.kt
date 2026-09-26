@@ -40,6 +40,12 @@ import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * [IUserService] implementation: hides the service account from every read, keeps a User's personal
+ * data in sync with the IDP on login, and guards role assignment / block / impersonate / delete
+ * against escalating above the caller's own role or against removing the last administrator (of the
+ * platform or of a Project). Delegates persistence to [IUserPort].
+ */
 @Service
 class UserService(
 	private val port: IUserPort,

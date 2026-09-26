@@ -6,11 +6,9 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.groupId
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -26,15 +24,13 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class GroupReaderDtoMapperTest {
-	private val projectMapper: ProjectReaderDtoMapper = mock()
 	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
 	private val memberMapper: ParticipantReaderDtoMapper = mock()
-	private val mapper = GroupReaderDtoMapper(projectMapper, availabilityMapper, memberMapper)
+	private val mapper = GroupReaderDtoMapper(availabilityMapper, memberMapper)
 
 	private companion object {
 		private val participantDto = ParticipantReaderDto()
 		private val activityStatus = LabelDto(value = AVAILABLE.name, label = "Available")
-		private val dtoProject = ProjectReaderDto()
 
 		private val model = GroupModel(
 			members = listOf(ParticipantModel()),
@@ -47,7 +43,6 @@ class GroupReaderDtoMapperTest {
 			insideMembersCount = 2
 			outsideMembersCount = 3
 			id = groupId
-			project = ProjectModel()
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -62,7 +57,6 @@ class GroupReaderDtoMapperTest {
 			insideMembersCount = 2
 			outsideMembersCount = 3
 			id = groupId
-			project = dtoProject
 			members = listOf(participantDto)
 			visible = true
 			creation = HistoryModel()
@@ -72,8 +66,8 @@ class GroupReaderDtoMapperTest {
 		@JvmStatic
 		fun `GroupModel to GroupReaderDto data`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(model, dto, 1, 1),
-				Arguments.of(GroupModel(), GroupReaderDto(members = listOf(participantDto)), 0, 0),
+				Arguments.of(model, dto, 1),
+				Arguments.of(GroupModel(), GroupReaderDto(members = listOf(participantDto)), 0),
 			)
 		}
 	}
@@ -82,7 +76,6 @@ class GroupReaderDtoMapperTest {
 	fun setup() {
 		whenever(memberMapper.toDtoList(any())).thenReturn(listOf(participantDto))
 		whenever(availabilityMapper.toDto(any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
-		whenever(projectMapper.toDto(any())).thenReturn(dtoProject)
 	}
 
 	@ParameterizedTest
@@ -91,7 +84,6 @@ class GroupReaderDtoMapperTest {
 		model: GroupModel,
 		dto: GroupReaderDto,
 		expectedAvailabilityCast: Int,
-		expectedProjectCast: Int,
 	) {
 		// Act
 		val result = mapper.toDto(model)
@@ -102,8 +94,6 @@ class GroupReaderDtoMapperTest {
 		verify(memberMapper).toDtoList(model.members)
 		verify(availabilityMapper, times(expectedAvailabilityCast))
 			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
-
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -112,7 +102,6 @@ class GroupReaderDtoMapperTest {
 		model: GroupModel,
 		dto: GroupReaderDto,
 		expectedAvailabilityCast: Int,
-		expectedProjectCast: Int,
 	) {
 		// Arrange
 		val models = listOf(model)
@@ -127,8 +116,6 @@ class GroupReaderDtoMapperTest {
 		verify(memberMapper).toDtoList(model.members)
 		verify(availabilityMapper, times(expectedAvailabilityCast))
 			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
-
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -137,7 +124,6 @@ class GroupReaderDtoMapperTest {
 		model: GroupModel,
 		dto: GroupReaderDto,
 		expectedAvailabilityCast: Int,
-		expectedProjectCast: Int,
 	) {
 		// Arrange
 		val modelPage = PageModel(
@@ -165,7 +151,5 @@ class GroupReaderDtoMapperTest {
 		verify(memberMapper).toDtoList(model.members)
 		verify(availabilityMapper, times(expectedAvailabilityCast))
 			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
-
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 }

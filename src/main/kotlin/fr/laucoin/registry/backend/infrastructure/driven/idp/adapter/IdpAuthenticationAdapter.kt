@@ -24,6 +24,12 @@ import reactor.netty.http.client.HttpClient
 import reactor.netty.resources.ConnectionProvider
 import java.time.Duration
 
+/**
+ * [IAuthenticationPort] implementation talking to the Authentik OIDC provider over a dedicated
+ * [WebClient]: builds the login/logout URIs, exchanges an authorization code or refresh token for
+ * tokens, and best-effort revokes both tokens on logout (revocation failures are logged and
+ * swallowed so a flaky IDP never blocks the user from logging out locally).
+ */
 @Service
 class IdpAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,

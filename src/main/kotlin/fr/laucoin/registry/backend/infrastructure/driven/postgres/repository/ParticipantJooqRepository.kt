@@ -57,6 +57,12 @@ import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_PARTICIPANT`: CRUD (including bulk Guest save and bulk end-availability
+ * update), similarity-ranked/filtered/sorted/paginated search with Group membership and last-Movement
+ * status joined in via CTEs, the birthday/arriving/departing-today dashboard queries, and the
+ * "unused since" lookup for the purge job. Consumed by [ParticipantModelPostgresRepository].
+ */
 @Repository
 class ParticipantJooqRepository(private val dsl: DSLContext) {
 	private companion object {
@@ -270,12 +276,6 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 					lmDateTime,
 					fgGroups,
 					fgAvailableGroups,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -443,12 +443,6 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 					user.FIRST_NAME,
 					user.LAST_NAME,
 					user.EMAIL,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -485,12 +479,6 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 					user.FIRST_NAME,
 					user.LAST_NAME,
 					user.EMAIL,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -527,12 +515,6 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 					user.FIRST_NAME,
 					user.LAST_NAME,
 					user.EMAIL,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -600,12 +582,6 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 				user.FIRST_NAME,
 				user.LAST_NAME,
 				user.EMAIL,
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -808,6 +784,6 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		purged = get(TB_PARTICIPANT.PURGED),
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_PARTICIPANT.PROJECT_ID, project)
+		fillGenericProject(this, TB_PARTICIPANT.PROJECT_ID)
 	}
 }

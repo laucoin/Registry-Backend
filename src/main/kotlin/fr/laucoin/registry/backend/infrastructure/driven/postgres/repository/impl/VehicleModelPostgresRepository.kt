@@ -17,6 +17,10 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IVehiclePort] implementation: translates every call to [VehicleJooqRepository] and maps
+ * [VehicleEntity] ↔ [VehicleModel] via [VehicleEntityMapper]. No business logic of its own.
+ */
 @Service
 class VehicleModelPostgresRepository(
 	private val repository: VehicleJooqRepository,

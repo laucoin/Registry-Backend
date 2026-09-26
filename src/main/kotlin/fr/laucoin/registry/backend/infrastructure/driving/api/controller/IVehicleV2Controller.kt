@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -48,7 +49,10 @@ import java.util.UUID
 interface IVehicleV2Controller {
 	@Operation(
 		summary = "Find Vehicles",
-		description = "Find or get paginated Vehicles",
+		description = """
+			Search and list the Project's Vehicles, with pagination and sorting. Combine `q` (free-text search),
+			`visible`, `status` (presence) and `dateTime` to narrow the results.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
@@ -56,7 +60,7 @@ interface IVehicleV2Controller {
 	fun findVehicles(
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) status: PresenceStatusEnum?,
 		@RequestParam(required = false)
@@ -65,7 +69,7 @@ interface IVehicleV2Controller {
 
 	@Operation(
 		summary = "Find Vehicle",
-		description = "Find Vehicle by ID",
+		description = "Get a single Vehicle of the Project by its ID.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_R')")
 	@GetMapping("/{id}")
@@ -76,7 +80,10 @@ interface IVehicleV2Controller {
 
 	@Operation(
 		summary = "Find Vehicle Movements",
-		description = "Find or get paginated vehicle Movements",
+		description = """
+			List, paginated, the Movements in which this Vehicle was used, optionally filtered by visibility,
+			`linkedToActivity`, Movement `type` and a `startDateTime`/`endDateTime` range.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_HISTORY_R')")
 	@GetMapping("/{id}/movements")
@@ -89,15 +96,12 @@ interface IVehicleV2Controller {
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
 		@RequestParam(required = false) linkedToActivity: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
+		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
 
 	@Operation(
 		summary = "Create Vehicle",
-		description = "Create Vehicle linked to the Project",
+		description = "Register a new Vehicle in the Project, with its license plate, brand, model and its own availability window.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_C')")
 	@RateLimited(SENSITIVE)
@@ -110,7 +114,7 @@ interface IVehicleV2Controller {
 
 	@Operation(
 		summary = "Update Vehicle",
-		description = "Update Vehicle",
+		description = "Update the Vehicle's license plate, brand, model and availability window (same shape as creation).",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
 	@RateLimited(SENSITIVE)
@@ -124,7 +128,7 @@ interface IVehicleV2Controller {
 
 	@Operation(
 		summary = "Disable Vehicle",
-		description = "Disable Vehicle, it will not visible anymore in the Project",
+		description = "Soft-delete the Vehicle: it is kept (with its Movement history) but hidden from the Project going forward.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
 	@RateLimited(SENSITIVE)
@@ -137,7 +141,7 @@ interface IVehicleV2Controller {
 
 	@Operation(
 		summary = "Enable Vehicle",
-		description = "Enable Vehicle, obviously it will be visible again in the Project",
+		description = "Reverse a disable: the Vehicle becomes visible in the Project again.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
 	@RateLimited(SENSITIVE)
@@ -150,7 +154,10 @@ interface IVehicleV2Controller {
 
 	@Operation(
 		summary = "Delete Vehicle",
-		description = "Delete all Vehicle data.",
+		description = """
+			Permanently delete the Vehicle and all its data, including its Movement history. This cannot be undone;
+			prefer disabling it if it may be needed again.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_D')")
 	@RateLimited(SENSITIVE)

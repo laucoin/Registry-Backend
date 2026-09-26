@@ -44,6 +44,11 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_VEHICLE`: CRUD, similarity-ranked/filtered/sorted/paginated search with
+ * last-Movement (presence) status joined in via a CTE, and the "unused since" lookup for the purge
+ * job. Consumed by [VehicleModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class VehicleJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(
@@ -152,12 +157,6 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 		return Flux.from(
 			dsl.select(
 				TB_VEHICLE.asterisk(),
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -203,12 +202,6 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 					lastMovementType,
 					lastMovementDateTime,
 					similarityScore,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -271,12 +264,6 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 					TB_VEHICLE.asterisk(),
 					lastMovementType,
 					lastMovementDateTime,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -323,12 +310,6 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 					lastMovementType,
 					lastMovementDateTime,
 					similarityScore,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -370,12 +351,6 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 					TB_VEHICLE.asterisk(),
 					lastMovementType,
 					lastMovementDateTime,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -463,6 +438,6 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 		endAvailabilityTime = get(TB_VEHICLE.END_AVAILABILITY_TIME),
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_VEHICLE.PROJECT_ID, project)
+		fillGenericProject(this, TB_VEHICLE.PROJECT_ID)
 	}
 }

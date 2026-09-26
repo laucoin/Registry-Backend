@@ -40,6 +40,12 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_COMMUNICATION`: CRUD, similarity-ranked/filtered/sorted/paginated search
+ * scoped to a Project, a Movement or an Alert (joining in the Activity/Alert it targets), and the
+ * orphan lookups for the purge job. Consumed by [CommunicationPostgresRepository], never by the
+ * domain directly.
+ */
 @Repository
 class CommunicationJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(TB_COMMUNICATION.ID, TB_COMMUNICATION.VISIBLE, TB_COMMUNICATION.CREATED_DATE, TB_COMMUNICATION.CREATED_BY, TB_COMMUNICATION.LAST_MODIFIED_DATE, TB_COMMUNICATION.LAST_MODIFIED_BY)
@@ -73,12 +79,6 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 				alert.TITLE,
 				alert.DATE_TIME,
 				alert.STATUS,
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -442,6 +442,6 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 		alertStatus = alert?.let { get(it.STATUS) },
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_COMMUNICATION.PROJECT_ID, project)
+		fillGenericProject(this, TB_COMMUNICATION.PROJECT_ID)
 	}
 }

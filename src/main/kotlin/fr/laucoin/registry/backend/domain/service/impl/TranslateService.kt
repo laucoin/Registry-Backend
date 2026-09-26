@@ -5,6 +5,11 @@ import java.util.Locale
 import org.springframework.context.MessageSource
 import org.springframework.stereotype.Component
 
+/**
+ * [ITranslateService] implementation delegating to the two [MessageSource] beans wired in
+ * [I18nConfig] (`messagesSource`/`errorsSource`), falling back to the provided default (or the code
+ * itself) when a key is missing from the bundle.
+ */
 @Component
 class TranslateService(
 	private val messagesSource: MessageSource,

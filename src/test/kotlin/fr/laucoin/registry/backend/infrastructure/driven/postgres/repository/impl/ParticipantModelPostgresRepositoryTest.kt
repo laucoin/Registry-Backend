@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ParticipantEntityMapper
@@ -272,17 +271,15 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				lastName = "match"
 				birthday = LocalDate.now().minusYears(30)
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 			val bornAnotherDay = ParticipantModel().apply {
 				firstName = "birthday"
 				lastName = "no-match"
 				birthday = LocalDate.now().minusYears(30).minusDays(1)
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			matchingId = repository.create(bornToday).block()!!.id!!
@@ -332,9 +329,8 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				lastName = "test"
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.create(participant).`as`(transactionalOperator::transactional).block()
@@ -358,10 +354,9 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				groups = listOf(GroupModel().apply { id = groupId })
-				project = ProjectModel().apply { id = projectId }
 				purged = false
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.update(participant).`as`(transactionalOperator::transactional).block()
@@ -391,10 +386,9 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				lastName = "test updated"
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
 				purged = false
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.update(participant).`as`(transactionalOperator::transactional).block()

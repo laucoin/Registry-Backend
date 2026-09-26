@@ -23,14 +23,14 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Proj
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileRoleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfilesWriterDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class ProjectProfileV2Controller(
@@ -44,11 +44,11 @@ class ProjectProfileV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IProjectProfileV2Controller {
+) : IProjectProfileV2Controller {
 	override fun findProjectProfiles(
 		projectId: UUID,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		available: Boolean?,
 		status: ProfileStatusEnum?,
 		dateTime: ZonedDateTime?,
@@ -57,7 +57,7 @@ class ProjectProfileV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ProjectProfileSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ProjectProfileSearchParamModel(q, available, status, dateTime)
+		val searchParams = ProjectProfileSearchParamModel(query, available, status, dateTime)
 
 		return service.findProjectProfilesPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -67,8 +67,8 @@ class ProjectProfileV2Controller(
 		return service.findProjectProfileById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
-	override fun searchUsers(projectId: UUID, q: String?): Flux<PartialUserReaderDto> {
-		return service.searchUsers(q).map(partialUserReaderMapper::toDto)
+	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
+		return service.searchUsers(query).map(partialUserReaderMapper::toDto)
 	}
 
 	override fun getAssignableProjectProfileRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<LabelDto> {

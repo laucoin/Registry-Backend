@@ -15,6 +15,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for Activities: search/read, its Movement history and ongoing-outings
+ * dashboard, the create/update/disable/enable/delete lifecycle, and the retention purge sweep.
+ * Callers (controllers, other services) go through this contract, never the [IActivityPort] directly.
+ */
 interface IActivityService {
 	fun findActivitiesPage(
 		projectId: UUID,

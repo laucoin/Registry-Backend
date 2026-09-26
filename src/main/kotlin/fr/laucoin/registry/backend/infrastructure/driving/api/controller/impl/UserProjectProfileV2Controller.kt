@@ -10,56 +10,76 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserProjectProfileV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.PageQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserProjectProfileReaderDtoMapper
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class UserProjectProfileV2Controller(
 	private val service: IUserProjectProfileService,
-	private val readerMapper: ProjectProfileReaderDtoMapper,
+	private val readerMapper: UserProjectProfileReaderDtoMapper,
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IUserProjectProfileV2Controller {
+) : IUserProjectProfileV2Controller {
 	override fun findUserProjectProfiles(
 		currentUser: CurrentUserModel,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		available: Boolean?,
+		upcoming: Boolean?,
 		status: ProfileStatusEnum?,
 		dateTime: ZonedDateTime?,
 		favorite: Boolean?,
-	): Mono<PageReaderDto<ProjectProfileReaderDto>> {
+		includeCounts: Boolean?,
+	): Mono<PageReaderDto<UserProjectProfileReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ProjectProfileSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ProjectProfileSearchParamModel(q, available, status, dateTime, favorite)
+		val searchParams = ProjectProfileSearchParamModel(query, available, status, dateTime, favorite, upcoming)
 
-		return service.findProjectProfilesPage(currentUser.id!!, pageable, searchParams, sortFields)
+		return service.findProjectProfilesPage(
+			currentUser.id!!,
+			pageable,
+			searchParams,
+			sortFields,
+			includeCounts == true,
+		)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
-	override fun acceptUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileReaderDto> {
+	override fun acceptUserProjectProfileById(
+		currentUser: CurrentUserModel,
+		id: UUID
+	): Mono<UserProjectProfileReaderDto> {
 		return service.updateUserProjectProfileStatusById(currentUser, id, ACCEPTED).map(readerMapper::toDto)
 	}
 
-	override fun rejectUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileReaderDto> {
+	override fun rejectUserProjectProfileById(
+		currentUser: CurrentUserModel,
+		id: UUID
+	): Mono<UserProjectProfileReaderDto> {
 		return service.updateUserProjectProfileStatusById(currentUser, id, REJECTED).map(readerMapper::toDto)
 	}
 
-	override fun createSupportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileReaderDto> {
+	override fun createSupportProjectProfile(
+		currentUser: CurrentUserModel,
+		projectId: UUID
+	): Mono<UserProjectProfileReaderDto> {
 		return service.createSupportProjectProfile(currentUser, projectId).map(readerMapper::toDto)
 	}
 
-	override fun toggleFavoriteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileReaderDto> {
+	override fun toggleFavoriteUserProjectProfileById(
+		currentUser: CurrentUserModel,
+		id: UUID
+	): Mono<UserProjectProfileReaderDto> {
 		return service.toggleFavoriteProjectProfileById(currentUser, id).map(readerMapper::toDto)
 	}
 

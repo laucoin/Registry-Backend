@@ -3,6 +3,10 @@ package fr.laucoin.registry.backend.domain.extension
 import java.util.Objects
 import kotlin.random.Random
 
+/**
+ * Small String helpers: [getStringBetween] extracts the substring between two occurrences of a
+ * delimiter, and [generateRandomString] produces a short random alphanumeric token.
+ */
 object StringExt {
 	fun String?.getStringBetween(delimiter: String): String? {
 		if (Objects.isNull(this)) return null

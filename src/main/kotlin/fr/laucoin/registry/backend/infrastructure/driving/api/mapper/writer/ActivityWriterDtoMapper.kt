@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DURATION_FORMAT_FAILED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
 import java.util.Optional
@@ -34,7 +33,6 @@ class ActivityWriterDtoMapper(
 				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
 				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

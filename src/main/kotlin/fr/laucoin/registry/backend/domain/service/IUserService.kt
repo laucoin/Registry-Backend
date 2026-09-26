@@ -12,6 +12,11 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
 
+/**
+ * Use-case entry point for Users: search/read, JIT provisioning and personal-data sync from the IDP
+ * on login, role assignment, block/unblock/impersonate/delete, and the retention purge sweep. Callers
+ * go through this contract, never the [IUserPort] directly.
+ */
 interface IUserService {
 	fun findUsersPage(
 		pageable: PageableModel,

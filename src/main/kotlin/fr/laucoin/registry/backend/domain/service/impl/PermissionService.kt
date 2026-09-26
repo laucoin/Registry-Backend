@@ -10,6 +10,12 @@ import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
 import org.springframework.security.access.PermissionEvaluator
 import org.springframework.security.core.Authentication
 
+/**
+ * Spring Security [PermissionEvaluator] backing `hasPermission(#id, 'X')` in `@PreAuthorize`
+ * expressions: checks the authenticated principal for the namespaced `{targetId}_{permission}`
+ * authority (ADR 005). The `(targetId, targetType, permission)` overload is intentionally
+ * unsupported — every call site must resolve the target object itself first.
+ */
 class PermissionService: PermissionEvaluator {
 	private val log = LoggerFactory.getLogger(this::class.java)
 

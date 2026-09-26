@@ -11,9 +11,15 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.UserProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import java.util.Objects
 
+/**
+ * Computes the derived presence/availability status of Participants, Vehicles, Projects, Groups,
+ * Activities and Profiles from their availability window (and, for presence, their last recorded
+ * Movement) against "now" — never persisted, always recomputed on read.
+ */
 object AvailabilityElementExt {
 	fun ParticipantModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
 		val now = CustomDateTimeModel.now()
@@ -51,6 +57,12 @@ object AvailabilityElementExt {
 	}
 
 	fun ProjectProfileModel.buildStatus(): AvailabilityStatusEnum {
+		val now = CustomDateTimeModel.now()
+		val available = now.asStartIsAfterOther(startAccess) && now.asEndIsBeforeOther(endAccess)
+		return availability(available)
+	}
+
+	fun UserProjectProfileModel.buildStatus(): AvailabilityStatusEnum {
 		val now = CustomDateTimeModel.now()
 		val available = now.asStartIsAfterOther(startAccess) && now.asEndIsBeforeOther(endAccess)
 		return availability(available)

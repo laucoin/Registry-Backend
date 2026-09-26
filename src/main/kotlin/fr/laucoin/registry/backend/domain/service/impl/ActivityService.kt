@@ -27,6 +27,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IActivityService] implementation: enforces that an Activity's availability window stays inside
+ * its Project's dates and that a "linked to Movement(s)" Activity cannot be deleted, then delegates
+ * reads/writes to [IActivityPort] (and cross-resource reads to [IMovementPort]/[ICommunicationPort]).
+ */
 @Service
 class ActivityService(
 	private val projectService: IProjectService,
@@ -82,7 +87,7 @@ class ActivityService(
 
 	override fun createActivity(currentUser: CurrentUserModel, activity: ActivityModel): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -96,7 +101,7 @@ class ActivityService(
 		activity: ActivityModel
 	): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -155,7 +160,7 @@ class ActivityService(
 
 	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->
 		movementPort.countAllByActivityId(
-			activityToUpdate.project!!.id!!,
+			activityToUpdate.projectId!!,
 			activityToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->

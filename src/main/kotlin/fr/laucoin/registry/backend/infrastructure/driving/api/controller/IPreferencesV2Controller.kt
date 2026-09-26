@@ -20,7 +20,7 @@ import reactor.core.publisher.Mono
 interface IPreferencesV2Controller {
 	@Operation(
 		summary = "Save theme",
-		description = "Save theme preferences for other devices",
+		description = "Persist the caller's UI theme preference (SYSTEM / LIGHT / DARK) server-side so it follows them on other devices.",
 	)
 	@RateLimited(SENSITIVE)
 	@PostMapping("/theme")
@@ -31,7 +31,7 @@ interface IPreferencesV2Controller {
 
 	@Operation(
 		summary = "Save language",
-		description = "Save language preferences for other devices",
+		description = "Persist the caller's UI language preference server-side so it follows them on other devices.",
 	)
 	@RateLimited(SENSITIVE)
 	@PostMapping("/language")

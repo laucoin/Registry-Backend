@@ -18,6 +18,12 @@ import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * Shared jOOQ building blocks reused by every `*JooqRepository`: aliased creator/editor/project
+ * tables, visibility/date-range/availability [Condition] builders, and the [Record] ↔
+ * [GenericEntity]/[GenericProjectEntity] fill/set helpers for the columns every entity has in common
+ * (id, visibility, audit trail, owning Project).
+ */
 object GenericJooqQueries {
 	fun creatorTable(): TbUser = TB_USER.`as`("create_tb")
 
@@ -32,7 +38,10 @@ object GenericJooqQueries {
 		startDate.isNull.or(startDate.lt(DSL.currentLocalDate()))
 			.or(startDate.eq(DSL.currentLocalDate()).and(startTime.isNull.or(startTime.le(DSL.currentOffsetTime()))))
 
-	private fun notEndedCondition(endDate: Field<LocalDate?>, endTime: Field<OffsetTime?>): Condition =
+	fun notStartedCondition(startDate: Field<LocalDate?>, startTime: Field<OffsetTime?>): Condition =
+		DSL.not(startedCondition(startDate, startTime))
+
+	fun notEndedCondition(endDate: Field<LocalDate?>, endTime: Field<OffsetTime?>): Condition =
 		endDate.isNull.or(endDate.gt(DSL.currentLocalDate()))
 			.or(endDate.eq(DSL.currentLocalDate()).and(endTime.isNull.or(endTime.ge(DSL.currentOffsetTime()))))
 

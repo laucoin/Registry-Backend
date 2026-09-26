@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
@@ -357,9 +356,8 @@ class GroupServiceTest {
 		val uuid = UUID.randomUUID()
 		val participantIds = listOf(UUID.randomUUID())
 		val group = GroupModel().apply {
-			project = ProjectModel().apply { id = projectId }
 			members = participantIds.map { ParticipantModel().apply { id = it } }
-		}
+		}.also { it.projectId = projectId }
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(group))
 		whenever(port.update(any())).thenReturn(Mono.just(group))

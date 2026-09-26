@@ -12,5 +12,4 @@ data class ProjectEntity(
 	var endDate: LocalDate? = null,
 	var endTime: OffsetTime? = null,
 	var options: List<ProjectOptionEnum>? = null,
-	var favorite: Boolean? = null,
 ): GenericEntity()

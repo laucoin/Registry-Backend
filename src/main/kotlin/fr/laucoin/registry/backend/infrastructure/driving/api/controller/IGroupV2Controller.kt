@@ -57,7 +57,11 @@ import java.util.UUID
 interface IGroupV2Controller {
 	@Operation(
 		summary = "Find Groups",
-		description = "Find or get paginated Groups",
+		description = """
+			Search and list the Project's Groups (without their members), with pagination and sorting. Combine `q`
+			(free-text search), `visible`, `present` (whether the Group's own presence window covers `dateTime`, defaulting to now)
+			to narrow the results.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
@@ -65,7 +69,7 @@ interface IGroupV2Controller {
 	fun findGroups(
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) present: Boolean?,
 		@RequestParam(required = false)
@@ -74,35 +78,50 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Find Groups arriving today",
-		description = "Groups whose own presence window opens today and governs at least one Participant's presence " +
-			"(i.e. a member with no individual date overriding the Group's); capped at \"limit\" rows",
+		description = """
+			Dashboard widget: Groups whose own presence window opens today and governs at least one Participant's presence
+			(i.e. a member with no individual date overriding the Group's). Results are capped at "limit" rows
+			(default $DEFAULT_DASHBOARD_LIMIT, max $MAX_DASHBOARD_LIMIT).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@GetMapping("/arrivals-today")
 	fun findGroupsArrivingToday(
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
-		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+			MAX_DASHBOARD_LIMIT,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		)
 		limit: Int,
 	): Flux<GroupWithoutMemberReaderDto>
 
 	@Operation(
 		summary = "Find Groups departing today",
-		description = "Groups whose own presence window closes today and governs at least one Participant's presence " +
-			"(i.e. a member with no individual date overriding the Group's); capped at \"limit\" rows",
+		description = """
+			Dashboard widget: Groups whose own presence window closes today and governs at least one Participant's presence
+			(i.e. a member with no individual date overriding the Group's). Results are capped at "limit" rows
+			(default $DEFAULT_DASHBOARD_LIMIT, max $MAX_DASHBOARD_LIMIT).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@GetMapping("/departures-today")
 	fun findGroupsDepartingToday(
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
-		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+			MAX_DASHBOARD_LIMIT,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		)
 		limit: Int,
 	): Flux<GroupWithoutMemberReaderDto>
 
 	@Operation(
 		summary = "Find Group Members",
-		description = "Find or get paginated Group Members by Group ID",
+		description = """
+			List, paginated, the Participants who are members of this Group. Combine `q` (free-text search), `isMajor`,
+			`type` (REGISTERED / GUEST), `visible`, `status` (presence) and `dateTime` to narrow the results.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
@@ -111,7 +130,7 @@ interface IGroupV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@ParameterObject @Valid page: PageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) isMajor: Boolean?,
 		@RequestParam(required = false) type: ParticipantTypeEnum?,
 		@RequestParam(required = false) visible: Boolean?,
@@ -122,7 +141,7 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Find Group",
-		description = "Find Group by ID",
+		description = "Get a single Group of the Project by its ID, including its members.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@GetMapping("/{id}")
@@ -133,19 +152,22 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Search Participants",
-		description = "Search Participants to add in a Group",
+		description = "Search Participants of the Project not yet in this Group, to add as members.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_METADATA_R')")
 	@RateLimited(SEARCH)
 	@GetMapping("/search/participants")
 	fun searchParticipants(
 		@PathVariable projectId: UUID,
-		@RequestParam q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 	): Flux<ParticipantReaderDto>
 
 	@Operation(
 		summary = "Create Group",
-		description = "Create Group and related Group Content",
+		description = """
+			Create a new Group linked to the Project, with its own availability window and its initial list of members
+			(must contain at least one Participant ID).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_C')")
 	@RateLimited(SENSITIVE)
@@ -158,7 +180,7 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Update Group",
-		description = "Update Group",
+		description = "Update the Group's name, availability window and full member list (replaces the current members).",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -172,7 +194,7 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Add members in Group",
-		description = "Add members in an existing Group",
+		description = "Add one or more existing Participants as members of the Group, without touching its current members.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -186,7 +208,7 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Remove member from Group",
-		description = "Remove member from an existing Group",
+		description = "Remove a single Participant from the Group's members, without affecting the Participant itself.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -200,7 +222,7 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Disable Group",
-		description = "Disable Group, it will not visible anymore in the Project",
+		description = "Soft-delete the Group: it is kept (with its members) but hidden from the Project going forward.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -213,7 +235,7 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Enable Group",
-		description = "Enable Group, obviously it will be visible again in the Project",
+		description = "Reverse a disable: the Group becomes visible in the Project again.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
 	@RateLimited(SENSITIVE)
@@ -226,7 +248,10 @@ interface IGroupV2Controller {
 
 	@Operation(
 		summary = "Delete Group",
-		description = "Delete all Group data.",
+		description = """
+			Permanently delete the Group and all its data. This cannot be undone; the members themselves are not deleted.
+			Prefer disabling the Group if it may be needed again.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_D')")
 	@RateLimited(SENSITIVE)

@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfileWriterDto
 import java.util.Optional
@@ -16,7 +15,6 @@ class ProjectProfileWriterDtoMapper(
 			role = dto.role
 			startAccess = Optional.ofNullable(dto.startAccess).map(customDateTimeMapper::toModel).orElse(null)
 			endAccess = Optional.ofNullable(dto.endAccess).map(customDateTimeMapper::toModel).orElse(null)
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

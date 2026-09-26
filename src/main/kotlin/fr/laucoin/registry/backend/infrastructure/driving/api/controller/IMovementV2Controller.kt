@@ -16,6 +16,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
@@ -33,8 +34,6 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springdoc.core.annotations.ParameterObject
-import org.springframework.format.annotation.DateTimeFormat
-import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -50,7 +49,6 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.time.ZonedDateTime
 import java.util.UUID
 
 @Tag(name = "Movements management", description = "API for Movements-related operations")
@@ -58,7 +56,11 @@ import java.util.UUID
 interface IMovementV2Controller {
 	@Operation(
 		summary = "Find Movements",
-		description = "Find or get paginated Movements without content",
+		description = """
+			Search and list the Project's Movements (without their content), with pagination. Combine `currentMovements`
+			(only ongoing outings/visits still open), `linkedToActivity`, `visible`, `type` (IN / OUT) and a `startDateTime`/`endDateTime`
+			range to narrow the results.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
 	@GetMapping
@@ -72,15 +74,15 @@ interface IMovementV2Controller {
 		@RequestParam(required = false) linkedToActivity: Boolean?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
+		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
 
 	@Operation(
 		summary = "Find Movements contents",
-		description = "Find or get content of given Movements IDs",
+		description = """
+			Batch-fetch the content (who/what moved) of several Movements at once, given their IDs.
+			Returns one entry per requested Movement ID paired with its list of contents.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
 	@GetMapping("/contents")
@@ -93,7 +95,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Find Movement",
-		description = "Find Movement by ID with content",
+		description = "Get a single Movement of the Project by its ID, with its full content (Participants, Groups, Guests or Vehicle involved).",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
 	@GetMapping("/{id}")
@@ -104,7 +106,10 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Search Reasons (and Activity as reason)",
-		description = "Search Reasons (and Activity as reason) to add in a Movement",
+		description = """
+			Search the Movement reasons (and, when relevant, Activities usable as a reason) compatible with the given
+			`type` (IN / OUT) and `contentType` (REGISTERED / GUEST), to attach to a new Movement.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@RateLimited(SEARCH)
@@ -113,12 +118,12 @@ interface IMovementV2Controller {
 		@PathVariable projectId: UUID,
 		@RequestParam(required = true) type: MovementTypeEnum,
 		@RequestParam(required = true) contentType: ParticipantTypeEnum,
-		@RequestParam q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 	): Flux<MovementReasonsReaderDto>
 
 	@Operation(
 		summary = "Search Participants and/or Groups",
-		description = "Search Participants and/or Groups to add in a Movement",
+		description = "Search Participants and/or Groups of the given `contentType` (REGISTERED / GUEST), to add as content of a new Movement.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@RateLimited(SEARCH)
@@ -126,24 +131,27 @@ interface IMovementV2Controller {
 	fun searchParticipantsAndGroups(
 		@PathVariable projectId: UUID,
 		@RequestParam(required = true) contentType: ParticipantTypeEnum,
-		@RequestParam q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 	): Mono<MovementParticipantsAndGroupsReaderDto>
 
 	@Operation(
 		summary = "Search Vehicles",
-		description = "Search Vehicles to add in a Movement",
+		description = "Search Vehicles of the Project, to attach one to a new Movement.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@RateLimited(SEARCH)
 	@GetMapping("/search/vehicles")
 	fun searchVehicles(
 		@PathVariable projectId: UUID,
-		@RequestParam q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 	): Flux<VehicleReaderDto>
 
 	@Operation(
 		summary = "Find Movements Communications",
-		description = "Find or get paginated movement communications",
+		description = """
+			List, paginated, the Communications posted on this Movement, optionally filtered by free-text search,
+			visibility and a date/time range.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
@@ -152,17 +160,14 @@ interface IMovementV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@ParameterObject @Valid page: PageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) visible: Boolean?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
+		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>>
 
 	@Operation(
 		summary = "Find participants status",
-		description = "Return current major and minor status presence status",
+		description = "Dashboard widget: current count of major/minor Participants who are IN, OUT or UNAVAILABLE.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/participants/status")
@@ -170,7 +175,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Find vehicles status",
-		description = "Return current vehicles presence status",
+		description = "Dashboard widget: current count of Vehicles that are IN, OUT or UNAVAILABLE.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/vehicles/status")
@@ -178,7 +183,11 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Create Movement",
-		description = "Create Movement and related Content",
+		description = """
+			Record a new IN/OUT Movement for one or more Participants and/or Groups, each entry optionally linked to a
+			Vehicle and/or a carpool name (`poolName`). Exactly one of `reason` or `activityId` may be set, and both must stay
+			compatible with the Movement `type` and the Participant type.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
 	@RateLimited(SENSITIVE)
@@ -191,7 +200,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Update Movement",
-		description = "Update Movement and related Content",
+		description = "Update an existing REGISTERED-content Movement: its date/time, type, reason/Activity and content (same shape as creation).",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@RateLimited(SENSITIVE)
@@ -205,7 +214,10 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Create Guest Movement",
-		description = "Create Movement and related Guest Content",
+		description = """
+			Record a new IN/OUT Movement for one or more Guests. Existing Guests can be referenced by `id`, or created
+			inline by providing their first name, last name and birthday.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
 	@RateLimited(SENSITIVE)
@@ -218,7 +230,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Update Guest Movement",
-		description = "Update Movement and related Guest Content",
+		description = "Update an existing GUEST-content Movement: its date/time, type, reason and guest content (same shape as creation).",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@RateLimited(SENSITIVE)
@@ -232,7 +244,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Disable Movement",
-		description = "Disable Movement, it will not visible anymore in the Project",
+		description = "Soft-delete the Movement: it is kept (with its Communications) but hidden from the Project going forward.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@RateLimited(SENSITIVE)
@@ -245,7 +257,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Enable Movement",
-		description = "Enable Movement, obviously it will be visible again in the Project",
+		description = "Reverse a disable: the Movement becomes visible in the Project again.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@RateLimited(SENSITIVE)
@@ -258,7 +270,10 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Delete Movement",
-		description = "Delete all Movement data.",
+		description = """
+			Permanently delete the Movement and all its data, including its Communications. This cannot be undone;
+			prefer disabling it if it may be needed again.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_D')")
 	@RateLimited(SENSITIVE)

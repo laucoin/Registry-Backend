@@ -12,6 +12,13 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for a Project's Profiles (its members): search/read, the User picker and
+ * assignable-roles lookup, bulk invitation, and the update/block/unblock/delete lifecycle. Does not
+ * cover accepting/rejecting an invitation or the favorite toggle — see [IUserProjectProfileService]
+ * for the caller's-own-Profile operations. Callers go through this contract, never the
+ * [IProjectProfilePort] directly.
+ */
 interface IProjectProfileService {
 	fun findProjectProfilesPage(
 		projectId: UUID,

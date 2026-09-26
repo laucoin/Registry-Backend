@@ -10,6 +10,11 @@ import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import reactor.core.publisher.Mono
 
+/**
+ * Common base for services that create or move Profiles into an active state: guards against two
+ * ACCEPTED/INVITED Profiles overlapping for the same User on the same Project, rejecting the whole
+ * batch on a full conflict or filtering out only the conflicting Users on a partial one.
+ */
 open class GenericProfileService(
 	private val repository: IProjectProfilePort,
 ): GenericService() {

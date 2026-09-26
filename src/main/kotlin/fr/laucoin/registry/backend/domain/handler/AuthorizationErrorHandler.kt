@@ -30,6 +30,12 @@ import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
+/**
+ * Renders every authentication/authorization failure as the app's standard [ErrorDto] JSON body
+ * instead of Spring Security's default HTML/empty response: login failures (401, mapped from
+ * [JwtConversionException]/[InvalidBearerTokenException]), missing credentials (401) and denied
+ * access (403).
+ */
 @Component
 class AuthorizationErrorHandler(
 	private val translateService: ITranslateService,

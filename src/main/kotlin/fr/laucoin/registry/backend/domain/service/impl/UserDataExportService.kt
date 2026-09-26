@@ -20,6 +20,11 @@ import fr.laucoin.registry.backend.domain.service.IUserDataExportService
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
+/**
+ * [IUserDataExportService] implementation: fans out to every content port (Movements,
+ * Communications, Alerts, Activities, Vehicles, Groups) plus [IParticipantService] for any linked
+ * Participant, and zips the results into one [UserDataExportModel] for the GDPR export.
+ */
 @Service
 class UserDataExportService(
 	private val userPort: IUserPort,
@@ -60,7 +65,7 @@ class UserDataExportService(
 		val vehicles = vehiclePort.findAllByCreatorId(userId).collectList()
 		val groups = groupPort.findAllByCreatorId(userId).collectList()
 		val linkedParticipants = participantPort.findAllByUserId(userId)
-			.flatMap { participantService.exportParticipantData(it.project!!.id!!, it.id!!) }
+			.flatMap { participantService.exportParticipantData(it.projectId!!, it.id!!) }
 			.collectList()
 
 		val accountAndContent = Mono.zip(user, preferences, projectProfiles, createdProjectProfiles, movements, communications, alerts, activities)

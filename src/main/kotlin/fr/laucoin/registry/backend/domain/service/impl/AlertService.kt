@@ -32,6 +32,12 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IAlertService] implementation: enforces an Alert's date/status invariants (date inside its
+ * Project's range, immutable once no longer IN_PROGRESS, rescheduling checked against already-linked
+ * Communications, no delete while Communications remain), and delegates persistence to [IAlertPort]
+ * (with [ICommunicationPort] for its thread).
+ */
 @Service
 class AlertService(
 	private val projectService: IProjectService,
@@ -92,7 +98,7 @@ class AlertService(
 
 	private fun validateAlertDateWithProjectDates(alert: AlertModel): Mono<UUID> {
 		return projectService.validateDateTime(
-			alert.project!!.id!!,
+			alert.projectId!!,
 			CustomDateTimeModel(alert.dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -158,7 +164,7 @@ class AlertService(
 		flatMap { oldAlert ->
 			if (oldAlert.dateTime.isEqual(updatedAlert.dateTime)) Mono.just(oldAlert)
 			else communicationPort.countAllByAlertId(
-				oldAlert.project!!.id!!,
+				oldAlert.projectId!!,
 				oldAlert.id!!,
 				CommunicationSearchParamModel(
 					textSearched = null,
@@ -231,7 +237,7 @@ class AlertService(
 
 	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
 		communicationPort.countAllByAlertId(
-			oldAlert.project!!.id!!,
+			oldAlert.projectId!!,
 			oldAlert.id!!,
 			CommunicationSearchParamModel(),
 		).handle { it, handle ->

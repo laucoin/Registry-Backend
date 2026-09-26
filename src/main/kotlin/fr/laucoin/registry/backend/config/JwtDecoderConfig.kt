@@ -11,6 +11,11 @@ import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import java.net.URI
 
+/**
+ * Builds the [ReactiveJwtDecoder] used to validate incoming bearer tokens: fetches signing keys from
+ * the IDP's JWKS endpoint and chains the default validators with an audience check (private + public
+ * Swagger client IDs) and an issuer-origin check against the configured authorization URI.
+ */
 @Configuration
 class JwtDecoderConfig(
 	@param:Value($$"${registry.security.oauth2.jwks-uri}")

@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
@@ -199,9 +198,8 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 			val activity = ActivityModel().apply {
 				name = "test"
 				description = "test"
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.create(activity).block()
@@ -222,9 +220,8 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				name = "test update"
 				description = "test update"
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.update(activity).block()

@@ -8,8 +8,8 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserDataExportModel
+import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserDataExportService
 import fr.laucoin.registry.backend.domain.service.IUserService
@@ -24,7 +24,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -41,8 +40,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
-class UserV2ControllerTest: TestContext() {
+class UserV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IUserService
 
@@ -83,7 +83,11 @@ class UserV2ControllerTest: TestContext() {
 		// Assert
 		result.body<Map<*, *>>(OK)
 
-		verify(service).findUsersPage(pageable, UserSearchParamModel(textSearched = null, visibilitySearched = null), emptyList())
+		verify(service).findUsersPage(
+			pageable,
+			UserSearchParamModel(textSearched = null, visibilitySearched = null),
+			emptyList()
+		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 	}
@@ -148,7 +152,7 @@ class UserV2ControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(REGISTRY_USER_METADATA_R)
 			.get()
-			.uri(uriBuilder("$BASE_URL/roles", emptyList(), emptyList()))
+			.uri(uriBuilder("$BASE_URL/metadata/roles", emptyList(), emptyList()))
 			.exchange()
 
 		// Assert

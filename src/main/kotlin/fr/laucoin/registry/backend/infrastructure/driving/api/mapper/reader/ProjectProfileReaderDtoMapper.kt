@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component
 @Component
 class ProjectProfileReaderDtoMapper(
 	private val translateService: ITranslateService,
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val partialUserMapper: PartialUserReaderDtoMapper,
 ): IGenericReaderDtoMapper<ProjectProfileModel, ProjectProfileReaderDto> {
@@ -36,7 +35,6 @@ class ProjectProfileReaderDtoMapper(
 			favorite = model.favorite,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

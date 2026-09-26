@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
@@ -11,6 +12,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.SortModel
@@ -31,6 +33,12 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IProjectService] implementation: grants the creator's administration Profile on creation,
+ * validates a narrowed schedule against everything already scheduled inside it, and invalidates every
+ * member's [IPrincipalCacheService] entry when the Project's options/visibility change. Delegates
+ * persistence to [IProjectPort].
+ */
 @Service
 class ProjectService(
 	private val port: IProjectPort,
@@ -56,12 +64,44 @@ class ProjectService(
 			searchParams,
 			sortFields,
 		)
+			.flatMap { it.withActiveProfiles(currentUser) }
 	}
 
-	override fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
+	override fun findProjectById(
+		id: UUID,
+		visibilitySearched: Boolean?,
+		currentUser: CurrentUserModel?,
+	): Mono<ProjectModel> {
 		return port.findById(id, visibilitySearched)
 			.notFoundIfEmpty(id)
+			.flatMap { project ->
+				if (currentUser == null) Mono.just(project)
+				else profilePort.findProjectProfileByProjectAndUserId(id, currentUser.id!!, usableProfileSearchParams())
+					.map { project.apply { activeProfile = it } }
+					.defaultIfEmpty(project)
+			}
 	}
+
+	override fun findProjectsRequiringAttention(currentUser: CurrentUserModel, limit: Int): Flux<ProjectModel> {
+		return profilePort.findProjectsRequiringAttentionByUserId(currentUser.id!!, limit)
+	}
+
+	private fun PageModel<ProjectModel>.withActiveProfiles(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> {
+		val projectIds = content.mapNotNull { it.id }
+		if (projectIds.isEmpty()) return Mono.just(this)
+		return profilePort.findProjectProfilesByProjectIdsAndUserId(projectIds, currentUser.id!!, usableProfileSearchParams())
+			.collectList()
+			.map { profiles ->
+				val profilesByProjectId = profiles.associateBy { it.projectId }
+				apply { content = content.map { it.apply { activeProfile = profilesByProjectId[it.id] } } }
+			}
+	}
+
+	private fun usableProfileSearchParams() = ProjectProfileSearchParamModel(
+		visibilitySearched = true,
+		availabilitySearched = true,
+		statusSearched = listOf(ACCEPTED),
+	)
 
 	override fun availableProjectOptions(): Flux<ProjectOptionEnum> {
 		return Flux.fromIterable(ProjectOptionEnum.entries)

@@ -17,6 +17,12 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for Participants: search/read, its Movement history, dashboard queries
+ * (birthdays, arriving/departing today), the picker searches used to link a User or a Group, GDPR
+ * data export, the create/update/disable/enable/delete lifecycle, and the retention purge sweep.
+ * Callers go through this contract, never the [IParticipantPort] directly.
+ */
 interface IParticipantService {
 	fun findParticipantsPage(
 		projectId: UUID,

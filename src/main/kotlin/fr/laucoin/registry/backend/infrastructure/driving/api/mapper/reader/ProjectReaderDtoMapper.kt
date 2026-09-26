@@ -5,14 +5,16 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
-import java.util.Optional
 import org.springframework.stereotype.Component
+import java.util.Optional
 
 @Component
 class ProjectReaderDtoMapper(
 	private val translateService: ITranslateService,
-	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper
-): IGenericReaderDtoMapper<ProjectModel, ProjectReaderDto> {
+	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
+	private val profileMapper: ProjectProfileReaderDtoMapper,
+	private val countMapper: ProjectCountReaderDtoMapper,
+) : IGenericReaderDtoMapper<ProjectModel, ProjectReaderDto> {
 	override fun toDto(model: ProjectModel): ProjectReaderDto {
 		return ProjectReaderDto(
 			name = model.name,
@@ -26,7 +28,8 @@ class ProjectReaderDtoMapper(
 					translateService.getMessage(code = "$PROJECT_OPTION_NAME_PREFIX$it")
 				)
 			},
-			favorite = model.favorite,
+			counts = model.counts?.let(countMapper::toDto),
+			activeProfile = Optional.ofNullable(model.activeProfile).map(profileMapper::toDto).orElse(null),
 		).apply {
 			id = model.id
 			visible = model.visible

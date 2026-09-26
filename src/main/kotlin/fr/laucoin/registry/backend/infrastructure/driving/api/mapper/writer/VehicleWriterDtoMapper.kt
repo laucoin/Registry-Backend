@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.VehicleWriterDto
 import java.util.Optional
@@ -20,7 +19,6 @@ class VehicleWriterDtoMapper(
 				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
 				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

@@ -1,15 +1,21 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
+import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.RESOLVED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_ALERT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PROJECT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.jooq.tables.references.TB_PROJECT_PROFILE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleEntityMapper
@@ -23,6 +29,8 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -38,6 +46,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import reactor.core.publisher.Mono
 
 class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
@@ -54,6 +63,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 
 	@Autowired
 	private lateinit var repository: IProjectProfilePort
+
+	@Autowired
+	private lateinit var dsl: DSLContext
 
 	@Test
 	fun `Should findProjectProfilesPageByUserId call repository findByUserId`() {
@@ -78,11 +90,110 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
 			favoriteSearched = null,
+			upcomingSearched = null,
 			sortFields = emptyList(),
-			pageable.limit,
-			pageable.offset,
+			limit = pageable.limit,
+			offset = pageable.offset,
+			includeCounts = false,
 		)
 		verify(mapper, times(1)).toModel(any())
+	}
+
+	@Test
+	fun `Should findProjectProfilesPageByUserId forward includeCounts to the port`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = ProjectProfileSearchParamModel(statusSearched = null)
+
+		// Act
+		val result = repository.findProjectProfilesPageByUserId(
+			currentUser().id!!, pageable, params, includeCounts = true
+		).block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findByUserId(
+			currentUser().id!!,
+			textSearched = null,
+			visibilitySearched = null,
+			availabilitySearched = null,
+			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			dateTimeSearched = null,
+			favoriteSearched = null,
+			upcomingSearched = null,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
+			includeCounts = true,
+		)
+	}
+
+	@Test
+	fun `Should findProjectsRequiringAttentionByUserId only return ALERT-enabled Projects with an ongoing Alert, sorted and limited`() {
+		// Arrange: two dedicated Projects (the ALERT option enabled, an ACCEPTED Profile for the current
+		// user, and a different number of IN_PROGRESS Alerts each) plus a RESOLVED Alert as a decoy.
+		val busyProjectId = UUID.randomUUID()
+		val busierProjectId = UUID.randomUUID()
+		val busyProfileId = UUID.randomUUID()
+		val busierProfileId = UUID.randomUUID()
+
+		createAlertEnabledProject(busyProjectId)
+		createAlertEnabledProject(busierProjectId)
+		createAcceptedProfile(busyProfileId, busyProjectId)
+		createAcceptedProfile(busierProfileId, busierProjectId)
+		createAlerts(busyProjectId, IN_PROGRESS, count = 3)
+		createAlerts(busyProjectId, RESOLVED, count = 1)
+		createAlerts(busierProjectId, IN_PROGRESS, count = 5)
+
+		try {
+			// Act
+			val all = repository.findProjectsRequiringAttentionByUserId(currentUser().id!!, limit = 10).collectList().block()!!
+
+			// Assert: sorted by ongoingAlerts descending, and the pre-existing seeded Project — whose
+			// ALERT option is disabled despite having IN_PROGRESS Alerts — is correctly excluded.
+			assertEquals(listOf(busierProjectId, busyProjectId), all.map { it.id })
+			assertEquals(5L, all[0].counts?.ongoingAlerts)
+			assertEquals(3L, all[1].counts?.ongoingAlerts)
+			assertTrue(all.none { it.id == projectId })
+			verify(postgresRepository).findAcceptedByUserId(currentUser().id!!, limit = 10)
+
+			// Act: the limit is enforced in SQL, keeping only the highest-ranked Project
+			val limited =
+				repository.findProjectsRequiringAttentionByUserId(currentUser().id!!, limit = 1).collectList().block()!!
+
+			// Assert
+			assertEquals(listOf(busierProjectId), limited.map { it.id })
+		} finally {
+			Mono.from(dsl.deleteFrom(TB_ALERT).where(TB_ALERT.PROJECT_ID.`in`(busyProjectId, busierProjectId))).block()
+			Mono.from(dsl.deleteFrom(TB_PROJECT_PROFILE).where(TB_PROJECT_PROFILE.ID.`in`(busyProfileId, busierProfileId))).block()
+			Mono.from(dsl.deleteFrom(TB_PROJECT).where(TB_PROJECT.ID.`in`(busyProjectId, busierProjectId))).block()
+		}
+	}
+
+	private fun createAlertEnabledProject(id: UUID) {
+		Mono.from(
+			dsl.insertInto(TB_PROJECT, TB_PROJECT.ID, TB_PROJECT.NAME, TB_PROJECT.OPTIONS)
+				.values(id, "Counts test project $id", listOf(ProjectOptionEnum.ALERT))
+		).block()
+	}
+
+	private fun createAcceptedProfile(id: UUID, forProjectId: UUID) {
+		Mono.from(
+			dsl.insertInto(
+				TB_PROJECT_PROFILE,
+				TB_PROJECT_PROFILE.ID,
+				TB_PROJECT_PROFILE.USER_ID,
+				TB_PROJECT_PROFILE.PROJECT_ID,
+				TB_PROJECT_PROFILE.ROLE,
+				TB_PROJECT_PROFILE.STATUS,
+			).values(id, currentUser().id!!, forProjectId, "PROJECT_ADMINISTRATOR", ACCEPTED)
+		).block()
+	}
+
+	private fun createAlerts(forProjectId: UUID, status: AlertStatusEnum, count: Int) {
+		var insert = dsl.insertInto(TB_ALERT, TB_ALERT.PROJECT_ID, TB_ALERT.STATUS)
+		repeat(count) { insert = insert.values(forProjectId, status) }
+		Mono.from(insert).block()
 	}
 
 	@Test
@@ -312,11 +423,10 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
 				user = UserModel().apply { id = userIdWithoutProfile }
-				project = ProjectModel().apply { id = projectId }
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.create(projectProfile).block()
@@ -335,11 +445,10 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
 				user = UserModel().apply { id = userIdWithoutProfile }
-				project = ProjectModel().apply { id = projectId }
 				role = "PROJECT_ADMINISTRATOR"
 				status = ACCEPTED
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.update(projectProfile).block()
@@ -367,11 +476,10 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
 				user = UserModel().apply { id = userIdWithoutProfile }
-				project = ProjectModel().apply { id = projectId }
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.saveAll(listOf(projectProfile)).collectList().block()

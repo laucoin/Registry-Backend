@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IProjectPort] implementation: translates every call to [ProjectJooqRepository] and maps
+ * [ProjectEntity] ↔ [ProjectModel] via [ProjectEntityMapper]. No business logic of its own.
+ */
 @Service
 class ProjectModelPostgresRepository(
 	private val repository: ProjectJooqRepository,
