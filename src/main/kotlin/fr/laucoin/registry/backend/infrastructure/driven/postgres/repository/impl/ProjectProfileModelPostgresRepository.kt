@@ -2,19 +2,21 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectProfileEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectProfileJooqRepository
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -23,15 +25,20 @@ import reactor.core.publisher.Mono
 
 @Service
 class ProjectProfileModelPostgresRepository(
-	private val repository: IProjectProfileEntityRepository,
+	private val repository: ProjectProfileJooqRepository,
 	private val mapper: ProjectProfileEntityMapper,
 	private val roleMapper: ProjectProfileRoleEntityMapper,
 	private val roleCountMapper: ProjectProfileRoleCountEntityMapper,
 ): IProjectProfilePort {
+	override fun findAllByCreatorId(userId: UUID): Flux<ProjectProfileModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findProjectProfilesPageByUserId(
 		userId: UUID,
 		pageable: PageableModel,
-		searchParams: ProjectProfileSearchParamModel
+		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByUserId(
 			userId,
@@ -40,6 +47,8 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.statusSearched,
 			searchParams.dateTimeSearched,
+			searchParams.favoriteSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
@@ -49,6 +58,7 @@ class ProjectProfileModelPostgresRepository(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByProjectId(
 			projectId,
@@ -57,6 +67,7 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.availabilitySearched,
 			searchParams.statusSearched,
 			searchParams.dateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
@@ -101,13 +112,11 @@ class ProjectProfileModelPostgresRepository(
 	): Mono<ProjectProfileModel> {
 		return repository.findByUserIdAndId(userId, id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel> {
 		return repository.findByProjectIdAndId(projectId, id, visibilitySearched)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findProjectProfileByProjectAndUserId(
@@ -123,7 +132,6 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.statusSearched,
 		)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findLevel0ProjectProfileRoleByUserId(

@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import java.time.LocalDate
@@ -17,6 +19,7 @@ interface IVehicleService {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: VehicleSearchParamModel,
+		sortFields: List<SortModel<VehicleSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<VehicleModel>>
 
 	fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>

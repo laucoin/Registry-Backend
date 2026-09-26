@@ -257,7 +257,7 @@ class VehicleControllerTest: TestContext() {
 			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val page = PageModel(pageable, totalElements = 1, listOf(VehicleModel()))
-		whenever(service.findVehiclesPage(any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(service.findVehiclesPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(VehicleReaderDto())),
 		)
@@ -286,7 +286,7 @@ class VehicleControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findVehiclesPage(projectId, pageable, searchParams)
+		verify(service).findVehiclesPage(projectId, pageable, searchParams, emptyList())
 		verify(readerMapper).toDtoPage(page)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)

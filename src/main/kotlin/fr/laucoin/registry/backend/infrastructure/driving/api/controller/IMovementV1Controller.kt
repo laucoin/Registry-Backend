@@ -49,12 +49,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/projects/{projectId}/movements.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Movements management", description = "API for Movements-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/movements")
 interface IMovementV1Controller {
 	@Operation(
 		summary = "Find Movements",
 		description = "Find or get paginated Movements without content",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
 	@GetMapping
@@ -81,6 +86,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Find Movements contents",
 		description = "Find or get content of given Movements IDs",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
 	@GetMapping("/contents")
@@ -94,6 +100,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Find Movement",
 		description = "Find Movement by ID with content",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
 	@GetMapping("/{id}")
@@ -105,6 +112,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Search Reasons (and Activity as reason)",
 		description = "Search Reasons (and Activity as reason) to add in a Movement",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@GetMapping("/search/reasons")
@@ -118,6 +126,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Search Participants and/or Groups",
 		description = "Search Participants and/or Groups to add in a Movement",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@GetMapping("/search/participants-and-groups")
@@ -130,6 +139,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Search Vehicles",
 		description = "Search Vehicles to add in a Movement",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@GetMapping("/search/vehicles")
@@ -141,6 +151,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Find Movements Communications",
 		description = "Find or get paginated movement communications",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R')")
 	@GetMapping("/{id}/communications")
@@ -163,6 +174,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Find participants status",
 		description = "Return current major and minor status presence status",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/participants/status")
@@ -171,6 +183,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Find vehicles status",
 		description = "Return current vehicles presence status",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/vehicles/status")
@@ -179,6 +192,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Create Movement",
 		description = "Create Movement and related Content",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
 	@PostMapping
@@ -191,6 +205,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Update Movement",
 		description = "Update Movement and related Content",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@PatchMapping("/{id}")
@@ -204,6 +219,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Create Guest Movement",
 		description = "Create Movement and related Guest Content",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
 	@PostMapping("/guests")
@@ -216,6 +232,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Update Guest Movement",
 		description = "Update Movement and related Guest Content",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@PatchMapping("/guests/{id}")
@@ -229,6 +246,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Disable Movement",
 		description = "Disable Movement, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@PatchMapping("/{id}/disable")
@@ -241,6 +259,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Enable Movement",
 		description = "Enable Movement, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
 	@PatchMapping("/{id}/enable")
@@ -253,6 +272,7 @@ interface IMovementV1Controller {
 	@Operation(
 		summary = "Delete Movement",
 		description = "Delete all Movement data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_D')")
 	@DeleteMapping("/{id}")

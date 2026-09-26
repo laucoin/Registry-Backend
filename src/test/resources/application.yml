@@ -107,6 +107,12 @@ registry:
       auth:
         capacity: 10
         window-seconds: 60
+      sensitive:
+        capacity: 30
+        window-seconds: 60
+      search:
+        capacity: 60
+        window-seconds: 60
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}

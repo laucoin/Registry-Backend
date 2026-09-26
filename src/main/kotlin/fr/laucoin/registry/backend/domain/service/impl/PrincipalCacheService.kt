@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture
 
 @Service
 class PrincipalCacheService(
-	@param:Value($$"${registry.security.oauth2.cache.principal.ttl-seconds}")
+	@Value($$"${registry.security.oauth2.cache.principal.ttl-seconds}")
 	ttlSeconds: Long,
 ) : IPrincipalCacheService {
 	private val cache: AsyncCache<UUID, CurrentUserModel> = Caffeine.newBuilder()

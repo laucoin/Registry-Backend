@@ -26,6 +26,7 @@ class ProjectReaderDtoMapper(
 					translateService.getMessage(code = "$PROJECT_OPTION_NAME_PREFIX$it")
 				)
 			},
+			favorite = model.favorite,
 		).apply {
 			id = model.id
 			visible = model.visible

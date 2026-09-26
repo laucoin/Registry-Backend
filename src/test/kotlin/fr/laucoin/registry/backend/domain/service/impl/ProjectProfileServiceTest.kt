@@ -93,7 +93,7 @@ class ProjectProfileServiceTest {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
-		whenever(port.findProjectProfilesPageByProjectId(any(), any(), any())).thenReturn(
+		whenever(port.findProjectProfilesPageByProjectId(any(), any(), any(), any())).thenReturn(
 			Mono.just(PageModel(1, 2, 3, 4, emptyList()))
 		)
 
@@ -101,7 +101,7 @@ class ProjectProfileServiceTest {
 		service.findProjectProfilesPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findProjectProfilesPageByProjectId(projectId, pageable, params)
+		verify(port).findProjectProfilesPageByProjectId(projectId, pageable, params, emptyList())
 	}
 
 	@Test

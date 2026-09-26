@@ -13,7 +13,7 @@ import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectProfileEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectProfileJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.ModelExt.userIdWithoutProfile
@@ -41,7 +41,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IProjectProfileEntityRepository
+	private lateinit var postgresRepository: ProjectProfileJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: ProjectProfileEntityMapper
@@ -77,6 +77,8 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
+			favoriteSearched = null,
+			sortFields = emptyList(),
 			pageable.limit,
 			pageable.offset,
 		)
@@ -105,8 +107,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			availabilitySearched = null,
 			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

@@ -38,12 +38,17 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/projects/{projectId}/communications.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Communications management", description = "API for Communications-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/communications")
 interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Find Communications",
 		description = "Find or get paginated Communications",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_R')")
 	@GetMapping
@@ -65,6 +70,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Find Communication",
 		description = "Find Communication by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_R')")
 	@GetMapping("/{id}")
@@ -76,6 +82,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Search Movements",
 		description = "Search Movements with an activity to link a Communication",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
 	@GetMapping("/search/movements")
@@ -87,6 +94,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Search Alerts",
 		description = "Search Alerts to link a Communication",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_METADATA_R')")
 	@GetMapping("/search/alerts")
@@ -98,6 +106,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Create Communication",
 		description = "Create Communication linked to the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_C')")
 	@PostMapping
@@ -110,6 +119,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Update Communication",
 		description = "Update Communication",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
 	@PatchMapping("/{id}")
@@ -123,6 +133,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Disable Communication",
 		description = "Disable Communication, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
 	@PatchMapping("/{id}/disable")
@@ -135,6 +146,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Enable Communication",
 		description = "Enable Communication, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
 	@PatchMapping("/{id}/enable")
@@ -147,6 +159,7 @@ interface ICommunicationV1Controller {
 	@Operation(
 		summary = "Delete Communication",
 		description = "Delete all Communication data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_D')")
 	@DeleteMapping("/{id}")

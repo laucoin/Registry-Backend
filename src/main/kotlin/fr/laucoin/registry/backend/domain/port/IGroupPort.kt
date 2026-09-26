@@ -1,19 +1,23 @@
 package fr.laucoin.registry.backend.domain.port
 
+import fr.laucoin.registry.backend.domain.enumeration.GroupSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IGroupPort {
+	fun findAllByCreatorId(userId: UUID): Flux<GroupModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: GroupSearchParamModel,
+		sortFields: List<SortModel<GroupSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<GroupModel>>
 
 	fun findByIdWithContent(
@@ -33,6 +37,8 @@ interface IGroupPort {
 
 	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
+	fun findArrivingToday(projectId: UUID, limit: Int): Flux<GroupModel>
+	fun findDepartingToday(projectId: UUID, limit: Int): Flux<GroupModel>
 	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
 	fun create(element: GroupModel): Mono<GroupModel>
 	fun update(element: GroupModel): Mono<GroupModel>

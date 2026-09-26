@@ -1,13 +1,16 @@
 package fr.laucoin.registry.backend.domain.service
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.OngoingAlertModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
@@ -18,6 +21,7 @@ interface IAlertService {
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel,
+		sortFields: List<SortModel<AlertSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<AlertModel>>
 
 	fun findAlertById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertModel>
@@ -28,6 +32,8 @@ interface IAlertService {
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel,
 	): Mono<PageModel<CommunicationModel>>
+
+	fun findOngoingAlerts(projectId: UUID, limit: Int): Flux<OngoingAlertModel>
 
 	fun createAlert(currentUser: CurrentUserModel, alert: AlertModel): Mono<AlertModel>
 	fun updateAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, alert: AlertModel): Mono<AlertModel>

@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -12,6 +13,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -43,13 +45,16 @@ class ProjectService(
 		pageable: PageableModel,
 		withProfile: Boolean,
 		searchParams: ProjectSearchParamModel,
+		sortFields: List<SortModel<ProjectSortFieldEnum>>,
 	): Mono<PageModel<ProjectModel>> {
 		return if (!withProfile) {
-			port.findPage(pageable, searchParams)
+			port.findPage(currentUser.id!!, pageable, searchParams, sortFields)
 		} else port.findPage(
+			currentUser.id!!,
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),
 			pageable,
-			searchParams
+			searchParams,
+			sortFields,
 		)
 	}
 

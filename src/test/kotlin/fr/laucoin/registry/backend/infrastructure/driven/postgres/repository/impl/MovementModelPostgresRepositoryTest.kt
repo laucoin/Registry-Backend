@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -12,8 +13,8 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementContentEntityRepository
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.MovementContentJooqRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.MovementJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.activityId
 import fr.laucoin.registry.backend.test.ModelExt.movementId
 import fr.laucoin.registry.backend.test.ModelExt.participantId
@@ -21,6 +22,7 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
@@ -40,18 +42,20 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import org.springframework.transaction.reactive.TransactionalOperator
 
 class MovementModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: IMovementEntityRepository
+	private lateinit var postgresRepository: MovementJooqRepository
 
 	@MockitoSpyBean
-	private lateinit var contentPostgresRepository: IMovementContentEntityRepository
+	private lateinit var contentPostgresRepository: MovementContentJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: MovementEntityMapper
@@ -61,6 +65,9 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 
 	@Autowired
 	private lateinit var repository: IMovementPort
+
+	@Autowired
+	private lateinit var transactionalOperator: TransactionalOperator
 
 	private companion object {
 		@JvmStatic
@@ -182,6 +189,80 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			pageable.limit,
 			pageable.offset,
 		)
+	}
+
+	@Test
+	fun `Should findCurrentPage call repository findCurrent and countCurrent`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = MovementSearchParamModel(typeSearched = null)
+
+		// Act
+		val result = repository.findCurrentPage(projectId, pageable, params).block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).countCurrent(
+			projectId,
+			visibilitySearched = null,
+			linkedToActivity = null,
+			typeSearched = listOf(IN, OUT),
+			startDateTimeSearched = null,
+			endDateTimeSearched = null,
+		)
+		verify(postgresRepository).findCurrent(
+			projectId,
+			visibilitySearched = null,
+			linkedToActivity = null,
+			typeSearched = listOf(IN, OUT),
+			startDateTimeSearched = null,
+			endDateTimeSearched = null,
+			pageable.limit,
+			pageable.offset,
+		)
+	}
+
+	@Test
+	fun `Should findCurrentContent call contentRepository findCurrentByMovementIds`() {
+		// Act
+		val result = repository.findCurrentContent(projectId, listOf(movementId)).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(contentPostgresRepository).findCurrentByMovementIds(projectId, listOf(movementId))
+	}
+
+	@Test
+	fun `Should findActivityWithLimit call repository findByActivityWithLimit`() {
+		// Arrange
+		val params = ActivitySearchParamModel()
+
+		// Act
+		val result = repository.findActivityWithLimit(10, projectId, params).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findByActivityWithLimit(
+			projectId,
+			textSearched = null,
+			visibilitySearched = null,
+			availabilitySearched = null,
+			dateTimeSearched = null,
+			10,
+		)
+	}
+
+	@Test
+	fun `Should findOlderThanAndUncommentedSince call repository findOlderThanAndUncommentedSince`() {
+		// Arrange
+		val dateThreshold = LocalDate.now().plusDays(1)
+
+		// Act
+		val result = repository.findOlderThanAndUncommentedSince(dateThreshold).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findOlderThanAndUncommentedSince(dateThreshold)
 	}
 
 	@ParameterizedTest
@@ -317,12 +398,12 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.create(movement).block()
+			val result = repository.create(movement).`as`(transactionalOperator::transactional).block()
 			uuid = result!!.id!!
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
+			verify(postgresRepository).save(any(), any())
 			verify(mapper).toEntity(any())
 			verify(mapper).toModel(any())
 		}
@@ -343,13 +424,13 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.update(movement).block()
+			val result = repository.update(movement).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
-			verify(contentPostgresRepository).findAllByMovementIds(projectId, listOf(uuid))
+			verify(postgresRepository).save(any(), any())
+			verify(postgresRepository).findById(eq(projectId), eq(uuid), visibilitySearched = eq(null), using = any())
+			verify(contentPostgresRepository).findAllByMovementIds(eq(projectId), eq(listOf(uuid)), using = any())
 			verify(mapper).toEntity(any())
 			verify(mapper, times(2)).toModel(any())
 		}
@@ -368,13 +449,13 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			}
 
 			// Act
-			val result = repository.update(movement).block()
+			val result = repository.update(movement).`as`(transactionalOperator::transactional).block()
 
 			// Assert
 			assertNotNull(result)
-			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
-			verify(contentPostgresRepository).findAllByMovementIds(projectId, listOf(uuid))
+			verify(postgresRepository).save(any(), any())
+			verify(postgresRepository).findById(eq(projectId), eq(uuid), visibilitySearched = eq(null), using = any())
+			verify(contentPostgresRepository).findAllByMovementIds(eq(projectId), eq(listOf(uuid)), using = any())
 			verify(mapper).toEntity(any())
 			verify(mapper, times(2)).toModel(any())
 		}

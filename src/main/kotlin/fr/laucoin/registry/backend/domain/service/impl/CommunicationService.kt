@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationSortFieldEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -27,6 +28,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
@@ -58,9 +60,10 @@ class CommunicationService(
 	override fun findCommunicationPage(
 		projectId: UUID,
 		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel
+		searchParams: CommunicationSearchParamModel,
+		sortFields: List<SortModel<CommunicationSortFieldEnum>>,
 	): Mono<PageModel<CommunicationModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
 	override fun findCommunicationById(

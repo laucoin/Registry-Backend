@@ -2,7 +2,9 @@ package fr.laucoin.registry.backend.test
 
 import com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage
 import com.tngtech.archunit.core.domain.JavaClasses
+import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.core.importer.ImportOption.DoNotIncludeTests
+import com.tngtech.archunit.core.importer.Location
 import com.tngtech.archunit.junit.AnalyzeClasses
 import com.tngtech.archunit.junit.ArchTest
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
@@ -11,9 +13,14 @@ import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import org.springframework.web.bind.annotation.RestController
 
+class DoNotIncludeGeneratedJooq : ImportOption {
+	override fun includes(location: Location): Boolean =
+		!location.contains("/infrastructure/driven/postgres/jooq/")
+}
+
 @AnalyzeClasses(
 	packages = ["fr.laucoin.registry.backend"],
-	importOptions = [DoNotIncludeTests::class],
+	importOptions = [DoNotIncludeTests::class, DoNotIncludeGeneratedJooq::class],
 )
 class HexagonalArchitectureTest {
 	private companion object {

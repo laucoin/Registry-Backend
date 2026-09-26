@@ -10,6 +10,7 @@ data class ProjectProfileSearchParamModel(
 	var availabilitySearched: Boolean? = null,
 	val statusSearched: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
 	var dateTimeSearched: ZonedDateTime? = null,
+	var favoriteSearched: Boolean? = null,
 ) {
 	var textSearched: String? = null
 
@@ -18,11 +19,13 @@ data class ProjectProfileSearchParamModel(
 		availabilitySearched: Boolean? = null,
 		statusSearched: ProfileStatusEnum? = null,
 		dateTimeSearched: ZonedDateTime? = null,
+		favoriteSearched: Boolean? = null,
 	): this(
 		if (statusSearched === BLOCKED) false else null,
 		availabilitySearched,
 		if (Objects.nonNull(statusSearched) && statusSearched!! != BLOCKED) listOf(statusSearched) else ProfileStatusEnum.entries.toList(),
 		dateTimeSearched,
+		favoriteSearched,
 	) {
 		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
 	}

@@ -1,14 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.AlertEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IAlertEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.AlertJooqRepository
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -17,13 +19,18 @@ import reactor.core.publisher.Mono
 
 @Service
 class AlertModelPostgresRepository(
-	private val repository: IAlertEntityRepository,
+	private val repository: AlertJooqRepository,
 	private val mapper: AlertEntityMapper,
 ): IAlertPort {
+	override fun findAllByCreatorId(userId: UUID): Flux<AlertModel> {
+		return repository.findAllByCreatorId(userId).map(mapper::toModel)
+	}
+
 	override fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
-		searchParams: AlertSearchParamModel
+		searchParams: AlertSearchParamModel,
+		sortFields: List<SortModel<AlertSortFieldEnum>>,
 	): Mono<PageModel<AlertModel>> {
 		return repository.findAll(
 			projectId,
@@ -32,6 +39,7 @@ class AlertModelPostgresRepository(
 			searchParams.visibilitySearched,
 			searchParams.startDateTimeSearched,
 			searchParams.endDateTimeSearched,
+			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, AlertEntity::fullCount, mapper::toModel)

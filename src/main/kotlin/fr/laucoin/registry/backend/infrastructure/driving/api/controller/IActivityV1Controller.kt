@@ -36,12 +36,17 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/projects/{projectId}/activities.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Activities management", description = "API for Activities-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/activities")
 interface IActivityV1Controller {
 	@Operation(
 		summary = "Find Activities",
 		description = "Find or get paginated Activities",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_R')")
 	@GetMapping
@@ -62,6 +67,7 @@ interface IActivityV1Controller {
 	@Operation(
 		summary = "Find Activity",
 		description = "Find Activity by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_R')")
 	@GetMapping("/{id}")
@@ -73,6 +79,7 @@ interface IActivityV1Controller {
 	@Operation(
 		summary = "Find Activity Movements",
 		description = "Find or get paginated activity Movements",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_HISTORY_R')")
 	@GetMapping("/{id}/movements")
@@ -95,6 +102,7 @@ interface IActivityV1Controller {
 	@Operation(
 		summary = "Create Activity",
 		description = "Create Activity linked to the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_C')")
 	@PostMapping
@@ -107,6 +115,7 @@ interface IActivityV1Controller {
 	@Operation(
 		summary = "Update Activity",
 		description = "Update Activity",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
 	@PatchMapping("/{id}")
@@ -120,6 +129,7 @@ interface IActivityV1Controller {
 	@Operation(
 		summary = "Disable Activity",
 		description = "Disable Activity, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
 	@PatchMapping("/{id}/disable")
@@ -132,6 +142,7 @@ interface IActivityV1Controller {
 	@Operation(
 		summary = "Enable Activity",
 		description = "Enable Activity, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
 	@PatchMapping("/{id}/enable")
@@ -144,6 +155,7 @@ interface IActivityV1Controller {
 	@Operation(
 		summary = "Delete Activity",
 		description = "Delete all Activity data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_D')")
 	@DeleteMapping("/{id}")

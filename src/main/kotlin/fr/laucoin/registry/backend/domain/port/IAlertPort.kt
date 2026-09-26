@@ -1,20 +1,24 @@
 package fr.laucoin.registry.backend.domain.port
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IAlertPort {
+	fun findAllByCreatorId(userId: UUID): Flux<AlertModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel,
+		sortFields: List<SortModel<AlertSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<AlertModel>>
 
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: AlertSearchParamModel): Flux<AlertModel>

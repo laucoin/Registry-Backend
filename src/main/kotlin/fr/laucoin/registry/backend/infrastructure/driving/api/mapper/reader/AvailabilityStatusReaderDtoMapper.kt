@@ -55,7 +55,7 @@ class AvailabilityStatusReaderDtoMapper(
 				)
 			}
 
-			Objects.nonNull(startAvailability) && now.asStartIsAfterOther(startAvailability) -> {
+			Objects.nonNull(startAvailability) && startAvailability.asStartIsAfterOther(now) -> {
 				val interval = Duration.between(
 					now.toZonedDateTime(),
 					startAvailability?.toZonedDateTime(
@@ -69,7 +69,7 @@ class AvailabilityStatusReaderDtoMapper(
 				)
 			}
 
-			Objects.nonNull(endAvailability) && now.asEndIsBeforeOther(endAvailability) -> {
+			Objects.nonNull(endAvailability) && endAvailability.asEndIsBeforeOther(now) -> {
 				val interval = Duration.between(
 					endAvailability?.toZonedDateTime(
 						LocalTime.MAX, now.zone()!!

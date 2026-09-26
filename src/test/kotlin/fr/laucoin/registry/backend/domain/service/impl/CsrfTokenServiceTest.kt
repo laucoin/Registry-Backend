@@ -20,7 +20,8 @@ class CsrfTokenServiceTest {
 		val exchangeA = exchangeWithAccessTokenCookie("accessToken")
 		val exchangeB = exchangeWithAccessTokenCookie("accessToken")
 
-		// Act & Assert
+		// Act
+		// Assert
 		assertEquals(service.computeToken(exchangeA), service.computeToken(exchangeB))
 	}
 
@@ -30,7 +31,8 @@ class CsrfTokenServiceTest {
 		val exchangeA = exchangeWithAccessTokenCookie("accessTokenA")
 		val exchangeB = exchangeWithAccessTokenCookie("accessTokenB")
 
-		// Act & Assert
+		// Act
+		// Assert
 		assertNotEquals(service.computeToken(exchangeA), service.computeToken(exchangeB))
 	}
 
@@ -42,7 +44,8 @@ class CsrfTokenServiceTest {
 		)
 		val cookieExchange = exchangeWithAccessTokenCookie("accessToken")
 
-		// Act & Assert
+		// Act
+		// Assert
 		assertEquals(service.computeToken(cookieExchange), service.computeToken(exchange))
 	}
 
@@ -58,7 +61,8 @@ class CsrfTokenServiceTest {
 			MockServerHttpRequest.method(GET, "/api/v1/whatever").header(AUTHORIZATION, "Bearer headerToken")
 		)
 
-		// Act & Assert
+		// Act
+		// Assert
 		assertEquals(service.computeToken(headerOnlyExchange), service.computeToken(exchange))
 	}
 
@@ -67,7 +71,8 @@ class CsrfTokenServiceTest {
 		// Arrange
 		val exchange = MockServerWebExchange.from(MockServerHttpRequest.method(GET, "/api/v1/whatever"))
 
-		// Act & Assert
+		// Act
+		// Assert
 		assertEquals(service.computeToken(exchange), service.computeToken(exchange))
 	}
 

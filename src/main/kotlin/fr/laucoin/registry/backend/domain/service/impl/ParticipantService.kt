@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -18,11 +19,14 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.SortModel
+import fr.laucoin.registry.backend.domain.model.ParticipantDataExportModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
@@ -38,6 +42,7 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -48,21 +53,36 @@ class ParticipantService(
 	private val userPort: IUserPort,
 	private val movementPort: IMovementPort,
 	private val groupPort: IGroupPort,
+	private val communicationPort: ICommunicationPort,
+	private val transactionalOperator: TransactionalOperator,
 	@param:Value($$"${registry.feature.participant.searched.max-user-result}")
 	private val maxUserResult: Int,
 	@param:Value($$"${registry.feature.participant.searched.max-group-result}")
 	private val maxGroupResult: Int,
 ): IParticipantService, GenericService() {
+	private companion object {
+		private const val EXPORT_MAX_ROWS = 10_000
+	}
+
 	override fun findParticipantsPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ParticipantSearchParamModel,
+		sortFields: List<SortModel<ParticipantSortFieldEnum>>,
 	): Mono<PageModel<ParticipantModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
-	override fun findBirthdays(projectId: UUID): Flux<ParticipantModel> {
-		return port.findBirthdays(projectId, visibilitySearched = true)
+	override fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findBirthdays(projectId, visibilitySearched = true, limit)
+	}
+
+	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findArrivingToday(projectId, visibilitySearched = true, limit)
+	}
+
+	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
+		return port.findDepartingToday(projectId, visibilitySearched = true, limit)
 	}
 
 	override fun findParticipantsByIds(
@@ -107,6 +127,29 @@ class ParticipantService(
 		)
 	}
 
+	override fun exportParticipantData(projectId: UUID, id: UUID): Mono<ParticipantDataExportModel> {
+		return findParticipantById(projectId, id, visibilitySearched = null)
+			.flatMap { participant ->
+				movementPort.findPageByParticipantId(
+					projectId,
+					id,
+					PageableModel(0, EXPORT_MAX_ROWS),
+					MovementSearchParamModel(visibilitySearched = null, typeSearched = null),
+				).flatMap { movements ->
+					val movementIds = movements.content.mapNotNull { it.id }
+					communicationPort.findByMovementIdsWithLimit(EXPORT_MAX_ROWS, projectId, movementIds, visibilitySearched = null)
+						.collectList()
+						.map { pairs ->
+							ParticipantDataExportModel(
+								participant = participant,
+								movements = movements.content,
+								communications = pairs.flatMap { it.second },
+							)
+						}
+				}
+			}
+	}
+
 	override fun createParticipant(
 		currentUser: CurrentUserModel,
 		participant: ParticipantModel
@@ -128,6 +171,7 @@ class ParticipantService(
 				} else Mono.just(participant)
 			}
 			.flatMap { port.create(participant.apply { create(currentUser) }) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun validateNoParticipantForUser(projectId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
@@ -220,7 +264,7 @@ class ParticipantService(
 
 	private fun Mono<ParticipantModel>.updateParticipant(currentUser: CurrentUserModel) = flatMap {
 		port.update(it.apply { update(currentUser) })
-	}
+	}.`as`(transactionalOperator::transactional)
 
 	override fun disableParticipantById(
 		currentUser: CurrentUserModel,

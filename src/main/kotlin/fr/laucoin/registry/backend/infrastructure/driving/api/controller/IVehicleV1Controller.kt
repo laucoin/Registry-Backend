@@ -38,12 +38,17 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
+@Deprecated(
+	message = "Superseded by /api/v2/projects/{projectId}/vehicles.",
+	level = DeprecationLevel.WARNING,
+)
 @Tag(name = "Vehicles management", description = "API for Vehicles-related operations")
 @RequestMapping("/api/v1/projects/{projectId}/vehicles")
 interface IVehicleV1Controller {
 	@Operation(
 		summary = "Find Vehicles",
 		description = "Find or get paginated Vehicles",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_R')")
 	@GetMapping
@@ -64,6 +69,7 @@ interface IVehicleV1Controller {
 	@Operation(
 		summary = "Find Vehicle",
 		description = "Find Vehicle by ID",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_R')")
 	@GetMapping("/{id}")
@@ -75,6 +81,7 @@ interface IVehicleV1Controller {
 	@Operation(
 		summary = "Find Vehicle Movements",
 		description = "Find or get paginated vehicle Movements",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_HISTORY_R')")
 	@GetMapping("/{id}/movements")
@@ -100,6 +107,7 @@ interface IVehicleV1Controller {
 	@Operation(
 		summary = "Create Vehicle",
 		description = "Create Vehicle linked to the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_C')")
 	@PostMapping
@@ -112,6 +120,7 @@ interface IVehicleV1Controller {
 	@Operation(
 		summary = "Update Vehicle",
 		description = "Update Vehicle",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
 	@PatchMapping("/{id}")
@@ -125,6 +134,7 @@ interface IVehicleV1Controller {
 	@Operation(
 		summary = "Disable Vehicle",
 		description = "Disable Vehicle, it will not visible anymore in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
 	@PatchMapping("/{id}/disable")
@@ -137,6 +147,7 @@ interface IVehicleV1Controller {
 	@Operation(
 		summary = "Enable Vehicle",
 		description = "Enable Vehicle, obviously it will be visible again in the Project",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
 	@PatchMapping("/{id}/enable")
@@ -149,6 +160,7 @@ interface IVehicleV1Controller {
 	@Operation(
 		summary = "Delete Vehicle",
 		description = "Delete all Vehicle data.",
+		deprecated = true,
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_D')")
 	@DeleteMapping("/{id}")

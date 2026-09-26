@@ -5,11 +5,14 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTI
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.CommunicationModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IActivityPort
+import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
@@ -38,21 +41,22 @@ class ActivityServiceTest {
 	private val port: IActivityPort = mock()
 	private val projectService: IProjectService = mock()
 	private val movementPort: IMovementPort = mock()
-	private val service: IActivityService = ActivityService(projectService, port, movementPort)
+	private val communicationPort: ICommunicationPort = mock()
+	private val service: IActivityService = ActivityService(projectService, port, movementPort, communicationPort)
 
 	@Test
 	fun `Should findActivitiesPage call port findPage`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ActivitySearchParamModel()
-		whenever(port.findPage(any(), any(), any()))
+		whenever(port.findPage(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findActivitiesPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(projectId, pageable, params, emptyList())
 	}
 
 	@Test
@@ -102,6 +106,28 @@ class ActivityServiceTest {
 
 		// Assert
 		verify(movementPort).findPageByActivityId(projectId, activityId, pageable, params)
+	}
+
+	@Test
+	fun `Should findOngoingActivityOutings gather the last 3 communications per outing`() {
+		// Arrange
+		val movement = MovementModel().apply { id = UUID.randomUUID() }
+		val communication = CommunicationModel()
+
+		whenever(movementPort.findOngoingActivityOutings(any(), any())).thenReturn(Flux.just(movement))
+		whenever(communicationPort.findByMovementIdsWithLimit(any(), any(), any(), anyOrNull()))
+			.thenReturn(Flux.just(movement.id!! to listOf(communication)))
+
+		// Act
+		val result = service.findOngoingActivityOutings(projectId, limit = 5).collectList().block()!!
+
+		// Assert
+		assertEquals(1, result.size)
+		assertEquals(movement, result.first().movement)
+		assertEquals(listOf(communication), result.first().recentCommunications)
+
+		verify(movementPort).findOngoingActivityOutings(projectId, 5)
+		verify(communicationPort).findByMovementIdsWithLimit(3, projectId, listOf(movement.id!!), null)
 	}
 
 	@Test

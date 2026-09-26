@@ -1,0 +1,2 @@
+ALTER TABLE tb_project_profile
+    ADD COLUMN favorite BOOLEAN NOT NULL DEFAULT FALSE;

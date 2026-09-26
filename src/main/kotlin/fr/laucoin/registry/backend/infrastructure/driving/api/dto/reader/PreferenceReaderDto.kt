@@ -8,5 +8,4 @@ import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 data class PreferenceReaderDto(
 	var theme: ThemeEnum = ThemeEnum.SYSTEM,
 	var language: String? = null,
-	var selectedProfile: ProjectProfileReaderDto? = null
 )

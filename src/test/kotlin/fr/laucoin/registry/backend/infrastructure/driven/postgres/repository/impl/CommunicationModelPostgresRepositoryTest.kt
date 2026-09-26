@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ICommunicationEntityRepository
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.CommunicationJooqRepository
 import fr.laucoin.registry.backend.test.ModelExt.communicationId
 import fr.laucoin.registry.backend.test.ModelExt.movementId
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -39,7 +39,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 
 class CommunicationModelPostgresRepositoryTest: TestContext() {
 	@MockitoSpyBean
-	private lateinit var postgresRepository: ICommunicationEntityRepository
+	private lateinit var postgresRepository: CommunicationJooqRepository
 
 	@MockitoSpyBean
 	private lateinit var mapper: CommunicationEntityMapper
@@ -84,8 +84,9 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 			startDateTimeSearched = null,
 			endDateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			sortFields = emptyList(),
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

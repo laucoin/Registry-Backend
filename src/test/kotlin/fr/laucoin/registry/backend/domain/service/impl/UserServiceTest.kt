@@ -162,14 +162,14 @@ class UserServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = UserSearchParamModel()
 
-		whenever(port.findPage(any(), any()))
+		whenever(port.findPage(any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findUsersPage(pageable, params).block()
 
 		// Assert
-		verify(port).findPage(pageable, params)
+		verify(port).findPage(pageable, params, emptyList())
 	}
 
 	@Test
