@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
 import java.util.Optional
 import java.util.UUID
@@ -20,7 +19,6 @@ class ParticipantMovementWriterDtoMapper(
 			reason = dto.reason
 			activity = Optional.ofNullable(dto.activityId).map { ActivityModel().apply { id = it } }.orElse(null)
 			content = dto.content!!.map(contentMapper::toModel)
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

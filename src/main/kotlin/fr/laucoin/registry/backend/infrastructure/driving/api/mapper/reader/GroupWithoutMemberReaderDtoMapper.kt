@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class GroupWithoutMemberReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 ): IGenericReaderDtoMapper<GroupModel, GroupWithoutMemberReaderDto> {
 	override fun toDto(model: GroupModel): GroupWithoutMemberReaderDto {
@@ -23,7 +22,6 @@ class GroupWithoutMemberReaderDtoMapper(
 			outsideMembersCount = model.outsideMembersCount,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

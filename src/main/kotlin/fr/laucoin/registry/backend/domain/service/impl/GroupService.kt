@@ -32,6 +32,11 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IGroupService] implementation: enforces a Group's availability window against its Project's
+ * dates, that only visible REGISTERED Participants can become members, and that a Group can never be
+ * left with zero members, then delegates persistence to [IGroupPort]/[IParticipantPort].
+ */
 @Service
 class GroupService(
 	private val projectService: IProjectService,
@@ -101,12 +106,12 @@ class GroupService(
 
 	override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateMembers(group.project!!.id!!, group, group.members.mapNotNull { p -> p.id }) }
+			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
 			.flatMap { port.create(group.apply { create(currentUser) }) }
 			.`as`(transactionalOperator::transactional)
 	}
@@ -118,7 +123,7 @@ class GroupService(
 		group: GroupModel
 	): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,

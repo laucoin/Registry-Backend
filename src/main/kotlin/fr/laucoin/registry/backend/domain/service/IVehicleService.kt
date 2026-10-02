@@ -14,6 +14,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for Vehicles: search/read, its Movement history, the
+ * create/update/disable/enable/delete lifecycle, and the retention purge sweep. Callers go through
+ * this contract, never the [IVehiclePort] directly.
+ */
 interface IVehicleService {
 	fun findVehiclesPage(
 		projectId: UUID,

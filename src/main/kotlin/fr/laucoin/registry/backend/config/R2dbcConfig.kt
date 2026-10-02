@@ -12,6 +12,11 @@ import org.springframework.transaction.ReactiveTransactionManager
 import org.springframework.transaction.annotation.EnableTransactionManagement
 import org.springframework.transaction.reactive.TransactionalOperator
 
+/**
+ * Wires reactive transaction management for R2DBC: the [R2dbcTransactionManager] and the
+ * [TransactionalOperator] every multi-step write goes through, plus a [MeterBinder] exposing the
+ * connection pool's acquired/allocated/idle/pending gauges for observability.
+ */
 @Configuration
 @EnableTransactionManagement
 class R2dbcConfig {

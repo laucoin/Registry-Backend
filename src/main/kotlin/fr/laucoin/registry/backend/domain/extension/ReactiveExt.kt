@@ -10,6 +10,11 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * Small Reactor helpers shared across services: [notFoundIfEmpty] turns an empty `Mono` into the
+ * standard 404 [RegistryException] (logging the identifier/permissions context), and [toPageModel]
+ * assembles a [PageModel] from a `Flux` of rows carrying their own total-count column.
+ */
 object ReactiveExt {
 	fun <T : Any> Mono<T>.notFoundIfEmpty(identifier: Any): Mono<T> {
 		return switchIfEmpty {

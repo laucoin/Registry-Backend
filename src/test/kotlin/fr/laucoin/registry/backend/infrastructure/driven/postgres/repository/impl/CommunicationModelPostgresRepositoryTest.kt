@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.CommunicationJooqRepository
@@ -157,9 +156,8 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				dateTime = ZonedDateTime.now()
 				message = "message"
 				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.create(communication).block()
@@ -181,9 +179,8 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				dateTime = ZonedDateTime.now()
 				message = "message updated"
 				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.update(activity).block()

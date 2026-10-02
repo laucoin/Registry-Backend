@@ -10,6 +10,11 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * Resolves the bearer token from the standard `Authorization` header first, then falls back to the
+ * HttpOnly access-token cookie — lets the same OAuth2 resource-server pipeline serve both a
+ * header-based API client and the cookie-based browser flow set up by [AuthenticationCookieService].
+ */
 @Component
 class CookieBearerTokenHandler : ServerAuthenticationConverter {
 	private val headerConverter = ServerBearerTokenAuthenticationConverter()

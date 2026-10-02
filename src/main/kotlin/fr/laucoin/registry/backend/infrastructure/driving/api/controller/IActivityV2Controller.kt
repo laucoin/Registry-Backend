@@ -17,6 +17,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
@@ -55,7 +56,12 @@ import java.util.UUID
 interface IActivityV2Controller {
 	@Operation(
 		summary = "Find Activities",
-		description = "Find or get paginated Activities",
+		description = """
+			Search and list the Project's Activities, with pagination and sorting.
+			Use `q` for a free-text search on the name/description, `visible` to filter disabled Activities out,
+			and `available` combined with `dateTime` to only keep Activities whose allowed availability window covers that instant
+			(defaults to now when `dateTime` is omitted).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
@@ -63,7 +69,7 @@ interface IActivityV2Controller {
 	fun findActivities(
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) available: Boolean?,
 		@RequestParam(required = false)
@@ -72,7 +78,7 @@ interface IActivityV2Controller {
 
 	@Operation(
 		summary = "Find Activity",
-		description = "Find Activity by ID",
+		description = "Get a single Activity of the Project by its ID.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_R')")
 	@GetMapping("/{id}")
@@ -83,7 +89,10 @@ interface IActivityV2Controller {
 
 	@Operation(
 		summary = "Find Activity Movements",
-		description = "Find or get paginated activity Movements",
+		description = """
+			List, paginated, the IN/OUT Movements recorded against this Activity (its attendance history),
+			optionally filtered by visibility, Movement `type` and a `startDateTime`/`endDateTime` range.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_HISTORY_R')")
 	@GetMapping("/{id}/movements")
@@ -93,28 +102,34 @@ interface IActivityV2Controller {
 		@ParameterObject @Valid page: PageQueryDto,
 		@RequestParam(required = false) visible: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
+		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
 
 	@Operation(
 		summary = "Find ongoing Activity outings",
-		description = "Activities whose last Movement is an outing (OUT), each with their 3 most recent Communications for a contextualized preview; capped at \"limit\" rows",
+		description = """
+			Dashboard widget: Activities whose last Movement is an outing (OUT), i.e. participants currently away on that Activity,
+			each returned with its 3 most recent Communications for a contextualized preview. Results are capped at "limit" rows (default $DEFAULT_DASHBOARD_LIMIT, max $MAX_DASHBOARD_LIMIT).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_R')")
 	@GetMapping("/ongoing")
 	fun findOngoingActivityOutings(
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
-		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+			MAX_DASHBOARD_LIMIT,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		)
 		limit: Int,
 	): Flux<OngoingActivityOutingReaderDto>
 
 	@Operation(
 		summary = "Create Activity",
-		description = "Create Activity linked to the Project",
+		description = """
+			Create a new Activity linked to the Project, with its optional description, expected duration (ISO-8601,
+			e.g. "PT3H30M" for 3h30), allowed number of participants and its own availability window.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_C')")
 	@RateLimited(SENSITIVE)
@@ -127,7 +142,10 @@ interface IActivityV2Controller {
 
 	@Operation(
 		summary = "Update Activity",
-		description = "Update Activity",
+		description = """
+			Update an existing Activity. The payload replaces the current values (same shape as creation)
+			and can rescope its availability window or its allowed number of participants.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
 	@RateLimited(SENSITIVE)
@@ -141,7 +159,7 @@ interface IActivityV2Controller {
 
 	@Operation(
 		summary = "Disable Activity",
-		description = "Disable Activity, it will not visible anymore in the Project",
+		description = "Soft-delete the Activity: it is kept (with its Movement history) but hidden from the Project going forward.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
 	@RateLimited(SENSITIVE)
@@ -154,7 +172,7 @@ interface IActivityV2Controller {
 
 	@Operation(
 		summary = "Enable Activity",
-		description = "Enable Activity, obviously it will be visible again in the Project",
+		description = "Reverse a disable: the Activity becomes visible in the Project again.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
 	@RateLimited(SENSITIVE)
@@ -167,7 +185,10 @@ interface IActivityV2Controller {
 
 	@Operation(
 		summary = "Delete Activity",
-		description = "Delete all Activity data.",
+		description = """
+			Permanently delete the Activity and all its data, including its Movement history. This cannot be undone;
+			prefer disabling the Activity if it may be needed again.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_D')")
 	@RateLimited(SENSITIVE)

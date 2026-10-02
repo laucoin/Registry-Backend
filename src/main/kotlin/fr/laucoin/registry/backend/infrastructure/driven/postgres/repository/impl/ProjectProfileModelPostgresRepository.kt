@@ -5,17 +5,20 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProjectProfileSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
+import fr.laucoin.registry.backend.domain.model.UserProjectProfileModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserProjectProfileEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ProjectProfileJooqRepository
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -23,10 +26,16 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IProjectProfilePort] implementation: translates every call to [ProjectProfileJooqRepository] and
+ * maps [ProjectProfileEntity]/role rows ↔ their domain models via the corresponding mappers. No
+ * business logic of its own.
+ */
 @Service
 class ProjectProfileModelPostgresRepository(
 	private val repository: ProjectProfileJooqRepository,
 	private val mapper: ProjectProfileEntityMapper,
+	private val userProjectProfileMapper: UserProjectProfileEntityMapper,
 	private val roleMapper: ProjectProfileRoleEntityMapper,
 	private val roleCountMapper: ProjectProfileRoleCountEntityMapper,
 ): IProjectProfilePort {
@@ -39,6 +48,7 @@ class ProjectProfileModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
 		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
+		includeCounts: Boolean,
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByUserId(
 			userId,
@@ -48,10 +58,61 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.statusSearched,
 			searchParams.dateTimeSearched,
 			searchParams.favoriteSearched,
+			searchParams.upcomingSearched,
 			sortFields,
 			pageable.limit,
 			pageable.offset,
+			includeCounts,
 		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
+	}
+
+	override fun findUserProjectProfilesPageByUserId(
+		userId: UUID,
+		pageable: PageableModel,
+		searchParams: ProjectProfileSearchParamModel,
+		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
+		includeCounts: Boolean,
+	): Mono<PageModel<UserProjectProfileModel>> {
+		return repository.findByUserId(
+			userId,
+			searchParams.textSearched,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.statusSearched,
+			searchParams.dateTimeSearched,
+			searchParams.favoriteSearched,
+			searchParams.upcomingSearched,
+			sortFields,
+			pageable.limit,
+			pageable.offset,
+			includeCounts,
+		).toPageModel(pageable, ProjectProfileEntity::fullCount, userProjectProfileMapper::toModel)
+	}
+
+	override fun findProjectsRequiringAttentionByUserId(userId: UUID, limit: Int): Flux<ProjectModel> {
+		return repository.findAcceptedByUserId(userId, limit)
+			.map(userProjectProfileMapper::toModel)
+			.map(::toProjectWithActiveProfile)
+	}
+
+	private fun toProjectWithActiveProfile(profile: UserProjectProfileModel): ProjectModel {
+		val activeProfileModel = ProjectProfileModel(
+			role = profile.role,
+			availabilityStatus = profile.availabilityStatus,
+			status = profile.status,
+			startAccess = profile.startAccess,
+			endAccess = profile.endAccess,
+			favorite = profile.favorite,
+		).apply {
+			id = profile.id
+			visible = profile.visible
+			creation = profile.creation
+			lastEdition = profile.lastEdition
+		}
+
+		val project = profile.project!!
+		project.activeProfile = activeProfileModel
+		return project
 	}
 
 	override fun findProjectProfilesPageByProjectId(
@@ -114,6 +175,15 @@ class ProjectProfileModelPostgresRepository(
 			.map(mapper::toModel)
 	}
 
+	override fun findUserProjectProfileByUserIdAndId(
+		userId: UUID,
+		id: UUID,
+		visibilitySearched: Boolean?,
+	): Mono<UserProjectProfileModel> {
+		return repository.findByUserIdAndId(userId, id, visibilitySearched)
+			.map(userProjectProfileMapper::toModel)
+	}
+
 	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel> {
 		return repository.findByProjectIdAndId(projectId, id, visibilitySearched)
 			.map(mapper::toModel)
@@ -126,6 +196,21 @@ class ProjectProfileModelPostgresRepository(
 	): Mono<ProjectProfileModel> {
 		return repository.findProjectProfileByProjectAndUserId(
 			projectId,
+			userId,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.statusSearched,
+		)
+			.map(mapper::toModel)
+	}
+
+	override fun findProjectProfilesByProjectIdsAndUserId(
+		projectIds: List<UUID>,
+		userId: UUID,
+		searchParams: ProjectProfileSearchParamModel,
+	): Flux<ProjectProfileModel> {
+		return repository.findProjectProfilesByProjectIdsAndUserId(
+			projectIds,
 			userId,
 			searchParams.visibilitySearched,
 			searchParams.availabilitySearched,

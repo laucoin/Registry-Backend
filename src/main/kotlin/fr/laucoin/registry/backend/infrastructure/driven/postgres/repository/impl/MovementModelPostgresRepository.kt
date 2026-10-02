@@ -20,6 +20,12 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
 
+/**
+ * [IMovementPort] implementation: translates every call to [MovementJooqRepository]/
+ * [MovementContentJooqRepository] and diffs a Movement's content on create/update (adding new
+ * Participants/Guests/Vehicles, removing dropped ones) through a single passed-through [DSLContext]
+ * so the save and the diff share the caller's transaction. No business rule validation of its own.
+ */
 @Service
 class MovementModelPostgresRepository(
 	private val repository: MovementJooqRepository,
@@ -248,7 +254,7 @@ class MovementModelPostgresRepository(
 
 	override fun update(element: MovementModel): Mono<MovementModel> {
 		return save(dsl, element)
-			.flatMap { findById(dsl, element.project!!.id!!, element.id!!) }
+			.flatMap { findById(dsl, element.projectId!!, element.id!!) }
 			.removeDeletedContent(dsl, element)
 			.saveNewContent(dsl, element)
 	}

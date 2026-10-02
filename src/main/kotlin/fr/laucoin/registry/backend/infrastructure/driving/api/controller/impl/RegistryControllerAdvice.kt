@@ -27,6 +27,12 @@ import org.springframework.web.server.ServerWebInputException
 import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
+/**
+ * [IRegistryControllerAdvice] implementation: resolves each exception to an HTTP status and i18n
+ * error code(s) via [ITranslateService], logs 5xx as errors and everything else as info, and
+ * collapses one-or-many constraint failures into the [ErrorDto] wire shape (single flat error, or
+ * `errors` populated when a request fails more than one constraint at once).
+ */
 @RestControllerAdvice
 class RegistryControllerAdvice(
 	private val translateService: ITranslateService,

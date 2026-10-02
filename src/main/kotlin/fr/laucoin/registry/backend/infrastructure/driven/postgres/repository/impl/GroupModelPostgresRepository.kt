@@ -20,6 +20,12 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.UUID
 
+/**
+ * [IGroupPort] implementation: translates every call to [GroupJooqRepository]/
+ * [GroupContentJooqRepository] and diffs a Group's member list on create/update (adding new members,
+ * removing dropped ones) through a single passed-through [DSLContext] so the save and the diff share
+ * the caller's transaction. No business rule validation of its own.
+ */
 @Service
 class GroupModelPostgresRepository(
 	private val repository: GroupJooqRepository,
@@ -122,7 +128,7 @@ class GroupModelPostgresRepository(
 
 	override fun update(element: GroupModel): Mono<GroupModel> {
 		return save(dsl, element)
-			.flatMap { findByIdWithContent(dsl, element.project!!.id!!, element.id!!) }
+			.flatMap { findByIdWithContent(dsl, element.projectId!!, element.id!!) }
 			.removeDeletedMembers(dsl, element)
 			.saveNewMembers(dsl, element)
 	}

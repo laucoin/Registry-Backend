@@ -12,6 +12,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [ProjectModel]: CRUD, paginated/filtered search (optionally restricted to a
+ * caller's own Profiles), schedule-overlap validation, and the retention lookup used by the purge
+ * job. Implemented by the jOOQ Postgres adapter.
+ */
 interface IProjectPort {
 	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
 	fun findPage(

@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import java.util.Optional
 import java.util.UUID
@@ -18,7 +17,6 @@ class GuestMovementWriterDtoMapper(
 			type = dto.type
 			reason = dto.reason
 			content = Optional.ofNullable(dto.content).map(contentMapper::toModels).orElse(emptyList())
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

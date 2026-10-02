@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ICommunicationV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
@@ -19,13 +20,12 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Comm
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.CommunicationWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.util.UUID
 
 @RestController
 class CommunicationV2Controller(
@@ -37,20 +37,19 @@ class CommunicationV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): ICommunicationV2Controller {
+) : ICommunicationV2Controller {
 	override fun findCommunications(
 		projectId: UUID,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			CommunicationSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = CommunicationSearchParamModel(q, visible, startDateTime, endDateTime)
+		val searchParams = CommunicationSearchParamModel(query, visible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findCommunicationPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -60,12 +59,12 @@ class CommunicationV2Controller(
 		return service.findCommunicationById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
-	override fun searchActivities(projectId: UUID, q: String?): Flux<MovementReaderDto> {
-		return service.searchOutMovementWithActivityByText(projectId, q).map(readerMovementMapper::toDto)
+	override fun searchActivities(projectId: UUID, query: String?): Flux<MovementReaderDto> {
+		return service.searchOutMovementWithActivityByText(projectId, query).map(readerMovementMapper::toDto)
 	}
 
-	override fun searchAlerts(projectId: UUID, q: String?): Flux<AlertReaderDto> {
-		return service.searchAlertByText(projectId, q).map(readerAlertMapper::toDto)
+	override fun searchAlerts(projectId: UUID, query: String?): Flux<AlertReaderDto> {
+		return service.searchAlertByText(projectId, query).map(readerAlertMapper::toDto)
 	}
 
 	override fun createCommunication(

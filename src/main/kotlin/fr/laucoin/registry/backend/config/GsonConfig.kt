@@ -16,6 +16,11 @@ import java.util.Objects
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
+/**
+ * Provides the app-wide [Gson] bean used for JSON serialization outside the WebFlux codec pipeline
+ * (e.g. error payloads written directly by [WebFilter]s). Registers ISO-8601 adapters for
+ * [ZonedDateTime], [LocalDate] and [OffsetTime] so those types serialize consistently everywhere.
+ */
 @Configuration
 class GsonConfig {
 	@Bean

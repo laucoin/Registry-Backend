@@ -35,9 +35,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -56,8 +53,11 @@ import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.util.UUID
 
-class VehicleV2ControllerTest: TestContext() {
+class VehicleV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IVehicleService
 
@@ -98,7 +98,12 @@ class VehicleV2ControllerTest: TestContext() {
 		verify(service).findVehiclesPage(
 			projectId,
 			pageable,
-			VehicleSearchParamModel(textSearched = null, visibilitySearched = null, statusSearched = null, dateTimeSearched = null),
+			VehicleSearchParamModel(
+				textSearched = null,
+				visibilitySearched = null,
+				statusSearched = null,
+				dateTimeSearched = null
+			),
 			emptyList(),
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -107,7 +112,7 @@ class VehicleV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findVehicles resolve q, visible, status and dateTime into VehicleSearchParamModel`() {
+	fun `Should findVehicles resolve query, visible, status and dateTime into VehicleSearchParamModel`() {
 		// Arrange
 		val pageable = PageableModel(40, 20)
 		val page = PageModel(pageable, totalElements = 0, emptyList<VehicleModel>())
@@ -138,7 +143,12 @@ class VehicleV2ControllerTest: TestContext() {
 		verify(service).findVehiclesPage(
 			projectId,
 			pageable,
-			VehicleSearchParamModel(textSearched = "hello", visibilitySearched = true, statusSearched = PresenceStatusEnum.IN, dateTimeSearched = null),
+			VehicleSearchParamModel(
+				textSearched = "hello",
+				visibilitySearched = true,
+				statusSearched = PresenceStatusEnum.IN,
+				dateTimeSearched = null
+			),
 			emptyList(),
 		)
 	}
@@ -233,7 +243,10 @@ class VehicleV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_HISTORY_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_VEHICLE_HISTORY_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE)
+			)
 			.get()
 			.uri(
 				uriBuilder(

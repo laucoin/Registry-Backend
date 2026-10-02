@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -108,8 +107,8 @@ class ProjectProfileServiceTest {
 	fun `Should findProjectProfileById call port findById`() {
 		// Arrange
 		val profile = ProjectProfileModel().apply {
-			role = "PROJECT_ROLE"; project = ProjectModel().apply { id = projectId }
-		}
+			role = "PROJECT_ROLE"
+		}.also { it.projectId = projectId }
 		val uuid = UUID.randomUUID()
 		val onlyVisible = true
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
@@ -158,8 +157,8 @@ class ProjectProfileServiceTest {
 	fun `Should getAssignableProjectRoles call port findProjectProfileByProjectAndUserId and role service getAssignableProjectRoles`() {
 		// Arrange
 		val profile = ProjectProfileModel().apply {
-			role = "PROJECT_ROLE"; project = ProjectModel().apply { id = projectId }
-		}
+			role = "PROJECT_ROLE"
+		}.also { it.projectId = projectId }
 		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), anyOrNull())).thenReturn(
 			Mono.just(
 				profile
@@ -299,15 +298,13 @@ class ProjectProfileServiceTest {
 		val currentUserProfile = ProjectProfileModel().apply {
 			role = profileRole
 			user = UserModel().apply { id = currentUser().id }
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 		val profile = ProjectProfileModel().apply {
 			role = profileRole
 			user = UserModel().apply { id = uuid }
-			project = ProjectModel().apply { id = projectId }
 			startAccess = CustomDateTimeModel.MIN
 			endAccess = CustomDateTimeModel.MAX
-		}
+		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
@@ -373,8 +370,7 @@ class ProjectProfileServiceTest {
 		val profile = ProjectProfileModel().apply {
 			role = profileRole
 			user = UserModel().apply { id = uuid }
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
@@ -423,18 +419,15 @@ class ProjectProfileServiceTest {
 		val currentUserProfile = ProjectProfileModel().apply {
 			role = "ROLE_PROJECT"
 			user = UserModel().apply { id = currentUser().id }
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 		val profileToUpdate = ProjectProfileModel().apply {
 			role = profileToUpdateRole
 			user = UserModel().apply { id = uuid }
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 		val profileUpdated = ProjectProfileModel().apply {
 			role = profileUpdatedRole
 			user = UserModel().apply { id = uuid }
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profileToUpdate))
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
@@ -491,9 +484,8 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			project = ProjectModel().apply { id = projectId }
 			visible = true
-		}
+		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
 			Mono.just(
@@ -522,9 +514,8 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			project = ProjectModel().apply { id = projectId }
 			visible = false
-		}
+		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
@@ -542,9 +533,8 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			project = ProjectModel().apply { id = projectId }
 			visible = true
-		}
+		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
 			Mono.just(

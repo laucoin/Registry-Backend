@@ -7,11 +7,11 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.UserProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserProjectProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserProjectProfileReaderDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
@@ -40,7 +40,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 	private lateinit var service: IUserProjectProfileService
 
 	@MockitoBean
-	private lateinit var readerMapper: ProjectProfileReaderDtoMapper
+	private lateinit var readerMapper: UserProjectProfileReaderDtoMapper
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
@@ -53,9 +53,9 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 	fun `Should findUserProjectProfiles call service with page, size and empty sort by default`() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
-		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
-		whenever(service.findProjectProfilesPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		val page = PageModel(pageable, totalElements = 1, listOf(UserProjectProfileModel()))
+		whenever(service.findProjectProfilesPage(any(), any(), any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(readerMapper.toDto(any())).thenReturn(UserProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -72,6 +72,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 			pageable,
 			ProjectProfileSearchParamModel(textSearched = null, availabilitySearched = null, statusSearched = null, dateTimeSearched = null),
 			emptyList(),
+			false,
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
 	}
@@ -80,9 +81,9 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 	fun `Should findUserProjectProfiles thread favorite query param to search params`() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
-		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
-		whenever(service.findProjectProfilesPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		val page = PageModel(pageable, totalElements = 1, listOf(UserProjectProfileModel()))
+		whenever(service.findProjectProfilesPage(any(), any(), any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(readerMapper.toDto(any())).thenReturn(UserProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -99,6 +100,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 			pageable,
 			ProjectProfileSearchParamModel(textSearched = null, availabilitySearched = null, statusSearched = null, dateTimeSearched = null, favoriteSearched = true),
 			emptyList(),
+			false,
 		)
 	}
 
@@ -134,8 +136,8 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 	fun `Should acceptUserProjectProfileById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.updateUserProjectProfileStatusById(any(), any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(service.updateUserProjectProfileStatusById(any(), any(), any())).thenReturn(Mono.just(UserProjectProfileModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(UserProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -145,7 +147,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
+		result.body<UserProjectProfileReaderDto>(OK)
 		verify(service).updateUserProjectProfileStatusById(any(), eq(uuid), eq(ACCEPTED))
 	}
 
@@ -153,8 +155,8 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 	fun `Should rejectUserProjectProfileById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.updateUserProjectProfileStatusById(any(), any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(service.updateUserProjectProfileStatusById(any(), any(), any())).thenReturn(Mono.just(UserProjectProfileModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(UserProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -164,15 +166,15 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
+		result.body<UserProjectProfileReaderDto>(OK)
 		verify(service).updateUserProjectProfileStatusById(any(), eq(uuid), eq(REJECTED))
 	}
 
 	@Test
 	fun `Should createSupportProjectProfile return 200`() {
 		// Arrange
-		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(UserProjectProfileModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(UserProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -182,7 +184,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
+		result.body<UserProjectProfileReaderDto>(OK)
 		verify(readerMapper).toDto(any())
 		verify(service).createSupportProjectProfile(any(), eq(projectId))
 	}
@@ -191,8 +193,8 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 	fun `Should toggleFavoriteUserProjectProfileById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.toggleFavoriteProjectProfileById(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(service.toggleFavoriteProjectProfileById(any(), any())).thenReturn(Mono.just(UserProjectProfileModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(UserProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -202,7 +204,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
+		result.body<UserProjectProfileReaderDto>(OK)
 		verify(service).toggleFavoriteProjectProfileById(any(), eq(uuid))
 	}
 

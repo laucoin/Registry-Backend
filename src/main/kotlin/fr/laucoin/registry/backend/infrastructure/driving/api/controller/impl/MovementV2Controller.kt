@@ -11,6 +11,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
@@ -37,15 +38,14 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Vehi
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestMovementWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantMovementWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.apache.commons.text.similarity.JaroWinklerSimilarity
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.util.UUID
 
 @RestController
 class MovementV2Controller(
@@ -64,7 +64,7 @@ class MovementV2Controller(
 	private val pageReaderMapper: PageReaderDtoMapper,
 	private val projectStatusReaderMapper: ProjectStatusReaderDtoMapper,
 	private val vehicleStatusReaderMapper: VehicleStatusReaderDtoMapper,
-): IMovementV2Controller {
+) : IMovementV2Controller {
 	private val similarity: JaroWinklerSimilarity = JaroWinklerSimilarity()
 
 	override fun findMovements(
@@ -75,15 +75,14 @@ class MovementV2Controller(
 		linkedToActivity: Boolean?,
 		visible: Boolean?,
 		type: MovementTypeEnum?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
 		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, startDateTime, endDateTime)
+		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		val movements = if (currentMovements) {
 			service.findCurrentMovementsPage(projectId, pageable, searchParams)
@@ -116,21 +115,21 @@ class MovementV2Controller(
 		projectId: UUID,
 		type: MovementTypeEnum,
 		contentType: ParticipantTypeEnum,
-		q: String?,
+		query: String?,
 	): Flux<MovementReasonsReaderDto> {
-		return service.searchActivitiesByText(projectId, contentType, q)
+		return service.searchActivitiesByText(projectId, contentType, query)
 			.map(activityReasonReaderMapper::toDto)
-			.mergeWith(searchReasons(q, type, contentType))
+			.mergeWith(searchReasons(query, type, contentType))
 	}
 
 	private fun searchReasons(
-		q: String?,
+		query: String?,
 		type: MovementTypeEnum,
 		contentType: ParticipantTypeEnum,
 	): Flux<MovementReasonsReaderDto> {
 		return service.searchReasonsByText(contentType, type)
 			.map(reasonReaderMapper::toDto)
-			.map { Pair(it, similarity.apply(it.label, q ?: it.label)) }
+			.map { Pair(it, similarity.apply(it.label, query ?: it.label)) }
 			.filter { it.second > 0 }
 			.map(Pair<MovementReasonsReaderDto, Double>::first)
 	}
@@ -138,28 +137,27 @@ class MovementV2Controller(
 	override fun searchParticipantsAndGroups(
 		projectId: UUID,
 		contentType: ParticipantTypeEnum,
-		q: String?,
+		query: String?,
 	): Mono<MovementParticipantsAndGroupsReaderDto> {
-		return service.searchParticipantsAndGroupsByText(projectId, contentType, q)
+		return service.searchParticipantsAndGroupsByText(projectId, contentType, query)
 			.map { Pair(it.t1, it.t2) }
 			.map(movementParticipantsAndGroupsMapper::toDto)
 	}
 
-	override fun searchVehicles(projectId: UUID, q: String?): Flux<VehicleReaderDto> {
-		return service.searchVehiclesByText(projectId, q).map(vehiclesMapper::toDto)
+	override fun searchVehicles(projectId: UUID, query: String?): Flux<VehicleReaderDto> {
+		return service.searchVehiclesByText(projectId, query).map(vehiclesMapper::toDto)
 	}
 
 	override fun findMovementCommunications(
 		projectId: UUID,
 		id: UUID,
 		page: PageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = CommunicationSearchParamModel(q, visible, startDateTime, endDateTime)
+		val searchParams = CommunicationSearchParamModel(query, visible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, communicationReaderMapper::toDto) }

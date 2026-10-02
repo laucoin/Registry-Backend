@@ -11,6 +11,11 @@ import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver
 import reactor.core.publisher.Hooks
 import java.util.Locale
 
+/**
+ * Wires internationalization for the app: the `messages`/`errors` resource-bundle [MessageSource]s
+ * consumed by [ITranslateService], the Accept-Language based [AcceptHeaderLocaleContextResolver], and
+ * Reactor's automatic propagation of the resolved locale across reactive chains.
+ */
 @Configuration
 class I18nConfig(
 	@param:Value($$"${registry.information.locale.default}") val defaultLocale: Locale,

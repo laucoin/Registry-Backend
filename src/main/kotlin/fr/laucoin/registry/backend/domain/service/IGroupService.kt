@@ -13,6 +13,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for participant Groups: search/read, its members, arriving/departing-today
+ * dashboards, the create/update/member add-remove/disable/enable/delete lifecycle, and cleanup of
+ * groups left with no members. Callers go through this contract, never the [IGroupPort] directly.
+ */
 interface IGroupService {
 	fun findGroupsPage(
 		projectId: UUID,

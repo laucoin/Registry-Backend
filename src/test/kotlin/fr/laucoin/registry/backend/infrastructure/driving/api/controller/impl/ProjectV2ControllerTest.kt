@@ -35,6 +35,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
@@ -45,6 +46,7 @@ import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class ProjectV2ControllerTest: TestContext() {
@@ -120,6 +122,24 @@ class ProjectV2ControllerTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findProjectsRequiringAttention return 200`() {
+		// Arrange
+		whenever(service.findProjectsRequiringAttention(any(), any())).thenReturn(Flux.just(ProjectModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder("$BASE_URL/attention", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(service).findProjectsRequiringAttention(any(), eq(5))
+	}
+
+	@Test
 	fun `Should findProjects return 403 when withProfile is false without REGISTRY_PROJECT_R`() {
 		// Act
 		val result = webClient
@@ -165,7 +185,7 @@ class ProjectV2ControllerTest: TestContext() {
 	fun `Should findProjectById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
+		whenever(service.findProjectById(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
 
 		// Act
@@ -177,7 +197,7 @@ class ProjectV2ControllerTest: TestContext() {
 
 		// Assert
 		result.body<ProjectReaderDto>(OK)
-		verify(service).findProjectById(uuid, visibilitySearched = null)
+		verify(service).findProjectById(eq(uuid), visibilitySearched = isNull(), currentUser = any())
 	}
 
 	@Test

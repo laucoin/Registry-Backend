@@ -13,13 +13,14 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IParticipantV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.PageQueryDtoMapper
@@ -27,19 +28,19 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.SortParamDt
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.TimeZone
-import java.util.UUID
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.time.ZonedDateTime
+import java.util.TimeZone
+import java.util.UUID
 
 @RestController
 class ParticipantV2Controller(
@@ -53,11 +54,11 @@ class ParticipantV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IParticipantV2Controller {
+) : IParticipantV2Controller {
 	override fun findParticipants(
 		projectId: UUID,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		isMajor: Boolean?,
 		type: ParticipantTypeEnum?,
 		visible: Boolean?,
@@ -68,7 +69,7 @@ class ParticipantV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ParticipantSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ParticipantSearchParamModel(q, isMajor, type, visible, status, dateTime)
+		val searchParams = ParticipantSearchParamModel(query, isMajor, type, visible, status, dateTime)
 
 		return service.findParticipantsPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -90,12 +91,12 @@ class ParticipantV2Controller(
 		return service.findParticipantById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
 	}
 
-	override fun searchUsers(projectId: UUID, q: String?): Flux<PartialUserReaderDto> {
-		return service.searchUsersByText(projectId, q).map(partialUserReaderMapper::toDto)
+	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
+		return service.searchUsersByText(projectId, query).map(partialUserReaderMapper::toDto)
 	}
 
-	override fun searchGroups(projectId: UUID, q: String?): Flux<GroupWithoutMemberReaderDto> {
-		return service.searchGroupsByText(projectId, q).map(groupReaderMapper::toDto)
+	override fun searchGroups(projectId: UUID, query: String?): Flux<GroupWithoutMemberReaderDto> {
+		return service.searchGroupsByText(projectId, query).map(groupReaderMapper::toDto)
 	}
 
 	override fun findParticipantMovements(
@@ -106,15 +107,14 @@ class ParticipantV2Controller(
 		visible: Boolean?,
 		linkedToActivity: Boolean?,
 		type: MovementTypeEnum?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
 		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, startDateTime, endDateTime)
+		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findParticipantMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }

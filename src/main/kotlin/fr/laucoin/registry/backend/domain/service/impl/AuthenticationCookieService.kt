@@ -8,6 +8,11 @@ import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.stereotype.Component
 
+/**
+ * Reads and writes the HttpOnly access/refresh token cookies exchanged with the browser: sets them
+ * on login/refresh, clears them on logout, and extracts them back off an incoming request. Knows
+ * nothing about the token's content or validity — that's [TokenConverterService]/[JwtDecoderConfig].
+ */
 @Component
 class AuthenticationCookieService(
 	@param:Value($$"${registry.server.prefix}")

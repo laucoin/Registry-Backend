@@ -51,6 +51,11 @@ import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_GROUP`: CRUD, filtered/sorted/paginated search with member/inside-member
+ * counts computed via CTEs, the arriving/departing-today dashboard queries, and empty-group
+ * detection for cleanup. Consumed by [GroupModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class GroupJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(
@@ -226,12 +231,6 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 					DSL.coalesce(insideMembersCountRaw, DSL.inline(0L)).`as`("full_inside_members_count"),
 					membersCount.minus(DSL.coalesce(insideMembersCountRaw, DSL.inline(0L)))
 						.`as`("full_outside_members_count"),
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -269,12 +268,6 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		return Flux.from(
 			dsl.select(
 				TB_GROUP.asterisk(),
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -375,12 +368,6 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 					listOf(
 						TB_GROUP.asterisk(),
 						mwoCount.`as`("full_members_count"),
-						project.NAME,
-						project.BEGIN_DATE,
-						project.BEGIN_TIME,
-						project.END_DATE,
-						project.END_TIME,
-						project.OPTIONS,
 						creator.FIRST_NAME,
 						creator.LAST_NAME,
 						creator.EMAIL,
@@ -499,7 +486,7 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		members = get(membersCount),
 	).apply {
 		fillGeneric(this, columns, creator, editor)
-		fillGenericProject(this, TB_GROUP.PROJECT_ID, project)
+		fillGenericProject(this, TB_GROUP.PROJECT_ID)
 	}
 
 	private fun Record.toEntity(
@@ -519,6 +506,6 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		outsideMembers = if (includeCounts) get(fullOutsideMembersCount) else null,
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_GROUP.PROJECT_ID, project)
+		fillGenericProject(this, TB_GROUP.PROJECT_ID)
 	}
 }

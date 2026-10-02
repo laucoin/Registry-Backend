@@ -82,7 +82,7 @@ class UserDataExportServiceTest {
 
 		whenever(userPort.findById(any(), anyOrNull())).thenReturn(Mono.just(user))
 		whenever(preferencesService.findByUser(any())).thenReturn(Mono.just(preferences))
-		whenever(projectProfilePort.findProjectProfilesPageByUserId(any(), any(), any(), any()))
+		whenever(projectProfilePort.findProjectProfilesPageByUserId(any(), any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(PageableModel(0, 10_000), 1, listOf(ownProfile))))
 		whenever(projectProfilePort.findAllByCreatorId(any())).thenReturn(Flux.just(createdProfile))
 		whenever(movementPort.findAllByCreatorId(any())).thenReturn(Flux.just(movement))

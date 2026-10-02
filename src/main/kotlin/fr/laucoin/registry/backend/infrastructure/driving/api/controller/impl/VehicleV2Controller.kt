@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IVehicleV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -21,12 +22,12 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Move
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.VehicleWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class VehicleV2Controller(
@@ -37,11 +38,11 @@ class VehicleV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IVehicleV2Controller {
+) : IVehicleV2Controller {
 	override fun findVehicles(
 		projectId: UUID,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
 		status: PresenceStatusEnum?,
 		dateTime: ZonedDateTime?,
@@ -50,7 +51,7 @@ class VehicleV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			VehicleSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = VehicleSearchParamModel(q, visible, status, dateTime)
+		val searchParams = VehicleSearchParamModel(query, visible, status, dateTime)
 
 		return service.findVehiclesPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -68,11 +69,10 @@ class VehicleV2Controller(
 		visible: Boolean?,
 		linkedToActivity: Boolean?,
 		type: MovementTypeEnum?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, startDateTime, endDateTime)
+		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findVehicleMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }

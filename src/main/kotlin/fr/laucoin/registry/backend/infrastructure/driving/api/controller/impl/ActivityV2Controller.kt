@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IActivityV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
@@ -22,13 +23,13 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Move
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.OngoingActivityOutingReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PageReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ActivityWriterDtoMapper
-import java.net.URI
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class ActivityV2Controller(
@@ -40,11 +41,11 @@ class ActivityV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IActivityV2Controller {
+) : IActivityV2Controller {
 	override fun findActivities(
 		projectId: UUID,
 		page: SortedPageQueryDto,
-		q: String?,
+		query: String?,
 		visible: Boolean?,
 		available: Boolean?,
 		dateTime: ZonedDateTime?,
@@ -53,7 +54,7 @@ class ActivityV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ActivitySortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ActivitySearchParamModel(q, visible, available, dateTime)
+		val searchParams = ActivitySearchParamModel(query, visible, available, dateTime)
 
 		return service.findActivitiesPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -69,11 +70,10 @@ class ActivityV2Controller(
 		page: PageQueryDto,
 		visible: Boolean?,
 		type: MovementTypeEnum?,
-		startDateTime: ZonedDateTime?,
-		endDateTime: ZonedDateTime?,
+		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity = null, type, startDateTime, endDateTime)
+		val searchParams = MovementSearchParamModel(visible, linkedToActivity = null, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findActivityMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }

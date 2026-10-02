@@ -22,6 +22,12 @@ import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_MOVEMENT_CONTENT` (a Movement's Participants/Guests/Vehicles): batch
+ * fetching a Movement's full content, or only the "current" one (still-ongoing outing/visit, computed
+ * via CTEs), plus CRUD. Every method has a `DSLContext` overload so callers (e.g.
+ * [MovementModelPostgresRepository]) can run it inside an already-open transaction.
+ */
 @Repository
 class MovementContentJooqRepository(private val dsl: DSLContext) {
 	private fun lastParticipantMovementCte(): CommonTableExpression<*> {

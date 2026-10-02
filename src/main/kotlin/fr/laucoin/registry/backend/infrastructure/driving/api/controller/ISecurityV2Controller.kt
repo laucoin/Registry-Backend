@@ -25,14 +25,20 @@ import reactor.core.publisher.Mono
 interface ISecurityV2Controller {
 	@Operation(
 		summary = "OAuth2 auth URI",
-		description = "Build and return the OAuth2 provider authentication URI",
+		description = """
+			Build the OAuth2 provider's authentication (login) URI the frontend must redirect the browser to, so the
+			provider can send the User back to `redirectUri` once authenticated.
+		""",
 	)
 	@GetMapping("/login/uri")
 	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): Mono<AuthenticationUriReaderDto>
 
 	@Operation(
 		summary = "OAuth2 logout URI",
-		description = "Build and return the OAuth2 provider logout URI, clearing the authentication cookies",
+		description = """
+			Build the OAuth2 provider's logout URI, and clear this session's authentication cookies (access and refresh
+			token) so the browser can then be redirected to `redirectUri`.
+		""",
 	)
 	@GetMapping("/logout/uri")
 	fun getLogoutUri(
@@ -42,7 +48,10 @@ interface ISecurityV2Controller {
 
 	@Operation(
 		summary = "Fetch token from code",
-		description = "Exchange an authorization code for an OAuth2 provider token, set as HttpOnly cookies",
+		description = """
+			Exchange the OAuth2 authorization code obtained after login for the provider's access/refresh tokens, and
+			set them as HttpOnly cookies on the response so the browser doesn't need to handle them directly.
+		""",
 	)
 	@PostMapping("/token")
 	fun fetchToken(
@@ -52,14 +61,17 @@ interface ISecurityV2Controller {
 
 	@Operation(
 		summary = "Fetch token from refresh token",
-		description = "Renew the OAuth2 provider token from the refresh token cookie, set as HttpOnly cookies",
+		description = """
+			Use the refresh token cookie to obtain a new access token from the OAuth2 provider without a full login,
+			and set the renewed tokens as HttpOnly cookies on the response.
+		""",
 	)
 	@PostMapping("/token/refresh")
 	fun refreshToken(@Parameter(hidden = true) exchange: ServerWebExchange): Mono<Void>
 
 	@Operation(
 		summary = "Get Current User",
-		description = "Get the logged in User",
+		description = "Get the account of the currently logged in User, as resolved from the authentication cookies.",
 	)
 	@GetMapping("/user/current")
 	fun findCurrentUser(

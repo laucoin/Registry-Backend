@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.model.AlertModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
 import java.util.UUID
 import org.springframework.stereotype.Component
@@ -16,7 +15,6 @@ class AlertWriterDtoMapper: IGenericProjectWriterDtoMapper<AlertModel, AlertWrit
 			title = dto.title
 			dateTime = dto.dateTime!!
 			status = dto.status
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

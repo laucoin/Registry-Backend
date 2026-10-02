@@ -11,6 +11,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [ActivityModel]: CRUD, paginated/filtered search, dashboard/picker queries, and
+ * the retention lookup used by the purge job. Implemented by the jOOQ Postgres adapter; the domain
+ * only depends on this contract, never on jOOQ directly.
+ */
 interface IActivityPort {
 	fun findAllByCreatorId(userId: UUID): Flux<ActivityModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel>

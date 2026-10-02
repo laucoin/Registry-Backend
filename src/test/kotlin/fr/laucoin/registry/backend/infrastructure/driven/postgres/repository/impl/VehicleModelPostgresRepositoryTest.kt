@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.ASC
 import fr.laucoin.registry.backend.domain.enumeration.SortDirectionEnum.DESC
 import fr.laucoin.registry.backend.domain.enumeration.VehicleSortFieldEnum.BRAND
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
@@ -202,9 +201,8 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 				licensePlate = "AB-123-CD"
 				brand = "test"
 				model = "test"
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.create(vehicle).block()
@@ -226,9 +224,8 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 				licensePlate = "AB-123-CD"
 				brand = "test update"
 				model = "test update"
-				project = ProjectModel().apply { id = projectId }
 				create(currentUser())
-			}
+			}.also { it.projectId = projectId }
 
 			// Act
 			val result = repository.update(vehicle).block()

@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_FAVORITE_REQUIRES_ACCEPTED_STATUS
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -16,6 +17,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.SortModel
+import fr.laucoin.registry.backend.domain.model.UserProjectProfileModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
@@ -28,6 +30,15 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
 
+/**
+ * [IUserProjectProfileService] implementation: the last-level-0-administrator safeguard query,
+ * granting a level-0 Profile when a Project is created or a temporary support Profile is requested,
+ * accepting/rejecting an invitation, and the favorite toggle (restricted to ACCEPTED Profiles).
+ * Delegates persistence to [IProjectProfilePort], which also computes the per-project counts used by
+ * the `includeCounts` decoration directly in SQL. The "Projects requiring attention" dashboard lives
+ * on [fr.laucoin.registry.backend.domain.service.IProjectService] instead: it returns Projects, not
+ * Profiles.
+ */
 @Service
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
@@ -39,9 +50,9 @@ class UserProjectProfileService(
 		pageable: PageableModel,
 		searchParams: ProjectProfileSearchParamModel,
 		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
-	): Mono<PageModel<ProjectProfileModel>> {
-		return port
-			.findProjectProfilesPageByUserId(userId, pageable, searchParams, sortFields)
+		includeCounts: Boolean,
+	): Mono<PageModel<UserProjectProfileModel>> {
+		return port.findUserProjectProfilesPageByUserId(userId, pageable, searchParams, sortFields, includeCounts)
 	}
 
 	override fun <T: GenericModel> validateNotLastProjectRoleLevel0(
@@ -67,7 +78,7 @@ class UserProjectProfileService(
 		project: ProjectModel
 	): Mono<ProjectProfileModel> {
 		val profile = ProjectProfileModel().apply {
-			this.project = project
+			this.projectId = project.id
 			this.user = currentUser
 			this.role = roleService.getLevel0RoleFromProjectRoles()
 			this.status = ACCEPTED
@@ -82,7 +93,7 @@ class UserProjectProfileService(
 		currentUser: CurrentUserModel,
 		id: UUID,
 		status: ProfileStatusEnum
-	): Mono<ProjectProfileModel> {
+	): Mono<UserProjectProfileModel> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
 			.filter { it.status == INVITED }
 			.notFoundIfEmpty(id)
@@ -91,33 +102,39 @@ class UserProjectProfileService(
 				profile.update(currentUser)
 				port.update(profile)
 			}
+			.flatMap { withProject(currentUser, it.id!!) }
 	}
 
-	override fun toggleFavoriteProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
+	override fun toggleFavoriteProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<UserProjectProfileModel> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
 			.notFoundIfEmpty(id)
 			.flatMap { profile ->
+				if (profile.status != ACCEPTED) {
+					return@flatMap Mono.error(
+						RegistryException(CONFLICT, PROJECT_PROFILE_FAVORITE_REQUIRES_ACCEPTED_STATUS)
+					)
+				}
 				profile.favorite = !profile.favorite
 				profile.update(currentUser)
 				port.update(profile)
 			}
+			.flatMap { withProject(currentUser, it.id!!) }
 	}
 
 	override fun createSupportProjectProfile(
 		currentUser: CurrentUserModel,
 		projectId: UUID
-	): Mono<ProjectProfileModel> {
+	): Mono<UserProjectProfileModel> {
 		val now = CustomDateTimeModel.now()
 		val nowPlusOneHour = CustomDateTimeModel.now().plusHours(1)
 		val profile = ProjectProfileModel().apply {
 			user = currentUser
-			project = ProjectModel().apply { id = projectId }
 			role = roleService.getLevel0RoleFromProjectRoles()
 			status = ACCEPTED
 			startAccess = now
 			endAccess = nowPlusOneHour
 			create(currentUser)
-		}
+		}.also { it.projectId = projectId }
 
 		return validateNoProfileConflict(
 			projectId,
@@ -128,6 +145,15 @@ class UserProjectProfileService(
 		)
 			.flatMap { port.create(profile) }
 			.`as`(transactionalOperator::transactional)
+			.flatMap { withProject(currentUser, it.id!!) }
+	}
+
+	// The mutation above goes through `port.update`/`port.create`, which only ever return the lean
+	// `ProjectProfileModel` (no Project): this re-fetches the same row decorated with its Project,
+	// since these endpoints aren't scoped under a Project id and the caller needs to know which one changed.
+	private fun withProject(currentUser: CurrentUserModel, id: UUID): Mono<UserProjectProfileModel> {
+		return port.findUserProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+			.notFoundIfEmpty(id)
 	}
 
 	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
@@ -135,7 +161,7 @@ class UserProjectProfileService(
 			.flatMap {
 				validateNotLastProjectRoleLevel0(
 					it.user!!.id!!,
-					it.project!!.id!!,
+					it.projectId!!,
 					it,
 					PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 				)

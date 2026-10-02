@@ -32,6 +32,12 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IProjectProfileService] implementation: enforces the invitation-conflict check, that a caller can
+ * only assign/reassign a role within their own eligible range, and the last-level-0-administrator
+ * safeguard on update/block/delete, invalidating [IPrincipalCacheService] whenever a change affects
+ * the profile's authorities. Delegates persistence to [IProjectProfilePort].
+ */
 @Service
 class ProjectProfileService(
 	private val profileService: IUserProjectProfileService,
@@ -164,7 +170,7 @@ class ProjectProfileService(
 	}
 
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
-		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.project!!.id!!, it, error)
+		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.projectId!!, it, error)
 	}
 
 	private fun Mono<ProjectProfileModel>.validateRole(

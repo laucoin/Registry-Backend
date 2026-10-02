@@ -23,4 +23,11 @@ data class ProjectProfileEntity(
 	var endAccessDate: LocalDate? = null,
 	var endAccessTime: OffsetTime? = null,
 	var favorite: Boolean? = null,
+
+	var participantsCount: Int? = null,
+	var vehiclesCount: Int? = null,
+	var groupsCount: Int? = null,
+	var activitiesCount: Int? = null,
+	var profilesCount: Int? = null,
+	var ongoingAlertsCount: Int? = null,
 ): GenericProjectEntity()

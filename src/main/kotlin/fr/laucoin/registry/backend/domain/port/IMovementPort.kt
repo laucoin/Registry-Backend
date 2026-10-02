@@ -11,6 +11,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [MovementModel]: CRUD, paginated/filtered search scoped to a Project,
+ * Participant, Vehicle or Activity, current-outing queries, content loading, counts, and the
+ * retention lookup used by the purge job. Implemented by the jOOQ Postgres adapter.
+ */
 interface IMovementPort {
 	fun findAllByCreatorId(userId: UUID): Flux<MovementModel>
 	fun findOngoingActivityOutings(projectId: UUID, limit: Int): Flux<MovementModel>

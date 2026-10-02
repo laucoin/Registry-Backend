@@ -44,6 +44,12 @@ import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_MOVEMENT`: CRUD, filtered/paginated search (by Project, Participant,
+ * Vehicle or Activity), "current" (still-ongoing) Movements computed via CTEs, the ongoing-Activity-
+ * outings dashboard query, and the "older than and uncommented since" lookup for the purge job.
+ * Consumed by [MovementModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class MovementJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(
@@ -208,12 +214,6 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				activity.START_AVAILABILITY_TIME,
 				activity.END_AVAILABILITY_DATE,
 				activity.END_AVAILABILITY_TIME,
-				project.NAME,
-				project.BEGIN_DATE,
-				project.BEGIN_TIME,
-				project.END_DATE,
-				project.END_TIME,
-				project.OPTIONS,
 				creator.FIRST_NAME,
 				creator.LAST_NAME,
 				creator.EMAIL,
@@ -305,12 +305,6 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 						activity.START_AVAILABILITY_TIME,
 						activity.END_AVAILABILITY_DATE,
 						activity.END_AVAILABILITY_TIME,
-						project.NAME,
-						project.BEGIN_DATE,
-						project.BEGIN_TIME,
-						project.END_DATE,
-						project.END_TIME,
-						project.OPTIONS,
 						creator.FIRST_NAME,
 						creator.LAST_NAME,
 						creator.EMAIL,
@@ -378,12 +372,6 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 						activity.START_AVAILABILITY_TIME,
 						activity.END_AVAILABILITY_DATE,
 						activity.END_AVAILABILITY_TIME,
-						project.NAME,
-						project.BEGIN_DATE,
-						project.BEGIN_TIME,
-						project.END_DATE,
-						project.END_TIME,
-						project.OPTIONS,
 						creator.FIRST_NAME,
 						creator.LAST_NAME,
 						creator.EMAIL,
@@ -677,12 +665,6 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 					activity.START_AVAILABILITY_TIME,
 					activity.END_AVAILABILITY_DATE,
 					activity.END_AVAILABILITY_TIME,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					creator.FIRST_NAME,
 					creator.LAST_NAME,
 					creator.EMAIL,
@@ -705,13 +687,6 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 					TB_MOVEMENT.ACTIVITY_ID,
 					TB_MOVEMENT.REASON,
 					activity.SEARCH_TEXT,
-					project.ID,
-					project.NAME,
-					project.BEGIN_DATE,
-					project.BEGIN_TIME,
-					project.END_DATE,
-					project.END_TIME,
-					project.OPTIONS,
 					activity.ID,
 					activity.NAME,
 					activity.DESCRIPTION,
@@ -827,6 +802,6 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 		activityEndAvailabilityTime = activity?.let { get(it.END_AVAILABILITY_TIME) },
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
-		fillGenericProject(this, TB_MOVEMENT.PROJECT_ID, project)
+		fillGenericProject(this, TB_MOVEMENT.PROJECT_ID)
 	}
 }

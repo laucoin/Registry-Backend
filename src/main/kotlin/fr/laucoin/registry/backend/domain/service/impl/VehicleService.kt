@@ -25,6 +25,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IVehicleService] implementation: enforces a Vehicle's availability window against its Project's
+ * dates and blocks deletion of a Vehicle "linked to Movement(s)", then delegates persistence to
+ * [IVehiclePort].
+ */
 @Service
 class VehicleService(
 	private val port: IVehiclePort,
@@ -56,7 +61,7 @@ class VehicleService(
 
 	override fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel> {
 		return projectService.validateDateTimes(
-			vehicle.project!!.id!!,
+			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -71,7 +76,7 @@ class VehicleService(
 		vehicle: VehicleModel
 	): Mono<VehicleModel> {
 		return projectService.validateDateTimes(
-			vehicle.project!!.id!!,
+			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -129,7 +134,7 @@ class VehicleService(
 
 	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { vehicleToUpdate ->
 		movementPort.countAllByVehicleId(
-			vehicleToUpdate.project!!.id!!,
+			vehicleToUpdate.projectId!!,
 			vehicleToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->

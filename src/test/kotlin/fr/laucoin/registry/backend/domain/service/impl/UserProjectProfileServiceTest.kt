@@ -2,8 +2,12 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_FAVORITE_REQUIRES_ACCEPTED_STATUS
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -17,6 +21,7 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.commonProject
 import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
 import fr.laucoin.registry.backend.test.ModelExt.commonUser
+import fr.laucoin.registry.backend.test.ModelExt.commonUserProjectProfile
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.ModelExt.userId
@@ -48,9 +53,7 @@ class UserProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
 	private val roleService: IRoleService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
-	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, roleService, transactionalOperator
-	)
+	private val service: IUserProjectProfileService = UserProjectProfileService(port, roleService, transactionalOperator)
 
 	private companion object {
 		private const val PROJECT_ROLE = "PROJECT_ROLE"
@@ -75,23 +78,45 @@ class UserProjectProfileServiceTest {
 			)
 		}
 
+		@JvmStatic
+		fun `Should toggleFavoriteProjectProfileById throw RegistryException when status is not ACCEPTED`(): Stream<ProfileStatusEnum> {
+			return Stream.of(INVITED, REJECTED, BLOCKED)
+		}
+
 	}
 
 	@Test
-	fun `Should findProjectProfilesPage call port findProjectProfilesPageByUserId`() {
+	fun `Should findProjectProfilesPage call port findUserProjectProfilesPageByUserId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
 		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
 
-		whenever(port.findProjectProfilesPageByUserId(any(), any(), any(), any()))
+		whenever(port.findUserProjectProfilesPageByUserId(any(), any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectProfilesPage(projectId, pageable, params).block()
 
 		// Assert
-		verify(port).findProjectProfilesPageByUserId(projectId, pageable, params, emptyList())
+		verify(port).findUserProjectProfilesPageByUserId(projectId, pageable, params, emptyList(), false)
 	}
+
+	@Test
+	fun `Should findProjectProfilesPage pass includeCounts through to port`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
+
+		whenever(port.findUserProjectProfilesPageByUserId(any(), any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
+
+		// Act
+		service.findProjectProfilesPage(projectId, pageable, params, includeCounts = true).block()
+
+		// Assert
+		verify(port).findUserProjectProfilesPageByUserId(projectId, pageable, params, emptyList(), true)
+	}
+
 
 	@ParameterizedTest
 	@MethodSource
@@ -144,6 +169,7 @@ class UserProjectProfileServiceTest {
 	fun `Should createSupportProjectProfile call port findUserIdsWithProjectProfile and create`() {
 		// Arrange
 		val profile = commonProjectProfile().apply { role = PROJECT_ROLE }
+		val decoratedProfile = commonUserProjectProfile().apply { role = PROJECT_ROLE }
 
 		whenever(roleService.getLevel0RoleFromProjectRoles()).thenReturn(PROJECT_ROLE)
 		whenever(
@@ -158,6 +184,7 @@ class UserProjectProfileServiceTest {
 		).thenReturn(Flux.empty())
 
 		whenever(port.create(any())).thenReturn(Mono.just(profile))
+		whenever(port.findUserProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(decoratedProfile))
 
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
@@ -165,7 +192,7 @@ class UserProjectProfileServiceTest {
 		val result = service.createSupportProjectProfile(currentUser(), projectId).block()
 
 		// Assert
-		assertEquals(profile, result)
+		assertEquals(decoratedProfile, result)
 
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			eq(projectId),
@@ -177,6 +204,7 @@ class UserProjectProfileServiceTest {
 		)
 
 		verify(port).create(any())
+		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, visibilitySearched = null)
 		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
@@ -240,16 +268,20 @@ class UserProjectProfileServiceTest {
 	fun `Should updateUserProjectProfileStatusById update Project Profile status is INVITED`() {
 		// Arrange
 		val profile = commonProjectProfile().apply { status = INVITED }
+		val decoratedProfile = commonUserProjectProfile().apply { status = ACCEPTED }
 
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
+		whenever(port.findUserProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(decoratedProfile))
 
 		// Act
-		service.updateUserProjectProfileStatusById(currentUser(), projectProfileId, ACCEPTED).block()
+		val result = service.updateUserProjectProfileStatusById(currentUser(), projectProfileId, ACCEPTED).block()
 
 		// Assert
+		assertEquals(decoratedProfile, result)
 		verify(port).update(any())
 		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
+		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, visibilitySearched = null)
 	}
 
 	@Test
@@ -277,19 +309,46 @@ class UserProjectProfileServiceTest {
 	@Test
 	fun `Should toggleFavoriteProjectProfileById flip the favorite flag`() {
 		// Arrange
-		val profile = commonProjectProfile().apply { favorite = false }
+		val profile = commonProjectProfile().apply { status = ACCEPTED; favorite = false }
+		val decoratedProfile = commonUserProjectProfile().apply { favorite = true }
 
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
+		whenever(port.findUserProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(decoratedProfile))
 
 		// Act
-		service.toggleFavoriteProjectProfileById(currentUser(), projectProfileId).block()
+		val result = service.toggleFavoriteProjectProfileById(currentUser(), projectProfileId).block()
 
 		// Assert
 		assertEquals(true, profile.favorite)
+		assertEquals(decoratedProfile, result)
 
 		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
 		verify(port).update(profile)
+		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, visibilitySearched = null)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should toggleFavoriteProjectProfileById throw RegistryException when status is not ACCEPTED`(
+		status: ProfileStatusEnum
+	) {
+		// Arrange
+		val profile = commonProjectProfile().apply { this.status = status; favorite = false }
+
+		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.toggleFavoriteProjectProfileById(currentUser(), projectProfileId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(PROJECT_PROFILE_FAVORITE_REQUIRES_ACCEPTED_STATUS, result.message)
+		assertEquals(false, profile.favorite)
+
+		verify(port, never()).update(any())
 	}
 
 	@Test

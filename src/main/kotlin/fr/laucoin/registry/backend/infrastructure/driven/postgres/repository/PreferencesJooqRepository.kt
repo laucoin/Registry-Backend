@@ -16,6 +16,10 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Mono
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_PREFERENCES`: lookup by User and upsert. Consumed by
+ * [PreferenceModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class PreferencesJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(

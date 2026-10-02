@@ -14,6 +14,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Use-case entry point for Projects: search/read, available options metadata, schedule-overlap
+ * validation, the create/update/disable/enable/delete lifecycle, and the retention purge sweep.
+ * Callers go through this contract, never the [IProjectPort] directly.
+ */
 interface IProjectService {
 	fun findProjectsPage(
 		currentUser: CurrentUserModel,
@@ -23,7 +28,15 @@ interface IProjectService {
 		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectModel>>
 
-	fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
+	fun findProjectById(id: UUID, visibilitySearched: Boolean?, currentUser: CurrentUserModel? = null): Mono<ProjectModel>
+
+	/**
+	 * The caller's ACCEPTED, still-in-progress Projects with at least one ongoing Alert, sorted by
+	 * that count descending — the "Projects requiring attention" dashboard widget. Each result carries
+	 * its counts and the caller's own [ProjectModel.activeProfile].
+	 */
+	fun findProjectsRequiringAttention(currentUser: CurrentUserModel, limit: Int): Flux<ProjectModel>
+
 	fun availableProjectOptions(): Flux<ProjectOptionEnum>
 	fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID>
 	fun validateDateTimes(

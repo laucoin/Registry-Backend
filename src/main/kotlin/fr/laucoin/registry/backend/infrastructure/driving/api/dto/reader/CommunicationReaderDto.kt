@@ -7,4 +7,4 @@ data class CommunicationReaderDto(
 	var message: String? = null,
 	var movement: MovementReaderDto? = null,
 	var alert: AlertReaderDto? = null,
-): GenericProjectReaderDto()
+): GenericReaderDto()

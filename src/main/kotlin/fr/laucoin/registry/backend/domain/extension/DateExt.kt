@@ -5,6 +5,11 @@ import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.Objects
 
+/**
+ * Comparison helpers for [CustomDateTimeModel] (a date with an optional time) treating a missing
+ * bound as unbounded (start = -infinity, end = +infinity): chronological ordering, in-range checks,
+ * and the age-of-majority check used by presence/availability rules.
+ */
 object DateExt {
 	fun CustomDateTimeModel?.asStartIsAfterOther(other: CustomDateTimeModel?): Boolean {
 		return when {

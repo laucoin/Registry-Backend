@@ -25,7 +25,12 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
-
+/**
+ * Spring Security [Converter] that turns a validated [Jwt] into an [AbstractAuthenticationToken]:
+ * resolves or JIT-provisions the matching [CurrentUserModel] (via [IUserService], cached through
+ * [IPrincipalCacheService]), rejects blocked/impersonated accounts, and builds its authorities from
+ * [IRoleService] and the caller's Project Profiles.
+ */
 @Component
 class TokenConverterService(
 	private val userService: IUserService,

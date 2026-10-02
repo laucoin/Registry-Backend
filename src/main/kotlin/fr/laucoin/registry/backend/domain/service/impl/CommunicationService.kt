@@ -46,6 +46,11 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * [ICommunicationService] implementation: validates a Communication's date against its Project and
+ * against whichever Movement/Alert it targets (visibility, chronology, type/content compatibility,
+ * and the ALERT option authorization), then delegates persistence to [ICommunicationPort].
+ */
 @Service
 class CommunicationService(
 	private val projectService: IProjectService,
@@ -110,7 +115,7 @@ class CommunicationService(
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
 		return projectService.validateDateTime(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -126,7 +131,7 @@ class CommunicationService(
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
 		return projectService.validateDateTime(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -204,7 +209,7 @@ class CommunicationService(
 		return if (Objects.isNull(communication.movement) || communication.movement!!.id == oldCommunication?.movement?.id)
 			Mono.just(communicationToReturn)
 		else movementPort.findById(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			communication.movement!!.id!!,
 			visibilitySearched = null
 		)
@@ -260,7 +265,7 @@ class CommunicationService(
 		return if (Objects.isNull(communication.alert) || communication.alert!!.id == oldCommunication?.alert?.id)
 			Mono.just(communicationToReturn)
 		else {
-			if (!currentUser.hasAuthority(communication.project!!.id!!, REGISTRY_PROJECT_OPTION_ALERT)) {
+			if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
 				throw RegistryException(
 					status = FORBIDDEN,
 					code = NOT_ENOUGH_PERMISSION,
@@ -268,7 +273,7 @@ class CommunicationService(
 			}
 
 			alertPort.findById(
-				communication.project!!.id!!,
+				communication.projectId!!,
 				communication.alert!!.id!!,
 				visibilitySearched = null
 			)

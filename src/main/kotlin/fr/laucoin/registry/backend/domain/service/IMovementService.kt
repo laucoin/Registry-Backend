@@ -23,6 +23,13 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 
+/**
+ * Use-case entry point for Movements: search/read (including "current"/ongoing ones and their
+ * content), presence-status dashboards for participants and vehicles, the picker searches used to
+ * build a new one, the create/update/disable/enable/delete lifecycle for both REGISTERED and GUEST
+ * content, and the retention purge sweep. Callers go through this contract, never the [IMovementPort]
+ * directly.
+ */
 interface IMovementService {
 	fun findMovementsPage(
 		projectId: UUID,

@@ -1,27 +1,21 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.extension
 
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.GenericProjectModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel.HistoryUserModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericProjectEntity
 import java.util.Objects
 
+/**
+ * Shared fill helpers for the common columns every entity/model pair has (id, visibility, audit
+ * trail, and — for Project-scoped resources — the owning Project id): fills a domain model from an
+ * entity, or an entity from a domain model, so each `*EntityMapper` doesn't repeat this boilerplate.
+ */
 object GenericExt {
 	fun <M: GenericProjectModel, E: GenericProjectEntity> M.fillWithProjectAndEntity(entity: E): M {
-		project = if (Objects.isNull(entity.projectName)) null
-		else ProjectModel().apply {
-			id = entity.projectId
-			name = entity.projectName
-			begin = if (Objects.isNull(entity.projectStartDate)) null
-			else CustomDateTimeModel(entity.projectStartDate!!, entity.projectStartTime)
-			end = if (Objects.isNull(entity.projectEndDate) && Objects.isNull(entity.projectEndTime)) null
-			else CustomDateTimeModel(entity.projectEndDate!!, entity.projectEndTime)
-			options = entity.projectOptions
-		}
+		projectId = entity.projectId
 
 		fillWithEntity(entity)
 
@@ -58,7 +52,7 @@ object GenericExt {
 	}
 
 	fun <M: GenericProjectModel, E: GenericProjectEntity> E.fillWithProjectAndModel(model: M): E {
-		projectId = model.project?.id
+		projectId = model.projectId
 
 		fillWithModel(model)
 

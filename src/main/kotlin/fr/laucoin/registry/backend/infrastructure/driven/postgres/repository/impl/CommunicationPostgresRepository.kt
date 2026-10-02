@@ -16,6 +16,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [ICommunicationPort] implementation: translates every call to [CommunicationJooqRepository],
+ * regroups the batched-preview queries by their Movement/Alert ID, and maps [CommunicationEntity] ↔
+ * [CommunicationModel] via [CommunicationEntityMapper]. No business logic of its own.
+ */
 @Service
 class CommunicationPostgresRepository(
 	private val repository: CommunicationJooqRepository,

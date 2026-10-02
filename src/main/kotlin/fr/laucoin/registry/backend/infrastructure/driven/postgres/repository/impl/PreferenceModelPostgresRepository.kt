@@ -8,6 +8,10 @@ import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
+/**
+ * [IPreferencesPort] implementation: translates every call to [PreferencesJooqRepository] and maps
+ * the entity ↔ [PreferencesModel] via [PreferencesEntityMapper]. No business logic of its own.
+ */
 @Service
 class PreferenceModelPostgresRepository(
 	private val repository: PreferencesJooqRepository,

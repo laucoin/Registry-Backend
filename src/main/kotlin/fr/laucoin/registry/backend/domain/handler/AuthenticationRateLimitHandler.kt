@@ -22,6 +22,11 @@ import java.time.Instant
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Rate-limits the public, pre-authentication `/authentication/token` and `/token/refresh` endpoints
+ * by remote address (there is no principal yet at this point). Registered first in the filter chain;
+ * unrelated to [RateLimitHandler], which gates authenticated `@RateLimited` endpoints instead.
+ */
 class AuthenticationRateLimitHandler(
 	private val translateService: ITranslateService,
 	private val localeContextResolver: LocaleContextResolver,

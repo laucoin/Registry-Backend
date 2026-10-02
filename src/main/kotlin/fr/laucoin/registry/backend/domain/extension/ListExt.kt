@@ -2,6 +2,11 @@ package fr.laucoin.registry.backend.domain.extension
 
 import java.util.Objects
 
+/**
+ * Reflection-based null/empty checks (`isIterable`, `isNullOrEmpty`, `isNotEmpty`) that work
+ * uniformly across any [Iterable] or primitive/object array without the caller knowing the concrete
+ * collection type in advance.
+ */
 object ListExt {
 	fun Any?.isIterable(): Boolean {
 		return this is Iterable<*> || (Objects.nonNull(this) && this!!.javaClass.isArray)

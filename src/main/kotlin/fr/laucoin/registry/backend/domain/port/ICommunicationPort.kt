@@ -10,6 +10,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Persistence port for [CommunicationModel]: CRUD, paginated/filtered search scoped to a Project, a
+ * Movement or an Alert, batched previews/counts for dashboards, and orphan detection for the purge
+ * job. Implemented by the jOOQ Postgres adapter; the domain only depends on this contract.
+ */
 interface ICommunicationPort {
 	fun findAllByCreatorId(userId: UUID): Flux<CommunicationModel>
 	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>

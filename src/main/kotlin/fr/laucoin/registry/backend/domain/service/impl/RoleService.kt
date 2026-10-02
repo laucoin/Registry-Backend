@@ -17,6 +17,12 @@ import reactor.core.publisher.Mono
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * [IRoleService] implementation: loads every User/Project role and its authorities into memory once
+ * at startup ([onApplicationEvent]) from [IRolePort], then serves all role/authority lookups from
+ * that in-memory map for the rest of the process's lifetime — a seed migration change needs a
+ * restart to take effect (ADR 005).
+ */
 @Service
 class RoleService(
 	private val port: IRolePort,

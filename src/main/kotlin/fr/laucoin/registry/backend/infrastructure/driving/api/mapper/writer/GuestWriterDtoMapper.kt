@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto.GuestWriterDto
 import java.util.UUID
 import org.springframework.stereotype.Component
@@ -16,7 +15,6 @@ class GuestWriterDtoMapper: IGenericProjectWriterDtoMapper<ParticipantModel, Gue
 			lastName = dto.lastName
 			birthday = dto.birthday
 			type = GUEST
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

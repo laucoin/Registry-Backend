@@ -52,7 +52,13 @@ import org.springframework.web.reactive.result.method.annotation.RequestMappingH
 import org.springframework.web.server.i18n.LocaleContextResolver
 import java.time.Duration
 
-
+/**
+ * Central WebFlux security configuration: two filter chains (unauthenticated documentation
+ * endpoints on the management port, and the authenticated API on the main one), wiring CORS, CSRF,
+ * security headers, OAuth2 resource-server JWT auth, rate limiting and locale resolution as filters,
+ * and the CORS/method-security beans. Endpoint-level authorization itself lives on each controller's
+ * `@PreAuthorize`, not here.
+ */
 @Configuration
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity

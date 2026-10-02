@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GroupWriterDto
 import java.util.Optional
 import java.util.UUID
@@ -22,7 +21,6 @@ class GroupWriterDtoMapper(
 			endAvailability =
 				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			members = dto.members!!.map { ParticipantModel().apply { id = it } }
-			project = ProjectModel().apply { id = projectId }
-		}
+		}.also { it.projectId = projectId }
 	}
 }

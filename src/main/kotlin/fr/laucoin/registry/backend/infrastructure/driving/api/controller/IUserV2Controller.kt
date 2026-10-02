@@ -38,20 +38,23 @@ import java.util.UUID
 interface IUserV2Controller {
 	@Operation(
 		summary = "Find Users",
-		description = "Find or get paginated Users",
+		description = """
+			Search and list every User of the platform, with pagination and sorting.
+			Combine `q` (free-text search) and different filters to narrow the results.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
 	@GetMapping
 	fun findUsers(
 		@ParameterObject @Valid page: SortedPageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) visible: Boolean?,
 	): Mono<PageReaderDto<UserReaderDto>>
 
 	@Operation(
 		summary = "Find User",
-		description = "Find User by ID",
+		description = "Get a single User of the platform by its ID.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
 	@GetMapping("/{id}")
@@ -59,17 +62,17 @@ interface IUserV2Controller {
 
 	@Operation(
 		summary = "Get assignable Roles",
-		description = "Get all the roles you are allowed to assign",
+		description = "List the platform-level roles the caller is allowed to assign to another User.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_METADATA_R')")
-	@GetMapping("/roles")
+	@GetMapping("/metadata/roles")
 	fun getAssignableUserRoles(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 	): Flux<LabelDto>
 
 	@Operation(
 		summary = "Update User's role",
-		description = "Update a User's role",
+		description = "Change a User's platform-level role. Pass `role` blank/omitted to remove their current role.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
 	@RateLimited(SENSITIVE)
@@ -82,7 +85,7 @@ interface IUserV2Controller {
 
 	@Operation(
 		summary = "Block User",
-		description = "Prproject a User from logging in",
+		description = "Prevent the User from logging in, without deleting their account or data.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
 	@RateLimited(SENSITIVE)
@@ -94,7 +97,7 @@ interface IUserV2Controller {
 
 	@Operation(
 		summary = "Unblock User",
-		description = "Re-authorize a User to log in",
+		description = "Reverse a block: the User can log in again.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
 	@RateLimited(SENSITIVE)
@@ -106,7 +109,10 @@ interface IUserV2Controller {
 
 	@Operation(
 		summary = "Impersonate User",
-		description = "Impersonate all User data",
+		description = """
+			Start a support session as this User: subsequent authenticated calls act on their behalf. Intended for
+			platform administrators investigating an issue on a User's account.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
 	@RateLimited(SENSITIVE)
@@ -118,7 +124,10 @@ interface IUserV2Controller {
 
 	@Operation(
 		summary = "Impersonate Current User",
-		description = "Impersonate all Current User data",
+		description = """
+			Re-authenticate as the caller's own account, ending any ongoing impersonation session started via
+			"Impersonate User" and returning to the caller's own identity.
+		""",
 	)
 	@RateLimited(SENSITIVE)
 	@PostMapping("/impersonate")
@@ -138,7 +147,10 @@ interface IUserV2Controller {
 
 	@Operation(
 		summary = "Delete User",
-		description = "Delete all User data",
+		description = """
+			Permanently delete the User account and all its data, including their Profiles across every Project.
+			This cannot be undone; prefer blocking the User if it may need to be reversed.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
 	@RateLimited(SENSITIVE)

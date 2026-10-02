@@ -48,7 +48,11 @@ import java.util.UUID
 interface IProjectProfileV2Controller {
 	@Operation(
 		summary = "Find Project's Profiles",
-		description = "Find or get paginated Project's Profiles",
+		description = """
+			Search and list the Profiles (i.e. the Users) attached to this Project, with pagination and sorting.
+			Combine `q` (free-text search), `available`, `status` (INVITED / ACCEPTED / REJECTED / BLOCKED) and `dateTime`
+			to narrow the results.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
@@ -56,7 +60,7 @@ interface IProjectProfileV2Controller {
 	fun findProjectProfiles(
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) available: Boolean?,
 		@RequestParam(required = false) status: ProfileStatusEnum?,
 		@RequestParam(required = false)
@@ -65,7 +69,7 @@ interface IProjectProfileV2Controller {
 
 	@Operation(
 		summary = "Find Project's Profile",
-		description = "Find Project's Profile by ID",
+		description = "Get a single Profile of the Project by its ID.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@GetMapping("/{id}")
@@ -76,19 +80,19 @@ interface IProjectProfileV2Controller {
 
 	@Operation(
 		summary = "Search Users",
-		description = "Search Users to invite to an Project",
+		description = "Search Users of the platform who don't already have a Profile on this Project, to invite them (see \"Create Project's Profiles\").",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
 	@RateLimited(SEARCH)
 	@GetMapping("/search/users")
 	fun searchUsers(
 		@PathVariable projectId: UUID,
-		@RequestParam q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 	): Flux<PartialUserReaderDto>
 
 	@Operation(
 		summary = "Get assignable Roles",
-		description = "Get all the roles you are allowed to assign",
+		description = "List the Project-level roles the caller is allowed to assign when inviting or updating a Profile.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
 	@GetMapping("/roles")
@@ -99,7 +103,10 @@ interface IProjectProfileV2Controller {
 
 	@Operation(
 		summary = "Create Project's Profiles",
-		description = "Create Project's Profiles (multiple Users)",
+		description = """
+			Invite one or more Users to the Project at once, each with the same role and the same optional access
+			window. Every invited Profile starts as INVITED until the User accepts it.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_C')")
 	@RateLimited(SENSITIVE)
@@ -112,7 +119,7 @@ interface IProjectProfileV2Controller {
 
 	@Operation(
 		summary = "Update Project's Profile",
-		description = "Update Project's Profile",
+		description = "Update an existing Profile's role and access window.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@RateLimited(SENSITIVE)
@@ -126,7 +133,7 @@ interface IProjectProfileV2Controller {
 
 	@Operation(
 		summary = "Block Project's Profile",
-		description = "Prproject a User from using it",
+		description = "Prevent the User from using this Profile to access the Project, without removing it.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@RateLimited(SENSITIVE)
@@ -139,7 +146,7 @@ interface IProjectProfileV2Controller {
 
 	@Operation(
 		summary = "Unblock Project's Profile",
-		description = "Re-authorize a User to use it",
+		description = "Reverse a block: the User can use this Profile to access the Project again.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
 	@RateLimited(SENSITIVE)
@@ -152,7 +159,10 @@ interface IProjectProfileV2Controller {
 
 	@Operation(
 		summary = "Delete Project's Profile",
-		description = "Delete Project's Profile",
+		description = """
+			Permanently remove this Profile, revoking the User's access to the Project. This cannot be undone;
+			prefer blocking it if access may need to be restored later.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_D')")
 	@RateLimited(SENSITIVE)

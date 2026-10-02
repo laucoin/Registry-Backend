@@ -28,7 +28,10 @@ import reactor.core.publisher.Mono
 interface IPurgeV2Controller {
 	@Operation(
 		summary = "Purge users",
-		description = "Purge users if necessary",
+		description = """
+			Permanently delete Users disabled for longer than the given (or default) threshold. Intended to be called by
+			the scheduled purge job; use `dryRun=true` (the default) to preview the IDs that would be deleted without deleting anything.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)
@@ -43,7 +46,10 @@ interface IPurgeV2Controller {
 
 	@Operation(
 		summary = "Purge projects",
-		description = "Purge projects if necessary",
+		description = """
+			Permanently delete Projects disabled for longer than the given (or default) threshold. Intended to be called by
+			the scheduled purge job; use `dryRun=true` (the default) to preview the IDs that would be deleted without deleting anything.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)
@@ -58,7 +64,11 @@ interface IPurgeV2Controller {
 
 	@Operation(
 		summary = "Purge projects contents",
-		description = "Purge projects contents (movements, communications and alerts) if necessary",
+		description = """
+			Permanently delete the content (Movements, Communications and Alerts) disabled for longer than the given
+			(or default) threshold, across every Project. Intended to be called by the scheduled purge job; use `dryRun=true`
+			(the default) to preview the counts that would be deleted without deleting anything.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)
@@ -73,7 +83,11 @@ interface IPurgeV2Controller {
 
 	@Operation(
 		summary = "Purge projects configurations",
-		description = "Purge projects configurations (vehicles, activities, groups and participants) if necessary",
+		description = """
+			Permanently delete the configuration (Vehicles, Activities, Groups and Participants) disabled for longer than
+			the given (or default) threshold, across every Project. Intended to be called by the scheduled purge job; use `dryRun=true`
+			(the default) to preview the counts that would be deleted without deleting anything.
+		""",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@RateLimited(SENSITIVE)

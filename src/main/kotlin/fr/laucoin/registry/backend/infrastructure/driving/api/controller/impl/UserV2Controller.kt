@@ -17,10 +17,10 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Page
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 @RestController
 class UserV2Controller(
@@ -32,13 +32,17 @@ class UserV2Controller(
 	private val pageQueryMapper: PageQueryDtoMapper,
 	private val sortParamMapper: SortParamDtoMapper,
 	private val pageReaderMapper: PageReaderDtoMapper,
-): IUserV2Controller {
-	override fun findUsers(page: SortedPageQueryDto, q: String?, visible: Boolean?): Mono<PageReaderDto<UserReaderDto>> {
+) : IUserV2Controller {
+	override fun findUsers(
+		page: SortedPageQueryDto,
+		query: String?,
+		visible: Boolean?
+	): Mono<PageReaderDto<UserReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			UserSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = UserSearchParamModel(q, visible)
+		val searchParams = UserSearchParamModel(query, visible)
 
 		return service.findUsersPage(pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }

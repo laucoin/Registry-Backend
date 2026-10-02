@@ -14,6 +14,11 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.UUID
 
+/**
+ * jOOQ queries against the `TB_GROUP_CONTENT` join table (Group ↔ Participant membership): listing a
+ * Group's members, adding/removing one, and batch-saving. Every method has a `DSLContext` overload so
+ * callers (e.g. [GroupModelPostgresRepository]) can run it inside an already-open transaction.
+ */
 @Repository
 class GroupContentJooqRepository(private val dsl: DSLContext) {
 	fun findAllByGroupIds(

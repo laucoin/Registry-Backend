@@ -19,6 +19,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [IUserPort] implementation: translates every call to [UserJooqRepository] and maps [UserEntity] ↔
+ * [UserModel]/[CurrentUserModel] via [UserEntityMapper]/[CurrentUserEntityMapper]. No business logic
+ * of its own.
+ */
 @Service
 class UserModelPostgresRepository(
 	private val repository: UserJooqRepository,

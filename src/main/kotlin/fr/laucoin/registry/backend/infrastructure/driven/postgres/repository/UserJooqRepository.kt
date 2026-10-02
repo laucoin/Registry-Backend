@@ -36,6 +36,12 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
 
+/**
+ * jOOQ queries against `TB_USER`: CRUD, similarity-ranked/filtered/sorted/paginated search, lookup by
+ * OIDC ID/email/role level/service-account (excluding the service account and purged rows from
+ * regular reads), and the "older than last login" lookup for the purge job. Consumed by
+ * [UserModelPostgresRepository], never by the domain directly.
+ */
 @Repository
 class UserJooqRepository(private val dsl: DSLContext) {
 	private val columns = GenericColumns(

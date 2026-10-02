@@ -18,13 +18,14 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SEARCH
 import fr.laucoin.registry.backend.domain.enumeration.RateLimitCategoryEnum.SENSITIVE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.DateTimeRangeQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.PageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.SortedPageQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PageReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -60,7 +61,10 @@ import java.util.UUID
 interface IParticipantV2Controller {
 	@Operation(
 		summary = "Find Participants",
-		description = "Find or get paginated Participants",
+		description = """
+			Search and list the Project's Participants, with pagination and sorting. Combine `q` (free-text search),
+			`isMajor`, `type` (REGISTERED / GUEST), `visible`, `status` (presence) and `dateTime` to narrow the results.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@RateLimited(SEARCH, whenParamPresent = ["q"])
@@ -68,7 +72,7 @@ interface IParticipantV2Controller {
 	fun findParticipants(
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
-		@RequestParam(required = false) q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) isMajor: Boolean?,
 		@RequestParam(required = false) type: ParticipantTypeEnum?,
 		@RequestParam(required = false) visible: Boolean?,
@@ -79,46 +83,64 @@ interface IParticipantV2Controller {
 
 	@Operation(
 		summary = "Find Participants with a birthday today",
-		description = "Participants whose birthday is today; capped at \"limit\" rows",
+		description = """
+			Dashboard widget: Participants whose birthday is today. Results are capped at "limit" rows
+			(default $DEFAULT_DASHBOARD_LIMIT, max $MAX_DASHBOARD_LIMIT).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/birthday")
 	fun findBirthdays(
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
-		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+			MAX_DASHBOARD_LIMIT,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		)
 		limit: Int,
 	): Flux<ParticipantReaderDto>
 
 	@Operation(
 		summary = "Find Participants arriving today",
-		description = "Participants whose presence window opens today; capped at \"limit\" rows",
+		description = """
+			Dashboard widget: Participants whose presence window opens today. Results are capped at "limit" rows
+			(default $DEFAULT_DASHBOARD_LIMIT, max $MAX_DASHBOARD_LIMIT).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/arrivals-today")
 	fun findArrivingToday(
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
-		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+			MAX_DASHBOARD_LIMIT,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		)
 		limit: Int,
 	): Flux<ParticipantReaderDto>
 
 	@Operation(
 		summary = "Find Participants departing today",
-		description = "Participants whose presence window closes today; capped at \"limit\" rows",
+		description = """
+			Dashboard widget: Participants whose presence window closes today. Results are capped at "limit" rows
+			(default $DEFAULT_DASHBOARD_LIMIT, max $MAX_DASHBOARD_LIMIT).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/departures-today")
 	fun findDepartingToday(
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
-		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(MAX_DASHBOARD_LIMIT, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE)
+		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
+			MAX_DASHBOARD_LIMIT,
+			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+		)
 		limit: Int,
 	): Flux<ParticipantReaderDto>
 
 	@Operation(
 		summary = "Find Participant",
-		description = "Find Participant by ID",
+		description = "Get a single Participant of the Project by its ID.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping("/{id}")
@@ -129,31 +151,34 @@ interface IParticipantV2Controller {
 
 	@Operation(
 		summary = "Search Users",
-		description = "Search Users to link to a Participant",
+		description = "Search Users of the platform, to link one to a Participant (`userId`) so they can access their own data.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
 	@RateLimited(SEARCH)
 	@GetMapping("/search/users")
 	fun searchUsers(
 		@PathVariable projectId: UUID,
-		@RequestParam q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 	): Flux<PartialUserReaderDto>
 
 	@Operation(
 		summary = "Search Groups",
-		description = "Search Groups to add Participant in it",
+		description = "Search Groups of the Project, to add this Participant into one (`groupIds`).",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
 	@RateLimited(SEARCH)
 	@GetMapping("/search/groups")
 	fun searchGroups(
 		@PathVariable projectId: UUID,
-		@RequestParam q: String?,
+		@RequestParam(name = "q", required = false) query: String?,
 	): Flux<GroupWithoutMemberReaderDto>
 
 	@Operation(
 		summary = "Find Participant Movements",
-		description = "Find or get paginated participant Movements",
+		description = """
+			List, paginated, the Movements recorded for this Participant (their attendance history), optionally filtered
+			by visibility, `linkedToActivity`, Movement `type` and a `startDateTime`/`endDateTime` range.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')")
 	@GetMapping("/{id}/movements")
@@ -166,10 +191,7 @@ interface IParticipantV2Controller {
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
 		@RequestParam(required = false) linkedToActivity: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) startDateTime: ZonedDateTime?,
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) endDateTime: ZonedDateTime?,
+		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
 
 	@Operation(
@@ -178,7 +200,7 @@ interface IParticipantV2Controller {
 	)
 	@PreAuthorize(
 		"hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R') " +
-			"&& hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')",
+				"&& hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')",
 	)
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/data-export")
@@ -189,7 +211,10 @@ interface IParticipantV2Controller {
 
 	@Operation(
 		summary = "Create Participant",
-		description = "Create Participant linked to the Project",
+		description = """
+			Register a new Participant in the Project, with their identity, birthday, own availability window and,
+			optionally, a linked User account (`userId`) and/or Group memberships (`groupIds`).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_C')")
 	@RateLimited(SENSITIVE)
@@ -202,7 +227,10 @@ interface IParticipantV2Controller {
 
 	@Operation(
 		summary = "Update Participant",
-		description = "Update Participant",
+		description = """
+			Update an existing Participant's identity, birthday, availability window, linked User and Group memberships
+			(same shape as creation).
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@RateLimited(SENSITIVE)
@@ -217,7 +245,7 @@ interface IParticipantV2Controller {
 
 	@Operation(
 		summary = "Disable Participant",
-		description = "Disable Participant, it will not visible anymore in the Project",
+		description = "Soft-delete the Participant: it is kept (with its Movement history) but hidden from the Project going forward.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@RateLimited(SENSITIVE)
@@ -230,7 +258,7 @@ interface IParticipantV2Controller {
 
 	@Operation(
 		summary = "Enable Participant",
-		description = "Enable Participant, obviously it will be visible again in the Project",
+		description = "Reverse a disable: the Participant becomes visible in the Project again.",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
 	@RateLimited(SENSITIVE)
@@ -243,7 +271,10 @@ interface IParticipantV2Controller {
 
 	@Operation(
 		summary = "Delete Participant",
-		description = "Delete all Participant data.",
+		description = """
+			Permanently delete the Participant and all its data, including its Movement history. This cannot be undone;
+			prefer disabling it if it may be needed again.
+		""",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_D')")
 	@RateLimited(SENSITIVE)
