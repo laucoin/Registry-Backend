@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -13,5 +14,7 @@ data class CurrentUserReaderDto(
 	var role: LabelDto? = null,
 	var birthday: LocalDate? = null,
 	var lastLogin: ZonedDateTime? = null,
-	var purged: Boolean,
+	@get:JsonProperty("purged")
+	@param:JsonProperty("purged")
+	var isPurged: Boolean,
 ): GenericReaderDto()

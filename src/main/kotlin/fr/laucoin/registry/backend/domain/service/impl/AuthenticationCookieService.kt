@@ -18,7 +18,7 @@ class AuthenticationCookieService(
 	@param:Value($$"${registry.server.prefix}")
 	private val apiPrefix: String,
 	@param:Value($$"${registry.security.cookie.secure}")
-	private val secure: Boolean,
+	private val isSecure: Boolean,
 ) {
 	companion object {
 		const val ACCESS_TOKEN_COOKIE = "registry_access_token"
@@ -30,7 +30,7 @@ class AuthenticationCookieService(
 	 * itself and its own sub-paths, so a narrower scope would silently exclude sibling routes like
 	 * `/logout/uri`, which needs this cookie to revoke the refresh token at the identity provider.
 	 */
-	private val refreshTokenPath: String get() = "$apiPrefix/v1/authentication"
+	private val refreshTokenPath: String get() = "$apiPrefix/v2/authentication"
 
 	fun setAuthCookies(response: ServerHttpResponse, token: TokenModel) {
 		response.addCookie(buildCookie(ACCESS_TOKEN_COOKIE, token.accessToken, apiPrefix, Duration.ofSeconds(token.expiresIn)))
@@ -49,7 +49,7 @@ class AuthenticationCookieService(
 	private fun buildCookie(name: String, value: String, path: String, maxAge: Duration?): ResponseCookie {
 		val builder = ResponseCookie.from(name, value)
 			.httpOnly(true)
-			.secure(secure)
+			.secure(isSecure)
 			.sameSite("Lax")
 			.path(path)
 		maxAge?.let { builder.maxAge(it) }

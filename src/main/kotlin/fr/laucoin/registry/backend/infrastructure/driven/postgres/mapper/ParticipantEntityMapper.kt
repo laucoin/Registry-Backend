@@ -37,20 +37,20 @@ class ParticipantEntityMapper(
 			status = buildStatus(entity.lastMovementType)
 			lastMovement = entity.lastMovementDateTime
 			user = mapUser(entity)
-			purged = entity.purged
+			isPurged = entity.isPurged
 		}.fillWithProjectAndEntity(entity)
 	}
 
 	private fun extractGroups(groups: String?): List<GroupModel> {
-		return Optional.ofNullable(groups).map { g ->
-			val groupList = gson.fromJson<List<GroupModel>?>(g, groupListType) ?: emptyList()
+		return Optional.ofNullable(groups).map { json ->
+			val groupList = gson.fromJson<List<GroupModel>?>(json, groupListType) ?: emptyList()
 			groupList.filter { Objects.nonNull(it.id) }
 		}.orElse(emptyList())
 	}
 
 	private fun buildPresentGroupIds(availableGroups: String?): List<UUID> {
-		return Optional.ofNullable(availableGroups).map { g ->
-			val groupIds = gson.fromJson<List<UUID>?>(g, uuidListType) ?: emptyList()
+		return Optional.ofNullable(availableGroups).map { json ->
+			val groupIds = gson.fromJson<List<UUID>?>(json, uuidListType) ?: emptyList()
 			groupIds.filter { Objects.nonNull(it) }
 		}.orElse(emptyList())
 	}
@@ -77,7 +77,7 @@ class ParticipantEntityMapper(
 			endAvailabilityDate = model.endAvailability?.date
 			endAvailabilityTime = model.endAvailability?.time
 			userId = model.user?.id
-			purged = model.purged
+			isPurged = model.isPurged
 		}.fillWithProjectAndModel(model)
 	}
 }

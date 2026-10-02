@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono
 interface IMovementPort {
 	fun findAllByCreatorId(userId: UUID): Flux<MovementModel>
 	fun findOngoingActivityOutings(projectId: UUID, limit: Int): Flux<MovementModel>
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

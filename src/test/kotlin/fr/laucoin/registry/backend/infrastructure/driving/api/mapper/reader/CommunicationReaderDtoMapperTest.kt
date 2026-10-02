@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -39,7 +38,7 @@ class CommunicationReaderDtoMapperTest {
 			movement = MovementModel(dateTime = now)
 			alert = AlertModel(dateTime = now)
 			id = communicationId
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -50,7 +49,7 @@ class CommunicationReaderDtoMapperTest {
 			movement = dtoMovement
 			alert = dtoAlert
 			id = communicationId
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -107,43 +106,6 @@ class CommunicationReaderDtoMapperTest {
 
 		// Assert
 		assertEquals(dtos, result)
-
-		verify(movementMapper, times(expectedMovementCast))
-			.toDto(model.movement ?: MovementModel())
-
-		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel())
-	}
-
-	@ParameterizedTest
-	@MethodSource("CommunicationModel to CommunicationReaderDto data")
-	fun `Should toDto convert CommunicationModel page to CommunicationReaderDto page`(
-		model: CommunicationModel,
-		dto: CommunicationReaderDto,
-		expectedMovementCast: Int,
-		expectedAlertCast: Int,
-	) {
-		// Arrange
-		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(model),
-		)
-		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(dto),
-			lastRefresh = modelPage.lastRefresh,
-		)
-
-		// Act
-		val result = mapper.toDtoPage(modelPage)
-
-		// Assert
-		assertEquals(dtoPage, result)
 
 		verify(movementMapper, times(expectedMovementCast))
 			.toDto(model.movement ?: MovementModel())

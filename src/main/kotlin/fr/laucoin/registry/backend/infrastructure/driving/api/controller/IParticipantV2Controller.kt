@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
 import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
@@ -75,7 +75,7 @@ interface IParticipantV2Controller {
 		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) isMajor: Boolean?,
 		@RequestParam(required = false) type: ParticipantTypeEnum?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@RequestParam(required = false) status: PresenceStatusEnum?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
@@ -95,7 +95,7 @@ interface IParticipantV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<ParticipantReaderDto>
@@ -114,7 +114,7 @@ interface IParticipantV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<ParticipantReaderDto>
@@ -133,7 +133,7 @@ interface IParticipantV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<ParticipantReaderDto>
@@ -187,27 +187,12 @@ interface IParticipantV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@ParameterObject @Valid page: PageQueryDto,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
-		@RequestParam(required = false) linkedToActivity: Boolean?,
+		@RequestParam(name = "linkedToActivity", required = false) hasActivity: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
-
-	@Operation(
-		summary = "Export Participant data",
-		description = "Export all personal data held about a Participant (GDPR access/portability request), gathered on their behalf by a project administrator",
-	)
-	@PreAuthorize(
-		"hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R') " +
-				"&& hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')",
-	)
-	@RateLimited(SENSITIVE)
-	@PostMapping("/{id}/data-export")
-	fun exportParticipantDataById(
-		@PathVariable projectId: UUID,
-		@PathVariable id: UUID,
-	): Mono<ParticipantDataExportReaderDto>
 
 	@Operation(
 		summary = "Create Participant",
@@ -260,7 +245,7 @@ interface IParticipantV2Controller {
 		summary = "Enable Participant",
 		description = "Reverse a disable: the Participant becomes visible in the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableParticipantById(
@@ -268,6 +253,21 @@ interface IParticipantV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ParticipantReaderDto>
+
+	@Operation(
+		summary = "Export Participant data",
+		description = "Export all personal data held about a Participant (GDPR access/portability request), gathered on their behalf by a project administrator",
+	)
+	@PreAuthorize(
+		"hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R') " +
+				"&& hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')",
+	)
+	@RateLimited(SENSITIVE)
+	@PostMapping("/{id}/data-export")
+	fun exportParticipantDataById(
+		@PathVariable projectId: UUID,
+		@PathVariable id: UUID,
+	): Mono<ParticipantDataExportReaderDto>
 
 	@Operation(
 		summary = "Delete Participant",

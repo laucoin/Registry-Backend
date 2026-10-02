@@ -61,11 +61,11 @@ class UserProjectProfileService(
 		result: T,
 		error: String
 	): Mono<T> {
-		return port.findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
+		return port.findLevel0ProjectProfileRoleByUserId(userId, isVisible = true)
 			.filter { Objects.isNull(projectId) || Objects.equals(it.project!!.id, projectId) }
 			.collectList()
 			.handle { it, handle ->
-				val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
+				val projects = it.filter { profile -> (profile.level0 ?: 0) <= 1 }
 				if (projects.isNotEmpty()) {
 					log.warn("The user {} is the last administrator of {} project(s)", userId, it.size)
 					handle.error(RegistryException(CONFLICT, error, arrayListOf(projects.first().project!!.name)))
@@ -94,7 +94,7 @@ class UserProjectProfileService(
 		id: UUID,
 		status: ProfileStatusEnum
 	): Mono<UserProjectProfileModel> {
-		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = true)
 			.filter { it.status == INVITED }
 			.notFoundIfEmpty(id)
 			.flatMap { profile ->
@@ -106,7 +106,7 @@ class UserProjectProfileService(
 	}
 
 	override fun toggleFavoriteProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<UserProjectProfileModel> {
-		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = true)
 			.notFoundIfEmpty(id)
 			.flatMap { profile ->
 				if (profile.status != ACCEPTED) {
@@ -114,7 +114,7 @@ class UserProjectProfileService(
 						RegistryException(CONFLICT, PROJECT_PROFILE_FAVORITE_REQUIRES_ACCEPTED_STATUS)
 					)
 				}
-				profile.favorite = !profile.favorite
+				profile.isFavorite = !profile.isFavorite
 				profile.update(currentUser)
 				port.update(profile)
 			}
@@ -152,12 +152,12 @@ class UserProjectProfileService(
 	// `ProjectProfileModel` (no Project): this re-fetches the same row decorated with its Project,
 	// since these endpoints aren't scoped under a Project id and the caller needs to know which one changed.
 	private fun withProject(currentUser: CurrentUserModel, id: UUID): Mono<UserProjectProfileModel> {
-		return port.findUserProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+		return port.findUserProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
 			.notFoundIfEmpty(id)
 	}
 
 	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
-		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
 			.flatMap {
 				validateNotLastProjectRoleLevel0(
 					it.user!!.id!!,

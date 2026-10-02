@@ -32,7 +32,7 @@ class UserProjectProfileEntityMapper(
 			endAccess = mapCustomDateTime(entity.endAccessDate, entity.endAccessTime)
 			status = entity.status
 			availabilityStatus = buildStatus()
-			favorite = entity.favorite ?: false
+			isFavorite = entity.isFavorite ?: false
 			project = mapProjectEntity(entity)
 		}.fillWithEntity(entity)
 	}
@@ -47,7 +47,7 @@ class UserProjectProfileEntityMapper(
 					lastName = entity.userLastName
 					email = entity.userEmail
 					lastLogin = entity.userLastLogin
-					purged = entity.userPurged ?: purged
+					isPurged = entity.isUserPurged ?: isPurged
 				}
 			)
 		}.orElse(null)

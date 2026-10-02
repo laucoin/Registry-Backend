@@ -9,7 +9,7 @@ enum class SortDirectionEnum {
 	ASC,
 	DESC;
 
-	val descending: Boolean
+	val isDescending: Boolean
 		get() = this == DESC
 
 	companion object {

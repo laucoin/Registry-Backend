@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.SORT_FIELD_IS_UNKNOWN
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
@@ -34,8 +34,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -58,8 +56,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
+import java.util.stream.Stream
 
-class GroupV2ControllerTest: TestContext() {
+class GroupV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IGroupService
 
@@ -88,7 +88,7 @@ class GroupV2ControllerTest: TestContext() {
 		fun `Should findGroupsArrivingToday and findGroupsDepartingToday return 400 on an invalid limit`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(0, PAGE_SIZE_IS_LOWER_THAN_ONE),
-				Arguments.of(51, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+				Arguments.of(51, PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE),
 			)
 		}
 	}
@@ -114,7 +114,7 @@ class GroupV2ControllerTest: TestContext() {
 		verify(service).findGroupsPage(
 			projectId,
 			pageable,
-			GroupSearchParamModel(textSearched = null, visibilitySearched = null, presenceSearched = null, dateTimeSearched = null),
+			GroupSearchParamModel(query = null, isVisible = null, isPresent = null, dateTime = null),
 			emptyList(),
 		)
 		verify(readerLightMapper, atLeastOnce()).toDto(any())
@@ -237,7 +237,7 @@ class GroupV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findGroupMembersByGroupId drop the Searched suffix and call service`() {
+	fun `Should findGroupMembersByGroupId  call service`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 20)
@@ -261,7 +261,11 @@ class GroupV2ControllerTest: TestContext() {
 	fun `Should findGroupById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(GroupModel()))
+		whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+			Mono.just(
+				GroupModel()
+			)
+		)
 		whenever(readerMapper.toDto(any())).thenReturn(GroupReaderDto())
 
 		// Act
@@ -276,14 +280,14 @@ class GroupV2ControllerTest: TestContext() {
 		verify(service).findGroupById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null,
+			isVisible = null,
+			isMemberVisible = null,
+			isMemberAvailable = null,
 		)
 	}
 
 	@Test
-	fun `Should searchParticipants rename textSearched to q`() {
+	fun `Should searchParticipants rename query to q`() {
 		// Arrange
 		val searched = "John"
 		whenever(service.searchParticipantsByText(any(), anyOrNull())).thenReturn(Flux.just(ParticipantModel()))
@@ -320,7 +324,8 @@ class GroupV2ControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		val entityResult = result.expectStatus().isCreated.expectBody(GroupWithoutMemberReaderDto::class.java).returnResult()
+		val entityResult =
+			result.expectStatus().isCreated.expectBody(GroupWithoutMemberReaderDto::class.java).returnResult()
 		val location = entityResult.responseHeaders.getFirst("Location")
 		assertNotNull(location)
 		assertTrue(location!!.endsWith("/api/v2/projects/$projectId/groups/$createdId"))
@@ -373,8 +378,20 @@ class GroupV2ControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val memberIds = listOf(UUID.randomUUID())
-		whenever(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(Mono.just(Pair(emptyList(), emptyList())))
-		whenever(addedGroupMembersReaderMapper.toDto(any())).thenReturn(AddedGroupMembersReaderDto(emptyList(), emptyList()))
+		whenever(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(
+			Mono.just(
+				Pair(
+					emptyList(),
+					emptyList()
+				)
+			)
+		)
+		whenever(addedGroupMembersReaderMapper.toDto(any())).thenReturn(
+			AddedGroupMembersReaderDto(
+				emptyList(),
+				emptyList()
+			)
+		)
 
 		// Act
 		val result = webClient
@@ -437,7 +454,7 @@ class GroupV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()

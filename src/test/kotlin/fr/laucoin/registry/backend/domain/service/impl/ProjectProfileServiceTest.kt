@@ -91,7 +91,7 @@ class ProjectProfileServiceTest {
 	fun `Should findProjectProfilesPage call port findProjectProfilesPageByProjectId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
+		val params = ProjectProfileSearchParamModel(status = ACCEPTED)
 		whenever(port.findProjectProfilesPageByProjectId(any(), any(), any(), any())).thenReturn(
 			Mono.just(PageModel(1, 2, 3, 4, emptyList()))
 		)
@@ -150,7 +150,7 @@ class ProjectProfileServiceTest {
 		service.searchUsers(text).blockFirst()
 
 		// Assert
-		verify(userPort).findWithLimit(eq(maxUser), eq(UserSearchParamModel(text, visibilitySearched = true)))
+		verify(userPort).findWithLimit(eq(maxUser), eq(UserSearchParamModel(text, isVisible = true)))
 	}
 
 	@Test
@@ -174,9 +174,9 @@ class ProjectProfileServiceTest {
 			projectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			),
 		)
 		verify(roleService).getAssignableProjectRoles(profile)
@@ -201,9 +201,9 @@ class ProjectProfileServiceTest {
 			projectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			),
 		)
 		verify(roleService, never()).getAssignableProjectRoles(any())
@@ -242,9 +242,9 @@ class ProjectProfileServiceTest {
 			projectId,
 			wantedProfileForUserIds,
 			profileIdToExclude = null,
-			statusSearched = listOf(ACCEPTED, INVITED),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			status = listOf(ACCEPTED, INVITED),
+			startDateTime = null,
+			endDateTime = null,
 		)
 		verify(port).saveAll(expectedProfiles)
 	}
@@ -283,9 +283,9 @@ class ProjectProfileServiceTest {
 			projectId = eq(projectId),
 			userIds = eq(users),
 			profileIdToExclude = eq(null),
-			statusSearched = eq(listOf(ACCEPTED, INVITED)),
-			startDateTimeSearched = any(),
-			endDateTimeSearched = any(),
+			status = eq(listOf(ACCEPTED, INVITED)),
+			startDateTime = any(),
+			endDateTime = any(),
 		)
 		verify(port, never()).saveAll(any())
 	}
@@ -334,14 +334,14 @@ class ProjectProfileServiceTest {
 
 		// Assert
 		assertEquals(profile, result)
-		verify(port).findById(projectId, uuid, visibilitySearched = null)
+		verify(port).findById(projectId, uuid, isVisible = null)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			projectId = eq(projectId),
 			userIds = eq(listOf(uuid)),
 			profileIdToExclude = eq(null),
-			statusSearched = eq(listOf(ACCEPTED, INVITED)),
-			startDateTimeSearched = any(),
-			endDateTimeSearched = any(),
+			status = eq(listOf(ACCEPTED, INVITED)),
+			startDateTime = any(),
+			endDateTime = any(),
 		)
 		verify(profileService).validateNotLastProjectRoleLevel0(
 			uuid,
@@ -353,9 +353,9 @@ class ProjectProfileServiceTest {
 			projectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			),
 		)
 		verify(roleService).getAssignableProjectRoles(currentUserProfile)
@@ -391,14 +391,14 @@ class ProjectProfileServiceTest {
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
-		verify(port).findById(projectId, uuid, visibilitySearched = null)
+		verify(port).findById(projectId, uuid, isVisible = null)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			projectId,
 			listOf(uuid),
 			profileIdToExclude = null,
-			statusSearched = listOf(ACCEPTED, INVITED),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			status = listOf(ACCEPTED, INVITED),
+			startDateTime = null,
+			endDateTime = null,
 		)
 		verify(profileService, never()).validateNotLastProjectRoleLevel0(any(), any(), any(), any())
 		verify(port, never()).findProjectProfileByProjectAndUserId(any(), any(), any())
@@ -455,23 +455,23 @@ class ProjectProfileServiceTest {
 		// Assert
 		assertEquals(FORBIDDEN, result.status)
 		assertEquals(expectedErrorMessage, result.message)
-		verify(port).findById(projectId, uuid, visibilitySearched = null)
+		verify(port).findById(projectId, uuid, isVisible = null)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			projectId,
 			listOf(uuid),
 			profileIdToExclude = null,
-			statusSearched = listOf(ACCEPTED, INVITED),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			status = listOf(ACCEPTED, INVITED),
+			startDateTime = null,
+			endDateTime = null,
 		)
 		verify(profileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
 		verify(port).findProjectProfileByProjectAndUserId(
 			projectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			),
 		)
 		verify(roleService).getAssignableProjectRoles(currentUserProfile)
@@ -484,7 +484,7 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			visible = true
+			isVisible = true
 		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
@@ -498,14 +498,14 @@ class ProjectProfileServiceTest {
 		service.blockProjectProfileById(currentUser(), projectId, uuid).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, visibilitySearched = true)
+		verify(port).findById(projectId, uuid, isVisible = true)
 		verify(profileService).validateNotLastProjectRoleLevel0(
 			uuid,
 			projectId,
 			profile,
 			PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR,
 		)
-		verify(port).update(profile.apply { visible = false })
+		verify(port).update(profile.apply { isVisible = false })
 	}
 
 	@Test
@@ -514,7 +514,7 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			visible = false
+			isVisible = false
 		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
@@ -523,8 +523,8 @@ class ProjectProfileServiceTest {
 		service.unblockProjectProfileById(currentUser(), projectId, uuid).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, visibilitySearched = false)
-		verify(port).update(profile.apply { visible = true })
+		verify(port).findById(projectId, uuid, isVisible = false)
+		verify(port).update(profile.apply { isVisible = true })
 	}
 
 	@Test
@@ -533,7 +533,7 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			visible = true
+			isVisible = true
 		}.also { it.projectId = projectId }
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
@@ -547,7 +547,7 @@ class ProjectProfileServiceTest {
 		service.deleteProjectProfileById(currentUser(), projectId, uuid).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, visibilitySearched = null)
+		verify(port).findById(projectId, uuid, isVisible = null)
 		verify(profileService).validateNotLastProjectRoleLevel0(
 			uuid,
 			projectId,

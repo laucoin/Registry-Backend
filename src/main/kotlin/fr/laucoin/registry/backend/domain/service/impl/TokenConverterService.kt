@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_ANONYMIZED_ACCOUNT
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
@@ -28,7 +28,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 /**
  * Spring Security [Converter] that turns a validated [Jwt] into an [AbstractAuthenticationToken]:
  * resolves or JIT-provisions the matching [CurrentUserModel] (via [IUserService], cached through
- * [IPrincipalCacheService]), rejects blocked/impersonated accounts, and builds its authorities from
+ * [IPrincipalCacheService]), rejects blocked/anonymized accounts, and builds its authorities from
  * [IRoleService] and the caller's Project Profiles.
  */
 @Component
@@ -67,7 +67,7 @@ class TokenConverterService(
 	private fun resolveCurrentUser(
 		oidcId: UUID, email: String, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> =
-		userService.findUserByOidcId(oidcId, visibilitySearched = null)
+		userService.findUserByOidcId(oidcId, isVisible = null)
 			.throwOnBlockedUser()
 			.updateUserIfPersonalDataChanged(email, firstName, lastName)
 			.createNewUserOnNotFound(oidcId, email, firstName, lastName)
@@ -77,9 +77,9 @@ class TokenConverterService(
 		if (it.isNotVisible()) {
 			log.warn("Signing in attempt blocked for user \"{}\" due to disabled account", it.id)
 			handle.error(JwtConversionException(LOCKED, AUTH_BLOCKED_ACCOUNT))
-		} else if (it.isPurged()) {
-			log.warn("Signing in attempt blocked for impersonate user \"{}\"", it.id)
-			handle.error(JwtConversionException(CONFLICT, AUTH_IMPERSONATED_ACCOUNT))
+		} else if (it.isPurged) {
+			log.warn("Signing in attempt blocked for anonymized user \"{}\"", it.id)
+			handle.error(JwtConversionException(CONFLICT, AUTH_ANONYMIZED_ACCOUNT))
 		} else handle.next(it)
 	}
 
@@ -94,7 +94,7 @@ class TokenConverterService(
 		oidcId: UUID, email: String, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> = switchIfEmpty {
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
-		userService.findUserByEmail(email, visibilitySearched = null)
+		userService.findUserByEmail(email, isVisible = null)
 			.collectList()
 			.flatMap { matches ->
 				when {
@@ -129,10 +129,10 @@ class TokenConverterService(
 						roleService.getAuthoritiesByProjectRole(
 							profile.role!!,
 							profile.projectId!!,
-							profile.projectVisible
+							profile.isProjectVisible
 						)
 					)
-					if (profile.projectVisible == true) {
+					if (profile.isProjectVisible == true) {
 						it.promote(
 							roleService.getOptionAuthoritiesByProject(
 								profile.projectId!!,

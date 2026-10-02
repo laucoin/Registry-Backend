@@ -85,7 +85,7 @@ class UserV2ControllerTest : TestContext() {
 
 		verify(service).findUsersPage(
 			pageable,
-			UserSearchParamModel(textSearched = null, visibilitySearched = null),
+			UserSearchParamModel(query = null, isVisible = null),
 			emptyList()
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -139,7 +139,7 @@ class UserV2ControllerTest : TestContext() {
 		result.body<UserReaderDto>(OK)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).findUserById(uuid, visibilitySearched = null)
+		verify(service).findUserById(uuid, isVisible = null)
 	}
 
 	@Test
@@ -217,7 +217,7 @@ class UserV2ControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(REGISTRY_USER_U)
+			.authenticate(REGISTRY_USER_D)
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(uuid), emptyList()))
 			.exchange()
@@ -228,49 +228,6 @@ class UserV2ControllerTest : TestContext() {
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).unblockUserById(any(), eq(uuid))
-	}
-
-	@Test
-	fun `Should impersonateUserById use POST and return 200`() {
-		// Arrange
-		val uuid = UUID.randomUUID()
-		whenever(service.impersonateUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
-
-		// Act
-		val result = webClient
-			.authenticate(REGISTRY_USER_D)
-			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/impersonate", listOf(uuid), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<UserReaderDto>(OK)
-
-		verify(readerMapper).toDto(any())
-		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), eq(uuid))
-	}
-
-	@Test
-	fun `Should impersonateCurrentUser use POST and return 200`() {
-		// Arrange
-		whenever(service.impersonateUserById(any(), any())).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
-
-		// Act
-		val result = webClient
-			.authenticate()
-			.post()
-			.uri(uriBuilder("$BASE_URL/impersonate", emptyList(), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<UserReaderDto>(OK)
-
-		verify(readerMapper).toDto(any())
-		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), any())
 	}
 
 	@Test

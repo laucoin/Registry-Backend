@@ -49,7 +49,7 @@ class AlertV2Controller(
 		projectId: UUID,
 		page: SortedPageQueryDto,
 		query: String?,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		status: AlertStatusEnum?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<AlertReaderDto>> {
@@ -57,14 +57,14 @@ class AlertV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			AlertSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = AlertSearchParamModel(query, visible, status, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = AlertSearchParamModel(query, isVisible, status, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findAlertsPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
 	override fun findAlertById(projectId: UUID, id: UUID): Mono<AlertReaderDto> {
-		return service.findAlertById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findAlertById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun findAlertCommunications(
@@ -72,11 +72,11 @@ class AlertV2Controller(
 		id: UUID,
 		page: PageQueryDto,
 		query: String?,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = CommunicationSearchParamModel(query, visible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = CommunicationSearchParamModel(query, isVisible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findAlertCommunicationsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, communicationReaderMapper::toDto) }

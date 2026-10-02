@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono
  */
 interface IVehiclePort {
 	fun findAllByCreatorId(userId: UUID): Flux<VehicleModel>
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -26,7 +26,7 @@ interface IVehiclePort {
 	): Mono<PageModel<VehicleModel>>
 
 	fun countAll(projectId: UUID, searchParams: VehicleSearchParamModel): Mono<Long>
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleModel>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<VehicleModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: VehicleSearchParamModel): Flux<VehicleModel>
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: VehicleModel): Mono<VehicleModel>

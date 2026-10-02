@@ -80,10 +80,10 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			dateTime = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -117,14 +117,14 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -143,10 +143,10 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			dateTime = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -155,14 +155,14 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, activityId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, activityId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			activityId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -173,14 +173,14 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}

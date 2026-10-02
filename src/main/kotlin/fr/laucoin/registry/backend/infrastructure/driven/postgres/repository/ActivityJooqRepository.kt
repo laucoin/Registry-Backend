@@ -52,26 +52,26 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 
 	private fun searchConditions(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		dateTime: ZonedDateTime?,
 	): Condition {
 		val conditions = mutableListOf(TB_ACTIVITY.PROJECT_ID.eq(projectId))
-		textSearched?.let { conditions += similarity(TB_ACTIVITY.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
-		conditions += visibleCondition(TB_ACTIVITY.VISIBLE, visibilitySearched)
-		availabilitySearched?.let { conditions += availabilityCondition(it) }
-		dateTimeSearched?.let { conditions += dateInRangeCondition(it) }
+		query?.let { conditions += similarity(TB_ACTIVITY.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
+		conditions += visibleCondition(TB_ACTIVITY.VISIBLE, isVisible)
+		isAvailable?.let { conditions += availabilityCondition(it) }
+		dateTime?.let { conditions += dateInRangeCondition(it) }
 		return DSL.and(conditions)
 	}
 
-	private fun availabilityCondition(availabilitySearched: Boolean): Condition {
-		val isAvailable = activeNowCondition(TB_ACTIVITY.START_AVAILABILITY_DATE, TB_ACTIVITY.START_AVAILABILITY_TIME, TB_ACTIVITY.END_AVAILABILITY_DATE, TB_ACTIVITY.END_AVAILABILITY_TIME)
-		return if (availabilitySearched) isAvailable else isAvailable.not()
+	private fun availabilityCondition(isAvailable: Boolean): Condition {
+		val activeNow = activeNowCondition(TB_ACTIVITY.START_AVAILABILITY_DATE, TB_ACTIVITY.START_AVAILABILITY_TIME, TB_ACTIVITY.END_AVAILABILITY_DATE, TB_ACTIVITY.END_AVAILABILITY_TIME)
+		return if (isAvailable) activeNow else activeNow.not()
 	}
 
-	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime): Condition =
-		activeAtCondition(TB_ACTIVITY.START_AVAILABILITY_DATE, TB_ACTIVITY.START_AVAILABILITY_TIME, TB_ACTIVITY.END_AVAILABILITY_DATE, TB_ACTIVITY.END_AVAILABILITY_TIME, dateTimeSearched)
+	private fun dateInRangeCondition(dateTime: ZonedDateTime): Condition =
+		activeAtCondition(TB_ACTIVITY.START_AVAILABILITY_DATE, TB_ACTIVITY.START_AVAILABILITY_TIME, TB_ACTIVITY.END_AVAILABILITY_DATE, TB_ACTIVITY.END_AVAILABILITY_TIME, dateTime)
 
 	private fun ActivitySortFieldEnum.toJooqField(): Field<*> = when (this) {
 		NAME -> TB_ACTIVITY.NAME
@@ -81,8 +81,8 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 	}
 
 	// similarityScore sorts first (a no-op constant when there's no text search), TB_ACTIVITY.NAME
-	// always stays last as the final tiebreaker (v1's sole, implicit order), so pagination stays
-	// deterministic whether or not a v2 caller requested a sort.
+	// always stays last as the final tiebreaker, so pagination stays
+	// deterministic whether or not a caller requested a sort.
 	private fun orderFields(
 		similarityScore: Field<Float>,
 		sortFields: List<SortModel<ActivitySortFieldEnum>>,
@@ -113,10 +113,10 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		dateTime: ZonedDateTime?,
 		sortFields: List<SortModel<ActivitySortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -124,7 +124,7 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(TB_ACTIVITY.SEARCH_TEXT, DSL.`val`(textSearched))).`as`("similarity_score")
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(TB_ACTIVITY.SEARCH_TEXT, DSL.`val`(query))).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			dsl.select(
@@ -136,13 +136,13 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 				.join(project).on(TB_ACTIVITY.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
 				.leftJoin(creator).on(TB_ACTIVITY.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_ACTIVITY.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(searchConditions(projectId, textSearched, visibilitySearched, availabilitySearched, dateTimeSearched))
+				.where(searchConditions(projectId, query, isVisible, isAvailable, dateTime))
 				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(creator, editor, project, fullCount) }
 	}
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityEntity> {
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ActivityEntity> {
 		if (ids.isEmpty()) return Flux.empty()
 		val creator = creatorTable()
 		val editor = editorTable()
@@ -156,22 +156,22 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 				.join(project).on(TB_ACTIVITY.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
 				.leftJoin(creator).on(TB_ACTIVITY.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_ACTIVITY.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(TB_ACTIVITY.PROJECT_ID.eq(projectId).and(TB_ACTIVITY.ID.`in`(ids)).and(visibleCondition(TB_ACTIVITY.VISIBLE, visibilitySearched)))
+				.where(TB_ACTIVITY.PROJECT_ID.eq(projectId).and(TB_ACTIVITY.ID.`in`(ids)).and(visibleCondition(TB_ACTIVITY.VISIBLE, isVisible)))
 		).map { it.toEntity(creator, editor, project) }
 	}
 
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		dateTime: ZonedDateTime?,
 		limit: Int,
 	): Flux<ActivityEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(TB_ACTIVITY.SEARCH_TEXT, DSL.`val`(textSearched))).`as`("similarity_score")
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(TB_ACTIVITY.SEARCH_TEXT, DSL.`val`(query))).`as`("similarity_score")
 		return Flux.from(
 			dsl.select(
 				TB_ACTIVITY.asterisk(), similarityScore,
@@ -181,13 +181,13 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 				.join(project).on(TB_ACTIVITY.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
 				.leftJoin(creator).on(TB_ACTIVITY.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_ACTIVITY.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(searchConditions(projectId, textSearched, visibilitySearched, availabilitySearched, dateTimeSearched))
+				.where(searchConditions(projectId, query, isVisible, isAvailable, dateTime))
 				.orderBy(similarityScore.desc(), TB_ACTIVITY.NAME)
 				.limit(limit)
 		).map { it.toEntity(creator, editor, project) }
 	}
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityEntity> {
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
@@ -200,25 +200,25 @@ class ActivityJooqRepository(private val dsl: DSLContext) {
 				.join(project).on(TB_ACTIVITY.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
 				.leftJoin(creator).on(TB_ACTIVITY.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_ACTIVITY.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(TB_ACTIVITY.PROJECT_ID.eq(projectId).and(TB_ACTIVITY.ID.eq(id)).and(visibleCondition(TB_ACTIVITY.VISIBLE, visibilitySearched)))
+				.where(TB_ACTIVITY.PROJECT_ID.eq(projectId).and(TB_ACTIVITY.ID.eq(id)).and(visibleCondition(TB_ACTIVITY.VISIBLE, isVisible)))
 		).map { it.toEntity(creator, editor, project) }
 	}
 
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID> {
 		val lastMovement = max(TB_MOVEMENT.DATE_TIME).`as`("max")
-		val lu = dsl.select(lastMovement, TB_MOVEMENT.ACTIVITY_ID)
+		val usageTable = dsl.select(lastMovement, TB_MOVEMENT.ACTIVITY_ID)
 			.from(TB_MOVEMENT)
 			.where(TB_MOVEMENT.ACTIVITY_ID.isNotNull)
 			.groupBy(TB_MOVEMENT.ACTIVITY_ID)
 			.asTable("lu")
-		val luMax = field(name("lu", "max"), ZonedDateTime::class.java)
-		val luActivityId = field(name("lu", "activity_id"), UUID::class.java)
+		val usageMax = field(name("lu", "max"), ZonedDateTime::class.java)
+		val usageActivity = field(name("lu", "activity_id"), UUID::class.java)
 		val thresholdAsTimestamp = DSL.`val`(dateThreshold).cast(TB_ACTIVITY.LAST_MODIFIED_DATE)
 		return Flux.from(
 			dsl.select(TB_ACTIVITY.ID)
 				.from(TB_ACTIVITY)
-				.leftJoin(lu).on(luActivityId.eq(TB_ACTIVITY.ID))
-				.where(luMax.isNull.or(luMax.lt(thresholdAsTimestamp)).and(TB_ACTIVITY.LAST_MODIFIED_DATE.lt(thresholdAsTimestamp)))
+				.leftJoin(usageTable).on(usageActivity.eq(TB_ACTIVITY.ID))
+				.where(usageMax.isNull.or(usageMax.lt(thresholdAsTimestamp)).and(TB_ACTIVITY.LAST_MODIFIED_DATE.lt(thresholdAsTimestamp)))
 		).map { it.value1()!! }
 	}
 

@@ -88,7 +88,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = null)
+		val params = MovementSearchParamModel(type = null)
 
 		// Act
 		val result = repository.findPage(projectId, pageable, params).block()
@@ -101,11 +101,11 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		assertEquals(6, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			hasActivity = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -116,7 +116,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	fun `Should findPageByParticipantId call repository findAllByParticipantId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = null)
+		val params = MovementSearchParamModel(type = null)
 
 		// Act
 		val result = repository.findPageByParticipantId(projectId, participantId, pageable, params).block()
@@ -128,11 +128,11 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findAllByParticipantId(
 			projectId,
 			participantId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			hasActivity = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -143,7 +143,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	fun `Should findPageByVehicleId call repository findAllByVehicleId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = null)
+		val params = MovementSearchParamModel(type = null)
 
 		// Act
 		val result = repository.findPageByVehicleId(projectId, vehicleId, pageable, params).block()
@@ -155,11 +155,11 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findAllByVehicleId(
 			projectId,
 			vehicleId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			hasActivity = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -169,7 +169,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	fun `Should findPageByActivityId call repository findAllByActivityId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = null)
+		val params = MovementSearchParamModel(type = null)
 
 		// Act
 		val result = repository.findPageByActivityId(projectId, activityId, pageable, params).block()
@@ -181,10 +181,10 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findAllByActivityId(
 			projectId,
 			activityId,
-			visibilitySearched = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -194,7 +194,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	fun `Should findCurrentPage call repository findCurrent and countCurrent`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = null)
+		val params = MovementSearchParamModel(type = null)
 
 		// Act
 		val result = repository.findCurrentPage(projectId, pageable, params).block()
@@ -203,19 +203,19 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).countCurrent(
 			projectId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			hasActivity = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 		)
 		verify(postgresRepository).findCurrent(
 			projectId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			hasActivity = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -243,10 +243,10 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).findByActivityWithLimit(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			dateTime = null,
 			10,
 		)
 	}
@@ -284,14 +284,14 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, movementId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, movementId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			movementId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(contentPostgresRepository).findAllByMovementIds(
 			projectId,
@@ -310,11 +310,11 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).countAllByParticipantId(
 			projectId,
 			participantId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			hasActivity = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -329,11 +329,11 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).countAllByVehicleId(
 			projectId,
 			vehicleId,
-			visibilitySearched = null,
-			linkedToActivity = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			hasActivity = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -348,10 +348,10 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).countAllByActivityId(
 			projectId,
 			activityId,
-			visibilitySearched = null,
-			typeSearched = listOf(IN, OUT),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			isVisible = null,
+			type = listOf(IN, OUT),
+			startDateTime = null,
+			endDateTime = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -362,14 +362,14 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(contentPostgresRepository).findAllByMovementIds(
 			projectId,
@@ -426,7 +426,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any(), any())
-			verify(postgresRepository).findById(eq(projectId), eq(uuid), visibilitySearched = eq(null), using = any())
+			verify(postgresRepository).findById(eq(projectId), eq(uuid), isVisible = eq(null), using = any())
 			verify(contentPostgresRepository).findAllByMovementIds(eq(projectId), eq(listOf(uuid)), using = any())
 			verify(mapper).toEntity(any())
 			verify(mapper, times(2)).toModel(any())
@@ -450,7 +450,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any(), any())
-			verify(postgresRepository).findById(eq(projectId), eq(uuid), visibilitySearched = eq(null), using = any())
+			verify(postgresRepository).findById(eq(projectId), eq(uuid), isVisible = eq(null), using = any())
 			verify(contentPostgresRepository).findAllByMovementIds(eq(projectId), eq(listOf(uuid)), using = any())
 			verify(mapper).toEntity(any())
 			verify(mapper, times(2)).toModel(any())

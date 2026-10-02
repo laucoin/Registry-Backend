@@ -61,7 +61,7 @@ interface IVehicleV2Controller {
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@RequestParam(required = false) status: PresenceStatusEnum?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
@@ -92,9 +92,9 @@ interface IVehicleV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@ParameterObject @Valid page: PageQueryDto,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
-		@RequestParam(required = false) linkedToActivity: Boolean?,
+		@RequestParam(name = "linkedToActivity", required = false) hasActivity: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
@@ -143,7 +143,7 @@ interface IVehicleV2Controller {
 		summary = "Enable Vehicle",
 		description = "Reverse a disable: the Vehicle becomes visible in the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableVehicleById(

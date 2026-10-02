@@ -80,11 +80,11 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			dateTime = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -118,14 +118,14 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -144,11 +144,11 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			dateTime = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -157,14 +157,14 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, vehicleId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, vehicleId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			vehicleId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -175,14 +175,14 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}

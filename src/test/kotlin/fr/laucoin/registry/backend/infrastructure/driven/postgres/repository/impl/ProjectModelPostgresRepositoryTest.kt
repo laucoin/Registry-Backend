@@ -72,10 +72,10 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
 			userId = currentUser().id!!,
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
-			favoriteSearched = null,
+			query = null,
+			isVisible = null,
+			dateTime = null,
+			isFavorite = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -102,10 +102,10 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findAllInProjectIds(
 			currentUser().id!!,
 			ids,
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
-			favoriteSearched = null,
+			query = null,
+			isVisible = null,
+			dateTime = null,
+			isFavorite = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -131,13 +131,13 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = port.findById(projectId, visibilitySearched = null).block()
+		val result = port.findById(projectId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -148,13 +148,13 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = port.findById(uuid, visibilitySearched = null).block()
+		val result = port.findById(uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}

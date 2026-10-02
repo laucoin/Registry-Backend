@@ -32,10 +32,10 @@ class ProjectProfileReaderDtoMapper(
 			status = buildStatus(model),
 			startAccess = model.startAccess,
 			endAccess = model.endAccess,
-			favorite = model.favorite,
+			isFavorite = model.isFavorite,
 		).apply {
 			id = model.id
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}
@@ -44,7 +44,7 @@ class ProjectProfileReaderDtoMapper(
 	private fun buildStatus(model: ProjectProfileModel): LabelDto? {
 		val originalStatus =
 			translateService.getMessage(code = "$PROJECT_PROFILE_STATUS_PREFIX${model.status}")
-		if (!model.visible) {
+		if (!model.isVisible) {
 			return LabelDto(
 				BLOCKED.name,
 				Optional.ofNullable(model.status).map {

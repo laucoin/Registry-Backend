@@ -63,17 +63,17 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 	)
 
 	private fun searchConditions(
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?
+		query: String?,
+		isVisible: Boolean?,
+		dateTime: ZonedDateTime?
 	): Condition {
 		val conditions = mutableListOf<Condition>()
-		textSearched?.let {
+		query?.let {
 			val pattern = DSL.concat(DSL.inline("%"), unaccent2(DSL.`val`(it)), DSL.inline("%"))
 			conditions += unaccent2(TB_PROJECT.NAME).likeIgnoreCase(pattern)
 		}
-		conditions += visibleCondition(TB_PROJECT.VISIBLE, visibilitySearched)
-		dateTimeSearched?.let {
+		conditions += visibleCondition(TB_PROJECT.VISIBLE, isVisible)
+		dateTime?.let {
 			conditions += activeAtCondition(
 				TB_PROJECT.BEGIN_DATE,
 				TB_PROJECT.BEGIN_TIME,
@@ -85,9 +85,9 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 		return DSL.and(conditions)
 	}
 
-	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime): Condition {
-		val date = dateTimeSearched.toLocalDate()
-		val time = dateTimeSearched.toOffsetDateTime().toOffsetTime()
+	private fun dateInRangeCondition(dateTime: ZonedDateTime): Condition {
+		val date = dateTime.toLocalDate()
+		val time = dateTime.toOffsetDateTime().toOffsetTime()
 		val startsBefore = TB_PROJECT.BEGIN_DATE.isNull
 			.or(TB_PROJECT.BEGIN_DATE.lt(date))
 			.or(TB_PROJECT.BEGIN_DATE.eq(date).and(TB_PROJECT.BEGIN_TIME.isNull.or(TB_PROJECT.BEGIN_TIME.le(time))))
@@ -103,7 +103,7 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 		LAST_MODIFIED_DATE -> TB_PROJECT.LAST_MODIFIED_DATE
 	}
 
-	// TB_PROJECT.NAME always stays as the final tiebreaker (v1's sole, implicit order).
+	// TB_PROJECT.NAME always stays as the final tiebreaker.
 	private fun orderFields(sortFields: List<SortModel<ProjectSortFieldEnum>>): List<OrderField<*>> {
 		val fields = mutableListOf<OrderField<*>>()
 		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
@@ -116,15 +116,15 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 	// callerProfile.FAVORITE comes from a left join: it's NULL (not false) when the caller has no
 	// profile on the project at all. `= false` would then evaluate to NULL and wrongly drop that
 	// project from the "not favorited" filter, so the "no profile" case is coalesced to false.
-	private fun favoriteCondition(favorite: Field<Boolean?>, favoriteSearched: Boolean?): Condition =
-		favoriteSearched?.let { DSL.coalesce(favorite, DSL.inline(false)).eq(it) } ?: DSL.noCondition()
+	private fun favoriteCondition(favoriteField: Field<Boolean?>, isFavorite: Boolean?): Condition =
+		isFavorite?.let { DSL.coalesce(favoriteField, DSL.inline(false)).eq(it) } ?: DSL.noCondition()
 
 	fun findAll(
 		userId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
-		favoriteSearched: Boolean?,
+		query: String?,
+		isVisible: Boolean?,
+		dateTime: ZonedDateTime?,
+		isFavorite: Boolean?,
 		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -149,8 +149,8 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(editor).on(TB_PROJECT.LAST_MODIFIED_BY.eq(editor.ID))
 				.leftJoin(callerProfile).on(callerProfile.PROJECT_ID.eq(TB_PROJECT.ID).and(callerProfile.USER_ID.eq(userId)))
 				.where(
-					searchConditions(textSearched, visibilitySearched, dateTimeSearched)
-						.and(favoriteCondition(callerProfile.FAVORITE, favoriteSearched))
+					searchConditions(query, isVisible, dateTime)
+						.and(favoriteCondition(callerProfile.FAVORITE, isFavorite))
 				)
 				.orderBy(orderFields(sortFields))
 				.limit(limit).offset(offset)
@@ -160,10 +160,10 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 	fun findAllInProjectIds(
 		userId: UUID,
 		projectIds: List<UUID>,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
-		favoriteSearched: Boolean?,
+		query: String?,
+		isVisible: Boolean?,
+		dateTime: ZonedDateTime?,
+		isFavorite: Boolean?,
 		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -189,15 +189,15 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(callerProfile).on(callerProfile.PROJECT_ID.eq(TB_PROJECT.ID).and(callerProfile.USER_ID.eq(userId)))
 				.where(
 					TB_PROJECT.ID.`in`(projectIds)
-						.and(searchConditions(textSearched, visibilitySearched, dateTimeSearched))
-						.and(favoriteCondition(callerProfile.FAVORITE, favoriteSearched))
+						.and(searchConditions(query, isVisible, dateTime))
+						.and(favoriteCondition(callerProfile.FAVORITE, isFavorite))
 				)
 				.orderBy(orderFields(sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(creator, editor, fullCount) }
 	}
 
-	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectEntity> {
+	fun findById(id: UUID, isVisible: Boolean?): Mono<ProjectEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Mono.from(
@@ -213,7 +213,7 @@ class ProjectJooqRepository(private val dsl: DSLContext) {
 				.from(TB_PROJECT)
 				.leftJoin(creator).on(TB_PROJECT.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_PROJECT.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(TB_PROJECT.ID.eq(id).and(visibleCondition(TB_PROJECT.VISIBLE, visibilitySearched)))
+				.where(TB_PROJECT.ID.eq(id).and(visibleCondition(TB_PROJECT.VISIBLE, isVisible)))
 		).map { it.toEntity(creator, editor) }
 	}
 

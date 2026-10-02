@@ -16,9 +16,10 @@ import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.OngoingActivityOutingModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.OngoingActivityOutingModel
+import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.OngoingActivityOutingReaderDto
@@ -27,7 +28,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Acti
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.OngoingActivityOutingReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ActivityWriterDtoMapper
-import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
@@ -35,7 +35,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -54,8 +53,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
-class ActivityV2ControllerTest: TestContext() {
+class ActivityV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IActivityService
 
@@ -99,7 +99,7 @@ class ActivityV2ControllerTest: TestContext() {
 		verify(service).findActivitiesPage(
 			projectId,
 			pageable,
-			ActivitySearchParamModel(textSearched = null, visibilitySearched = null, availabilitySearched = null, dateTimeSearched = null),
+			ActivitySearchParamModel(query = null, isVisible = null, isAvailable = null, dateTime = null),
 			emptyList(),
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -152,25 +152,28 @@ class ActivityV2ControllerTest: TestContext() {
 		// Assert
 		result.body<ActivityReaderDto>(OK)
 
-		verify(service).findActivityById(projectId, uuid, visibilitySearched = null)
+		verify(service).findActivityById(projectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(movementReaderMapper)
 	}
 
 	@Test
-	fun `Should findActivityMovements drop the Searched suffix and call service`() {
+	fun `Should findActivityMovements  call service`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 20)
-		val searchParams = MovementSearchParamModel(visibilitySearched = true, typeSearched = IN)
+		val searchParams = MovementSearchParamModel(isVisible = true, type = IN)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
 		whenever(service.findActivityMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(movementReaderMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_HISTORY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_ACTIVITY_HISTORY_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY)
+			)
 			.get()
 			.uri(
 				uriBuilder(
@@ -321,7 +324,7 @@ class ActivityV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_U), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_D), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()

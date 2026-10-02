@@ -36,8 +36,8 @@ class UserModelPostgresRepository(
 		sortFields: List<SortModel<UserSortFieldEnum>>,
 	): Mono<PageModel<UserModel>> {
 		return repository.findAll(
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
+			searchParams.query,
+			searchParams.isVisible,
 			sortFields,
 			pageable.limit,
 			pageable.offset,
@@ -46,32 +46,32 @@ class UserModelPostgresRepository(
 
 	override fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel> {
 		return repository.findWithLimit(
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
+			searchParams.query,
+			searchParams.isVisible,
 			limit,
 		).map(mapper::toModel)
 	}
 
-	override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {
-		return repository.findById(id, visibilitySearched)
+	override fun findById(id: UUID, isVisible: Boolean?): Mono<UserModel> {
+		return repository.findById(id, isVisible)
 			.map(mapper::toModel)
 	}
 
-	override fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel> {
-		return repository.findByOidcId(oidcId, visibilitySearched)
+	override fun findByOidcId(oidcId: UUID, isVisible: Boolean?): Mono<CurrentUserModel> {
+		return repository.findByOidcId(oidcId, isVisible)
 			.map(currentUserMapper::toModel)
 	}
 
-	override fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel> {
-		return repository.findByEmail(email, visibilitySearched)
+	override fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel> {
+		return repository.findByEmail(email, isVisible)
 			.map(currentUserMapper::toModel)
 	}
 
 	override fun findServiceAccount(): Mono<CurrentUserModel> =
 		repository.findServiceAccount().map(currentUserMapper::toModel)
 
-	override fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel> {
-		return repository.findByRoleLevel(roleLevel, visibilitySearched).map(mapper::toModel)
+	override fun findByRoleLevel(roleLevel: Int, isVisible: Boolean?): Flux<UserModel> {
+		return repository.findByRoleLevel(roleLevel, isVisible).map(mapper::toModel)
 	}
 
 	override fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID> {

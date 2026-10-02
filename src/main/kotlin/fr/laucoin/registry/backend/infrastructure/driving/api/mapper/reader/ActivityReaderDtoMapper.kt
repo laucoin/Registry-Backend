@@ -28,7 +28,7 @@ class ActivityReaderDtoMapper(
 			endAvailability = model.endAvailability,
 		).apply {
 			id = model.id
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}

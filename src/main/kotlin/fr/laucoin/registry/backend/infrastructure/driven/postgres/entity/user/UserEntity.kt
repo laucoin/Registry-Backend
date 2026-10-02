@@ -15,6 +15,6 @@ open class UserEntity(
 	var role: String? = null,
 	var birthday: LocalDate? = null,
 	var lastLogin: ZonedDateTime? = null,
-	var purged: Boolean? = null,
+	var isPurged: Boolean? = null,
 ): GenericEntity()
 

@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_EXPIRED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -55,7 +55,7 @@ class SecurityV2Controller(
 
 	override fun refreshToken(exchange: ServerWebExchange): Mono<Void> {
 		val refreshToken = cookieService.extractRefreshToken(exchange.request)
-			?: return Mono.error(RegistryException(UNAUTHORIZED, REFRESH_TOKEN_OUTDATED))
+			?: return Mono.error(RegistryException(UNAUTHORIZED, REFRESH_TOKEN_EXPIRED))
 
 		return authenticationPort.refreshAuthenticationToken(refreshToken)
 			.doOnNext { cookieService.setAuthCookies(exchange.response, it) }

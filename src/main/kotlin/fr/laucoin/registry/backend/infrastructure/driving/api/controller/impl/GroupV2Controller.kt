@@ -51,15 +51,15 @@ class GroupV2Controller(
 		projectId: UUID,
 		page: SortedPageQueryDto,
 		query: String?,
-		visible: Boolean?,
-		present: Boolean?,
+		isVisible: Boolean?,
+		isPresent: Boolean?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<GroupWithoutMemberReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			GroupSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = GroupSearchParamModel(query, visible, present, dateTime)
+		val searchParams = GroupSearchParamModel(query, isVisible, isPresent, dateTime)
 
 		return service.findGroupsPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerLightMapper::toDto) }
@@ -80,12 +80,12 @@ class GroupV2Controller(
 		query: String?,
 		isMajor: Boolean?,
 		type: ParticipantTypeEnum?,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		status: PresenceStatusEnum?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<ParticipantReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = ParticipantSearchParamModel(query, isMajor, type, visible, status, dateTime)
+		val searchParams = ParticipantSearchParamModel(query, isMajor, type, isVisible, status, dateTime)
 
 		return service.findGroupMembersPageByGroupId(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, participantReaderMapper::toDto) }
@@ -95,9 +95,9 @@ class GroupV2Controller(
 		return service.findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null,
+			isVisible = null,
+			isMemberVisible = null,
+			isMemberAvailable = null,
 		).map(readerMapper::toDto)
 	}
 

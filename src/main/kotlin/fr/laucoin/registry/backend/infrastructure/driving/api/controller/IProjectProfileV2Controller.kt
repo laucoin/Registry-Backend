@@ -61,7 +61,7 @@ interface IProjectProfileV2Controller {
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) available: Boolean?,
+		@RequestParam(name = "available", required = false) isAvailable: Boolean?,
 		@RequestParam(required = false) status: ProfileStatusEnum?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
@@ -148,7 +148,7 @@ interface IProjectProfileV2Controller {
 		summary = "Unblock Project's Profile",
 		description = "Reverse a block: the User can use this Profile to access the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/unblock")
 	fun unblockProjectProfileById(

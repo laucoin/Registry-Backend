@@ -1,15 +1,12 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_CURRENT_USER
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.enumeration.UserSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -42,7 +39,7 @@ import java.util.UUID
 
 /**
  * [IUserService] implementation: hides the service account from every read, keeps a User's personal
- * data in sync with the IDP on login, and guards role assignment / block / impersonate / delete
+ * data in sync with the IDP on login, and guards role assignment / block / delete
  * against escalating above the caller's own role or against removing the last administrator (of the
  * platform or of a Project). Delegates persistence to [IUserPort].
  */
@@ -70,21 +67,21 @@ class UserService(
 		return port.findPage(pageable, searchParams, sortFields)
 	}
 
-	override fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {
-		return port.findById(id, visibilitySearched)
+	override fun findUserById(id: UUID, isVisible: Boolean?): Mono<UserModel> {
+		return port.findById(id, isVisible)
 			.filter { isNotServiceAccount(it) }
 			.notFoundIfEmpty(id)
 	}
 
 	private fun isNotServiceAccount(user: UserModel): Boolean = user.id != serviceAccount.id
 
-	override fun findUserByOidcId(id: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel> {
-		return port.findByOidcId(id, visibilitySearched)
+	override fun findUserByOidcId(id: UUID, isVisible: Boolean?): Mono<CurrentUserModel> {
+		return port.findByOidcId(id, isVisible)
 			.filter { isNotServiceAccount(it) }
 	}
 
-	override fun findUserByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel> {
-		return port.findByEmail(email, visibilitySearched)
+	override fun findUserByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel> {
+		return port.findByEmail(email, isVisible)
 			.filter { isNotServiceAccount(it) }
 	}
 
@@ -143,7 +140,7 @@ class UserService(
 	}
 
 	override fun recordLoginByOidcId(oidcId: UUID): Mono<Void> {
-		return port.findByOidcId(oidcId, visibilitySearched = null)
+		return port.findByOidcId(oidcId, isVisible = null)
 			.filter { isNotServiceAccount(it) }
 			.flatMap {
 				it.lastLogin = ZonedDateTime.now()
@@ -167,8 +164,8 @@ class UserService(
 
 	override fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel> {
 		val assignableRoles = roleService.getAssignableUserRoles(currentUser)
-		return findUserByIdWithEligibleRole(assignableRoles, id, visibilitySearched = true)
-			.validateRole(currentUser, assignableRoles, role, USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN)
+		return findUserByIdWithEligibleRole(assignableRoles, id, isVisible = true)
+			.validateRole(currentUser, assignableRoles, role, USER_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER)
 			.validateNotLastRoleLevel0(USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE)
 			.flatMap {
 				it.role = role
@@ -179,45 +176,33 @@ class UserService(
 	private fun findUserByIdWithEligibleRole(
 		assignableRoles: List<String>,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<UserModel> {
-		return findUserById(id, visibilitySearched)
+		return findUserById(id, isVisible)
 			.filter { Objects.isNull(it.role) || assignableRoles.contains(it.role) }
 			.notFoundIfEmpty(id)
 	}
 
 	override fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
 		val allowedRoles = roleService.getAssignableUserRoles(currentUser)
-		return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = true)
+		return findUserByIdWithEligibleRole(allowedRoles, id, isVisible = true)
 			.validateNotCurrentUser(currentUser, USER_BLOCK_CURRENT_USER)
 			.validateNotLastRoleLevel0(USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR)
 			.validateNotLastProjectRoleLevel0(USER_BLOCK_LAST_PROJECT_ADMINISTRATOR)
-			.updateVisibility(visibility = false)
+			.updateVisibility(isVisible = false)
 			.flatMap { updateUser(currentUser, it) }
 	}
 
 	override fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
 		val allowedRoles = roleService.getAssignableUserRoles(currentUser)
-		return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = false)
-			.updateVisibility(visibility = true)
+		return findUserByIdWithEligibleRole(allowedRoles, id, isVisible = false)
+			.updateVisibility(isVisible = true)
 			.flatMap { updateUser(currentUser, it) }
-	}
-
-	override fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
-		val allowedRoles = roleService.getAssignableUserRoles(currentUser)
-		return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
-			.validateNotCurrentUser(currentUser, USER_IMPERSONATE_CURRENT_USER)
-			.validateNotLastRoleLevel0(USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR)
-			.validateNotLastProjectRoleLevel0(USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR)
-			.flatMap {
-				it.impersonate()
-				updateUser(currentUser, it)
-			}
 	}
 
 	override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		val allowedRoles = roleService.getAssignableUserRoles(currentUser)
-		return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
+		return findUserByIdWithEligibleRole(allowedRoles, id, isVisible = null)
 			.validateNotCurrentUser(currentUser, USER_DELETE_CURRENT_USER)
 			.validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
 			.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
@@ -234,8 +219,8 @@ class UserService(
 				} else {
 					log.info("Purging user {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("User {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge user {}", it, err) }
+						.doOnNext { purgedId -> log.info("User {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge user {}", it, error) }
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}
@@ -254,7 +239,7 @@ class UserService(
 			return@flatMap Mono.just(userToUpdate)
 		}
 
-		port.findByRoleLevel(roleLevel = 0, visibilitySearched = true)
+		port.findByRoleLevel(roleLevel = 0, isVisible = true)
 			.any { userToUpdate.id !== it.id }
 			.flatMap { hasOtherAdministrator ->
 				if (!hasOtherAdministrator) {

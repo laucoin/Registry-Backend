@@ -61,15 +61,6 @@ class RoleServiceTest {
 		)
 
 		@JvmStatic
-		fun `Should getLevelByProjectRole return this right level`(): Stream<Arguments> = Stream.of(
-			Arguments.of(WRONG_ROLE, 0),
-			Arguments.of(ROLE_0, 0),
-			Arguments.of(ROLE_1_1, 1),
-			Arguments.of(ROLE_1_2, 1),
-			Arguments.of(ROLE_2, 2),
-		)
-
-		@JvmStatic
 		fun `Should getAuthoritiesByUserRole return a list of associated authorities`(): Stream<Arguments> = Stream.of(
 			Arguments.of(WRONG_ROLE, emptyList<String>()),
 			Arguments.of(ROLE_0, listOf(PERMISSION_0, REGISTRY_PROJECT_R)),
@@ -138,22 +129,6 @@ class RoleServiceTest {
 
 		// Act
 		val result = service.getLevelByUserRole(role)
-
-		// Assert
-		assertEquals(expected, result)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should getLevelByProjectRole return this right level`(
-		role: String,
-		expected: Int?,
-	) {
-		// Arrange
-		setField(service, "projectRoles", roles)
-
-		// Act
-		val result = service.getLevelByProjectRole(role)
 
 		// Assert
 		assertEquals(expected, result)

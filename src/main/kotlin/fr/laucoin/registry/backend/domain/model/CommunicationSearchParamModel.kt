@@ -3,18 +3,18 @@ package fr.laucoin.registry.backend.domain.model
 import java.time.ZonedDateTime
 
 data class CommunicationSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	var startDateTimeSearched: ZonedDateTime? = null,
-	var endDateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	var startDateTime: ZonedDateTime? = null,
+	var endDateTime: ZonedDateTime? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-		startDateTimeSearched: ZonedDateTime? = null,
-		endDateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, startDateTimeSearched, endDateTimeSearched) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		query: String? = null,
+		isVisible: Boolean? = null,
+		startDateTime: ZonedDateTime? = null,
+		endDateTime: ZonedDateTime? = null,
+	): this(isVisible, startDateTime, endDateTime) {
+		this.query = if (query.isNullOrBlank()) null else query
 	}
 }

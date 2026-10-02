@@ -25,5 +25,5 @@ data class ParticipantEntity(
 	var userFirstName: String? = null,
 	var userLastName: String? = null,
 	var userEmail: String? = null,
-	var purged: Boolean? = null,
+	var isPurged: Boolean? = null,
 ): GenericProjectEntity()

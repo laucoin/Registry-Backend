@@ -3,19 +3,19 @@ package fr.laucoin.registry.backend.domain.model
 import java.time.ZonedDateTime
 
 data class ActivitySearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	var availabilitySearched: Boolean? = null,
-	var dateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	var isAvailable: Boolean? = null,
+	var dateTime: ZonedDateTime? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-		availabilitySearched: Boolean? = null,
-		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, availabilitySearched, dateTimeSearched) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		query: String? = null,
+		isVisible: Boolean? = null,
+		isAvailable: Boolean? = null,
+		dateTime: ZonedDateTime? = null,
+	): this(isVisible, isAvailable, dateTime) {
+		this.query = if (query.isNullOrBlank()) null else query
 	}
 }
 

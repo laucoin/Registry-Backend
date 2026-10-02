@@ -59,11 +59,11 @@ class AlertService(
 	}
 
 	override fun findOngoingAlerts(projectId: UUID, limit: Int): Flux<OngoingAlertModel> {
-		return port.findWithLimit(limit, projectId, AlertSearchParamModel(statusSearched = IN_PROGRESS))
+		return port.findWithLimit(limit, projectId, AlertSearchParamModel(status = IN_PROGRESS))
 			.collectList()
 			.flatMapMany { alerts ->
 				val alertIds = alerts.mapNotNull { it.id }
-				communicationPort.findByAlertIdsWithLimit(RECENT_COMMUNICATIONS_LIMIT, projectId, alertIds, visibilitySearched = null)
+				communicationPort.findByAlertIdsWithLimit(RECENT_COMMUNICATIONS_LIMIT, projectId, alertIds, isVisible = null)
 					.collectMap({ it.first }, { it.second })
 					.flatMapMany { commsByAlertId ->
 						Flux.fromIterable(
@@ -81,9 +81,9 @@ class AlertService(
 	override fun findAlertById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<AlertModel> {
-		return port.findById(projectId, id, visibilitySearched)
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
@@ -128,7 +128,7 @@ class AlertService(
 		alert: AlertModel
 	): Mono<AlertModel> {
 		return validateAlertDateWithProjectDates(alert)
-			.flatMap { findAlertById(projectId, id, visibilitySearched = null) }
+			.flatMap { findAlertById(projectId, id, isVisible = null) }
 			.handle { it, handle ->
 				if (it.status !== IN_PROGRESS) {
 					log.warn("Only {} alert can be update", IN_PROGRESS)
@@ -151,7 +151,7 @@ class AlertService(
 		id: UUID,
 		status: AlertStatusEnum
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = null)
+		return findAlertById(projectId, id, isVisible = null)
 			.map {
 				it.apply {
 					this.status = status
@@ -167,10 +167,10 @@ class AlertService(
 				oldAlert.projectId!!,
 				oldAlert.id!!,
 				CommunicationSearchParamModel(
-					textSearched = null,
-					visibilitySearched = null,
-					startDateTimeSearched = null,
-					endDateTimeSearched = updatedAlert.dateTime,
+					query = null,
+					isVisible = null,
+					startDateTime = null,
+					endDateTime = updatedAlert.dateTime,
 				)
 			).handle { it, handle ->
 				if (it > 0L) {
@@ -194,8 +194,8 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = true)
-			.updateVisibility(visibility = false)
+		return findAlertById(projectId, id, isVisible = true)
+			.updateVisibility(isVisible = false)
 			.updateAlert(currentUser)
 	}
 
@@ -204,8 +204,8 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = false)
-			.updateVisibility(visibility = true)
+		return findAlertById(projectId, id, isVisible = false)
+			.updateVisibility(isVisible = true)
 			.updateAlert(currentUser)
 	}
 
@@ -214,7 +214,7 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<Unit> {
-		return findAlertById(projectId, id, visibilitySearched = null)
+		return findAlertById(projectId, id, isVisible = null)
 			.validateHasNoCommunicationLinked(ALERT_DELETE_HAS_COMMUNICATION)
 			.flatMap { port.deleteById(it.id!!) }
 	}
@@ -229,8 +229,8 @@ class AlertService(
 				} else {
 					log.info("Purging alert {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Alert {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge alert {}", it, err) }
+						.doOnNext { purgedId -> log.info("Alert {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge alert {}", it, error) }
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}

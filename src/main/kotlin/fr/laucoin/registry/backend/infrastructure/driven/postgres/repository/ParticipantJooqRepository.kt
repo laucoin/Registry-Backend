@@ -126,13 +126,13 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 
 	private fun filteredGroupsCte(
 		projectId: UUID,
-		dateTimeSearched: ZonedDateTime?,
+		dateTime: ZonedDateTime?,
 		using: DSLContext = dsl
 	): CommonTableExpression<*> {
 		val groupPresence = TB_GROUP.`as`("group_presence")
 		val groupPresenceOnDate = TB_GROUP.`as`("group_presence_on_date")
 
-		val onDateJoinCondition = if (dateTimeSearched == null) {
+		val onDateJoinCondition = if (dateTime == null) {
 			groupPresenceOnDate.ID.eq(TB_GROUP_CONTENT.GROUP_ID).and(groupPresenceOnDate.VISIBLE.isTrue)
 		} else {
 			activeAtCondition(
@@ -140,7 +140,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 				groupPresenceOnDate.START_AVAILABILITY_TIME,
 				groupPresenceOnDate.END_AVAILABILITY_DATE,
 				groupPresenceOnDate.END_AVAILABILITY_TIME,
-				dateTimeSearched
+				dateTime
 			)
 		}
 
@@ -199,7 +199,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		fgMinStartAvailability, fgMaxEndAvailability,
 	)
 
-	private fun dateInParticipantRangeCondition(dateTimeSearched: ZonedDateTime): Condition {
+	private fun dateInParticipantRangeCondition(dateTime: ZonedDateTime): Condition {
 		val hasNoGroupsOrAvailableOnDate = DSL.condition(
 			"({0} IS NULL OR json_array_length({0}) = 0 OR ({1} IS NOT NULL AND json_array_length({1}) > 0))",
 			fgGroups, fgAvailableGroupsOnDate,
@@ -209,53 +209,53 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 			TB_PARTICIPANT.START_AVAILABILITY_TIME,
 			TB_PARTICIPANT.END_AVAILABILITY_DATE,
 			TB_PARTICIPANT.END_AVAILABILITY_TIME,
-			dateTimeSearched
+			dateTime
 		)
 		return hasNoGroupsOrAvailableOnDate.and(dateRange)
 	}
 
-	private fun similarityScoreField(textSearched: String?): Field<Float> =
-		(if (textSearched == null) DSL.inline(1f) else similarity(
+	private fun similarityScoreField(query: String?): Field<Float> =
+		(if (query == null) DSL.inline(1f) else similarity(
 			TB_PARTICIPANT.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 
 	private fun searchConditions(
 		projectId: UUID,
-		textSearched: String?,
+		query: String?,
 		isMajor: Boolean?,
-		typeSearched: ParticipantTypeEnum?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		type: ParticipantTypeEnum?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 	): Condition {
 		val conditions = mutableListOf(
 			TB_PARTICIPANT.PURGED.isFalse,
 			TB_PARTICIPANT.PROJECT_ID.eq(projectId),
 		)
-		textSearched?.let { conditions += similarity(TB_PARTICIPANT.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
+		query?.let { conditions += similarity(TB_PARTICIPANT.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
 		isMajor?.let {
 			val isMajorCondition = TB_PARTICIPANT.BIRTHDAY.le(eighteenYearsAgo)
 			conditions += if (it) isMajorCondition else isMajorCondition.not()
 		}
-		typeSearched?.let { conditions += TB_PARTICIPANT.TYPE.eq(it) }
-		conditions += visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched)
-		availabilitySearched?.let {
+		type?.let { conditions += TB_PARTICIPANT.TYPE.eq(it) }
+		conditions += visibleCondition(TB_PARTICIPANT.VISIBLE, isVisible)
+		isAvailable?.let {
 			val cond = availabilityCondition()
 			conditions += if (it) cond else cond.not()
 		}
-		presenceSearched?.let {
+		isPresent?.let {
 			val isOutOrNull = lmType.isNull.or(lmType.eq("OUT"))
 			conditions += if (it) isOutOrNull.not() else isOutOrNull
 		}
-		dateTimeSearched?.let { conditions += dateInParticipantRangeCondition(it) }
+		dateTime?.let { conditions += dateInParticipantRangeCondition(it) }
 		return DSL.and(conditions)
 	}
 
 	private fun fullSelect(
 		projectId: UUID,
-		dateTimeSearched: ZonedDateTime?,
+		dateTime: ZonedDateTime?,
 		user: TbUser,
 		project: TbProject,
 		creator: TbUser,
@@ -264,7 +264,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		using: DSLContext = dsl,
 	): SelectOnConditionStep<Record> {
 		val lastMovement = lastMovementCte(using)
-		val filteredGroups = filteredGroupsCte(projectId, dateTimeSearched, using)
+		val filteredGroups = filteredGroupsCte(projectId, dateTime, using)
 		return using.with(lastMovement, filteredGroups)
 			.select(
 				listOf(
@@ -313,13 +313,13 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
+		query: String?,
 		isMajor: Boolean?,
-		typeSearched: ParticipantTypeEnum?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		type: ParticipantTypeEnum?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		sortFields: List<SortModel<ParticipantSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -328,11 +328,11 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = similarityScoreField(textSearched)
+		val similarityScore = similarityScoreField(query)
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
-			fullSelect(projectId, dateTimeSearched, user, project, creator, editor, similarityScore, fullCount)
-				.where(searchConditions(projectId, textSearched, isMajor, typeSearched, visibilitySearched, availabilitySearched, presenceSearched, dateTimeSearched))
+			fullSelect(projectId, dateTime, user, project, creator, editor, similarityScore, fullCount)
+				.where(searchConditions(projectId, query, isMajor, type, isVisible, isAvailable, isPresent, dateTime))
 				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map {
@@ -350,16 +350,16 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 
 	fun countAll(
 		projectId: UUID,
-		textSearched: String?,
+		query: String?,
 		isMajor: Boolean?,
-		typeSearched: ParticipantTypeEnum?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		type: ParticipantTypeEnum?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 	): Mono<Long> {
 		val lastMovement = lastMovementCte()
-		val filteredGroups = filteredGroupsCte(projectId, dateTimeSearched)
+		val filteredGroups = filteredGroupsCte(projectId, dateTime)
 		return Mono.from(
 			dsl.with(lastMovement, filteredGroups)
 				.select(count(TB_PARTICIPANT.ID))
@@ -369,13 +369,13 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
+						query,
 						isMajor,
-						typeSearched,
-						visibilitySearched,
-						availabilitySearched,
-						presenceSearched,
-						dateTimeSearched
+						type,
+						isVisible,
+						isAvailable,
+						isPresent,
+						dateTime
 					)
 				)
 		).map { it.value1()!!.toLong() }
@@ -384,13 +384,13 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 	fun findAllByGroupId(
 		projectId: UUID,
 		groupId: UUID,
-		textSearched: String?,
+		query: String?,
 		isMajor: Boolean?,
-		typeSearched: ParticipantTypeEnum?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		type: ParticipantTypeEnum?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<ParticipantEntity> {
@@ -398,22 +398,22 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = similarityScoreField(textSearched)
+		val similarityScore = similarityScoreField(query)
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
-			fullSelect(projectId, dateTimeSearched, user, project, creator, editor, similarityScore, fullCount)
+			fullSelect(projectId, dateTime, user, project, creator, editor, similarityScore, fullCount)
 				.join(TB_GROUP_CONTENT)
 				.on(TB_GROUP_CONTENT.PARTICIPANT_ID.eq(TB_PARTICIPANT.ID).and(TB_GROUP_CONTENT.GROUP_ID.eq(groupId)))
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
+						query,
 						isMajor,
-						typeSearched,
-						visibilitySearched,
-						availabilitySearched,
-						presenceSearched,
-						dateTimeSearched
+						type,
+						isVisible,
+						isAvailable,
+						isPresent,
+						dateTime
 					)
 				)
 				.orderBy(similarityScore.desc(), TB_PARTICIPANT.LAST_NAME)
@@ -431,7 +431,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		}
 	}
 
-	fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity> {
+	fun findArrivingToday(projectId: UUID, isVisible: Boolean?, limit: Int): Flux<ParticipantEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -460,14 +460,14 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 					TB_PARTICIPANT.PURGED.isFalse
 						.and(TB_PARTICIPANT.PROJECT_ID.eq(projectId))
 						.and(TB_PARTICIPANT.START_AVAILABILITY_DATE.eq(DSL.currentLocalDate()))
-						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, isVisible))
 				)
 				.orderBy(TB_PARTICIPANT.START_AVAILABILITY_TIME)
 				.limit(limit)
 		).map { it.toEntity(user, project, creator, editor) }
 	}
 
-	fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity> {
+	fun findDepartingToday(projectId: UUID, isVisible: Boolean?, limit: Int): Flux<ParticipantEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -496,14 +496,14 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 					TB_PARTICIPANT.PURGED.isFalse
 						.and(TB_PARTICIPANT.PROJECT_ID.eq(projectId))
 						.and(TB_PARTICIPANT.END_AVAILABILITY_DATE.eq(DSL.currentLocalDate()))
-						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, isVisible))
 				)
 				.orderBy(TB_PARTICIPANT.END_AVAILABILITY_TIME)
 				.limit(limit)
 		).map { it.toEntity(user, project, creator, editor) }
 	}
 
-	fun findAllWithBirthday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantEntity> {
+	fun findAllWithBirthday(projectId: UUID, isVisible: Boolean?, limit: Int): Flux<ParticipantEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -543,7 +543,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 								TB_PARTICIPANT.BIRTHDAY
 							)
 						)
-						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, isVisible))
 				)
 				.limit(limit)
 		).map { it.toEntity(user, project, creator, editor) }
@@ -552,8 +552,8 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 	fun findAllByIds(
 		projectId: UUID,
 		ids: List<UUID>,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?
+		isVisible: Boolean?,
+		dateTime: ZonedDateTime?
 	): Flux<ParticipantEntity> {
 		if (ids.isEmpty()) return Flux.empty()
 		val user = userTable()
@@ -561,12 +561,12 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Flux.from(
-			fullSelect(projectId, dateTimeSearched, user, project, creator, editor)
+			fullSelect(projectId, dateTime, user, project, creator, editor)
 				.where(
 					TB_PARTICIPANT.PURGED.isFalse
 						.and(TB_PARTICIPANT.PROJECT_ID.eq(projectId))
 						.and(TB_PARTICIPANT.ID.`in`(ids))
-						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(user, project, creator, editor, includeGroups = true, includeLastMovement = true) }
 	}
@@ -598,13 +598,13 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(user, project, creator, editor) }
 	}
 
-	fun findByUserId(projectId: UUID, userId: UUID, dateTimeSearched: ZonedDateTime?): Flux<ParticipantEntity> {
+	fun findByUserId(projectId: UUID, userId: UUID, dateTime: ZonedDateTime?): Flux<ParticipantEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Flux.from(
-			fullSelect(projectId, dateTimeSearched, user, project, creator, editor)
+			fullSelect(projectId, dateTime, user, project, creator, editor)
 				.where(
 					TB_PARTICIPANT.PURGED.isFalse.and(TB_PARTICIPANT.PROJECT_ID.eq(projectId))
 						.and(TB_PARTICIPANT.USER_ID.eq(userId))
@@ -615,32 +615,32 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
+		query: String?,
 		isMajor: Boolean?,
-		typeSearched: ParticipantTypeEnum?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		type: ParticipantTypeEnum?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		limit: Int,
 	): Flux<ParticipantEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = similarityScoreField(textSearched)
+		val similarityScore = similarityScoreField(query)
 		return Flux.from(
-			fullSelect(projectId, dateTimeSearched, user, project, creator, editor, similarityScore)
+			fullSelect(projectId, dateTime, user, project, creator, editor, similarityScore)
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
+						query,
 						isMajor,
-						typeSearched,
-						visibilitySearched,
-						availabilitySearched,
-						presenceSearched,
-						dateTimeSearched
+						type,
+						isVisible,
+						isAvailable,
+						isPresent,
+						dateTime
 					)
 				)
 				.orderBy(similarityScore.desc(), TB_PARTICIPANT.LAST_NAME)
@@ -651,16 +651,16 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 	fun findById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?
+		isVisible: Boolean?,
+		dateTime: ZonedDateTime?
 	): Mono<ParticipantEntity> =
-		findById(projectId, id, visibilitySearched, dateTimeSearched, dsl)
+		findById(projectId, id, isVisible, dateTime, dsl)
 
 	fun findById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		dateTime: ZonedDateTime?,
 		using: DSLContext
 	): Mono<ParticipantEntity> {
 		val user = userTable()
@@ -668,12 +668,12 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Mono.from(
-			fullSelect(projectId, dateTimeSearched, user, project, creator, editor, using = using)
+			fullSelect(projectId, dateTime, user, project, creator, editor, using = using)
 				.where(
 					TB_PARTICIPANT.PURGED.isFalse
 						.and(TB_PARTICIPANT.PROJECT_ID.eq(projectId))
 						.and(TB_PARTICIPANT.ID.eq(id))
-						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PARTICIPANT.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(user, project, creator, editor, includeGroups = true, includeLastMovement = true) }
 	}
@@ -728,7 +728,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		entity.endAvailabilityDate?.let { record.set(TB_PARTICIPANT.END_AVAILABILITY_DATE, it) }
 		entity.endAvailabilityTime?.let { record.set(TB_PARTICIPANT.END_AVAILABILITY_TIME, it) }
 		entity.userId?.let { record.set(TB_PARTICIPANT.USER_ID, it) }
-		entity.purged?.let { record.set(TB_PARTICIPANT.PURGED, it) }
+		entity.isPurged?.let { record.set(TB_PARTICIPANT.PURGED, it) }
 		return Mono.from(using.insertInto(TB_PARTICIPANT).set(record).returning()).map { it.toEntity() }
 	}
 
@@ -745,7 +745,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 			.set(TB_PARTICIPANT.END_AVAILABILITY_DATE, entity.endAvailabilityDate)
 			.set(TB_PARTICIPANT.END_AVAILABILITY_TIME, entity.endAvailabilityTime)
 			.set(TB_PARTICIPANT.USER_ID, entity.userId)
-			.set(TB_PARTICIPANT.PURGED, entity.purged)
+			.set(TB_PARTICIPANT.PURGED, entity.isPurged)
 			.where(TB_PARTICIPANT.ID.eq(entity.id))
 			.returning()
 	).map { it.toEntity() }
@@ -781,7 +781,7 @@ class ParticipantJooqRepository(private val dsl: DSLContext) {
 		userFirstName = user?.let { get(it.FIRST_NAME) },
 		userLastName = user?.let { get(it.LAST_NAME) },
 		userEmail = user?.let { get(it.EMAIL) },
-		purged = get(TB_PARTICIPANT.PURGED),
+		isPurged = get(TB_PARTICIPANT.PURGED),
 	).apply {
 		fillGeneric(this, columns, creator, editor, fullCount)
 		fillGenericProject(this, TB_PARTICIPANT.PROJECT_ID)

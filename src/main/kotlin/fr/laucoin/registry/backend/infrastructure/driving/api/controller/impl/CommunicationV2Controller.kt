@@ -42,21 +42,21 @@ class CommunicationV2Controller(
 		projectId: UUID,
 		page: SortedPageQueryDto,
 		query: String?,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			CommunicationSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = CommunicationSearchParamModel(query, visible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = CommunicationSearchParamModel(query, isVisible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findCommunicationPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
 	override fun findCommunicationById(projectId: UUID, id: UUID): Mono<CommunicationReaderDto> {
-		return service.findCommunicationById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findCommunicationById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun searchActivities(projectId: UUID, query: String?): Flux<MovementReaderDto> {
@@ -76,16 +76,6 @@ class CommunicationV2Controller(
 		return service.createCommunication(currentUser, communicationModel).map(readerMapper::toDto).map {
 			ResponseEntity.created(URI.create("$API_V2/projects/$projectId/communications/${it.id}")).body(it)
 		}
-	}
-
-	override fun updateCommunicationById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		communication: CommunicationWriterDto,
-	): Mono<CommunicationReaderDto> {
-		val communicationModel = writerMapper.toModel(communication, projectId)
-		return service.updateCommunicationById(currentUser, projectId, id, communicationModel).map(readerMapper::toDto)
 	}
 
 	override fun disableCommunicationById(

@@ -9,6 +9,6 @@ import reactor.core.publisher.Mono
  * Postgres adapter; the domain only depends on this contract.
  */
 interface IPreferencesPort {
-	fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesModel>
+	fun findByUserId(userId: UUID, isVisible: Boolean?): Mono<PreferencesModel>
 	fun save(preference: PreferencesModel): Mono<PreferencesModel>
 }

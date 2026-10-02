@@ -85,7 +85,7 @@ class MovementReaderDtoMapperTest {
 		assertEquals(movement.id, result.id)
 		assertEquals(movement.dateTime, result.dateTime)
 		assertEquals(movement.type?.name, result.type?.value)
-		assertEquals(movement.visible, result.visible)
+		assertEquals(movement.isVisible, result.isVisible)
 		assertEquals(movement.creation, result.creation)
 		assertEquals(movement.lastEdition, result.lastEdition)
 	}

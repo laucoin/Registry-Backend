@@ -26,19 +26,7 @@ data class MovementModel(
 
 	fun getNewContent(movement: MovementModel): List<MovementContentModel> {
 		return movement.content
-			.filter { new -> Objects.isNull(content.find { new.participant?.id == it.participant?.id && new.poolName == it.poolName && new.vehicle?.id == it.vehicle?.id }) }
-	}
-
-	fun getNewContentParticipantIds(movement: MovementModel): List<UUID> {
-		return getNewContent(movement).mapNotNull { it.participant?.id }
-	}
-
-	fun getNewContentVehicleIds(movement: MovementModel): List<UUID> {
-		return getNewContent(movement).mapNotNull { it.vehicle?.id }
-	}
-
-	fun getNewContentDriverIds(movement: MovementModel): List<UUID> {
-		return getNewContent(movement).filter { Objects.nonNull(it.vehicle) }.mapNotNull { it.participant?.id }
+			.filter { newContent -> Objects.isNull(content.find { newContent.participant?.id == it.participant?.id && newContent.poolName == it.poolName && newContent.vehicle?.id == it.vehicle?.id }) }
 	}
 
 	fun isLastParticipantMovement(): Boolean {
@@ -49,14 +37,9 @@ data class MovementModel(
 		return contentType === ParticipantTypeEnum.GUEST
 	}
 
-	fun atLeastOldGuestIfGuestsEntrance(movement: MovementModel): Boolean {
-		if (type == OUT || !isGuestsMovement()) return false
-		return content.any { old -> movement.content.any { new -> old.participant?.id == new.participant?.id } }
-	}
-
 	fun getOldContentIds(movement: MovementModel): List<UUID> {
 		return content
-			.filter { old -> Objects.isNull(movement.content.find { old.participant?.id == it.participant?.id && old.poolName == it.poolName && old.vehicle?.id == it.vehicle?.id }) }
+			.filter { oldContent -> Objects.isNull(movement.content.find { oldContent.participant?.id == it.participant?.id && oldContent.poolName == it.poolName && oldContent.vehicle?.id == it.vehicle?.id }) }
 			.mapNotNull(MovementContentModel::id)
 	}
 }

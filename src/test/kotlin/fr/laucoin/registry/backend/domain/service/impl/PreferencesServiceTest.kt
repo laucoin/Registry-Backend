@@ -11,7 +11,6 @@ import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
 import java.util.stream.Stream
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -78,7 +77,7 @@ class PreferencesServiceTest {
 		service.findByUser(currentUser()).block()
 
 		// Assert
-		verify(port, times(expectedCallOnFindByUserId)).findByUserId(currentUser().id!!, visibilitySearched = null)
+		verify(port, times(expectedCallOnFindByUserId)).findByUserId(currentUser().id!!, isVisible = null)
 		verify(port, times(expectedCallOnSave)).save(any())
 	}
 
@@ -101,7 +100,7 @@ class PreferencesServiceTest {
 		service.updateTheme(currentUser, newTheme).block()
 
 		// Assert
-		verify(port).findByUserId(uuid, visibilitySearched = null)
+		verify(port).findByUserId(uuid, isVisible = null)
 		verify(port, times(expectedCallOnUpdateTheme)).save(any())
 	}
 
@@ -124,7 +123,7 @@ class PreferencesServiceTest {
 		service.updateLanguage(currentUser, newLanguage).block()
 
 		// Assert
-		verify(port).findByUserId(uuid, visibilitySearched = null)
+		verify(port).findByUserId(uuid, isVisible = null)
 		verify(port, times(expectedCallOnUpdateLanguage)).save(any())
 	}
 }

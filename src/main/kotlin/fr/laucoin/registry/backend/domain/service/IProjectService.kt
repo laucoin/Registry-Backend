@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service
 
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -28,7 +27,7 @@ interface IProjectService {
 		sortFields: List<SortModel<ProjectSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ProjectModel>>
 
-	fun findProjectById(id: UUID, visibilitySearched: Boolean?, currentUser: CurrentUserModel? = null): Mono<ProjectModel>
+	fun findProjectById(id: UUID, isVisible: Boolean?, currentUser: CurrentUserModel? = null): Mono<ProjectModel>
 
 	/**
 	 * The caller's ACCEPTED, still-in-progress Projects with at least one ongoing Alert, sorted by
@@ -37,7 +36,6 @@ interface IProjectService {
 	 */
 	fun findProjectsRequiringAttention(currentUser: CurrentUserModel, limit: Int): Flux<ProjectModel>
 
-	fun availableProjectOptions(): Flux<ProjectOptionEnum>
 	fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID>
 	fun validateDateTimes(
 		id: UUID,

@@ -25,9 +25,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -48,8 +45,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.util.UUID
 
-class ProjectV2ControllerTest: TestContext() {
+class ProjectV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IProjectService
 
@@ -88,7 +88,7 @@ class ProjectV2ControllerTest: TestContext() {
 			any(),
 			eq(pageable),
 			eq(true),
-			eq(ProjectSearchParamModel(textSearched = null, visibilitySearched = null, dateTimeSearched = null)),
+			eq(ProjectSearchParamModel(query = null, isVisible = null, dateTime = null)),
 			eq(emptyList()),
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -116,7 +116,7 @@ class ProjectV2ControllerTest: TestContext() {
 			any(),
 			eq(pageable),
 			eq(true),
-			eq(ProjectSearchParamModel(textSearched = null, visibilitySearched = null, dateTimeSearched = null, favoriteSearched = true)),
+			eq(ProjectSearchParamModel(query = null, isVisible = null, dateTime = null, isFavorite = true)),
 			eq(emptyList()),
 		)
 	}
@@ -197,7 +197,7 @@ class ProjectV2ControllerTest: TestContext() {
 
 		// Assert
 		result.body<ProjectReaderDto>(OK)
-		verify(service).findProjectById(eq(uuid), visibilitySearched = isNull(), currentUser = any())
+		verify(service).findProjectById(eq(uuid), isVisible = isNull(), currentUser = any())
 	}
 
 	@Test
@@ -306,7 +306,7 @@ class ProjectV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId), emptyList()))
 			.exchange()

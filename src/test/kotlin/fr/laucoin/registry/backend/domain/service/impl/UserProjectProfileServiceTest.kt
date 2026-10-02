@@ -89,7 +89,7 @@ class UserProjectProfileServiceTest {
 	fun `Should findProjectProfilesPage call port findUserProjectProfilesPageByUserId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
+		val params = ProjectProfileSearchParamModel(status = ACCEPTED)
 
 		whenever(port.findUserProjectProfilesPageByUserId(any(), any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
@@ -105,7 +105,7 @@ class UserProjectProfileServiceTest {
 	fun `Should findProjectProfilesPage pass includeCounts through to port`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
+		val params = ProjectProfileSearchParamModel(status = ACCEPTED)
 
 		whenever(port.findUserProjectProfilesPageByUserId(any(), any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
@@ -138,7 +138,7 @@ class UserProjectProfileServiceTest {
 		// Assert
 		assertEquals(user, result)
 
-		verify(port).findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
+		verify(port).findLevel0ProjectProfileRoleByUserId(userId, isVisible = true)
 	}
 
 	@ParameterizedTest
@@ -162,7 +162,7 @@ class UserProjectProfileServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(errorMessage, result.message)
 
-		verify(port).findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
+		verify(port).findLevel0ProjectProfileRoleByUserId(userId, isVisible = true)
 	}
 
 	@Test
@@ -204,7 +204,7 @@ class UserProjectProfileServiceTest {
 		)
 
 		verify(port).create(any())
-		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, visibilitySearched = null)
+		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, isVisible = null)
 		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
@@ -280,8 +280,8 @@ class UserProjectProfileServiceTest {
 		// Assert
 		assertEquals(decoratedProfile, result)
 		verify(port).update(any())
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
-		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, visibilitySearched = null)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, isVisible = true)
+		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, isVisible = null)
 	}
 
 	@Test
@@ -303,14 +303,14 @@ class UserProjectProfileServiceTest {
 		assertEquals(projectProfileId.toString(), result.args?.first())
 
 		verify(port, never()).update(any())
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, isVisible = true)
 	}
 
 	@Test
 	fun `Should toggleFavoriteProjectProfileById flip the favorite flag`() {
 		// Arrange
-		val profile = commonProjectProfile().apply { status = ACCEPTED; favorite = false }
-		val decoratedProfile = commonUserProjectProfile().apply { favorite = true }
+		val profile = commonProjectProfile().apply { status = ACCEPTED; isFavorite = false }
+		val decoratedProfile = commonUserProjectProfile().apply { isFavorite = true }
 
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
@@ -320,12 +320,12 @@ class UserProjectProfileServiceTest {
 		val result = service.toggleFavoriteProjectProfileById(currentUser(), projectProfileId).block()
 
 		// Assert
-		assertEquals(true, profile.favorite)
+		assertEquals(true, profile.isFavorite)
 		assertEquals(decoratedProfile, result)
 
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, isVisible = true)
 		verify(port).update(profile)
-		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, visibilitySearched = null)
+		verify(port).findUserProjectProfileByUserIdAndId(currentUser().id!!, profile.id!!, isVisible = null)
 	}
 
 	@ParameterizedTest
@@ -334,7 +334,7 @@ class UserProjectProfileServiceTest {
 		status: ProfileStatusEnum
 	) {
 		// Arrange
-		val profile = commonProjectProfile().apply { this.status = status; favorite = false }
+		val profile = commonProjectProfile().apply { this.status = status; isFavorite = false }
 
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), any())).thenReturn(Mono.just(profile))
 
@@ -346,7 +346,7 @@ class UserProjectProfileServiceTest {
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_PROFILE_FAVORITE_REQUIRES_ACCEPTED_STATUS, result.message)
-		assertEquals(false, profile.favorite)
+		assertEquals(false, profile.isFavorite)
 
 		verify(port, never()).update(any())
 	}
@@ -382,7 +382,7 @@ class UserProjectProfileServiceTest {
 		service.deleteUserProjectProfileById(currentUser(), projectProfileId).block()
 
 		// Assert
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = null)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, isVisible = null)
 		verify(port).deleteById(projectProfileId)
 	}
 }

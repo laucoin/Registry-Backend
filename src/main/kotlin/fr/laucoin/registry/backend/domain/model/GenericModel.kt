@@ -8,12 +8,12 @@ import java.util.UUID
 
 abstract class GenericModel(
 	var id: UUID? = null,
-	var visible: Boolean = true,
+	var isVisible: Boolean = true,
 
 	var creation: HistoryModel? = null,
 	var lastEdition: HistoryModel? = null,
 ) {
-	fun isNotVisible() = !visible
+	fun isNotVisible() = !isVisible
 
 	fun create(currentUser: CurrentUserModel, dateTime: ZonedDateTime = now()) {
 		if (Objects.isNull(creation)) {

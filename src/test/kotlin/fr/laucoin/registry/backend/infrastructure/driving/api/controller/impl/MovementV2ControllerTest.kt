@@ -27,7 +27,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.domain.service.IMovementService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
@@ -50,8 +49,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime.now
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -71,8 +68,10 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuples
+import java.time.ZonedDateTime.now
+import java.util.UUID
 
-class MovementV2ControllerTest: TestContext() {
+class MovementV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IMovementService
 
@@ -108,10 +107,10 @@ class MovementV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findMovements drop the Searched suffix and call service`() {
+	fun `Should findMovements  call service`() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
-		val searchParams = MovementSearchParamModel(visibilitySearched = true, typeSearched = IN)
+		val searchParams = MovementSearchParamModel(isVisible = true, type = IN)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
 		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
@@ -186,17 +185,24 @@ class MovementV2ControllerTest: TestContext() {
 		// Assert
 		result.body<MovementReaderDto>(OK)
 
-		verify(service).findMovementById(projectId, uuid, visibilitySearched = null)
+		verify(service).findMovementById(projectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 	}
 
 	@Test
-	fun `Should searchReasonsAndActivities drop the Searched suffix and call service`() {
+	fun `Should searchReasonsAndActivities  call service`() {
 		// Arrange
 		val searched = "text"
 		whenever(service.searchActivitiesByText(any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
 		whenever(service.searchReasonsByText(any(), any())).thenReturn(Flux.just(OTHER))
-		whenever(activityReasonReaderMapper.toDto(any())).thenReturn(MovementReasonsReaderDto("value", "label", REASON, IN))
+		whenever(activityReasonReaderMapper.toDto(any())).thenReturn(
+			MovementReasonsReaderDto(
+				"value",
+				"label",
+				REASON,
+				IN
+			)
+		)
 		whenever(reasonReaderMapper.toDto(any())).thenReturn(MovementReasonsReaderDto("value", "label", REASON, IN))
 
 		// Act
@@ -220,7 +226,7 @@ class MovementV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should searchParticipantsAndGroups drop the Searched suffix and call service`() {
+	fun `Should searchParticipantsAndGroups  call service`() {
 		// Arrange
 		val searched = "text"
 		whenever(service.searchParticipantsAndGroupsByText(any(), any(), anyOrNull()))
@@ -248,7 +254,7 @@ class MovementV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should searchVehicles drop the Searched suffix and call service`() {
+	fun `Should searchVehicles  call service`() {
 		// Arrange
 		val searched = "text"
 		whenever(service.searchVehiclesByText(any(), anyOrNull())).thenReturn(Flux.just(VehicleModel()))
@@ -256,7 +262,10 @@ class MovementV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE)
+			)
 			.get()
 			.uri(uriBuilder("$BASE_URL/search/vehicles", listOf(projectId), listOf(Pair("q", searched))))
 			.exchange()
@@ -268,17 +277,20 @@ class MovementV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findMovementCommunications drop the Searched suffix and call service`() {
+	fun `Should findMovementCommunications  call service`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 20)
-		val searchParams = CommunicationSearchParamModel(visibilitySearched = true)
+		val searchParams = CommunicationSearchParamModel(isVisible = true)
 		val page = PageModel(pageable, totalElements = 0, emptyList<CommunicationModel>())
 		whenever(service.findMovementCommunicationsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION), buildAuthority(REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION),
+				buildAuthority(REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R)
+			)
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}/communications", listOf(projectId, uuid), listOf(Pair("visible", true))))
 			.exchange()
@@ -346,7 +358,9 @@ class MovementV2ControllerTest: TestContext() {
 		whenever(service.createMovement(any(), any(), any()))
 			.thenReturn(Mono.just(MovementModel(contentType = REGISTERED).apply { id = createdId }))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
-		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED).apply { id = createdId })
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED).apply {
+			id = createdId
+		})
 
 		// Act
 		val result = webClient
@@ -365,37 +379,6 @@ class MovementV2ControllerTest: TestContext() {
 		verify(service).createMovement(any(), any(), any())
 		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any(), eq(projectId))
-	}
-
-	@Test
-	fun `Should updateMovementById return 200`() {
-		// Arrange
-		val uuid = UUID.randomUUID()
-		val movement = ParticipantMovementWriterDto(
-			dateTime = now(),
-			type = IN,
-			reason = null,
-			activityId = null,
-			content = listOf(ParticipantMovementContentWriterDto(participantId = uuid)),
-		)
-		whenever(service.updateMovementById(any(), any(), any(), any(), any()))
-			.thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
-		whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
-		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
-
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
-			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
-			.bodyValue(movement)
-			.exchange()
-
-		// Assert
-		result.body<MovementReaderDto>(OK)
-
-		verify(service).updateMovementById(any(), eq(projectId), eq(uuid), any(), any())
-		verify(readerMapper).toDto(any())
 	}
 
 	@Test
@@ -429,7 +412,7 @@ class MovementV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()

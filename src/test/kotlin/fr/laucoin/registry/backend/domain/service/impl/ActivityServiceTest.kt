@@ -96,7 +96,7 @@ class ActivityServiceTest {
 	fun `Should findActivityMovementsPage call port findPageByActivityId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = MovementTypeEnum.IN)
+		val params = MovementSearchParamModel(type = MovementTypeEnum.IN)
 
 		whenever(movementPort.findPageByActivityId(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
@@ -168,7 +168,7 @@ class ActivityServiceTest {
 			end = null,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(port).findById(projectId, activityId, visibilitySearched = null)
+		verify(port).findById(projectId, activityId, isVisible = null)
 		verify(port).update(commonActivity())
 	}
 
@@ -182,14 +182,14 @@ class ActivityServiceTest {
 		service.disableActivityById(currentUser(), projectId, activityId).block()
 
 		// Assert
-		verify(port).findById(projectId, activityId, visibilitySearched = true)
-		verify(port).update(commonActivity().apply { visible = false })
+		verify(port).findById(projectId, activityId, isVisible = true)
+		verify(port).update(commonActivity().apply { isVisible = false })
 	}
 
 	@Test
 	fun `Should enableActivityById call existing activity and call port update`() {
 		// Arrange
-		val activity = commonActivity().apply { visible = false }
+		val activity = commonActivity().apply { isVisible = false }
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
 		whenever(port.update(any())).thenReturn(Mono.just(activity))
@@ -198,7 +198,7 @@ class ActivityServiceTest {
 		service.enableActivityById(currentUser(), projectId, activityId).block()
 
 		// Assert
-		verify(port).findById(projectId, activityId, visibilitySearched = false)
+		verify(port).findById(projectId, activityId, isVisible = false)
 		verify(port).update(commonActivity())
 	}
 
@@ -213,7 +213,7 @@ class ActivityServiceTest {
 		service.deleteActivityById(currentUser(), projectId, activityId).block()
 
 		// Assert
-		verify(port).findById(projectId, activityId, visibilitySearched = null)
+		verify(port).findById(projectId, activityId, isVisible = null)
 		verify(movementPort).countAllByActivityId(projectId, activityId, MovementSearchParamModel())
 		verify(port).deleteById(activityId)
 	}
@@ -233,7 +233,7 @@ class ActivityServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ACTIVITY_DELETE_HAS_MOVEMENT, result.message)
 
-		verify(port).findById(projectId, activityId, visibilitySearched = null)
+		verify(port).findById(projectId, activityId, isVisible = null)
 		verify(movementPort).countAllByActivityId(projectId, activityId, MovementSearchParamModel())
 		verify(port, never()).deleteById(any())
 	}

@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
 import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_HISTORY_R
@@ -70,8 +70,8 @@ interface IActivityV2Controller {
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
-		@RequestParam(required = false) available: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
+		@RequestParam(name = "available", required = false) isAvailable: Boolean?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<ActivityReaderDto>>
@@ -100,7 +100,7 @@ interface IActivityV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@ParameterObject @Valid page: PageQueryDto,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
@@ -119,7 +119,7 @@ interface IActivityV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<OngoingActivityOutingReaderDto>
@@ -174,7 +174,7 @@ interface IActivityV2Controller {
 		summary = "Enable Activity",
 		description = "Reverse a disable: the Activity becomes visible in the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableActivityById(

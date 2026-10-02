@@ -31,7 +31,7 @@ class PreferencesJooqRepository(private val dsl: DSLContext) {
 		TB_PREFERENCES.LAST_MODIFIED_BY
 	)
 
-	fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesEntity> {
+	fun findByUserId(userId: UUID, isVisible: Boolean?): Mono<PreferencesEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Mono.from(
@@ -48,7 +48,7 @@ class PreferencesJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(creator).on(TB_PREFERENCES.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_PREFERENCES.LAST_MODIFIED_BY.eq(editor.ID))
 				.where(TB_PREFERENCES.USER_ID.eq(userId))
-				.and(visibleCondition(TB_PREFERENCES.VISIBLE, visibilitySearched))
+				.and(visibleCondition(TB_PREFERENCES.VISIBLE, isVisible))
 		).map { it.toEntity(creator, editor) }
 	}
 

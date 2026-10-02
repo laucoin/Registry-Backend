@@ -71,7 +71,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findProjectProfilesPageByUserId call repository findByUserId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = ProjectProfileSearchParamModel(statusSearched = null)
+		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
 		val result = repository.findProjectProfilesPageByUserId(currentUser().id!!, pageable, params).block()
@@ -84,13 +84,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findByUserId(
 			currentUser().id!!,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			dateTimeSearched = null,
-			favoriteSearched = null,
-			upcomingSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			dateTime = null,
+			isFavorite = null,
+			isUpcoming = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -103,7 +103,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findProjectProfilesPageByUserId forward includeCounts to the port`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = ProjectProfileSearchParamModel(statusSearched = null)
+		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
 		val result = repository.findProjectProfilesPageByUserId(
@@ -114,13 +114,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).findByUserId(
 			currentUser().id!!,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			dateTimeSearched = null,
-			favoriteSearched = null,
-			upcomingSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			dateTime = null,
+			isFavorite = null,
+			isUpcoming = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -200,7 +200,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findProjectProfilesPageByProjectId call repository findByProjectId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = ProjectProfileSearchParamModel(statusSearched = null)
+		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
 		val result = repository.findProjectProfilesPageByProjectId(projectId, pageable, params).block()
@@ -213,11 +213,11 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findByProjectId(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			dateTime = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -232,9 +232,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			projectId,
 			listOf(currentUser().id!!),
 			profileIdToExclude = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null
+			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			startDateTime = null,
+			endDateTime = null
 		).collectList().block()
 
 		// Assert
@@ -243,9 +243,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			projectId,
 			listOf(currentUser().id!!),
 			profileIdToExclude = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			startDateTimeSearched = null,
-			endDateTimeSearched = null
+			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			startDateTime = null,
+			endDateTime = null
 		)
 	}
 
@@ -260,9 +260,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).findAllRolesByUserId(
 			currentUser().id!!,
-			visibilitySearched = null,
-			availabilitySearched = true,
-			statusSearched = listOf(ACCEPTED),
+			isVisible = null,
+			isAvailable = true,
+			status = listOf(ACCEPTED),
 		)
 		verify(roleMapper).toModel(any())
 	}
@@ -273,7 +273,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		val result = repository.findProjectProfileByUserIdAndId(
 			currentUser().id!!,
 			projectProfileId,
-			visibilitySearched = null
+			isVisible = null
 		).block()
 
 		// Assert
@@ -281,7 +281,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findByUserIdAndId(
 			currentUser().id!!,
 			projectProfileId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -293,14 +293,14 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 
 		// Act
 		val result =
-			repository.findProjectProfileByUserIdAndId(currentUser().id!!, uuid, visibilitySearched = null).block()
+			repository.findProjectProfileByUserIdAndId(currentUser().id!!, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findByUserIdAndId(
 			currentUser().id!!,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -308,14 +308,14 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findByProjectIdAndId`() {
 		// Act
-		val result = repository.findById(projectId, projectProfileId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, projectProfileId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findByProjectIdAndId(
 			projectId,
 			projectProfileId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -326,14 +326,14 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findByProjectIdAndId(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -341,7 +341,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findProjectProfileByProjectAndUserId call repository findUsableProfileByProjectAndUserId`() {
 		// Arrange
-		val params = ProjectProfileSearchParamModel(statusSearched = null)
+		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
 		val result = repository.findProjectProfileByProjectAndUserId(projectId, currentUser().id!!, params).block()
@@ -351,9 +351,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findProjectProfileByProjectAndUserId(
 			projectId,
 			currentUser().id!!,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			isVisible = null,
+			isAvailable = null,
+			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 		)
 		verify(mapper).toModel(any())
 	}
@@ -362,7 +362,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findProjectProfileByProjectAndUserId call repository findUsableProfileByProjectAndUserId and return null`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val params = ProjectProfileSearchParamModel(statusSearched = null)
+		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
 		val result = repository.findProjectProfileByProjectAndUserId(projectId, uuid, searchParams = params).block()
@@ -372,9 +372,9 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findProjectProfileByProjectAndUserId(
 			projectId,
 			uuid,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			statusSearched = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			isVisible = null,
+			isAvailable = null,
+			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -383,14 +383,14 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findLevel0ProjectProfileRoleByUserId call repository findLevel0ProjectProfileRoleByUserId`() {
 		// Act
 		val result =
-			repository.findLevel0ProjectProfileRoleByUserId(currentUser().id!!, visibilitySearched = null).collectList()
+			repository.findLevel0ProjectProfileRoleByUserId(currentUser().id!!, isVisible = null).collectList()
 				.block()
 
 		// Assert
 		assertFalse(result.isNullOrEmpty())
 		verify(postgresRepository).findLevel0ProjectProfileRoleByUserId(
 			currentUser().id!!,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(roleCountMapper).toModel(any())
 	}
@@ -399,14 +399,14 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findLevel0ProjectProfileRoleByProjectId call repository findLevel0ProjectProfileRoleByProjectId`() {
 		// Act
 		val result =
-			repository.findLevel0ProjectProfileRoleByProjectId(projectId, visibilitySearched = null).collectList()
+			repository.findLevel0ProjectProfileRoleByProjectId(projectId, isVisible = null).collectList()
 				.block()
 
 		// Assert
 		assertFalse(result.isNullOrEmpty())
 		verify(postgresRepository).findLevel0ProjectProfileRoleByProjectId(
 			projectId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

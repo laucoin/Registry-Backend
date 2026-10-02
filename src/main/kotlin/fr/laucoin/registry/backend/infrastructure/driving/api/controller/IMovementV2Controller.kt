@@ -40,7 +40,6 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -71,8 +70,8 @@ interface IMovementV2Controller {
 		@Parameter(description = "\"currentMovements\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
 		@RequestParam(required = false, defaultValue = "false") currentMovements: Boolean,
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
-		@RequestParam(required = false) linkedToActivity: Boolean?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "linkedToActivity", required = false) hasActivity: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@RequestParam(required = false) type: MovementTypeEnum?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>>
@@ -161,7 +160,7 @@ interface IMovementV2Controller {
 		@PathVariable id: UUID,
 		@ParameterObject @Valid page: PageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>>
 
@@ -199,20 +198,6 @@ interface IMovementV2Controller {
 	): Mono<ResponseEntity<MovementReaderDto>>
 
 	@Operation(
-		summary = "Update Movement",
-		description = "Update an existing REGISTERED-content Movement: its date/time, type, reason/Activity and content (same shape as creation).",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
-	@RateLimited(SENSITIVE)
-	@PatchMapping("/{id}")
-	fun updateMovementById(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
-		@PathVariable id: UUID,
-		@RequestBody @Valid movement: ParticipantMovementWriterDto,
-	): Mono<MovementReaderDto>
-
-	@Operation(
 		summary = "Create Guest Movement",
 		description = """
 			Record a new IN/OUT Movement for one or more Guests. Existing Guests can be referenced by `id`, or created
@@ -227,20 +212,6 @@ interface IMovementV2Controller {
 		@PathVariable projectId: UUID,
 		@RequestBody @Valid movement: GuestMovementWriterDto,
 	): Mono<ResponseEntity<MovementReaderDto>>
-
-	@Operation(
-		summary = "Update Guest Movement",
-		description = "Update an existing GUEST-content Movement: its date/time, type, reason and guest content (same shape as creation).",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
-	@RateLimited(SENSITIVE)
-	@PatchMapping("/guests/{id}")
-	fun updateGuestsMovementById(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
-		@PathVariable id: UUID,
-		@RequestBody @Valid movement: GuestMovementWriterDto,
-	): Mono<MovementReaderDto>
 
 	@Operation(
 		summary = "Disable Movement",
@@ -259,7 +230,7 @@ interface IMovementV2Controller {
 		summary = "Enable Movement",
 		description = "Reverse a disable: the Movement becomes visible in the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableMovementById(

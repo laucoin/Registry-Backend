@@ -56,8 +56,8 @@ class UserJooqRepository(private val dsl: DSLContext) {
 	private fun notPurgedAndNotServiceAccount(): Condition =
 		TB_USER.PURGED.isFalse.and(TB_USER.TYPE.ne(UserTypeEnum.SERVICE_ACCOUNT))
 
-	private fun searchCondition(textSearched: String?): Condition =
-		textSearched?.let { similarity(TB_USER.SEARCH_TEXT, DSL.`val`(it)).gt(0f) } ?: DSL.noCondition()
+	private fun searchCondition(query: String?): Condition =
+		query?.let { similarity(TB_USER.SEARCH_TEXT, DSL.`val`(it)).gt(0f) } ?: DSL.noCondition()
 
 	private fun UserSortFieldEnum.toJooqField(): Field<*> = when (this) {
 		FIRST_NAME -> TB_USER.FIRST_NAME
@@ -69,7 +69,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 	}
 
 	// similarityScore sorts first (a no-op constant when there's no text search), TB_USER.LAST_NAME
-	// always stays last as the final tiebreaker (v1's sole, implicit order).
+	// always stays last as the final tiebreaker.
 	private fun orderFields(similarityScore: Field<Float>, sortFields: List<SortModel<UserSortFieldEnum>>): List<OrderField<*>> {
 		val fields = mutableListOf<OrderField<*>>(similarityScore.desc())
 		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
@@ -78,17 +78,17 @@ class UserJooqRepository(private val dsl: DSLContext) {
 	}
 
 	fun findAll(
-		textSearched: String?,
-		visibilitySearched: Boolean?,
+		query: String?,
+		isVisible: Boolean?,
 		sortFields: List<SortModel<UserSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
 	): Flux<UserEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_USER.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
@@ -106,18 +106,18 @@ class UserJooqRepository(private val dsl: DSLContext) {
 				.from(TB_USER)
 				.leftJoin(creator).on(TB_USER.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_USER.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(notPurgedAndNotServiceAccount().and(searchCondition(textSearched)).and(visibleCondition(TB_USER.VISIBLE, visibilitySearched)))
+				.where(notPurgedAndNotServiceAccount().and(searchCondition(query)).and(visibleCondition(TB_USER.VISIBLE, isVisible)))
 				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(creator, editor, fullCount) }
 	}
 
-	fun findWithLimit(textSearched: String?, visibilitySearched: Boolean?, limit: Int): Flux<UserEntity> {
+	fun findWithLimit(query: String?, isVisible: Boolean?, limit: Int): Flux<UserEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_USER.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		return Flux.from(
 			dsl.select(
@@ -134,15 +134,15 @@ class UserJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(creator).on(TB_USER.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_USER.LAST_MODIFIED_BY.eq(editor.ID))
 				.where(
-					notPurgedAndNotServiceAccount().and(searchCondition(textSearched))
-						.and(visibleCondition(TB_USER.VISIBLE, visibilitySearched))
+					notPurgedAndNotServiceAccount().and(searchCondition(query))
+						.and(visibleCondition(TB_USER.VISIBLE, isVisible))
 				)
 				.orderBy(similarityScore.desc(), TB_USER.LAST_NAME)
 				.limit(limit)
 		).map { it.toEntity(creator, editor) }
 	}
 
-	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserEntity> {
+	fun findById(id: UUID, isVisible: Boolean?): Mono<UserEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Mono.from(
@@ -160,7 +160,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(editor).on(TB_USER.LAST_MODIFIED_BY.eq(editor.ID))
 				.where(
 					notPurgedAndNotServiceAccount().and(TB_USER.ID.eq(id))
-						.and(visibleCondition(TB_USER.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_USER.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(creator, editor) }
 	}
@@ -185,26 +185,26 @@ class UserJooqRepository(private val dsl: DSLContext) {
 		).map { it.toCurrentUserEntity(creator, editor, includesPreferences = false) }
 	}
 
-	fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserEntity> {
+	fun findByOidcId(oidcId: UUID, isVisible: Boolean?): Mono<CurrentUserEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Mono.from(
 			preferencesSelect(creator, editor)
 				.where(
 					TB_USER.TYPE.ne(UserTypeEnum.SERVICE_ACCOUNT).and(TB_USER.OIDC_ID.eq(oidcId))
-						.and(visibleCondition(TB_USER.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_USER.VISIBLE, isVisible))
 				)
 		).map { it.toCurrentUserEntity(creator, editor, includesPreferences = true) }
 	}
 
-	fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserEntity> {
+	fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Flux.from(
 			preferencesSelect(creator, editor)
 				.where(
 					TB_USER.TYPE.ne(UserTypeEnum.SERVICE_ACCOUNT).and(TB_USER.EMAIL.eq(email))
-						.and(visibleCondition(TB_USER.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_USER.VISIBLE, isVisible))
 				)
 		).map { it.toCurrentUserEntity(creator, editor, includesPreferences = true) }
 	}
@@ -227,7 +227,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 			.leftJoin(editor).on(TB_USER.LAST_MODIFIED_BY.eq(editor.ID))
 			.leftJoin(TB_PREFERENCES).on(TB_USER.ID.eq(TB_PREFERENCES.USER_ID).and(TB_PREFERENCES.VISIBLE.isTrue))
 
-	fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserEntity> {
+	fun findByRoleLevel(roleLevel: Int, isVisible: Boolean?): Flux<UserEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		return Flux.from(
@@ -244,7 +244,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(creator).on(TB_USER.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_USER.LAST_MODIFIED_BY.eq(editor.ID))
 				.join(TB_USER_ROLE).on(TB_USER.ROLE.eq(TB_USER_ROLE.NAME).and(TB_USER_ROLE.LEVEL.eq(roleLevel)))
-				.where(notPurgedAndNotServiceAccount().and(visibleCondition(TB_USER.VISIBLE, visibilitySearched)))
+				.where(notPurgedAndNotServiceAccount().and(visibleCondition(TB_USER.VISIBLE, isVisible)))
 		).map { it.toEntity(creator, editor) }
 	}
 
@@ -270,7 +270,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 		entity.role?.let { record.set(TB_USER.ROLE, it) }
 		entity.birthday?.let { record.set(TB_USER.BIRTHDAY, it) }
 		entity.lastLogin?.let { record.set(TB_USER.LAST_LOGIN, it) }
-		entity.purged?.let { record.set(TB_USER.PURGED, it) }
+		entity.isPurged?.let { record.set(TB_USER.PURGED, it) }
 		return Mono.from(dsl.insertInto(TB_USER).set(record).returning()).map { it.toEntity() }
 	}
 
@@ -285,7 +285,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 			.set(TB_USER.ROLE, entity.role)
 			.set(TB_USER.BIRTHDAY, entity.birthday)
 			.set(TB_USER.LAST_LOGIN, entity.lastLogin)
-			.set(TB_USER.PURGED, entity.purged)
+			.set(TB_USER.PURGED, entity.isPurged)
 			.where(TB_USER.ID.eq(entity.id))
 			.returning()
 	).map { it.toEntity() }
@@ -306,7 +306,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 			role = get(TB_USER.ROLE),
 			birthday = get(TB_USER.BIRTHDAY),
 			lastLogin = get(TB_USER.LAST_LOGIN),
-			purged = get(TB_USER.PURGED),
+			isPurged = get(TB_USER.PURGED),
 		).apply {
 			fillGeneric(this, columns, creator, editor, fullCount)
 		}
@@ -329,7 +329,7 @@ class UserJooqRepository(private val dsl: DSLContext) {
 			role = get(TB_USER.ROLE)
 			birthday = get(TB_USER.BIRTHDAY)
 			lastLogin = get(TB_USER.LAST_LOGIN)
-			purged = get(TB_USER.PURGED)
+			isPurged = get(TB_USER.PURGED)
 			fillGeneric(this, columns, creator, editor)
 		}
 	}

@@ -44,8 +44,6 @@ class RoleService(
 
 	override fun getLevelByUserRole(role: String?): Int? = userRoles[role]?.first
 
-	override fun getLevelByProjectRole(role: String): Int = projectRoles[role]?.first ?: 0
-
 	override fun getLevel0RoleFromProjectRoles(): String = projectRoles.filter { it.value.first == 0 }.keys.first()
 
 	override fun getDefaultUserRole(): String? {
@@ -63,7 +61,7 @@ class RoleService(
 		} else userRoles[role]?.second ?: emptyList()
 	}
 
-	override fun getAuthoritiesByProjectRole(role: String, projectId: UUID, visibility: Boolean?): List<String> {
+	override fun getAuthoritiesByProjectRole(role: String, projectId: UUID, isVisible: Boolean?): List<String> {
 		val roleAuthoritiesMapping = projectRoles[role]
 		return when {
 			Objects.isNull(roleAuthoritiesMapping) -> {
@@ -71,8 +69,8 @@ class RoleService(
 				emptyList()
 			}
 
-			visibility != true && roleAuthoritiesMapping!!.first != 0 -> emptyList()
-			visibility != true ->
+			isVisible != true && roleAuthoritiesMapping!!.first != 0 -> emptyList()
+			isVisible != true ->
 				roleAuthoritiesMapping!!.second.filter {
 					listOf(
 						REGISTRY_PROJECT_R,

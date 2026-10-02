@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driven.idp.adapter
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_EXPIRED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_EXPIRED
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.driven.idp.mapper.AuthenticationTokenEntityMapper
 import kotlin.test.assertEquals
@@ -175,7 +175,7 @@ class IdpAuthenticationAdapterTest {
 		// Assert
 		assertNotNull(result)
 		assertEquals(UNAUTHORIZED, result.status)
-		assertEquals(AUTHORIZATION_CODE_OUTDATED, result.message)
+		assertEquals(AUTHORIZATION_CODE_EXPIRED, result.message)
 	}
 
 	@Test
@@ -247,7 +247,7 @@ class IdpAuthenticationAdapterTest {
 		// Assert
 		assertNotNull(result)
 		assertEquals(UNAUTHORIZED, result.status)
-		assertEquals(REFRESH_TOKEN_OUTDATED, result.message)
+		assertEquals(REFRESH_TOKEN_EXPIRED, result.message)
 	}
 
 	@Test

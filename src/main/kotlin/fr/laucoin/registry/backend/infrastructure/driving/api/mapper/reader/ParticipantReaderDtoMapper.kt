@@ -20,7 +20,7 @@ class ParticipantReaderDtoMapper(
 			lastName = model.lastName,
 			birthday = model.birthday,
 			type = Optional.ofNullable(model.type).map(typeMapper::toDto).orElse(null),
-			major = isMajor(model.birthday),
+			isMajor = isMajor(model.birthday),
 			groups = groupMapper.toDtoList(model.groups),
 			availableGroups = groupMapper.toDtoList(model.availableGroups),
 			status = Optional.ofNullable(model.status)
@@ -29,10 +29,10 @@ class ParticipantReaderDtoMapper(
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
 			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
-			purged = model.purged,
+			isPurged = model.isPurged,
 		).apply {
 			id = model.id
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}

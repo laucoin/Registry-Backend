@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
@@ -46,9 +45,9 @@ class CurrentUserReaderDtoMapperTest {
 			birthday = LocalDate.of(1980, 1, 1)
 			lastLogin = now
 			role = "ROLE"
-			purged = false
+			isPurged = false
 			id = userId
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -62,10 +61,10 @@ class CurrentUserReaderDtoMapperTest {
 			birthday = LocalDate.of(1980, 1, 1),
 			lastLogin = now,
 			role = LabelDto(value = "ROLE", label = TRANSLATED),
-			purged = false,
+			isPurged = false,
 		).apply {
 			id = userId
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -76,7 +75,7 @@ class CurrentUserReaderDtoMapperTest {
 				Arguments.of(model, dto, 1, 1),
 				Arguments.of(
 					CurrentUserModel().apply { lastLogin = now },
-					CurrentUserReaderDto(authorities = emptyList(), lastLogin = now, purged = false),
+					CurrentUserReaderDto(authorities = emptyList(), lastLogin = now, isPurged = false),
 					0,
 					0,
 				),
@@ -128,44 +127,6 @@ class CurrentUserReaderDtoMapperTest {
 
 		// Assert
 		assertEquals(dtos, result)
-
-		verify(translateService, times(expectedRoleTranslation))
-			.getMessage("${USER_ROLE_PREFIX}ROLE")
-
-		verify(preferenceMapper, times(expectedPreferencesCast))
-			.toDto(model.preferences ?: PreferencesModel())
-	}
-
-	@ParameterizedTest
-	@MethodSource("CurrentUserModel to CurrentUserReaderDto data")
-	fun `Should toDto convert CurrentUserModel page to CurrentUserReaderDto page`(
-		model: CurrentUserModel,
-		dto: CurrentUserReaderDto,
-		expectedRoleTranslation: Int,
-		expectedPreferencesCast: Int,
-	) {
-		// Arrange
-		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(model),
-		)
-		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(dto),
-			lastRefresh = modelPage.lastRefresh,
-		)
-
-		// Act
-		val result = mapper.toDtoPage(modelPage)
-
-		// Assert
-		assertEquals(dtoPage, result)
 
 		verify(translateService, times(expectedRoleTranslation))
 			.getMessage("${USER_ROLE_PREFIX}ROLE")

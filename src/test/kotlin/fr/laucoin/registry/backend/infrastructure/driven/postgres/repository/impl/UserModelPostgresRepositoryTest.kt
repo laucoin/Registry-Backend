@@ -56,8 +56,8 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		assertEquals(5, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
-			textSearched = null,
-			visibilitySearched = null,
+			query = null,
+			isVisible = null,
 			sortFields = emptyList(),
 			pageable.limit,
 			pageable.offset,
@@ -78,8 +78,8 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		assertEquals(5, result.size)
 		verify(postgresRepository).findWithLimit(
-			textSearched = null,
-			visibilitySearched = null,
+			query = null,
+			isVisible = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -88,13 +88,13 @@ class UserModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(currentUser().id!!, visibilitySearched = null).block()
+		val result = repository.findById(currentUser().id!!, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			currentUser().id!!,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -105,13 +105,13 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(uuid, visibilitySearched = null).block()
+		val result = repository.findById(uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -119,13 +119,13 @@ class UserModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findByOidcId call repository findByOidcId`() {
 		// Act
-		val result = repository.findByOidcId(currentUser().oidcId!!, visibilitySearched = null).block()
+		val result = repository.findByOidcId(currentUser().oidcId!!, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findByOidcId(
 			currentUser().oidcId!!,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(currentUserMapper, atLeastOnce()).toModel(any())
 	}
@@ -136,13 +136,13 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findByOidcId(uuid, visibilitySearched = null).block()
+		val result = repository.findByOidcId(uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findByOidcId(
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -153,14 +153,14 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		val level = 0
 
 		// Act
-		val result = repository.findByRoleLevel(level, visibilitySearched = null).collectList().block()
+		val result = repository.findByRoleLevel(level, isVisible = null).collectList().block()
 
 		// Assert
 		assertEquals(3, result?.size)
 		assertEquals(currentUser().id, result?.first()?.id)
 		verify(postgresRepository).findByRoleLevel(
 			level,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 	}
 

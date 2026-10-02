@@ -18,9 +18,9 @@ data class ParticipantModel(
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,
 	var user: UserModel? = null,
-	var purged: Boolean? = null,
+	var isPurged: Boolean? = null,
 ): GenericProjectModel() {
-	fun isNotUsable() = isNotVisible() || purged == true
+	fun isNotUsable() = isNotVisible() || isPurged == true
 
 	fun getNewGroups(participant: ParticipantModel): List<GroupModel> {
 		val currentGroups = groups.mapNotNull { it.id }

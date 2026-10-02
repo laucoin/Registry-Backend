@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.NumericRangeModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.activityId
@@ -39,7 +38,7 @@ class ActivityReaderDtoMapperTest {
 			startAvailability = CustomDateTimeModel.MIN
 			endAvailability = CustomDateTimeModel.MAX
 			id = activityId
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -53,7 +52,7 @@ class ActivityReaderDtoMapperTest {
 			startAvailability = CustomDateTimeModel.MIN
 			endAvailability = CustomDateTimeModel.MAX
 			id = activityId
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -105,40 +104,6 @@ class ActivityReaderDtoMapperTest {
 
 		// Assert
 		assertEquals(dtos, result)
-
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
-	}
-
-	@ParameterizedTest
-	@MethodSource("ActivityModel to ActivityReaderDto data")
-	fun `Should toDto convert ActivityModel page to ActivityReaderDto page`(
-		model: ActivityModel,
-		dto: ActivityReaderDto,
-		expectedAvailabilityCast: Int,
-	) {
-		// Arrange
-		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(model),
-		)
-		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(dto),
-			lastRefresh = modelPage.lastRefresh,
-		)
-
-		// Act
-		val result = mapper.toDtoPage(modelPage)
-
-		// Assert
-		assertEquals(dtoPage, result)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
 			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)

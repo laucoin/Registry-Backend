@@ -95,15 +95,15 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 			.leftJoin(creator).on(TB_COMMUNICATION.CREATED_BY.eq(creator.ID))
 			.leftJoin(editor).on(TB_COMMUNICATION.LAST_MODIFIED_BY.eq(editor.ID))
 
-	private fun searchCondition(textSearched: String?): Condition =
-		textSearched?.let { similarity(TB_COMMUNICATION.SEARCH_TEXT, DSL.`val`(it)).gt(0f) } ?: DSL.noCondition()
+	private fun searchCondition(query: String?): Condition =
+		query?.let { similarity(TB_COMMUNICATION.SEARCH_TEXT, DSL.`val`(it)).gt(0f) } ?: DSL.noCondition()
 
 	private fun dateRangeCondition(
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?
 	): Condition {
-		val afterStart = startDateTimeSearched?.let { TB_COMMUNICATION.DATE_TIME.ge(it) } ?: DSL.noCondition()
-		val beforeEnd = endDateTimeSearched?.let { TB_COMMUNICATION.DATE_TIME.le(it) } ?: DSL.noCondition()
+		val afterStart = startDateTime?.let { TB_COMMUNICATION.DATE_TIME.ge(it) } ?: DSL.noCondition()
+		val beforeEnd = endDateTime?.let { TB_COMMUNICATION.DATE_TIME.le(it) } ?: DSL.noCondition()
 		return afterStart.and(beforeEnd)
 	}
 
@@ -114,7 +114,7 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 	}
 
 	// similarityScore sorts first (a no-op constant when there's no text search), TB_COMMUNICATION.DATE_TIME
-	// (descending) always stays last as the final tiebreaker (v1's sole, implicit order).
+	// (descending) always stays last as the final tiebreaker.
 	private fun orderFields(
 		similarityScore: Field<Float>,
 		sortFields: List<SortModel<CommunicationSortFieldEnum>>,
@@ -140,10 +140,10 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		sortFields: List<SortModel<CommunicationSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -153,18 +153,18 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_COMMUNICATION.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			baseSelect(activity, alert, project, creator, editor, similarityScore, fullCount)
 				.where(
 					TB_COMMUNICATION.PROJECT_ID.eq(projectId)
-						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
-						.and(searchCondition(textSearched))
-						.and(dateRangeCondition(startDateTimeSearched, endDateTimeSearched))
+						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
+						.and(searchCondition(query))
+						.and(dateRangeCondition(startDateTime, endDateTime))
 				)
 				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
@@ -174,7 +174,7 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 	fun findAllByMovementIdsWithLimit(
 		projectId: UUID,
 		movementIds: List<UUID>,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 		limit: Int
 	): Flux<CommunicationEntity> {
 		val activity = activityAlias()
@@ -186,7 +186,7 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 			baseSelect(activity, alert, project, creator, editor)
 				.where(
 					TB_COMMUNICATION.PROJECT_ID.eq(projectId)
-						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
 						.and(TB_COMMUNICATION.MOVEMENT_ID.`in`(movementIds))
 				)
 				.orderBy(TB_COMMUNICATION.DATE_TIME.desc())
@@ -197,10 +197,10 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 	fun findAllByMovementId(
 		projectId: UUID,
 		movementId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<CommunicationEntity> {
@@ -209,9 +209,9 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_COMMUNICATION.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
@@ -219,9 +219,9 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 				.where(
 					TB_COMMUNICATION.PROJECT_ID.eq(projectId)
 						.and(TB_COMMUNICATION.MOVEMENT_ID.eq(movementId))
-						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
-						.and(searchCondition(textSearched))
-						.and(dateRangeCondition(startDateTimeSearched, endDateTimeSearched))
+						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
+						.and(searchCondition(query))
+						.and(dateRangeCondition(startDateTime, endDateTime))
 				)
 				.orderBy(similarityScore.desc(), TB_COMMUNICATION.DATE_TIME.desc())
 				.limit(limit).offset(offset)
@@ -231,26 +231,26 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 	fun countAllByMovementId(
 		projectId: UUID,
 		movementId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Mono<Long> = Mono.from(
 		dsl.select(count(TB_COMMUNICATION.ID))
 			.from(TB_COMMUNICATION)
 			.where(
 				TB_COMMUNICATION.PROJECT_ID.eq(projectId)
 					.and(TB_COMMUNICATION.MOVEMENT_ID.eq(movementId))
-					.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
-					.and(searchCondition(textSearched))
-					.and(dateRangeCondition(startDateTimeSearched, endDateTimeSearched))
+					.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
+					.and(searchCondition(query))
+					.and(dateRangeCondition(startDateTime, endDateTime))
 			)
 	).map { it.value1().toLong() }
 
 	fun findAllByAlertIdsWithLimit(
 		projectId: UUID,
 		alertIds: List<UUID>,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 		limit: Int
 	): Flux<CommunicationEntity> {
 		val activity = activityAlias()
@@ -262,7 +262,7 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 			baseSelect(activity, alert, project, creator, editor)
 				.where(
 					TB_COMMUNICATION.PROJECT_ID.eq(projectId)
-						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
 						.and(TB_COMMUNICATION.ALERT_ID.`in`(alertIds))
 				)
 				.orderBy(TB_COMMUNICATION.DATE_TIME.desc())
@@ -273,10 +273,10 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 	fun findAllByAlertId(
 		projectId: UUID,
 		alertId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<CommunicationEntity> {
@@ -285,9 +285,9 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_COMMUNICATION.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
@@ -295,9 +295,9 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 				.where(
 					TB_COMMUNICATION.PROJECT_ID.eq(projectId)
 						.and(TB_COMMUNICATION.ALERT_ID.eq(alertId))
-						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
-						.and(searchCondition(textSearched))
-						.and(dateRangeCondition(startDateTimeSearched, endDateTimeSearched))
+						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
+						.and(searchCondition(query))
+						.and(dateRangeCondition(startDateTime, endDateTime))
 				)
 				.orderBy(similarityScore.desc(), TB_COMMUNICATION.DATE_TIME.desc())
 				.limit(limit).offset(offset)
@@ -307,23 +307,23 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 	fun countAllByAlertId(
 		projectId: UUID,
 		alertId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Mono<Long> = Mono.from(
 		dsl.select(count(TB_COMMUNICATION.ID))
 			.from(TB_COMMUNICATION)
 			.where(
 				TB_COMMUNICATION.PROJECT_ID.eq(projectId)
 					.and(TB_COMMUNICATION.ALERT_ID.eq(alertId))
-					.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
-					.and(searchCondition(textSearched))
-					.and(dateRangeCondition(startDateTimeSearched, endDateTimeSearched))
+					.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
+					.and(searchCondition(query))
+					.and(dateRangeCondition(startDateTime, endDateTime))
 			)
 	).map { it.value1().toLong() }
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<CommunicationEntity> {
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<CommunicationEntity> {
 		if (ids.isEmpty()) return Flux.empty()
 		val activity = activityAlias()
 		val alert = alertAlias()
@@ -335,12 +335,12 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 				.where(
 					TB_COMMUNICATION.PROJECT_ID.eq(projectId)
 						.and(TB_COMMUNICATION.ID.`in`(ids))
-						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(activity, alert, creator, editor, project) }
 	}
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationEntity> {
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<CommunicationEntity> {
 		val activity = activityAlias()
 		val alert = alertAlias()
 		val project = projectTable()
@@ -351,7 +351,7 @@ class CommunicationJooqRepository(private val dsl: DSLContext) {
 				.where(
 					TB_COMMUNICATION.PROJECT_ID.eq(projectId)
 						.and(TB_COMMUNICATION.ID.eq(id))
-						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_COMMUNICATION.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(activity, alert, creator, editor, project) }
 	}

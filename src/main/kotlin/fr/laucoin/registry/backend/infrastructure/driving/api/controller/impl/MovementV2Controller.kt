@@ -72,17 +72,17 @@ class MovementV2Controller(
 		projectId: UUID,
 		page: PageQueryDto,
 		currentMovements: Boolean,
-		linkedToActivity: Boolean?,
-		visible: Boolean?,
+		hasActivity: Boolean?,
+		isVisible: Boolean?,
 		type: MovementTypeEnum?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
-		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
+		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && hasActivity == true) {
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = MovementSearchParamModel(isVisible, hasActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		val movements = if (currentMovements) {
 			service.findCurrentMovementsPage(projectId, pageable, searchParams)
@@ -108,7 +108,7 @@ class MovementV2Controller(
 	}
 
 	override fun findMovementById(projectId: UUID, id: UUID): Mono<MovementReaderDto> {
-		return service.findMovementById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findMovementById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun searchReasonsAndActivities(
@@ -153,11 +153,11 @@ class MovementV2Controller(
 		id: UUID,
 		page: PageQueryDto,
 		query: String?,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = CommunicationSearchParamModel(query, visible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = CommunicationSearchParamModel(query, isVisible, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, communicationReaderMapper::toDto) }
@@ -181,16 +181,6 @@ class MovementV2Controller(
 			.map { ResponseEntity.created(URI.create("$API_V2/projects/$projectId/movements/${it.id}")).body(it) }
 	}
 
-	override fun updateMovementById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		movement: ParticipantMovementWriterDto,
-	): Mono<MovementReaderDto> {
-		val movementModel = writerMapper.toModel(movement, projectId)
-		return service.updateMovementById(currentUser, projectId, id, movementModel).map(readerMapper::toDto)
-	}
-
 	override fun createGuestsMovement(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
@@ -201,19 +191,6 @@ class MovementV2Controller(
 		return service.createMovement(currentUser, movementModel, newGuestModels)
 			.map(readerMapper::toDto)
 			.map { ResponseEntity.created(URI.create("$API_V2/projects/$projectId/movements/${it.id}")).body(it) }
-	}
-
-	override fun updateGuestsMovementById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		movement: GuestMovementWriterDto,
-	): Mono<MovementReaderDto> {
-		val movementModel = guestMovementWriterMapper.toModel(movement, projectId)
-		val newGuestModels = guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId)
-
-		return service.updateMovementById(currentUser, projectId, id, movementModel, newGuestModels)
-			.map(readerMapper::toDto)
 	}
 
 	override fun disableMovementById(

@@ -164,31 +164,31 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 	}
 
 	private fun dateRangeOverlap(
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?
 	): Condition {
-		val afterStart = startDateTimeSearched?.let { TB_MOVEMENT.DATE_TIME.ge(it) } ?: DSL.noCondition()
-		val beforeEnd = endDateTimeSearched?.let { TB_MOVEMENT.DATE_TIME.le(it) } ?: DSL.noCondition()
+		val afterStart = startDateTime?.let { TB_MOVEMENT.DATE_TIME.ge(it) } ?: DSL.noCondition()
+		val beforeEnd = endDateTime?.let { TB_MOVEMENT.DATE_TIME.le(it) } ?: DSL.noCondition()
 		return afterStart.and(beforeEnd)
 	}
 
 	private fun searchConditions(
 		projectId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Condition {
 		val conditions = mutableListOf(
 			TB_MOVEMENT.PROJECT_ID.eq(projectId),
-			visibleCondition(TB_MOVEMENT.VISIBLE, visibilitySearched),
-			TB_MOVEMENT.TYPE.`in`(typeSearched),
-			dateRangeOverlap(startDateTimeSearched, endDateTimeSearched),
+			visibleCondition(TB_MOVEMENT.VISIBLE, isVisible),
+			TB_MOVEMENT.TYPE.`in`(type),
+			dateRangeOverlap(startDateTime, endDateTime),
 		)
-		linkedToActivity?.let {
-			val hasActivity = TB_MOVEMENT.ACTIVITY_ID.isNotNull
-			conditions += if (it) hasActivity else hasActivity.not()
+		hasActivity?.let {
+			val linked = TB_MOVEMENT.ACTIVITY_ID.isNotNull
+			conditions += if (it) linked else linked.not()
 		}
 		return DSL.and(conditions)
 	}
@@ -230,11 +230,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 
 	fun findAll(
 		projectId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<MovementEntity> {
@@ -248,11 +248,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						visibilitySearched,
-						linkedToActivity,
-						typeSearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						isVisible,
+						hasActivity,
+						type,
+						startDateTime,
+						endDateTime
 					)
 				)
 				.orderBy(TB_MOVEMENT.DATE_TIME.desc())
@@ -343,11 +343,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 
 	fun findCurrent(
 		projectId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<MovementEntity> {
@@ -389,11 +389,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						visibilitySearched,
-						linkedToActivity,
-						typeSearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						isVisible,
+						hasActivity,
+						type,
+						startDateTime,
+						endDateTime
 					)
 				)
 				.orderBy(TB_MOVEMENT.DATE_TIME.desc())
@@ -403,11 +403,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 
 	fun countCurrent(
 		projectId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Mono<Long> {
 		val (lastParticipantMovement, filteredGroups, currentMovement) = currentMovementCtes(projectId)
 		val cmId = field(name("current_movement", "id"), UUID::class.java)
@@ -419,11 +419,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						visibilitySearched,
-						linkedToActivity,
-						typeSearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						isVisible,
+						hasActivity,
+						type,
+						startDateTime,
+						endDateTime
 					)
 				)
 		).map { it.value1()!!.toLong() }
@@ -432,11 +432,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 	fun findAllByParticipantId(
 		projectId: UUID,
 		participantId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<MovementEntity> {
@@ -454,11 +454,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						visibilitySearched,
-						linkedToActivity,
-						typeSearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						isVisible,
+						hasActivity,
+						type,
+						startDateTime,
+						endDateTime
 					)
 				)
 				.orderBy(TB_MOVEMENT.DATE_TIME.desc())
@@ -469,11 +469,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 	fun countAllByParticipantId(
 		projectId: UUID,
 		participantId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Mono<Long> = Mono.from(
 		dsl.select(count(TB_MOVEMENT.ID))
 			.from(TB_MOVEMENT_CONTENT)
@@ -482,11 +482,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				TB_MOVEMENT_CONTENT.PARTICIPANT_ID.eq(participantId).and(
 					searchConditions(
 						projectId,
-						visibilitySearched,
-						linkedToActivity,
-						typeSearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						isVisible,
+						hasActivity,
+						type,
+						startDateTime,
+						endDateTime
 					)
 				)
 			)
@@ -495,11 +495,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 	fun findAllByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<MovementEntity> {
@@ -516,11 +516,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						visibilitySearched,
-						linkedToActivity,
-						typeSearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						isVisible,
+						hasActivity,
+						type,
+						startDateTime,
+						endDateTime
 					)
 				)
 				.orderBy(TB_MOVEMENT.DATE_TIME.desc())
@@ -531,11 +531,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 	fun countAllByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Mono<Long> = Mono.from(
 		dsl.select(count(TB_MOVEMENT.ID))
 			.from(TB_MOVEMENT_CONTENT)
@@ -544,11 +544,11 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				TB_MOVEMENT_CONTENT.VEHICLE_ID.eq(vehicleId).and(
 					searchConditions(
 						projectId,
-						visibilitySearched,
-						linkedToActivity,
-						typeSearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						isVisible,
+						hasActivity,
+						type,
+						startDateTime,
+						endDateTime
 					)
 				)
 			)
@@ -557,10 +557,10 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 	fun findAllByActivityId(
 		projectId: UUID,
 		activityId: UUID,
-		visibilitySearched: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 		offset: Int,
 	): Flux<MovementEntity> {
@@ -574,9 +574,9 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 				.where(
 					TB_MOVEMENT.PROJECT_ID.eq(projectId)
 						.and(TB_MOVEMENT.ACTIVITY_ID.eq(activityId))
-						.and(visibleCondition(TB_MOVEMENT.VISIBLE, visibilitySearched))
-						.and(TB_MOVEMENT.TYPE.`in`(typeSearched))
-						.and(dateRangeOverlap(startDateTimeSearched, endDateTimeSearched))
+						.and(visibleCondition(TB_MOVEMENT.VISIBLE, isVisible))
+						.and(TB_MOVEMENT.TYPE.`in`(type))
+						.and(dateRangeOverlap(startDateTime, endDateTime))
 				)
 				.orderBy(TB_MOVEMENT.DATE_TIME.desc())
 				.limit(limit).offset(offset)
@@ -586,28 +586,28 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 	fun countAllByActivityId(
 		projectId: UUID,
 		activityId: UUID,
-		visibilitySearched: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		type: List<MovementTypeEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Mono<Long> = Mono.from(
 		dsl.select(count(TB_MOVEMENT.ID))
 			.from(TB_MOVEMENT)
 			.where(
 				TB_MOVEMENT.PROJECT_ID.eq(projectId)
 					.and(TB_MOVEMENT.ACTIVITY_ID.eq(activityId))
-					.and(visibleCondition(TB_MOVEMENT.VISIBLE, visibilitySearched))
-					.and(TB_MOVEMENT.TYPE.`in`(typeSearched))
-					.and(dateRangeOverlap(startDateTimeSearched, endDateTimeSearched))
+					.and(visibleCondition(TB_MOVEMENT.VISIBLE, isVisible))
+					.and(TB_MOVEMENT.TYPE.`in`(type))
+					.and(dateRangeOverlap(startDateTime, endDateTime))
 			)
 	).map { it.value1()!!.toLong() }
 
 	fun findByActivityWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		dateTime: ZonedDateTime?,
 		limit: Int,
 	): Flux<MovementEntity> {
 		val activity = activityTable()
@@ -616,22 +616,22 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 		val editor = editorTable()
 		val plm = lastMovementPerParticipant()
 		val plmDateTime = field(name("plm", "participant_last_movement_date_time"), ZonedDateTime::class.java)
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			activity.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 
 		val conditions = mutableListOf(
 			TB_MOVEMENT.PROJECT_ID.eq(projectId),
-			TB_MOVEMENT.ACTIVITY_ID.isNotNull.and(textSearched?.let {
+			TB_MOVEMENT.ACTIVITY_ID.isNotNull.and(query?.let {
 				similarity(
 					activity.SEARCH_TEXT,
 					DSL.`val`(it)
 				).gt(0f)
 			} ?: DSL.noCondition()),
-			visibleCondition(TB_MOVEMENT.VISIBLE, visibilitySearched),
+			visibleCondition(TB_MOVEMENT.VISIBLE, isVisible),
 		)
-		availabilitySearched?.let {
+		isAvailable?.let {
 			val cond = activeNowCondition(
 				activity.START_AVAILABILITY_DATE,
 				activity.START_AVAILABILITY_TIME,
@@ -640,7 +640,7 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 			)
 			conditions += if (it) cond else cond.not()
 		}
-		dateTimeSearched?.let {
+		dateTime?.let {
 			conditions += activeAtCondition(
 				activity.START_AVAILABILITY_DATE,
 				activity.START_AVAILABILITY_TIME,
@@ -714,10 +714,10 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(activity, project, creator, editor) }
 	}
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementEntity> =
-		findById(projectId, id, visibilitySearched, dsl)
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementEntity> =
+		findById(projectId, id, isVisible, dsl)
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?, using: DSLContext): Mono<MovementEntity> {
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?, using: DSLContext): Mono<MovementEntity> {
 		val activity = activityTable()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -726,25 +726,25 @@ class MovementJooqRepository(private val dsl: DSLContext) {
 			baseSelect(activity, project, creator, editor, using = using)
 				.where(
 					TB_MOVEMENT.PROJECT_ID.eq(projectId).and(TB_MOVEMENT.ID.eq(id))
-						.and(visibleCondition(TB_MOVEMENT.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_MOVEMENT.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(activity, project, creator, editor) }
 	}
 
 	fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID> {
-		val lc = dsl.select(max(TB_COMMUNICATION.DATE_TIME).`as`("max"), TB_COMMUNICATION.MOVEMENT_ID)
+		val commentTable = dsl.select(max(TB_COMMUNICATION.DATE_TIME).`as`("max"), TB_COMMUNICATION.MOVEMENT_ID)
 			.from(TB_COMMUNICATION)
 			.where(TB_COMMUNICATION.MOVEMENT_ID.isNotNull)
 			.groupBy(TB_COMMUNICATION.MOVEMENT_ID)
 			.asTable("lc")
-		val lcMax = field(name("lc", "max"), ZonedDateTime::class.java)
-		val lcMovementId = field(name("lc", "movement_id"), UUID::class.java)
+		val commentMax = field(name("lc", "max"), ZonedDateTime::class.java)
+		val commentMovement = field(name("lc", "movement_id"), UUID::class.java)
 		return Flux.from(
 			dsl.select(TB_MOVEMENT.ID)
 				.from(TB_MOVEMENT)
-				.leftJoin(lc).on(lcMovementId.eq(TB_MOVEMENT.ID))
+				.leftJoin(commentTable).on(commentMovement.eq(TB_MOVEMENT.ID))
 				.where(
-					lcMax.isNull.or(DSL.condition("{0} < {1}", lcMax, DSL.`val`(dateThreshold)))
+					commentMax.isNull.or(DSL.condition("{0} < {1}", commentMax, DSL.`val`(dateThreshold)))
 						.and(DSL.condition("{0} < {1}", TB_MOVEMENT.LAST_MODIFIED_DATE, DSL.`val`(dateThreshold)))
 				)
 		).map { it.value1()!! }

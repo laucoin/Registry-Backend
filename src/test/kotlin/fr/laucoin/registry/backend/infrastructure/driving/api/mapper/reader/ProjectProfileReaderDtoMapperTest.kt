@@ -37,7 +37,7 @@ class ProjectProfileReaderDtoMapperTest {
 						id = UUID.randomUUID()
 						startAccess = CustomDateTimeModel.MIN
 						endAccess = CustomDateTimeModel.MAX
-						visible = false
+						isVisible = false
 						status = null
 						creation = HistoryModel()
 						lastEdition = HistoryModel()
@@ -51,7 +51,7 @@ class ProjectProfileReaderDtoMapperTest {
 						startAccess = CustomDateTimeModel.MIN
 						endAccess = CustomDateTimeModel.MAX
 						status = ACCEPTED
-						visible = false
+						isVisible = false
 						creation = HistoryModel()
 						lastEdition = HistoryModel()
 					},
@@ -66,7 +66,7 @@ class ProjectProfileReaderDtoMapperTest {
 						status = ACCEPTED
 						startAccess = CustomDateTimeModel.MIN
 						endAccess = CustomDateTimeModel.MAX
-						visible = true
+						isVisible = true
 						creation = HistoryModel()
 						lastEdition = HistoryModel()
 					},
@@ -81,7 +81,7 @@ class ProjectProfileReaderDtoMapperTest {
 						startAccess = CustomDateTimeModel.MIN
 						endAccess = CustomDateTimeModel.MAX
 						status = null
-						visible = true
+						isVisible = true
 						creation = HistoryModel()
 						lastEdition = HistoryModel()
 					},
@@ -114,7 +114,7 @@ class ProjectProfileReaderDtoMapperTest {
 		assertEquals(expectedStatusValue, result.status?.value)
 		assertEquals(profile.startAccess, profile.startAccess)
 		assertEquals(profile.endAccess, profile.endAccess)
-		assertEquals(profile.visible, result.visible)
+		assertEquals(profile.isVisible, result.isVisible)
 		assertEquals(profile.creation, result.creation)
 		assertEquals(profile.lastEdition, result.lastEdition)
 	}

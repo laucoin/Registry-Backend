@@ -38,18 +38,18 @@ class ActivityModelPostgresRepository(
 	): Mono<PageModel<ActivityModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.dateTime,
 			sortFields,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ActivityEntity::fullCount, mapper::toModel)
 	}
 
-	override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel> {
-		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched)
+	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ActivityModel> {
+		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, isVisible)
 			.map(mapper::toModel)
 	}
 
@@ -60,10 +60,10 @@ class ActivityModelPostgresRepository(
 	): Flux<ActivityModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.dateTime,
 			limit,
 		).map(mapper::toModel)
 	}
@@ -72,8 +72,8 @@ class ActivityModelPostgresRepository(
 		return repository.findUnusedSince(dateThreshold)
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
-		return repository.findById(projectId, id, visibilitySearched)
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel> {
+		return repository.findById(projectId, id, isVisible)
 			.map(mapper::toModel)
 	}
 

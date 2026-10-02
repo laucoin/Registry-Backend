@@ -172,37 +172,37 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 
 	private fun searchConditions(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?
+		query: String?,
+		isVisible: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?
 	): Condition {
 		val conditions = mutableListOf(TB_GROUP.PROJECT_ID.eq(projectId))
-		textSearched?.let {
+		query?.let {
 			val pattern = DSL.concat(DSL.inline("%"), unaccent2(DSL.`val`(it)), DSL.inline("%"))
 			conditions += unaccent2(TB_GROUP.NAME).likeIgnoreCase(pattern)
 		}
-		conditions += visibleCondition(TB_GROUP.VISIBLE, visibilitySearched)
-		presenceSearched?.let {
-			val isPresent = activeNowCondition(
+		conditions += visibleCondition(TB_GROUP.VISIBLE, isVisible)
+		isPresent?.let {
+			val activeNow = activeNowCondition(
 				TB_GROUP.START_AVAILABILITY_DATE,
 				TB_GROUP.START_AVAILABILITY_TIME,
 				TB_GROUP.END_AVAILABILITY_DATE,
 				TB_GROUP.END_AVAILABILITY_TIME
 			)
-			conditions += if (it) isPresent else isPresent.not()
+			conditions += if (it) activeNow else activeNow.not()
 		}
-		dateTimeSearched?.let { conditions += dateInRangeCondition(it) }
+		dateTime?.let { conditions += dateInRangeCondition(it) }
 		return DSL.and(conditions)
 	}
 
-	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime): Condition =
+	private fun dateInRangeCondition(dateTime: ZonedDateTime): Condition =
 		activeAtCondition(
 			TB_GROUP.START_AVAILABILITY_DATE,
 			TB_GROUP.START_AVAILABILITY_TIME,
 			TB_GROUP.END_AVAILABILITY_DATE,
 			TB_GROUP.END_AVAILABILITY_TIME,
-			dateTimeSearched
+			dateTime
 		)
 
 	private val membersCount: Field<Long> = field(name("members", "members_count"), Long::class.java)
@@ -253,7 +253,7 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		LAST_MODIFIED_DATE -> TB_GROUP.LAST_MODIFIED_DATE
 	}
 
-	// TB_GROUP.NAME always stays as the final tiebreaker (v1's sole, implicit order).
+	// TB_GROUP.NAME always stays as the final tiebreaker.
 	private fun orderFields(sortFields: List<SortModel<GroupSortFieldEnum>>): List<OrderField<*>> {
 		val fields = mutableListOf<OrderField<*>>()
 		sortFields.forEach { fields += if (it.direction == DESC) it.field.toJooqField().desc() else it.field.toJooqField().asc() }
@@ -286,10 +286,10 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		sortFields: List<SortModel<GroupSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -300,13 +300,13 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			baseSelect(projectId, project, creator, editor, fullCount)
-				.where(searchConditions(projectId, textSearched, visibilitySearched, presenceSearched, dateTimeSearched))
+				.where(searchConditions(projectId, query, isVisible, isPresent, dateTime))
 				.orderBy(orderFields(sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(project, creator, editor, fullCount, includeCounts = true) }
 	}
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupEntity> {
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupEntity> {
 		if (ids.isEmpty()) return Flux.empty()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -315,17 +315,17 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 			baseSelect(projectId, project, creator, editor)
 				.where(
 					TB_GROUP.PROJECT_ID.eq(projectId).and(TB_GROUP.ID.`in`(ids))
-						.and(visibleCondition(TB_GROUP.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_GROUP.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(project, creator, editor, includeCounts = true) }
 	}
 
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		limit: Int,
 	): Flux<GroupEntity> {
 		val project = projectTable()
@@ -336,10 +336,10 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
-						visibilitySearched,
-						presenceSearched,
-						dateTimeSearched
+						query,
+						isVisible,
+						isPresent,
+						dateTime
 					)
 				)
 				.orderBy(TB_GROUP.NAME)
@@ -407,10 +407,10 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 		limit,
 	)
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupEntity> =
-		findById(projectId, id, visibilitySearched, dsl)
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<GroupEntity> =
+		findById(projectId, id, isVisible, dsl)
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?, using: DSLContext): Mono<GroupEntity> {
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?, using: DSLContext): Mono<GroupEntity> {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
@@ -418,24 +418,24 @@ class GroupJooqRepository(private val dsl: DSLContext) {
 			baseSelect(projectId, project, creator, editor, using = using)
 				.where(
 					TB_GROUP.PROJECT_ID.eq(projectId).and(TB_GROUP.ID.eq(id))
-						.and(visibleCondition(TB_GROUP.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_GROUP.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(project, creator, editor, includeCounts = true) }
 	}
 
 	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID> {
-		val gc = dsl.select(TB_GROUP_CONTENT.GROUP_ID, count(TB_GROUP_CONTENT.ID).`as`("count"))
+		val contentTable = dsl.select(TB_GROUP_CONTENT.GROUP_ID, count(TB_GROUP_CONTENT.ID).`as`("count"))
 			.from(TB_GROUP_CONTENT)
 			.where(TB_GROUP_CONTENT.PARTICIPANT_ID.notIn(participantToExclude))
 			.groupBy(TB_GROUP_CONTENT.GROUP_ID)
 			.asTable("gc")
-		val gcGroupId = field(name("gc", "group_id"), UUID::class.java)
-		val gcCount = field(name("gc", "count"), Long::class.java)
+		val contentGroup = field(name("gc", "group_id"), UUID::class.java)
+		val contentCount = field(name("gc", "count"), Long::class.java)
 		return Flux.from(
 			dsl.select(TB_GROUP.ID)
 				.from(TB_GROUP)
-				.leftJoin(gc).on(TB_GROUP.ID.eq(gcGroupId))
-				.where(gcCount.isNull.or(gcCount.eq(0L)))
+				.leftJoin(contentTable).on(TB_GROUP.ID.eq(contentGroup))
+				.where(contentCount.isNull.or(contentCount.eq(0L)))
 		).map { it.value1()!! }
 	}
 

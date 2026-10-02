@@ -16,7 +16,7 @@ class AlertReaderDtoMapper(
 			status = Optional.ofNullable(model.status).map(statusMapper::toDto).orElse(null),
 		).apply {
 			id = model.id
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}

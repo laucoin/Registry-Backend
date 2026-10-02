@@ -17,8 +17,8 @@ class PreferenceModelPostgresRepository(
 	private val repository: PreferencesJooqRepository,
 	private val mapper: PreferencesEntityMapper,
 ): IPreferencesPort {
-	override fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesModel> {
-		return repository.findByUserId(userId, visibilitySearched).map(mapper::toModel)
+	override fun findByUserId(userId: UUID, isVisible: Boolean?): Mono<PreferencesModel> {
+		return repository.findByUserId(userId, isVisible).map(mapper::toModel)
 	}
 
 	override fun save(preference: PreferencesModel): Mono<PreferencesModel> {

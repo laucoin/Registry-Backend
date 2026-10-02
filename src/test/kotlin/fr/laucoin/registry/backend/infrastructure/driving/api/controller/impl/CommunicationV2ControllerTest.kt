@@ -34,8 +34,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -54,8 +52,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
-class CommunicationV2ControllerTest: TestContext() {
+class CommunicationV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: ICommunicationService
 
@@ -88,7 +88,10 @@ class CommunicationV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
 			.exchange()
@@ -99,7 +102,7 @@ class CommunicationV2ControllerTest: TestContext() {
 		verify(service).findCommunicationPage(
 			projectId,
 			pageable,
-			CommunicationSearchParamModel(textSearched = null, visibilitySearched = null, startDateTimeSearched = null, endDateTimeSearched = null),
+			CommunicationSearchParamModel(query = null, isVisible = null, startDateTime = null, endDateTime = null),
 			emptyList(),
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -109,7 +112,10 @@ class CommunicationV2ControllerTest: TestContext() {
 	fun `Should findCommunications return 400 when a query param is invalid`() {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("page", -1))))
 			.exchange()
@@ -123,7 +129,10 @@ class CommunicationV2ControllerTest: TestContext() {
 	fun `Should findCommunications return 400 on an unknown sort field`() {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("sort", "unknownField"))))
 			.exchange()
@@ -142,26 +151,38 @@ class CommunicationV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<CommunicationReaderDto>(OK)
-		verify(service).findCommunicationById(projectId, uuid, visibilitySearched = null)
+		verify(service).findCommunicationById(projectId, uuid, isVisible = null)
 	}
 
 	@Test
-	fun `Should searchActivities rename textSearched to q`() {
+	fun `Should searchActivities rename query to q`() {
 		// Arrange
 		val searched = "text"
-		whenever(service.searchOutMovementWithActivityByText(any(), anyOrNull())).thenReturn(Flux.just(MovementModel(contentType = REGISTERED)))
+		whenever(service.searchOutMovementWithActivityByText(any(), anyOrNull())).thenReturn(
+			Flux.just(
+				MovementModel(
+					contentType = REGISTERED
+				)
+			)
+		)
 		whenever(readerMovementMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.get()
 			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("q", searched))))
 			.exchange()
@@ -172,7 +193,7 @@ class CommunicationV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should searchAlerts rename textSearched to q`() {
+	fun `Should searchAlerts rename query to q`() {
 		// Arrange
 		val searched = "text"
 		whenever(service.searchAlertByText(any(), anyOrNull())).thenReturn(Flux.just(AlertModel()))
@@ -180,7 +201,10 @@ class CommunicationV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT)
+			)
 			.get()
 			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("q", searched))))
 			.exchange()
@@ -193,15 +217,21 @@ class CommunicationV2ControllerTest: TestContext() {
 	@Test
 	fun `Should createCommunication return 201 with a Location header`() {
 		// Arrange
-		val communication = CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
+		val communication =
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
 		val createdId = UUID.randomUUID()
-		whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel().apply { id = createdId }))
+		whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel().apply {
+			id = createdId
+		}))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
 		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto().apply { id = createdId })
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_C), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_C),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.post()
 			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
 			.bodyValue(communication)
@@ -235,37 +265,22 @@ class CommunicationV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should updateCommunicationById return 200`() {
-		// Arrange
-		val uuid = UUID.randomUUID()
-		val communication = CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
-		whenever(service.updateCommunicationById(any(), any(), any(), any())).thenReturn(Mono.just(CommunicationModel()))
-		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
-		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
-
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
-			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
-			.bodyValue(communication)
-			.exchange()
-
-		// Assert
-		result.body<CommunicationReaderDto>(OK)
-		verify(service).updateCommunicationById(any(), eq(projectId), eq(uuid), any())
-	}
-
-	@Test
 	fun `Should disableCommunicationById use POST and return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.disableCommunicationById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(CommunicationModel()))
+		whenever(service.disableCommunicationById(any(), eq(projectId), eq(uuid))).thenReturn(
+			Mono.just(
+				CommunicationModel()
+			)
+		)
 		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
 			.exchange()
@@ -279,12 +294,19 @@ class CommunicationV2ControllerTest: TestContext() {
 	fun `Should enableCommunicationById use POST and return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.enableCommunicationById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(CommunicationModel()))
+		whenever(service.enableCommunicationById(any(), eq(projectId), eq(uuid))).thenReturn(
+			Mono.just(
+				CommunicationModel()
+			)
+		)
 		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_D),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()
@@ -302,7 +324,10 @@ class CommunicationV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_D), buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_D),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
 			.delete()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
 			.exchange()

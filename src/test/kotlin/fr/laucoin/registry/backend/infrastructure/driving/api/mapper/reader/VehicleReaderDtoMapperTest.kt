@@ -65,7 +65,7 @@ class VehicleReaderDtoMapperTest {
 		assertEquals(vehicle.model, result.model)
 		assertEquals(vehicle.startAvailability, result.startAvailability)
 		assertEquals(vehicle.endAvailability, result.endAvailability)
-		assertEquals(vehicle.visible, result.visible)
+		assertEquals(vehicle.isVisible, result.isVisible)
 		assertEquals(vehicle.creation, result.creation)
 		assertEquals(vehicle.lastEdition, result.lastEdition)
 	}

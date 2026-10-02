@@ -29,7 +29,7 @@ interface IAlertService {
 		sortFields: List<SortModel<AlertSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<AlertModel>>
 
-	fun findAlertById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertModel>
+	fun findAlertById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertModel>
 
 	fun findAlertCommunicationsPage(
 		projectId: UUID,

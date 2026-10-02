@@ -23,12 +23,12 @@ class PreferencesService(
 	private val supportedLocales: List<String>,
 ): IPreferencesService, GenericService() {
 	override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
-		return port.findByUserId(currentUser.id!!, visibilitySearched = null)
+		return port.findByUserId(currentUser.id!!, isVisible = null)
 			.switchIfEmpty {
 				val preferences = PreferencesModel(userId = currentUser.id)
 				preferences.create(currentUser)
 				port.save(preferences)
-					.flatMap { port.findByUserId(currentUser.id!!, visibilitySearched = null) }
+					.flatMap { port.findByUserId(currentUser.id!!, isVisible = null) }
 			}
 	}
 
@@ -48,10 +48,10 @@ class PreferencesService(
 		currentUser: CurrentUserModel,
 		language: String
 	): Mono<PreferencesModel> {
-		val language = supportedLocales.firstOrNull { s -> s.startsWith(language) }
+		val supportedLanguage = supportedLocales.firstOrNull { locale -> locale.startsWith(language) }
 		return findByUser(currentUser).flatMap {
-			if (it.language !== language) {
-				it.language = language
+			if (it.language !== supportedLanguage) {
+				it.language = supportedLanguage
 				port.save(it.apply { update(currentUser) })
 			} else Mono.just(it)
 		}

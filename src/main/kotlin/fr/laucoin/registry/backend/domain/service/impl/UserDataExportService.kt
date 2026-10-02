@@ -47,13 +47,13 @@ class UserDataExportService(
 		val userId = currentUser.id!!
 		val pageable = PageableModel(0, EXPORT_MAX_ROWS)
 
-		val user = userPort.findById(userId, visibilitySearched = null).notFoundIfEmpty(userId)
+		val user = userPort.findById(userId, isVisible = null).notFoundIfEmpty(userId)
 		val preferences = preferencesService.findByUser(currentUser)
 		val projectProfiles = projectProfilePort
 			.findProjectProfilesPageByUserId(
 				userId,
 				pageable,
-				ProjectProfileSearchParamModel(visibilitySearched = null),
+				ProjectProfileSearchParamModel(isVisible = null),
 				emptyList(),
 			)
 			.map { it.content }

@@ -34,7 +34,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -53,8 +52,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 
-class ProjectProfileV2ControllerTest: TestContext() {
+class ProjectProfileV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IProjectProfileService
 
@@ -107,7 +107,7 @@ class ProjectProfileV2ControllerTest: TestContext() {
 		verify(service).findProjectProfilesPage(
 			projectId,
 			pageable,
-			ProjectProfileSearchParamModel(textSearched = null, availabilitySearched = null, statusSearched = null, dateTimeSearched = null),
+			ProjectProfileSearchParamModel(query = null, isAvailable = null, status = null, dateTime = null),
 			emptyList(),
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -157,11 +157,11 @@ class ProjectProfileV2ControllerTest: TestContext() {
 
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
-		verify(service).findProjectProfileById(projectId, uuid, visibilitySearched = null)
+		verify(service).findProjectProfileById(projectId, uuid, isVisible = null)
 	}
 
 	@Test
-	fun `Should searchUsers rename textSearched to q`() {
+	fun `Should searchUsers rename query to q`() {
 		// Arrange
 		val searched = "John"
 		whenever(service.searchUsers(anyOrNull())).thenReturn(Flux.just(UserModel()))
@@ -205,7 +205,12 @@ class ProjectProfileV2ControllerTest: TestContext() {
 		whenever(service.createProjectProfiles(any(), any(), any(), any()))
 			.thenReturn(Mono.just(Pair(listOf(UUID.randomUUID()), emptyList())))
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
-		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(CreatedProjectProfilesReaderDto(emptyList(), emptyList()))
+		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
+			CreatedProjectProfilesReaderDto(
+				emptyList(),
+				emptyList()
+			)
+		)
 
 		// Act
 		val result = webClient
@@ -226,9 +231,22 @@ class ProjectProfileV2ControllerTest: TestContext() {
 		val uuid = UUID.randomUUID()
 		val uuid2 = UUID.randomUUID()
 		val profiles = ProjectProfilesWriterDto(userIds = listOf(uuid, uuid2), role = "ROLE")
-		whenever(service.createProjectProfiles(any(), any(), any(), any())).thenReturn(Mono.just(Pair(listOf(uuid2), listOf(uuid))))
+		whenever(service.createProjectProfiles(any(), any(), any(), any())).thenReturn(
+			Mono.just(
+				Pair(
+					listOf(uuid2),
+					listOf(uuid)
+				)
+			)
+		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
-		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(CreatedProjectProfilesReaderDto(listOf(uuid2), listOf(uuid)))
+		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
+			CreatedProjectProfilesReaderDto(
+				listOf(
+					uuid2
+				), listOf(uuid)
+			)
+		)
 
 		// Act
 		val result = webClient
@@ -267,7 +285,14 @@ class ProjectProfileV2ControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileWriterDto(role = "ROLE")
-		whenever(service.updateProjectProfileById(any(), any(), any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(
+			service.updateProjectProfileById(
+				any(),
+				any(),
+				any(),
+				any()
+			)
+		).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
@@ -307,7 +332,11 @@ class ProjectProfileV2ControllerTest: TestContext() {
 	fun `Should blockProjectProfileById use POST and return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.blockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(service.blockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(
+			Mono.just(
+				ProjectProfileModel()
+			)
+		)
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
@@ -326,12 +355,16 @@ class ProjectProfileV2ControllerTest: TestContext() {
 	fun `Should unblockProjectProfileById use POST and return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.unblockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(service.unblockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(
+			Mono.just(
+				ProjectProfileModel()
+			)
+		)
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(projectId, uuid), emptyList()))
 			.exchange()

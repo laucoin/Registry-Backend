@@ -80,42 +80,34 @@ class ParticipantService(
 	}
 
 	override fun findBirthdays(projectId: UUID, limit: Int): Flux<ParticipantModel> {
-		return port.findBirthdays(projectId, visibilitySearched = true, limit)
+		return port.findBirthdays(projectId, isVisible = true, limit)
 	}
 
 	override fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
-		return port.findArrivingToday(projectId, visibilitySearched = true, limit)
+		return port.findArrivingToday(projectId, isVisible = true, limit)
 	}
 
 	override fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel> {
-		return port.findDepartingToday(projectId, visibilitySearched = true, limit)
+		return port.findDepartingToday(projectId, isVisible = true, limit)
 	}
 
-	override fun findParticipantsByIds(
-		projectId: UUID,
-		ids: List<UUID>,
-		visibilitySearched: Boolean?
-	): Flux<ParticipantModel> {
-		return port.findAllByIds(projectId, ids, visibilitySearched)
-	}
-
-	override fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
-		return port.findById(projectId, id, visibilitySearched)
+	override fun findParticipantById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel> {
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
-	override fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel> {
+	override fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel> {
 		return userPort.findWithLimit(
 			maxUserResult,
-			UserSearchParamModel(textSearched, visibilitySearched = true),
+			UserSearchParamModel(query, isVisible = true),
 		)
 	}
 
-	override fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel> {
+	override fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel> {
 		return groupPort.findWithLimit(
 			maxGroupResult,
 			projectId,
-			GroupSearchParamModel(textSearched, visibilitySearched = true),
+			GroupSearchParamModel(query, isVisible = true),
 		)
 	}
 
@@ -134,16 +126,16 @@ class ParticipantService(
 	}
 
 	override fun exportParticipantData(projectId: UUID, id: UUID): Mono<ParticipantDataExportModel> {
-		return findParticipantById(projectId, id, visibilitySearched = null)
+		return findParticipantById(projectId, id, isVisible = null)
 			.flatMap { participant ->
 				movementPort.findPageByParticipantId(
 					projectId,
 					id,
 					PageableModel(0, EXPORT_MAX_ROWS),
-					MovementSearchParamModel(visibilitySearched = null, typeSearched = null),
+					MovementSearchParamModel(isVisible = null, type = null),
 				).flatMap { movements ->
 					val movementIds = movements.content.mapNotNull { it.id }
-					communicationPort.findByMovementIdsWithLimit(EXPORT_MAX_ROWS, projectId, movementIds, visibilitySearched = null)
+					communicationPort.findByMovementIdsWithLimit(EXPORT_MAX_ROWS, projectId, movementIds, isVisible = null)
 						.collectList()
 						.map { pairs ->
 							ParticipantDataExportModel(
@@ -173,7 +165,7 @@ class ParticipantService(
 			}
 			.flatMap {
 				if (participant.groups.isNotEmpty()) {
-					validateGroups(participant.projectId!!, participant, participant.groups.mapNotNull { g -> g.id })
+					validateGroups(participant.projectId!!, participant, participant.groups.mapNotNull { group -> group.id })
 				} else Mono.just(participant)
 			}
 			.flatMap { port.create(participant.apply { create(currentUser) }) }
@@ -201,7 +193,7 @@ class ParticipantService(
 		participant: ParticipantModel,
 		newGroupIds: List<UUID>
 	): Mono<ParticipantModel> {
-		return groupPort.findAllByIds(projectId, newGroupIds, visibilitySearched = null)
+		return groupPort.findAllByIds(projectId, newGroupIds, isVisible = null)
 			.collectList()
 			.handle { it, handle ->
 				when {
@@ -212,7 +204,7 @@ class ParticipantService(
 						)
 					)
 
-					it.any { m -> m.isNotVisible() } -> handle.error(
+					it.any { group -> group.isNotVisible() } -> handle.error(
 						RegistryException(
 							NOT_FOUND,
 							PARTICIPANT_GROUPS_NOT_VISIBLE,
@@ -236,7 +228,7 @@ class ParticipantService(
 			participant.endAvailability,
 			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findParticipantById(projectId, id, visibilitySearched = null) }
+			.flatMap { findParticipantById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(participant, it) }
 			.flatMap { toUpdate ->
 				if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
@@ -277,9 +269,9 @@ class ParticipantService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ParticipantModel> {
-		return findParticipantById(projectId, id, visibilitySearched = true)
+		return findParticipantById(projectId, id, isVisible = true)
 			.validateNotLastGroupMember(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER)
-			.updateVisibility(visibility = false)
+			.updateVisibility(isVisible = false)
 			.updateParticipant(currentUser)
 	}
 
@@ -288,13 +280,13 @@ class ParticipantService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ParticipantModel> {
-		return findParticipantById(projectId, id, visibilitySearched = false)
-			.updateVisibility(visibility = true)
+		return findParticipantById(projectId, id, isVisible = false)
+			.updateVisibility(isVisible = true)
 			.updateParticipant(currentUser)
 	}
 
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findParticipantById(projectId, id, visibilitySearched = null)
+		return findParticipantById(projectId, id, isVisible = null)
 			.validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
 			.validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
 			.flatMap { port.deleteById(it.id!!) }
@@ -310,8 +302,8 @@ class ParticipantService(
 				} else {
 					log.info("Purging participant {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Participant {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge participant {}", it, err) }
+						.doOnNext { purgedId -> log.info("Participant {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge participant {}", it, error) }
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}
@@ -337,9 +329,9 @@ class ParticipantService(
 			oldParticipant.projectId!!,
 			oldParticipant.id!!,
 			MovementSearchParamModel(
-				visibilitySearched = null,
-				typeSearched = null,
-				endDateTimeSearched = participant.startAvailability!!.toZonedDateTime(),
+				isVisible = null,
+				type = null,
+				endDateTime = participant.startAvailability!!.toZonedDateTime(),
 			)
 		).handle { it, handle ->
 			if (it > 0) {
@@ -366,9 +358,9 @@ class ParticipantService(
 			oldParticipant.projectId!!,
 			oldParticipant.id!!,
 			MovementSearchParamModel(
-				visibilitySearched = null,
-				typeSearched = null,
-				startDateTimeSearched = participant.endAvailability!!.toZonedDateTime(),
+				isVisible = null,
+				type = null,
+				startDateTime = participant.endAvailability!!.toZonedDateTime(),
 			)
 		).handle { it, handle ->
 			if (it > 0) {
@@ -409,7 +401,7 @@ class ParticipantService(
 		groupPort.findAllByIds(
 			participantToUpdate.projectId!!,
 			participantToUpdate.groups.mapNotNull { it.id },
-			visibilitySearched = null
+			isVisible = null
 		)
 			.any { it.members.size == 1 }
 			.flatMap { isLastMemberOfAGroup ->

@@ -53,23 +53,23 @@ interface IMovementService {
 		movementIds: List<UUID>,
 	): Flux<Pair<UUID, List<MovementContentModel>>>
 
-	fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+	fun findMovementById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel>
 	fun searchParticipantsAndGroupsByText(
 		projectId: UUID,
-		typeSearched: ParticipantTypeEnum,
-		textSearched: String?
+		type: ParticipantTypeEnum,
+		query: String?
 	): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>>
 
-	fun searchVehiclesByText(projectId: UUID, textSearched: String?): Flux<VehicleModel>
+	fun searchVehiclesByText(projectId: UUID, query: String?): Flux<VehicleModel>
 	fun searchReasonsByText(
-		contentTypeSearched: ParticipantTypeEnum,
-		typeSearched: MovementTypeEnum,
+		contentType: ParticipantTypeEnum,
+		type: MovementTypeEnum,
 	): Flux<MovementReasonEnum>
 
 	fun searchActivitiesByText(
 		projectId: UUID,
-		contentTypeSearched: ParticipantTypeEnum,
-		textSearched: String?
+		contentType: ParticipantTypeEnum,
+		query: String?
 	): Flux<ActivityModel>
 
 	fun findMovementCommunicationsPage(
@@ -85,14 +85,6 @@ interface IMovementService {
 
 	fun createMovement(
 		currentUser: CurrentUserModel,
-		movement: MovementModel,
-		newGuests: List<ParticipantModel> = emptyList()
-	): Mono<MovementModel>
-
-	fun updateMovementById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
 		movement: MovementModel,
 		newGuests: List<ParticipantModel> = emptyList()
 	): Mono<MovementModel>

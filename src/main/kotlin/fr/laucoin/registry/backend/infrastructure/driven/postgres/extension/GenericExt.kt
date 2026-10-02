@@ -24,7 +24,7 @@ object GenericExt {
 
 	fun <M: GenericModel, E: GenericEntity> M.fillWithEntity(entity: E): M {
 		id = entity.id
-		visible = entity.visible ?: visible
+		isVisible = entity.isVisible ?: isVisible
 
 		creation = if (Objects.isNull(entity.createdAt)) null
 		else HistoryModel(
@@ -61,7 +61,7 @@ object GenericExt {
 
 	fun <M: GenericModel, E: GenericEntity> E.fillWithModel(model: M): E {
 		id = model.id
-		visible = model.visible
+		isVisible = model.isVisible
 
 		createdAt = model.creation?.dateTime
 		creatorId = model.creation?.user?.id

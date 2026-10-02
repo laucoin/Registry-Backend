@@ -32,7 +32,7 @@ class ProjectReaderDtoMapper(
 			activeProfile = Optional.ofNullable(model.activeProfile).map(profileMapper::toDto).orElse(null),
 		).apply {
 			id = model.id
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}

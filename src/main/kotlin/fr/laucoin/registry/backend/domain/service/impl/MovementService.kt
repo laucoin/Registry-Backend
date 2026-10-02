@@ -5,15 +5,10 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DELETED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DISABLED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_ENABLED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_REMOVE_GUEST_CONTENT
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
@@ -128,37 +123,37 @@ class MovementService(
 		return port.findCurrentContent(projectId, movementIds)
 	}
 
-	override fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {
-		return port.findById(projectId, id, visibilitySearched)
+	override fun findMovementById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel> {
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
 	override fun searchParticipantsAndGroupsByText(
 		projectId: UUID,
-		typeSearched: ParticipantTypeEnum,
-		textSearched: String?
+		type: ParticipantTypeEnum,
+		query: String?
 	): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>> {
 		return zip(
-			findParticipantWithLimit(projectId, typeSearched, textSearched).collectList(),
-			findGroupWithLimit(projectId, textSearched),
+			findParticipantWithLimit(projectId, type, query).collectList(),
+			findGroupWithLimit(projectId, query),
 		)
 	}
 
 	private fun findParticipantWithLimit(
-		projectId: UUID, typeSearched: ParticipantTypeEnum, textSearched: String?
+		projectId: UUID, type: ParticipantTypeEnum, query: String?
 	): Flux<ParticipantModel> {
 		val participantSearch = ParticipantSearchParamModel().apply {
-			this.typeSearched = typeSearched
-			this.textSearched = textSearched
-			visibilitySearched = true
-			availabilitySearched = true
+			this.type = type
+			this.query = query
+			isVisible = true
+			isAvailable = true
 		}
 
 		return participantPort.findWithLimit(maxParticipantResult, projectId, participantSearch)
 	}
 
-	private fun findGroupWithLimit(projectId: UUID, textSearched: String?): Mono<List<GroupModel>> {
-		val groupSearch = GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true)
+	private fun findGroupWithLimit(projectId: UUID, query: String?): Mono<List<GroupModel>> {
+		val groupSearch = GroupSearchParamModel(query, isVisible = true, isPresent = true)
 
 		return groupPort.findWithLimit(maxGroupResult, projectId, groupSearch)
 			.collectList()
@@ -166,42 +161,42 @@ class MovementService(
 				groupPort.findContent(
 					projectId,
 					groups.mapNotNull(GroupModel::id),
-					visibilitySearched = true,
-					availabilitySearched = true,
+					isVisible = true,
+					isAvailable = true,
 				).map {
-					groups.first { g -> g.id == it.first }.apply { members = it.second }
+					groups.first { group -> group.id == it.first }.apply { members = it.second }
 				}.collectList()
 			}
 	}
 
-	override fun searchVehiclesByText(projectId: UUID, textSearched: String?): Flux<VehicleModel> {
+	override fun searchVehiclesByText(projectId: UUID, query: String?): Flux<VehicleModel> {
 		return vehiclePort.findWithLimit(
 			maxVehicleResult,
 			projectId,
-			VehicleSearchParamModel(visibilitySearched = true, availabilitySearched = true).apply {
-				this.textSearched = textSearched
+			VehicleSearchParamModel(isVisible = true, isAvailable = true).apply {
+				this.query = query
 			},
 		)
 	}
 
 	override fun searchReasonsByText(
-		contentTypeSearched: ParticipantTypeEnum,
-		typeSearched: MovementTypeEnum
+		contentType: ParticipantTypeEnum,
+		type: MovementTypeEnum
 	): Flux<MovementReasonEnum> {
 		return Flux.fromIterable(MovementReasonEnum.entries)
-			.filter { it.type == typeSearched && contentTypeSearched == it.participantType }
+			.filter { it.type == type && contentType == it.participantType }
 	}
 
 	override fun searchActivitiesByText(
 		projectId: UUID,
-		contentTypeSearched: ParticipantTypeEnum,
-		textSearched: String?
+		contentType: ParticipantTypeEnum,
+		query: String?
 	): Flux<ActivityModel> {
-		return if (contentTypeSearched === GUEST) Flux.empty()
+		return if (contentType === GUEST) Flux.empty()
 		else activityPort.findWithLimit(
 			maxActivityResult,
 			projectId,
-			ActivitySearchParamModel(textSearched, visibilitySearched = true, availabilitySearched = true),
+			ActivitySearchParamModel(query, isVisible = true, isAvailable = true),
 		)
 	}
 
@@ -219,56 +214,56 @@ class MovementService(
 			participantPort.countAll(
 				projectId,
 				searchParams = ParticipantSearchParamModel(
-					textSearched = null,
+					query = null,
 					isMajor = true,
-					typeSearched = REGISTERED,
-					statusSearched = PresenceStatusEnum.IN,
-					visibilitySearched = true,
-					dateTimeSearched = null
+					type = REGISTERED,
+					status = PresenceStatusEnum.IN,
+					isVisible = true,
+					dateTime = null
 				)
 			),
 			participantPort.countAll(
 				projectId,
 				searchParams = ParticipantSearchParamModel(
-					textSearched = null,
+					query = null,
 					isMajor = true,
-					typeSearched = REGISTERED,
-					statusSearched = PresenceStatusEnum.OUT,
-					visibilitySearched = true,
-					dateTimeSearched = null
+					type = REGISTERED,
+					status = PresenceStatusEnum.OUT,
+					isVisible = true,
+					dateTime = null
 				)
 			),
 			participantPort.countAll(
 				projectId,
 				ParticipantSearchParamModel(
-					textSearched = null,
+					query = null,
 					isMajor = false,
-					typeSearched = REGISTERED,
-					statusSearched = PresenceStatusEnum.IN,
-					visibilitySearched = true,
-					dateTimeSearched = null
+					type = REGISTERED,
+					status = PresenceStatusEnum.IN,
+					isVisible = true,
+					dateTime = null
 				)
 			),
 			participantPort.countAll(
 				projectId,
 				searchParams = ParticipantSearchParamModel(
-					textSearched = null,
+					query = null,
 					isMajor = false,
-					typeSearched = REGISTERED,
-					statusSearched = PresenceStatusEnum.OUT,
-					visibilitySearched = true,
-					dateTimeSearched = null
+					type = REGISTERED,
+					status = PresenceStatusEnum.OUT,
+					isVisible = true,
+					dateTime = null
 				)
 			),
 			participantPort.countAll(
 				projectId,
 				searchParams = ParticipantSearchParamModel(
-					textSearched = null,
+					query = null,
 					isMajor = null,
-					typeSearched = GUEST,
-					statusSearched = PresenceStatusEnum.IN,
-					visibilitySearched = true,
-					dateTimeSearched = null
+					type = GUEST,
+					status = PresenceStatusEnum.IN,
+					isVisible = true,
+					dateTime = null
 				)
 			)
 		)
@@ -290,19 +285,19 @@ class MovementService(
 			vehiclePort.countAll(
 				projectId,
 				searchParams = VehicleSearchParamModel(
-					textSearched = null,
-					visibilitySearched = true,
-					statusSearched = PresenceStatusEnum.IN,
-					dateTimeSearched = null
+					query = null,
+					isVisible = true,
+					status = PresenceStatusEnum.IN,
+					dateTime = null
 				)
 			),
 			vehiclePort.countAll(
 				projectId,
 				searchParams = VehicleSearchParamModel(
-					textSearched = null,
-					visibilitySearched = true,
-					statusSearched = PresenceStatusEnum.OUT,
-					dateTimeSearched = null
+					query = null,
+					isVisible = true,
+					status = PresenceStatusEnum.OUT,
+					dateTime = null
 				)
 			)
 		)
@@ -337,14 +332,14 @@ class MovementService(
 					validateParticipantsIfAny(
 						movement.projectId!!,
 						movement,
-						movement.content.mapNotNull { c -> c.participant!!.id },
-						movement.content.filter { c -> Objects.nonNull(c.vehicle) }
-							.mapNotNull { c -> c.participant!!.id },
+						movement.content.mapNotNull { content -> content.participant!!.id },
+						movement.content.filter { content -> Objects.nonNull(content.vehicle) }
+							.mapNotNull { content -> content.participant!!.id },
 					),
 					validateVehiclesIfAny(
 						movement.projectId!!,
 						movement,
-						movement.content.mapNotNull { c -> c.vehicle?.id },
+						movement.content.mapNotNull { content -> content.vehicle?.id },
 					),
 				)
 			}
@@ -353,51 +348,6 @@ class MovementService(
 				else Mono.just(movement)
 			}
 			.flatMap { port.create(movement.apply { create(currentUser) }) }
-			.`as`(transactionalOperator::transactional)
-	}
-
-	override fun updateMovementById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		movement: MovementModel,
-		newGuests: List<ParticipantModel>,
-	): Mono<MovementModel> {
-		return validateMovementDate(movement)
-			.flatMap { findMovementById(projectId, id, visibilitySearched = null) }
-			.validateUpdatableMovementFields(movement)
-			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_UPDATED)
-			.flatMap { validateNoCommunicationConflict(movement, it) }
-			.flatMap { oldMovement ->
-				Mono.zip(
-					validateActivity(movement, oldMovement),
-					saveGuestsIfNecessary(currentUser, movement, oldMovement, newGuests),
-				).thenReturn(oldMovement)
-			}
-			.flatMap { oldMovement ->
-				Mono.zip(
-					validateParticipantsIfAny(
-						projectId,
-						oldMovement,
-						oldMovement.getNewContentParticipantIds(movement),
-						oldMovement.getNewContentDriverIds(movement),
-					),
-					validateVehiclesIfAny(
-						projectId,
-						oldMovement,
-						oldMovement.getNewContentVehicleIds(movement),
-					),
-				).thenReturn(oldMovement)
-			}
-			.map {
-				it.apply {
-					it.dateTime = movement.dateTime
-					it.reason = movement.reason
-					it.activity = movement.activity
-					it.content = movement.content
-				}
-			}
-			.updateMovement(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -425,7 +375,7 @@ class MovementService(
 		return if (Objects.isNull(movement.activity) || movement.activity?.id == oldMovement?.activity?.id) Mono.just(
 			oldMovement ?: movement
 		)
-		else activityPort.findById(movement.projectId!!, movement.activity!!.id!!, visibilitySearched = null)
+		else activityPort.findById(movement.projectId!!, movement.activity!!.id!!, isVisible = null)
 			.switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT)) }
 			.handle { it, handle ->
 				if (it.isNotVisible()) handle.error(
@@ -436,30 +386,6 @@ class MovementService(
 				)
 				else handle.next(oldMovement ?: movement)
 			}
-	}
-
-	private fun validateNoCommunicationConflict(
-		movement: MovementModel,
-		oldMovement: MovementModel
-	): Mono<MovementModel> {
-		return if (movement.dateTime.isAfter(oldMovement.dateTime)) {
-			val params = CommunicationSearchParamModel(
-				visibilitySearched = null,
-				startDateTimeSearched = null,
-				endDateTimeSearched = movement.dateTime,
-			)
-			communicationPort.countAllByMovementId(movement.projectId!!, oldMovement.id!!, params)
-				.handle { it, handle ->
-					if (it > 0L) handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME,
-							arrayListOf(it)
-						)
-					)
-					else handle.next(oldMovement)
-				}
-		} else Mono.just(oldMovement)
 	}
 
 	private fun saveGuestsIfNecessary(
@@ -480,9 +406,9 @@ class MovementService(
 				}
 			}
 
-		return participantPort.findAllByIds(movement.projectId!!, guestIdsToUpdate, visibilitySearched = null)
+		return participantPort.findAllByIds(movement.projectId!!, guestIdsToUpdate, isVisible = null)
 			.map {
-				val updatedGuest = guests.find { g -> g.id == it.id }
+				val updatedGuest = guests.find { guest -> guest.id == it.id }
 				it.apply {
 					firstName = updatedGuest?.firstName
 					lastName = updatedGuest?.lastName
@@ -509,8 +435,8 @@ class MovementService(
 			.flatMap {
 				participantPort.saveAllGuest(it)
 					.collectList()
-					.map { l ->
-						movement.content = l.map { p -> MovementContentModel(participant = p) }
+					.map { participants ->
+						movement.content = participants.map { participant -> MovementContentModel(participant = participant) }
 						oldMovement
 					}
 			}
@@ -522,7 +448,7 @@ class MovementService(
 		newParticipantIds: List<UUID>,
 		driverIds: List<UUID>
 	): Mono<MovementModel> {
-		return participantPort.findAllByIds(projectId, newParticipantIds, visibilitySearched = null)
+		return participantPort.findAllByIds(projectId, newParticipantIds, isVisible = null)
 			.collectList()
 			.handle { it, handle ->
 				when {
@@ -540,7 +466,7 @@ class MovementService(
 						)
 					)
 
-					it.any { p -> !p.birthday.isMajor() && driverIds.contains(p.id) } -> handle.error(
+					it.any { participant -> !participant.birthday.isMajor() && driverIds.contains(participant.id) } -> handle.error(
 						RegistryException(
 							UNPROCESSABLE_CONTENT,
 							MOVEMENT_DRIVERS_NOT_MAJOR,
@@ -566,7 +492,7 @@ class MovementService(
 		movement: MovementModel,
 		newVehicleIds: List<UUID>
 	): Mono<MovementModel> {
-		return vehiclePort.findAllByIds(projectId, newVehicleIds, visibilitySearched = null)
+		return vehiclePort.findAllByIds(projectId, newVehicleIds, isVisible = null)
 			.collectList()
 			.handle { it, handle ->
 				when {
@@ -577,7 +503,7 @@ class MovementService(
 						)
 					)
 
-					it.any { m -> m.isNotVisible() } -> handle.error(
+					it.any { vehicle -> vehicle.isNotVisible() } -> handle.error(
 						RegistryException(
 							NOT_FOUND,
 							MOVEMENT_VEHICLES_NOT_VISIBLE,
@@ -588,34 +514,6 @@ class MovementService(
 				}
 			}
 	}
-
-	private fun Mono<MovementModel>.validateUpdatableMovementFields(newMovement: MovementModel): Mono<MovementModel> =
-		handle { it, handle ->
-			when {
-				it.type !== newMovement.type -> handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						MOVEMENT_UPDATE_CHANGE_TYPE,
-					)
-				)
-
-				it.contentType !== newMovement.contentType -> handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE,
-					)
-				)
-
-				it.atLeastOldGuestIfGuestsEntrance(newMovement) -> handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						MOVEMENT_REMOVE_GUEST_CONTENT,
-					)
-				)
-
-				else -> handle.next(it)
-			}
-		}
 
 	private fun Mono<MovementModel>.validateMovementIsAlterable(errorMessage: String): Mono<MovementModel> =
 		handle { it, handle ->
@@ -632,21 +530,21 @@ class MovementService(
 		}
 
 	override fun disableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
-		return findMovementById(projectId, id, visibilitySearched = true)
+		return findMovementById(projectId, id, isVisible = true)
 			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_DISABLED)
-			.updateVisibility(visibility = false)
+			.updateVisibility(isVisible = false)
 			.updateMovement(currentUser)
 	}
 
 	override fun enableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
-		return findMovementById(projectId, id, visibilitySearched = false)
+		return findMovementById(projectId, id, isVisible = false)
 			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_ENABLED)
-			.updateVisibility(visibility = true)
+			.updateVisibility(isVisible = true)
 			.updateMovement(currentUser)
 	}
 
 	override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Unit> {
-		return findMovementById(projectId, id, visibilitySearched = null)
+		return findMovementById(projectId, id, isVisible = null)
 			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_DELETED)
 			.flatMap { port.deleteById(id) }
 	}
@@ -661,8 +559,8 @@ class MovementService(
 				} else {
 					log.info("Purging movement {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Movement {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge movement {}", it, err) }
+						.doOnNext { purgedId -> log.info("Movement {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge movement {}", it, error) }
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}

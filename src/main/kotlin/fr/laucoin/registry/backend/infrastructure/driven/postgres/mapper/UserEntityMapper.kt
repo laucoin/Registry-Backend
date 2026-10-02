@@ -19,7 +19,7 @@ class UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
 			role = entity.role
 			birthday = entity.birthday
 			lastLogin = entity.lastLogin
-			purged = entity.purged ?: purged
+			isPurged = entity.isPurged ?: isPurged
 		}.fillWithEntity(entity)
 	}
 
@@ -33,7 +33,7 @@ class UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
 			role = model.role
 			birthday = model.birthday
 			lastLogin = model.lastLogin
-			purged = model.purged
+			isPurged = model.isPurged
 		}.fillWithModel(model)
 	}
 }

@@ -5,24 +5,24 @@ import java.time.ZonedDateTime
 import java.util.Objects
 
 data class MovementSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	val linkedToActivity: Boolean? = null,
-	val typeSearched: List<MovementTypeEnum> = MovementTypeEnum.entries.toList(),
-	var startDateTimeSearched: ZonedDateTime? = null,
-	var endDateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	val hasActivity: Boolean? = null,
+	val type: List<MovementTypeEnum> = MovementTypeEnum.entries.toList(),
+	var startDateTime: ZonedDateTime? = null,
+	var endDateTime: ZonedDateTime? = null,
 ) {
 	constructor(
-		visibilitySearched: Boolean? = null,
-		linkedToActivity: Boolean? = null,
-		typeSearched: MovementTypeEnum? = null,
-		startDateTimeSearched: ZonedDateTime? = null,
-		endDateTimeSearched: ZonedDateTime? = null,
+		isVisible: Boolean? = null,
+		hasActivity: Boolean? = null,
+		type: MovementTypeEnum? = null,
+		startDateTime: ZonedDateTime? = null,
+		endDateTime: ZonedDateTime? = null,
 	): this(
-		visibilitySearched,
-		linkedToActivity,
-		if (Objects.nonNull(typeSearched)) listOf(typeSearched!!) else MovementTypeEnum.entries.toList(),
-		startDateTimeSearched,
-		endDateTimeSearched,
+		isVisible,
+		hasActivity,
+		if (Objects.nonNull(type)) listOf(type!!) else MovementTypeEnum.entries.toList(),
+		startDateTime,
+		endDateTime,
 	)
 
 	constructor(): this(null, null, MovementTypeEnum.entries.toList(), null, null)

@@ -27,21 +27,14 @@ interface ICommunicationService {
 		sortFields: List<SortModel<CommunicationSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<CommunicationModel>>
 
-	fun findCommunicationById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
+	fun findCommunicationById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<CommunicationModel>
 
-	fun searchOutMovementWithActivityByText(projectId: UUID, textSearched: String?): Flux<MovementModel>
+	fun searchOutMovementWithActivityByText(projectId: UUID, query: String?): Flux<MovementModel>
 
-	fun searchAlertByText(projectId: UUID, textSearched: String?): Flux<AlertModel>
+	fun searchAlertByText(projectId: UUID, query: String?): Flux<AlertModel>
 
 	fun createCommunication(
 		currentUser: CurrentUserModel,
-		communication: CommunicationModel
-	): Mono<CommunicationModel>
-
-	fun updateCommunicationById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
 		communication: CommunicationModel
 	): Mono<CommunicationModel>
 

@@ -25,7 +25,6 @@ import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -134,7 +133,7 @@ class CommunicationServiceTest {
 				),
 				Arguments.of(
 					commonCommunication().apply { dateTime = past; movement = commonMovement() },
-					commonMovement().apply { dateTime = past; visible = false },
+					commonMovement().apply { dateTime = past; isVisible = false },
 					NOT_FOUND,
 					COMMUNICATION_MOVEMENT_NOT_VISIBLE,
 				),
@@ -175,7 +174,7 @@ class CommunicationServiceTest {
 				Arguments.of(
 					commonCommunication().apply { dateTime = past; alert = commonAlert() },
 					currentUserWithRight,
-					commonAlert().apply { dateTime = past; visible = false },
+					commonAlert().apply { dateTime = past; isVisible = false },
 					1,
 					NOT_FOUND,
 					COMMUNICATION_ALERT_NOT_VISIBLE,
@@ -262,18 +261,18 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should searchOutMovementWithActivityByText call port findActivityWithLimit`() {
 		// Arrange
-		val textSearched = "search"
+		val query = "search"
 		val search = ActivitySearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = true,
-			availabilitySearched = true,
-			dateTimeSearched = null,
+			query = query,
+			isVisible = true,
+			isAvailable = true,
+			dateTime = null,
 		)
 
 		whenever(movementPort.findActivityWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonMovement()))
 
 		// Act
-		service.searchOutMovementWithActivityByText(projectId, textSearched).collectList().block()
+		service.searchOutMovementWithActivityByText(projectId, query).collectList().block()
 
 		// Assert
 		verify(movementPort).findActivityWithLimit(MAX_ACTIVITIES, projectId, search)
@@ -282,17 +281,17 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should searchAlertByText call port findWithLimit`() {
 		// Arrange
-		val textSearched = "search"
+		val query = "search"
 		val search = AlertSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = true,
-			statusSearched = IN_PROGRESS,
+			query = query,
+			isVisible = true,
+			status = IN_PROGRESS,
 		)
 
 		whenever(alertPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonAlert()))
 
 		// Act
-		service.searchAlertByText(projectId, textSearched).collectList().block()
+		service.searchAlertByText(projectId, query).collectList().block()
 
 		// Assert
 		verify(alertPort).findWithLimit(MAX_ALERTS, projectId, search)
@@ -325,8 +324,8 @@ class CommunicationServiceTest {
 		verify(projectService).validateDateTime(
 			eq(projectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
-		verify(movementPort, times(callToMovement)).findById(projectId, movementId, visibilitySearched = null)
-		verify(alertPort, times(callToAlert)).findById(projectId, alertId, visibilitySearched = null)
+		verify(movementPort, times(callToMovement)).findById(projectId, movementId, isVisible = null)
+		verify(alertPort, times(callToAlert)).findById(projectId, alertId, isVisible = null)
 		verify(port).create(communication)
 	}
 
@@ -394,30 +393,6 @@ class CommunicationServiceTest {
 	}
 
 	@Test
-	fun `Should updateCommunicationById check date, check existing communication, call port updateCommunication`() {
-		// Arrange
-		val now = ZonedDateTime.now()
-		val communication = commonCommunication().apply { dateTime = now; movement = commonMovement() }
-
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(communication))
-		whenever(movementPort.findById(any(), anyOrNull(), anyOrNull()))
-			.thenReturn(Mono.just(MovementModel().apply { visible = true }))
-		whenever(port.update(any())).thenReturn(Mono.just(communication))
-
-		// Act
-		service.updateCommunicationById(currentUser(), projectId, communicationId, communication).block()
-
-		// Assert
-		verify(projectService).validateDateTime(
-			projectId, CustomDateTimeModel(now), COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
-		)
-		verify(port).findById(projectId, communicationId, visibilitySearched = null)
-		verify(movementPort, never()).findById(projectId, movementId, visibilitySearched = null)
-		verify(port).update(communication)
-	}
-
-	@Test
 	fun `Should disableCommunicationById call existing communication and call port update`() {
 		// Arrange
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonCommunication()))
@@ -427,14 +402,14 @@ class CommunicationServiceTest {
 		service.disableCommunicationById(currentUser(), projectId, communicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = true)
-		verify(port).update(commonCommunication().apply { visible = false })
+		verify(port).findById(projectId, communicationId, isVisible = true)
+		verify(port).update(commonCommunication().apply { isVisible = false })
 	}
 
 	@Test
 	fun `Should enableCommunicationById call existing communication and call port update`() {
 		// Arrange
-		val communication = commonCommunication().apply { visible = false }
+		val communication = commonCommunication().apply { isVisible = false }
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(communication))
 		whenever(port.update(any())).thenReturn(Mono.just(communication))
@@ -443,7 +418,7 @@ class CommunicationServiceTest {
 		service.enableCommunicationById(currentUser(), projectId, communicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = false)
+		verify(port).findById(projectId, communicationId, isVisible = false)
 		verify(port).update(commonCommunication())
 	}
 
@@ -457,7 +432,7 @@ class CommunicationServiceTest {
 		service.deleteCommunicationById(currentUser(), projectId, communicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = null)
+		verify(port).findById(projectId, communicationId, isVisible = null)
 		verify(port).deleteById(communicationId)
 	}
 

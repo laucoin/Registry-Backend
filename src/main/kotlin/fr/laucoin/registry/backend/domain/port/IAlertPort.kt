@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
  */
 interface IAlertPort {
 	fun findAllByCreatorId(userId: UUID): Flux<AlertModel>
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

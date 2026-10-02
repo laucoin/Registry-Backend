@@ -45,8 +45,8 @@ class VehicleService(
 		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
-	override fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {
-		return port.findById(projectId, id, visibilitySearched)
+	override fun findVehicleById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel> {
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
@@ -81,7 +81,7 @@ class VehicleService(
 			vehicle.endAvailability,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findVehicleById(projectId, id, visibilitySearched = null) }
+			.flatMap { findVehicleById(projectId, id, isVisible = null) }
 			.map {
 				it.apply {
 					licensePlate = vehicle.licensePlate
@@ -95,19 +95,19 @@ class VehicleService(
 	}
 
 	override fun disableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel> {
-		return findVehicleById(projectId, id, visibilitySearched = true)
-			.updateVisibility(visibility = false)
+		return findVehicleById(projectId, id, isVisible = true)
+			.updateVisibility(isVisible = false)
 			.updateVehicle(currentUser)
 	}
 
 	override fun enableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel> {
-		return findVehicleById(projectId, id, visibilitySearched = false)
-			.updateVisibility(visibility = true)
+		return findVehicleById(projectId, id, isVisible = false)
+			.updateVisibility(isVisible = true)
 			.updateVehicle(currentUser)
 	}
 
 	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findVehicleById(projectId, id, visibilitySearched = null)
+		return findVehicleById(projectId, id, isVisible = null)
 			.validateHasNoMovementLinked(VEHICLE_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }
 	}
@@ -122,8 +122,8 @@ class VehicleService(
 				} else {
 					log.info("Purging vehicle {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Vehicle {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge vehicle {}", it, err) }
+						.doOnNext { purgedId -> log.info("Vehicle {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge vehicle {}", it, error) }
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}

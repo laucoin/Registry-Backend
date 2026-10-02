@@ -12,7 +12,7 @@ class ProjectProfileRoleEntityMapper: IEntityReaderMapper<ProjectProfileRoleMode
 			role = entity.role,
 			projectId = entity.projectId,
 			projectOptions = entity.projectOptions,
-			projectVisible = entity.projectVisible
+			isProjectVisible = entity.isProjectVisible
 		)
 	}
 }

@@ -34,8 +34,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -54,8 +52,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
-class AlertV2ControllerTest: TestContext() {
+class AlertV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IAlertService
 
@@ -102,7 +102,13 @@ class AlertV2ControllerTest: TestContext() {
 		verify(service).findAlertsPage(
 			projectId,
 			pageable,
-			AlertSearchParamModel(textSearched = null, visibilitySearched = null, statusSearched = null, startDateTimeSearched = null, endDateTimeSearched = null),
+			AlertSearchParamModel(
+				query = null,
+				isVisible = null,
+				status = null,
+				startDateTime = null,
+				endDateTime = null
+			),
 			emptyList(),
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -152,11 +158,11 @@ class AlertV2ControllerTest: TestContext() {
 
 		// Assert
 		result.body<AlertReaderDto>(OK)
-		verify(service).findAlertById(projectId, uuid, visibilitySearched = null)
+		verify(service).findAlertById(projectId, uuid, isVisible = null)
 	}
 
 	@Test
-	fun `Should findAlertCommunications drop the Searched suffix and call service`() {
+	fun `Should findAlertCommunications  call service`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 20)
@@ -165,7 +171,10 @@ class AlertV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT)
+			)
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}/communications", listOf(projectId, uuid), listOf(Pair("visible", true))))
 			.exchange()
@@ -196,7 +205,12 @@ class AlertV2ControllerTest: TestContext() {
 	@Test
 	fun `Should createAlert return 201 with a Location header`() {
 		// Arrange
-		val alert = AlertCreationWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(), message = "test", movementId = null)
+		val alert = AlertCreationWriterDto(
+			title = "Alert 1",
+			dateTime = ZonedDateTime.now(),
+			message = "test",
+			movementId = null
+		)
 		val createdId = UUID.randomUUID()
 		whenever(service.createAlert(any(), any())).thenReturn(Mono.just(AlertModel().apply { id = createdId }))
 		whenever(creationWriterMapper.toModel(any(), any())).thenReturn(AlertModel())
@@ -222,7 +236,8 @@ class AlertV2ControllerTest: TestContext() {
 	@Test
 	fun `Should createAlert return 400`() {
 		// Arrange
-		val alert = AlertCreationWriterDto(title = null, dateTime = ZonedDateTime.now(), message = "test", movementId = null)
+		val alert =
+			AlertCreationWriterDto(title = null, dateTime = ZonedDateTime.now(), message = "test", movementId = null)
 
 		// Act
 		val result = webClient
@@ -307,7 +322,7 @@ class AlertV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_D), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()
