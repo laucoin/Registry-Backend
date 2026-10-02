@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driven.idp.adapter
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_EXPIRED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_EXPIRED
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
@@ -117,7 +117,7 @@ class IdpAuthenticationAdapter(
 			BodyInserters.fromFormData("grant_type", "authorization_code")
 				.with("code", authorizationCode)
 				.with("redirect_uri", redirectUri),
-			AUTHORIZATION_CODE_OUTDATED
+			AUTHORIZATION_CODE_EXPIRED
 		)
 	}
 
@@ -125,7 +125,7 @@ class IdpAuthenticationAdapter(
 		return fetchToken(
 			BodyInserters.fromFormData("grant_type", "refresh_token")
 				.with("refresh_token", refreshToken),
-			REFRESH_TOKEN_OUTDATED
+			REFRESH_TOKEN_EXPIRED
 		)
 	}
 

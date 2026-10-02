@@ -23,7 +23,6 @@ import java.time.OffsetTime
 import java.time.ZoneOffset
 import java.util.UUID
 import java.util.stream.Stream
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
@@ -38,7 +37,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -301,18 +299,6 @@ class ProjectServiceTest {
 		verify(port).findById(projectId, onlyVisible)
 	}
 
-	@Test
-	fun `Should availableProjectOptions not throw`() {
-		// Act
-		assertDoesNotThrow { service.availableProjectOptions().blockFirst() }
-
-		// Assert
-		verifyNoInteractions(port)
-		verifyNoInteractions(projectProfileService)
-		verifyNoInteractions(transactionalOperator)
-		verifyNoInteractions(roleService)
-	}
-
 	@ParameterizedTest
 	@MethodSource
 	fun `Should validateDateTime call port findById and validate the request date is in project range`(
@@ -332,7 +318,7 @@ class ProjectServiceTest {
 		// Assert
 		assertEquals(projectId, result)
 
-		verify(port).findById(projectId, visibilitySearched = null)
+		verify(port).findById(projectId, isVisible = null)
 	}
 
 	@ParameterizedTest
@@ -358,7 +344,7 @@ class ProjectServiceTest {
 		assertEquals(errorMessage, result.message)
 		assertEquals(3, result.args?.size)
 
-		verify(port).findById(projectId, visibilitySearched = null)
+		verify(port).findById(projectId, isVisible = null)
 	}
 
 	@ParameterizedTest
@@ -381,7 +367,7 @@ class ProjectServiceTest {
 		// Assert
 		assertEquals(projectId, result)
 
-		verify(port).findById(projectId, visibilitySearched = null)
+		verify(port).findById(projectId, isVisible = null)
 	}
 
 	@ParameterizedTest
@@ -408,7 +394,7 @@ class ProjectServiceTest {
 		assertEquals(errorMessage, result.message)
 		assertEquals(4, result.args?.size)
 
-		verify(port).findById(projectId, visibilitySearched = null)
+		verify(port).findById(projectId, isVisible = null)
 	}
 
 	@Test
@@ -451,7 +437,7 @@ class ProjectServiceTest {
 		service.updateProjectById(currentUser(), projectId, projectUpdated).block()
 
 		// Assert
-		verify(port).findById(projectId, visibilitySearched = null)
+		verify(port).findById(projectId, isVisible = null)
 		verify(port, times(expectedVerificationCall))
 			.validDateTime(eq(projectId), anyOrNull(), anyOrNull())
 		verify(port).update(any())
@@ -477,7 +463,7 @@ class ProjectServiceTest {
 		assertEquals(PROJECT_DATE_CONFLICT_WITH_ELEMENTS, result.message)
 		assertEquals(arrayListOf(commonProject().name), result.args)
 
-		verify(port).findById(projectId, visibilitySearched = null)
+		verify(port).findById(projectId, isVisible = null)
 		verify(port).validDateTime(
 			projectId,
 			dateTime.toZonedDateTime(OffsetTime.MIN),
@@ -496,14 +482,14 @@ class ProjectServiceTest {
 		service.disableProjectById(currentUser(), projectId).block()
 
 		// Assert
-		verify(port).findById(projectId, visibilitySearched = true)
-		verify(port).update(commonProject().apply { visible = false })
+		verify(port).findById(projectId, isVisible = true)
+		verify(port).update(commonProject().apply { isVisible = false })
 	}
 
 	@Test
 	fun `Should enableProjectById call existing project and call port update`() {
 		// Arrange
-		val project = commonProject().apply { visible = false }
+		val project = commonProject().apply { isVisible = false }
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
 		whenever(port.update(any())).thenReturn(Mono.just(project))
 
@@ -511,7 +497,7 @@ class ProjectServiceTest {
 		service.enableProjectById(currentUser(), projectId).block()
 
 		// Assert
-		verify(port).findById(projectId, visibilitySearched = false)
+		verify(port).findById(projectId, isVisible = false)
 		verify(port).update(commonProject())
 	}
 
@@ -525,7 +511,7 @@ class ProjectServiceTest {
 		service.deleteProjectById(projectId).block()
 
 		// Assert
-		verify(port).findById(projectId, visibilitySearched = null)
+		verify(port).findById(projectId, isVisible = null)
 		verify(port).deleteById(projectId)
 	}
 

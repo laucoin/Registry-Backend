@@ -29,10 +29,10 @@ class CurrentUserReaderDtoMapper(
 			}.orElse(null),
 			birthday = model.birthday,
 			lastLogin = model.lastLogin,
-			purged = model.purged,
+			isPurged = model.isPurged,
 		).apply {
 			id = model.id
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}

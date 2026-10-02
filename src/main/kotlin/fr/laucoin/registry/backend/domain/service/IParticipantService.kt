@@ -35,10 +35,9 @@ interface IParticipantService {
 	fun findArrivingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
 	fun findDepartingToday(projectId: UUID, limit: Int): Flux<ParticipantModel>
 
-	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
-	fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
-	fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel>
-	fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel>
+	fun findParticipantById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel>
+	fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel>
+	fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel>
 
 	fun findParticipantMovementsPage(
 		projectId: UUID,

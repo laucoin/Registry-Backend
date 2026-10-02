@@ -99,10 +99,10 @@ class VehicleV2ControllerTest : TestContext() {
 			projectId,
 			pageable,
 			VehicleSearchParamModel(
-				textSearched = null,
-				visibilitySearched = null,
-				statusSearched = null,
-				dateTimeSearched = null
+				query = null,
+				isVisible = null,
+				status = null,
+				dateTime = null
 			),
 			emptyList(),
 		)
@@ -144,10 +144,10 @@ class VehicleV2ControllerTest : TestContext() {
 			projectId,
 			pageable,
 			VehicleSearchParamModel(
-				textSearched = "hello",
-				visibilitySearched = true,
-				statusSearched = PresenceStatusEnum.IN,
-				dateTimeSearched = null
+				query = "hello",
+				isVisible = true,
+				status = PresenceStatusEnum.IN,
+				dateTime = null
 			),
 			emptyList(),
 		)
@@ -225,18 +225,18 @@ class VehicleV2ControllerTest : TestContext() {
 		// Assert
 		result.body<VehicleReaderDto>(OK)
 
-		verify(service).findVehicleById(projectId, uuid, visibilitySearched = null)
+		verify(service).findVehicleById(projectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(movementReaderMapper)
 	}
 
 	@Test
-	fun `Should findVehicleMovements drop the Searched suffix and call service`() {
+	fun `Should findVehicleMovements  call service`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 20)
-		val searchParams = MovementSearchParamModel(visibilitySearched = true, typeSearched = IN)
+		val searchParams = MovementSearchParamModel(isVisible = true, type = IN)
 		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
 		whenever(service.findVehicleMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(movementReaderMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
@@ -385,7 +385,7 @@ class VehicleV2ControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_U), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_D), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()

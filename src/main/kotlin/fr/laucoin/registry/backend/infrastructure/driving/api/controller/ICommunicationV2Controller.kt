@@ -29,7 +29,6 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -58,7 +57,7 @@ interface ICommunicationV2Controller {
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>>
 
@@ -114,20 +113,6 @@ interface ICommunicationV2Controller {
 	): Mono<ResponseEntity<CommunicationReaderDto>>
 
 	@Operation(
-		summary = "Update Communication",
-		description = "Update an existing Communication's date/time, message, or the Movement/Alert it is attached to.",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
-	@RateLimited(SENSITIVE)
-	@PatchMapping("/{id}")
-	fun updateCommunicationById(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
-		@PathVariable id: UUID,
-		@RequestBody @Valid communication: CommunicationWriterDto,
-	): Mono<CommunicationReaderDto>
-
-	@Operation(
 		summary = "Disable Communication",
 		description = "Soft-delete the Communication: it is kept but hidden from the Project going forward.",
 	)
@@ -144,7 +129,7 @@ interface ICommunicationV2Controller {
 		summary = "Enable Communication",
 		description = "Reverse a disable: the Communication becomes visible in the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableCommunicationById(

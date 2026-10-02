@@ -96,7 +96,7 @@ class VehicleServiceTest {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = MovementTypeEnum.IN)
+		val params = MovementSearchParamModel(type = MovementTypeEnum.IN)
 
 		whenever(movementPort.findPageByVehicleId(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
@@ -154,7 +154,7 @@ class VehicleServiceTest {
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 
-		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
+		verify(port).findById(projectId, vehicleId, isVisible = null)
 		verify(port).update(vehicle)
 	}
 
@@ -170,14 +170,14 @@ class VehicleServiceTest {
 		service.disableVehicleById(currentUser(), projectId, vehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, vehicleId, visibilitySearched = true)
-		verify(port).update(vehicle.apply { visible = false })
+		verify(port).findById(projectId, vehicleId, isVisible = true)
+		verify(port).update(vehicle.apply { isVisible = false })
 	}
 
 	@Test
 	fun `Should enableVehicleById call existing vehicle and call port update`() {
 		// Arrange
-		val vehicle = commonVehicle().apply { visible = false }
+		val vehicle = commonVehicle().apply { isVisible = false }
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
@@ -186,8 +186,8 @@ class VehicleServiceTest {
 		service.enableVehicleById(currentUser(), projectId, vehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, vehicleId, visibilitySearched = false)
-		verify(port).update(vehicle.apply { visible = true })
+		verify(port).findById(projectId, vehicleId, isVisible = false)
+		verify(port).update(vehicle.apply { isVisible = true })
 	}
 
 	@Test
@@ -201,7 +201,7 @@ class VehicleServiceTest {
 		service.deleteVehicleById(currentUser(), projectId, vehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
+		verify(port).findById(projectId, vehicleId, isVisible = null)
 		verify(movementPort).countAllByVehicleId(projectId, vehicleId, MovementSearchParamModel())
 		verify(port).deleteById(vehicleId)
 	}
@@ -221,7 +221,7 @@ class VehicleServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(VEHICLE_DELETE_HAS_MOVEMENT, result.message)
 
-		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
+		verify(port).findById(projectId, vehicleId, isVisible = null)
 		verify(movementPort).countAllByVehicleId(projectId, vehicleId, MovementSearchParamModel())
 		verify(port, never()).deleteById(any())
 	}

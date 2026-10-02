@@ -20,8 +20,8 @@ data class CurrentUserModel(
 		role = user.role
 		birthday = user.birthday
 		lastLogin = user.lastLogin
-		purged = user.purged
-		visible = user.visible
+		isPurged = user.isPurged
+		isVisible = user.isVisible
 		creation = user.creation
 		lastEdition = user.lastEdition
 	}

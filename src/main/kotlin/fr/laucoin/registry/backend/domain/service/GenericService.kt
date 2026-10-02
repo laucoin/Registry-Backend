@@ -10,8 +10,8 @@ import reactor.core.publisher.Mono
  * logger. Carries no persistence or business logic of its own.
  */
 open class GenericService : LoggerService() {
-	fun <T : GenericModel> Mono<T>.updateVisibility(visibility: Boolean): Mono<T> {
-		return this.map { it.apply { visible = visibility } }
+	fun <T : GenericModel> Mono<T>.updateVisibility(isVisible: Boolean): Mono<T> {
+		return this.map { it.apply { this.isVisible = isVisible } }
 	}
 
 	companion object {

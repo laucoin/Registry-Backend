@@ -5,7 +5,7 @@ import java.util.UUID
 
 abstract class GenericEntity(
 	var id: UUID? = null,
-	var visible: Boolean? = null,
+	var isVisible: Boolean? = null,
 
 	var createdAt: ZonedDateTime? = null,
 	var creatorId: UUID? = null,

@@ -6,8 +6,7 @@ import org.springframework.stereotype.Component
 
 /**
  * Wraps a paginated [PageModel] (a domain model) into a [PageReaderDto], so
- * v2 controllers never return a domain model directly on the wire the way
- * v1's `Mono<PageModel<T>>` responses still do.
+ * controllers never return a domain model directly on the wire.
  */
 @Component
 class PageReaderDtoMapper {

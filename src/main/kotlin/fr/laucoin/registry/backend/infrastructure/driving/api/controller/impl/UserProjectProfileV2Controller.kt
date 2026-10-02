@@ -32,18 +32,18 @@ class UserProjectProfileV2Controller(
 		currentUser: CurrentUserModel,
 		page: SortedPageQueryDto,
 		query: String?,
-		available: Boolean?,
-		upcoming: Boolean?,
+		isAvailable: Boolean?,
+		isUpcoming: Boolean?,
 		status: ProfileStatusEnum?,
 		dateTime: ZonedDateTime?,
-		favorite: Boolean?,
+		isFavorite: Boolean?,
 		includeCounts: Boolean?,
 	): Mono<PageReaderDto<UserProjectProfileReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ProjectProfileSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ProjectProfileSearchParamModel(query, available, status, dateTime, favorite, upcoming)
+		val searchParams = ProjectProfileSearchParamModel(query, isAvailable, status, dateTime, isFavorite, isUpcoming)
 
 		return service.findProjectProfilesPage(
 			currentUser.id!!,

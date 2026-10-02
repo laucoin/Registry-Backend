@@ -72,26 +72,26 @@ class GroupService(
 	override fun findGroupById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		memberVisibilitySearched: Boolean?,
-		memberAvailabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		isMemberVisible: Boolean?,
+		isMemberAvailable: Boolean?,
 	): Mono<GroupModel> {
 		return port.findByIdWithContent(
 			projectId,
 			id,
-			visibilitySearched,
-			memberVisibilitySearched,
-			memberAvailabilitySearched
+			isVisible,
+			isMemberVisible,
+			isMemberAvailable
 		)
 			.notFoundIfEmpty(id)
 	}
 
-	override fun searchParticipantsByText(projectId: UUID, textSearched: String?): Flux<ParticipantModel> {
+	override fun searchParticipantsByText(projectId: UUID, query: String?): Flux<ParticipantModel> {
 		return participantPort.findWithLimit(
 			maxParticipantResult,
 			projectId,
-			ParticipantSearchParamModel(typeSearched = REGISTERED, visibilitySearched = true).apply {
-				this.textSearched = textSearched
+			ParticipantSearchParamModel(type = REGISTERED, isVisible = true).apply {
+				this.query = query
 			},
 		)
 	}
@@ -111,7 +111,7 @@ class GroupService(
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
+			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { member -> member.id }) }
 			.flatMap { port.create(group.apply { create(currentUser) }) }
 			.`as`(transactionalOperator::transactional)
 	}
@@ -132,9 +132,9 @@ class GroupService(
 				findGroupById(
 					projectId,
 					id,
-					visibilitySearched = null,
-					memberVisibilitySearched = null,
-					memberAvailabilitySearched = null
+					isVisible = null,
+					isMemberVisible = null,
+					isMemberAvailable = null
 				)
 			}
 			.flatMap {
@@ -162,9 +162,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			isMemberVisible = null,
+			isMemberAvailable = null
 		)
 			.map { Pair(it, it.getNewMemberIds(memberIds)) }
 			.handle { it, handle ->
@@ -197,11 +197,11 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			isMemberVisible = null,
+			isMemberAvailable = null
 		)
-			.map { it.apply { members = members.filter { m -> m.id != memberId } } }
+			.map { it.apply { members = members.filter { member -> member.id != memberId } } }
 			.handle { it, handle ->
 				if (it.members.isEmpty()) {
 					handle.error(
@@ -222,7 +222,7 @@ class GroupService(
 	}.`as`(transactionalOperator::transactional)
 
 	private fun validateMembers(projectId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
-		return participantPort.findAllByIds(projectId, newMemberIds, visibilitySearched = null)
+		return participantPort.findAllByIds(projectId, newMemberIds, isVisible = null)
 			.filter { it.type == REGISTERED }
 			.collectList()
 			.handle { it, handle ->
@@ -250,11 +250,11 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = true,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = true,
+			isMemberVisible = null,
+			isMemberAvailable = null
 		)
-			.updateVisibility(visibility = false)
+			.updateVisibility(isVisible = false)
 			.updateGroup(currentUser)
 	}
 
@@ -262,11 +262,11 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = false,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = false,
+			isMemberVisible = null,
+			isMemberAvailable = null
 		)
-			.updateVisibility(visibility = true)
+			.updateVisibility(isVisible = true)
 			.updateGroup(currentUser)
 	}
 
@@ -274,9 +274,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			isMemberVisible = null,
+			isMemberAvailable = null
 		)
 			.flatMap { port.deleteById(id) }
 	}
@@ -294,8 +294,8 @@ class GroupService(
 				} else {
 					log.info("Purging group {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Group {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge group{}", it, err) }
+						.doOnNext { purgedId -> log.info("Group {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge group {}", it, error) }
 				}
 			}
 	}

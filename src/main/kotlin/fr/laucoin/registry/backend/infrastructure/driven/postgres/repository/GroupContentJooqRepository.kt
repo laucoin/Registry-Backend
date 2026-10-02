@@ -24,31 +24,31 @@ class GroupContentJooqRepository(private val dsl: DSLContext) {
 	fun findAllByGroupIds(
 		projectId: UUID,
 		groupIds: List<UUID>,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
 	): Flux<GroupContentEntity> =
-		findAllByGroupIds(projectId, groupIds, visibilitySearched, availabilitySearched, dsl)
+		findAllByGroupIds(projectId, groupIds, isVisible, isAvailable, dsl)
 
 	fun findAllByGroupIds(
 		projectId: UUID,
 		groupIds: List<UUID>,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
 		using: DSLContext,
 	): Flux<GroupContentEntity> {
 		val conditions = mutableListOf(
 			TB_GROUP.PROJECT_ID.eq(projectId),
 			TB_GROUP_CONTENT.GROUP_ID.`in`(groupIds),
-			visibleCondition(TB_PARTICIPANT.VISIBLE, visibilitySearched),
+			visibleCondition(TB_PARTICIPANT.VISIBLE, isVisible),
 		)
-		availabilitySearched?.let {
-			val isAvailable = activeNowCondition(
+		isAvailable?.let {
+			val activeNow = activeNowCondition(
 				TB_PARTICIPANT.START_AVAILABILITY_DATE,
 				TB_PARTICIPANT.START_AVAILABILITY_TIME,
 				TB_PARTICIPANT.END_AVAILABILITY_DATE,
 				TB_PARTICIPANT.END_AVAILABILITY_TIME,
 			)
-			conditions += if (it) isAvailable else isAvailable.not()
+			conditions += if (it) activeNow else activeNow.not()
 		}
 		return Flux.from(
 			using.select(

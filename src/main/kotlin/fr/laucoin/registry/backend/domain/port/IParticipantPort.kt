@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
  * and the retention lookup used by the purge job. Implemented by the jOOQ Postgres adapter.
  */
 interface IParticipantPort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -26,9 +26,9 @@ interface IParticipantPort {
 		sortFields: List<SortModel<ParticipantSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<ParticipantModel>>
 
-	fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel>
-	fun findArrivingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel>
-	fun findDepartingToday(projectId: UUID, visibilitySearched: Boolean?, limit: Int): Flux<ParticipantModel>
+	fun findBirthdays(projectId: UUID, isVisible: Boolean?, limit: Int): Flux<ParticipantModel>
+	fun findArrivingToday(projectId: UUID, isVisible: Boolean?, limit: Int): Flux<ParticipantModel>
+	fun findDepartingToday(projectId: UUID, isVisible: Boolean?, limit: Int): Flux<ParticipantModel>
 	fun countAll(projectId: UUID, searchParams: ParticipantSearchParamModel): Mono<Long>
 	fun findPageByGroupId(
 		projectId: UUID,
@@ -37,13 +37,12 @@ interface IParticipantPort {
 		searchParams: ParticipantSearchParamModel,
 	): Mono<PageModel<ParticipantModel>>
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ParticipantModel>
 	fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel>
 	fun findAllByUserId(userId: UUID): Flux<ParticipantModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
 	fun updateAllEndAvailability(ids: List<UUID>, endAvailability: CustomDateTimeModel): Flux<ParticipantModel>
 	fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel>
-	fun deleteAll(ids: List<UUID>): Mono<Unit>
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: ParticipantModel): Mono<ParticipantModel>
 	fun update(element: ParticipantModel): Mono<ParticipantModel>

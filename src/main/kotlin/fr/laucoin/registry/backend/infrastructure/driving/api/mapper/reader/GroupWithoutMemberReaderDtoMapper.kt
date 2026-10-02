@@ -22,7 +22,7 @@ class GroupWithoutMemberReaderDtoMapper(
 			outsideMembersCount = model.outsideMembersCount,
 		).apply {
 			id = model.id
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}

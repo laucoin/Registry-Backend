@@ -23,7 +23,7 @@ class ProjectProfileEntityMapper(
 			endAccess = mapCustomDateTime(entity.endAccessDate, entity.endAccessTime)
 			status = entity.status
 			availabilityStatus = buildStatus()
-			favorite = entity.favorite ?: false
+			isFavorite = entity.isFavorite ?: false
 		}.fillWithProjectAndEntity(entity)
 	}
 
@@ -37,7 +37,7 @@ class ProjectProfileEntityMapper(
 					lastName = entity.userLastName
 					email = entity.userEmail
 					lastLogin = entity.userLastLogin
-					purged = entity.userPurged ?: purged
+					isPurged = entity.isUserPurged ?: isPurged
 				}
 			)
 		}.orElse(null)
@@ -52,7 +52,7 @@ class ProjectProfileEntityMapper(
 			startAccessTime = model.startAccess?.time
 			endAccessDate = model.endAccess?.date
 			endAccessTime = model.endAccess?.time
-			favorite = model.favorite
+			isFavorite = model.isFavorite
 		}.fillWithProjectAndModel(model)
 	}
 }

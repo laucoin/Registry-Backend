@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
  * job. Implemented by the jOOQ Postgres adapter.
  */
 interface IProjectPort {
-	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
+	fun findById(id: UUID, isVisible: Boolean?): Mono<ProjectModel>
 	fun findPage(
 		userId: UUID,
 		pageable: PageableModel,

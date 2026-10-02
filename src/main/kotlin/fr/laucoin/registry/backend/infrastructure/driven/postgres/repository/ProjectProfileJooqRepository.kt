@@ -179,34 +179,34 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			.leftJoin(creator).on(TB_PROJECT_PROFILE.CREATED_BY.eq(creator.ID))
 			.leftJoin(editor).on(TB_PROJECT_PROFILE.LAST_MODIFIED_BY.eq(editor.ID))
 
-	private fun textProjectSearchCondition(project: TbProject, textSearched: String?): Condition =
-		textSearched?.let {
+	private fun textProjectSearchCondition(project: TbProject, query: String?): Condition =
+		query?.let {
 			val pattern = DSL.concat(DSL.inline("%"), unaccent2(DSL.`val`(it)), DSL.inline("%"))
 			unaccent2(project.NAME).likeIgnoreCase(pattern)
 		} ?: DSL.noCondition()
 
-	private fun textUserSearchCondition(user: TbUser, textSearched: String?): Condition =
-		textSearched?.let { similarity(user.SEARCH_TEXT, DSL.`val`(it)).gt(0f) } ?: DSL.noCondition()
+	private fun textUserSearchCondition(user: TbUser, query: String?): Condition =
+		query?.let { similarity(user.SEARCH_TEXT, DSL.`val`(it)).gt(0f) } ?: DSL.noCondition()
 
-	private fun usableCondition(availabilitySearched: Boolean?): Condition {
-		if (availabilitySearched == null) return DSL.noCondition()
+	private fun usableCondition(isAvailable: Boolean?): Condition {
+		if (isAvailable == null) return DSL.noCondition()
 		val isUsable = activeNowCondition(
 			TB_PROJECT_PROFILE.START_ACCESS_DATE,
 			TB_PROJECT_PROFILE.START_ACCESS_TIME,
 			TB_PROJECT_PROFILE.END_ACCESS_DATE,
 			TB_PROJECT_PROFILE.END_ACCESS_TIME
 		)
-		return if (availabilitySearched) isUsable else isUsable.not()
+		return if (isAvailable) isUsable else isUsable.not()
 	}
 
-	private fun upcomingCondition(project: TbProject, upcomingSearched: Boolean?): Condition {
-		if (upcomingSearched == null) return DSL.noCondition()
-		val isUpcoming = notStartedCondition(project.BEGIN_DATE, project.BEGIN_TIME)
-		return if (upcomingSearched) isUpcoming else isUpcoming.not()
+	private fun upcomingCondition(project: TbProject, isUpcoming: Boolean?): Condition {
+		if (isUpcoming == null) return DSL.noCondition()
+		val notStarted = notStartedCondition(project.BEGIN_DATE, project.BEGIN_TIME)
+		return if (isUpcoming) notStarted else notStarted.not()
 	}
 
-	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime?): Condition =
-		dateTimeSearched?.let {
+	private fun dateInRangeCondition(dateTime: ZonedDateTime?): Condition =
+		dateTime?.let {
 			activeAtCondition(
 				TB_PROJECT_PROFILE.START_ACCESS_DATE,
 				TB_PROJECT_PROFILE.START_ACCESS_TIME,
@@ -217,10 +217,10 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		} ?: DSL.noCondition()
 
 	private fun datesOverlapCondition(
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Condition {
-		val endsAfterSearchStart = startDateTimeSearched?.let {
+		val endsAfterSearchStart = startDateTime?.let {
 			val date = it.toLocalDate()
 			val time = it.toOffsetDateTime().toOffsetTime()
 			TB_PROJECT_PROFILE.END_ACCESS_DATE.isNull
@@ -230,7 +230,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 						.and(TB_PROJECT_PROFILE.END_ACCESS_TIME.isNull.or(TB_PROJECT_PROFILE.END_ACCESS_TIME.gt(time)))
 				)
 		} ?: DSL.noCondition()
-		val startsBeforeSearchEnd = endDateTimeSearched?.let {
+		val startsBeforeSearchEnd = endDateTime?.let {
 			val date = it.toLocalDate()
 			val time = it.toOffsetDateTime().toOffsetTime()
 			TB_PROJECT_PROFILE.START_ACCESS_DATE.isNull
@@ -250,7 +250,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		LAST_MODIFIED_DATE -> TB_PROJECT_PROFILE.LAST_MODIFIED_DATE
 	}
 
-	// tiebreaker stays last as the final, stable order (v1's sole, implicit order).
+	// tiebreaker stays last as the final, stable order.
 	private fun orderFields(
 		user: TbUser,
 		sortFields: List<SortModel<ProjectProfileSortFieldEnum>>,
@@ -276,13 +276,13 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 
 	fun findByUserId(
 		userId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
-		dateTimeSearched: ZonedDateTime?,
-		favoriteSearched: Boolean?,
-		upcomingSearched: Boolean?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
+		dateTime: ZonedDateTime?,
+		isFavorite: Boolean?,
+		isUpcoming: Boolean?,
 		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -302,13 +302,13 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			)
 				.where(
 					TB_PROJECT_PROFILE.USER_ID.eq(userId)
-						.and(textProjectSearchCondition(project, textSearched))
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
-						.and(usableCondition(availabilitySearched))
-						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
-						.and(dateInRangeCondition(dateTimeSearched))
-						.and(visibleCondition(TB_PROJECT_PROFILE.FAVORITE, favoriteSearched))
-						.and(upcomingCondition(project, upcomingSearched))
+						.and(textProjectSearchCondition(project, query))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
+						.and(usableCondition(isAvailable))
+						.and(TB_PROJECT_PROFILE.STATUS.`in`(status))
+						.and(dateInRangeCondition(dateTime))
+						.and(visibleCondition(TB_PROJECT_PROFILE.FAVORITE, isFavorite))
+						.and(upcomingCondition(project, isUpcoming))
 				)
 				.orderBy(orderFields(user, sortFields, tiebreaker = project.NAME))
 				.limit(limit).offset(offset)
@@ -342,11 +342,11 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 
 	fun findByProjectId(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
+		dateTime: ZonedDateTime?,
 		sortFields: List<SortModel<ProjectProfileSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -355,20 +355,20 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		val project = projectTable()
 		val creator = creatorTable()
 		val editor = editorTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			user.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
 			baseSelect(user, project, creator, editor, similarityScore, fullCount)
 				.where(
 					TB_PROJECT_PROFILE.PROJECT_ID.eq(projectId)
-						.and(textUserSearchCondition(user, textSearched))
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
-						.and(usableCondition(availabilitySearched))
-						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
-						.and(dateInRangeCondition(dateTimeSearched))
+						.and(textUserSearchCondition(user, query))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
+						.and(usableCondition(isAvailable))
+						.and(TB_PROJECT_PROFILE.STATUS.`in`(status))
+						.and(dateInRangeCondition(dateTime))
 				)
 				.orderBy(orderFields(user, sortFields, tiebreaker = user.LAST_NAME, leading = arrayOf(similarityScore.desc())))
 				.limit(limit).offset(offset)
@@ -379,9 +379,9 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		projectId: UUID,
 		userIds: List<UUID>,
 		profileIdToExclude: UUID?,
-		statusSearched: List<ProfileStatusEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		status: List<ProfileStatusEnum>,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Flux<UUID> = Flux.from(
 		dsl.selectDistinct(TB_PROJECT_PROFILE.USER_ID)
 			.from(TB_PROJECT_PROFILE)
@@ -389,16 +389,16 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 				TB_PROJECT_PROFILE.PROJECT_ID.eq(projectId)
 					.and(TB_PROJECT_PROFILE.USER_ID.`in`(userIds))
 					.and(profileIdToExclude?.let { TB_PROJECT_PROFILE.ID.ne(it) } ?: DSL.noCondition())
-					.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
-					.and(datesOverlapCondition(startDateTimeSearched, endDateTimeSearched))
+					.and(TB_PROJECT_PROFILE.STATUS.`in`(status))
+					.and(datesOverlapCondition(startDateTime, endDateTime))
 			)
 	).map { it.value1()!! }
 
 	fun findAllRolesByUserId(
 		userId: UUID,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
 	): Flux<ProjectProfileRoleEntity> {
 		val project = projectTable()
 		return Flux.from(
@@ -407,15 +407,15 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 				.join(project).on(TB_PROJECT_PROFILE.PROJECT_ID.eq(project.ID))
 				.where(
 					TB_PROJECT_PROFILE.USER_ID.eq(userId)
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
-						.and(usableCondition(availabilitySearched))
-						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
+						.and(usableCondition(isAvailable))
+						.and(TB_PROJECT_PROFILE.STATUS.`in`(status))
 				)
 		).map {
 			ProjectProfileRoleEntity(
 				projectId = it.value1(),
 				projectOptions = it.value2(),
-				projectVisible = it.value3(),
+				isProjectVisible = it.value3(),
 				role = it.value4()
 			)
 		}
@@ -431,9 +431,9 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 	fun findProjectProfileByProjectAndUserId(
 		projectId: UUID,
 		userId: UUID,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
 	): Mono<ProjectProfileEntity> {
 		val user = userTable()
 		val project = projectTable()
@@ -444,9 +444,9 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 				.where(
 					TB_PROJECT_PROFILE.USER_ID.eq(userId)
 						.and(TB_PROJECT_PROFILE.PROJECT_ID.eq(projectId))
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
-						.and(usableCondition(availabilitySearched))
-						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
+						.and(usableCondition(isAvailable))
+						.and(TB_PROJECT_PROFILE.STATUS.`in`(status))
 				)
 		).map { it.toEntity(user, project, creator, editor) }
 	}
@@ -454,9 +454,9 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 	fun findProjectProfilesByProjectIdsAndUserId(
 		projectIds: List<UUID>,
 		userId: UUID,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
 	): Flux<ProjectProfileEntity> {
 		if (projectIds.isEmpty()) return Flux.empty()
 		val user = userTable()
@@ -468,16 +468,16 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 				.where(
 					TB_PROJECT_PROFILE.USER_ID.eq(userId)
 						.and(TB_PROJECT_PROFILE.PROJECT_ID.`in`(projectIds))
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
-						.and(usableCondition(availabilitySearched))
-						.and(TB_PROJECT_PROFILE.STATUS.`in`(statusSearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
+						.and(usableCondition(isAvailable))
+						.and(TB_PROJECT_PROFILE.STATUS.`in`(status))
 				)
 		).map { it.toEntity(user, project, creator, editor) }
 	}
 
 	fun findLevel0ProjectProfileRoleByUserId(
 		userId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileRoleCountEntity> {
 		val userProfileProject = name("user_profile_project").`as`(
 			dsl.select(TB_PROJECT_PROFILE.PROJECT_ID)
@@ -486,7 +486,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 				.on(TB_PROJECT_PROFILE.ROLE.eq(TB_PROJECT_ROLE.NAME).and(TB_PROJECT_ROLE.LEVEL.eq(0)))
 				.where(
 					TB_PROJECT_PROFILE.STATUS.eq(ProfileStatusEnum.ACCEPTED)
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
 						.and(
 							startedCondition(
 								TB_PROJECT_PROFILE.START_ACCESS_DATE,
@@ -509,12 +509,12 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 				.join(TB_PROJECT).on(TB_PROJECT_PROFILE.PROJECT_ID.eq(TB_PROJECT.ID))
 				.join(TB_USER).on(
 					TB_PROJECT_PROFILE.USER_ID.eq(TB_USER.ID).and(TB_USER.PURGED.isFalse)
-						.and(visibleCondition(TB_USER.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_USER.VISIBLE, isVisible))
 				)
 				.join(userProfileProject).on(
 					upProjectId.eq(TB_PROJECT.ID)
 						.and(TB_PROJECT_PROFILE.STATUS.eq(ProfileStatusEnum.ACCEPTED))
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
 						.and(
 							startedCondition(
 								TB_PROJECT_PROFILE.START_ACCESS_DATE,
@@ -536,7 +536,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 
 	fun findLevel0ProjectProfileRoleByProjectId(
 		projectId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileEntity> {
 		val user = userTable()
 		val project = projectTable()
@@ -546,14 +546,14 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			baseSelect(user, project, creator, editor)
 				.join(TB_PROJECT_ROLE).on(TB_PROJECT_PROFILE.ROLE.eq(TB_PROJECT_ROLE.NAME))
 				.where(
-					visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched)
+					visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible)
 						.and(TB_PROJECT_ROLE.LEVEL.eq(0))
 						.and(TB_PROJECT_PROFILE.PROJECT_ID.eq(projectId))
 				)
 		).map { it.toEntity(user, project, creator, editor) }
 	}
 
-	fun findByUserIdAndId(userId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileEntity> {
+	fun findByUserIdAndId(userId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -565,12 +565,12 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			)
 				.where(
 					TB_PROJECT_PROFILE.USER_ID.eq(userId).and(TB_PROJECT_PROFILE.ID.eq(id))
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(user, project, creator, editor, includeProjectDetails = true) }
 	}
 
-	fun findByProjectIdAndId(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileEntity> {
+	fun findByProjectIdAndId(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileEntity> {
 		val user = userTable()
 		val project = projectTable()
 		val creator = creatorTable()
@@ -579,7 +579,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			baseSelect(user, project, creator, editor)
 				.where(
 					TB_PROJECT_PROFILE.PROJECT_ID.eq(projectId).and(TB_PROJECT_PROFILE.ID.eq(id))
-						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_PROJECT_PROFILE.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(user, project, creator, editor) }
 	}
@@ -601,7 +601,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		entity.startAccessTime?.let { record.set(TB_PROJECT_PROFILE.START_ACCESS_TIME, it) }
 		entity.endAccessDate?.let { record.set(TB_PROJECT_PROFILE.END_ACCESS_DATE, it) }
 		entity.endAccessTime?.let { record.set(TB_PROJECT_PROFILE.END_ACCESS_TIME, it) }
-		entity.favorite?.let { record.set(TB_PROJECT_PROFILE.FAVORITE, it) }
+		entity.isFavorite?.let { record.set(TB_PROJECT_PROFILE.FAVORITE, it) }
 		return Mono.from(dsl.insertInto(TB_PROJECT_PROFILE).set(record).returning()).map { it.toEntity() }
 	}
 
@@ -616,7 +616,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 			.set(TB_PROJECT_PROFILE.START_ACCESS_TIME, entity.startAccessTime)
 			.set(TB_PROJECT_PROFILE.END_ACCESS_DATE, entity.endAccessDate)
 			.set(TB_PROJECT_PROFILE.END_ACCESS_TIME, entity.endAccessTime)
-			.set(TB_PROJECT_PROFILE.FAVORITE, entity.favorite)
+			.set(TB_PROJECT_PROFILE.FAVORITE, entity.isFavorite)
 			.where(TB_PROJECT_PROFILE.ID.eq(entity.id))
 			.returning()
 	).map { it.toEntity() }
@@ -638,7 +638,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		userLastName = user?.let { get(it.LAST_NAME) },
 		userEmail = user?.let { get(it.EMAIL) },
 		userLastLogin = user?.let { get(it.LAST_LOGIN) },
-		userPurged = user?.let { get(it.PURGED) },
+		isUserPurged = user?.let { get(it.PURGED) },
 		userOidcId = user?.let { get(it.OIDC_ID) },
 		role = get(TB_PROJECT_PROFILE.ROLE),
 		status = get(TB_PROJECT_PROFILE.STATUS),
@@ -646,7 +646,7 @@ class ProjectProfileJooqRepository(private val dsl: DSLContext) {
 		startAccessTime = get(TB_PROJECT_PROFILE.START_ACCESS_TIME),
 		endAccessDate = get(TB_PROJECT_PROFILE.END_ACCESS_DATE),
 		endAccessTime = get(TB_PROJECT_PROFILE.END_ACCESS_TIME),
-		favorite = get(TB_PROJECT_PROFILE.FAVORITE),
+		isFavorite = get(TB_PROJECT_PROFILE.FAVORITE),
 		participantsCount = counts?.let { get(it.participants) },
 		vehiclesCount = counts?.let { get(it.vehicles) },
 		groupsCount = counts?.let { get(it.groups) },

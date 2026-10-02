@@ -61,7 +61,7 @@ class ParticipantV2Controller(
 		query: String?,
 		isMajor: Boolean?,
 		type: ParticipantTypeEnum?,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		status: PresenceStatusEnum?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<ParticipantReaderDto>> {
@@ -69,7 +69,7 @@ class ParticipantV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ParticipantSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ParticipantSearchParamModel(query, isMajor, type, visible, status, dateTime)
+		val searchParams = ParticipantSearchParamModel(query, isMajor, type, isVisible, status, dateTime)
 
 		return service.findParticipantsPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
@@ -88,7 +88,7 @@ class ParticipantV2Controller(
 	}
 
 	override fun findParticipantById(projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
-		return service.findParticipantById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findParticipantById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
@@ -104,17 +104,17 @@ class ParticipantV2Controller(
 		projectId: UUID,
 		id: UUID,
 		page: PageQueryDto,
-		visible: Boolean?,
-		linkedToActivity: Boolean?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
 		type: MovementTypeEnum?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
-		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && linkedToActivity == true) {
+		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && hasActivity == true) {
 			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 		}
 
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = MovementSearchParamModel(isVisible, hasActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findParticipantMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }

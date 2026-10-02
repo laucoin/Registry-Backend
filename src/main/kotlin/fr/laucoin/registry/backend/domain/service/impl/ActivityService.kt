@@ -52,8 +52,8 @@ class ActivityService(
 		return port.findPage(projectId, pageable, searchParams, sortFields)
 	}
 
-	override fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
-		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
+	override fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel> {
+		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
 	}
 
 	override fun findActivityMovementsPage(
@@ -70,7 +70,7 @@ class ActivityService(
 			.collectList()
 			.flatMapMany { movements ->
 				val movementIds = movements.mapNotNull { it.id }
-				communicationPort.findByMovementIdsWithLimit(RECENT_COMMUNICATIONS_LIMIT, projectId, movementIds, visibilitySearched = null)
+				communicationPort.findByMovementIdsWithLimit(RECENT_COMMUNICATIONS_LIMIT, projectId, movementIds, isVisible = null)
 					.collectMap({ it.first }, { it.second })
 					.flatMapMany { commsByMovementId ->
 						Flux.fromIterable(
@@ -106,7 +106,7 @@ class ActivityService(
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findActivityById(projectId, id, visibilitySearched = null) }
+			.flatMap { findActivityById(projectId, id, isVisible = null) }
 			.map {
 				it.apply {
 					name = activity.name
@@ -121,19 +121,19 @@ class ActivityService(
 	}
 
 	override fun disableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel> {
-		return findActivityById(projectId, id, visibilitySearched = true)
-			.updateVisibility(visibility = false)
+		return findActivityById(projectId, id, isVisible = true)
+			.updateVisibility(isVisible = false)
 			.updateActivity(currentUser)
 	}
 
 	override fun enableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel> {
-		return findActivityById(projectId, id, visibilitySearched = false)
-			.updateVisibility(visibility = true)
+		return findActivityById(projectId, id, isVisible = false)
+			.updateVisibility(isVisible = true)
 			.updateActivity(currentUser)
 	}
 
 	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findActivityById(projectId, id, visibilitySearched = null)
+		return findActivityById(projectId, id, isVisible = null)
 			.validateHasNoMovementLinked(ACTIVITY_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }
 	}
@@ -148,8 +148,8 @@ class ActivityService(
 				} else {
 					log.info("Purging activity {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Activity {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge activity {}", it, err) }
+						.doOnNext { purgedId -> log.info("Activity {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge activity {}", it, error) }
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}

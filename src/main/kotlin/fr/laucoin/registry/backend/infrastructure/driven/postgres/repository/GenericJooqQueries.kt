@@ -31,8 +31,8 @@ object GenericJooqQueries {
 
 	fun projectTable(): TbProject = TB_PROJECT.`as`("project_tb")
 
-	fun visibleCondition(field: TableField<*, Boolean?>, visibilitySearched: Boolean?): Condition =
-		visibilitySearched?.let { field.eq(it) } ?: DSL.noCondition()
+	fun visibleCondition(field: TableField<*, Boolean?>, isVisible: Boolean?): Condition =
+		isVisible?.let { field.eq(it) } ?: DSL.noCondition()
 
 	fun startedCondition(startDate: Field<LocalDate?>, startTime: Field<OffsetTime?>): Condition =
 		startDate.isNull.or(startDate.lt(DSL.currentLocalDate()))
@@ -86,7 +86,7 @@ object GenericJooqQueries {
 		fullCount: Field<Int>? = null,
 	) {
 		entity.id = get(columns.id)
-		entity.visible = get(columns.visible)
+		entity.isVisible = get(columns.visible)
 		entity.createdAt = get(columns.createdDate)
 		entity.creatorId = get(columns.createdBy)
 		entity.creatorFirstName = creator?.let { get(it.FIRST_NAME) }
@@ -111,7 +111,7 @@ object GenericJooqQueries {
 	}
 
 	fun Record.setGeneric(entity: GenericEntity, columns: GenericColumns) {
-		entity.visible?.let { set(columns.visible, it) }
+		entity.isVisible?.let { set(columns.visible, it) }
 		entity.createdAt?.let { set(columns.createdDate, it) }
 		entity.creatorId?.let { set(columns.createdBy, it) }
 		entity.lastUpdateAt?.let { set(columns.lastModifiedDate, it) }
@@ -123,7 +123,7 @@ object GenericJooqQueries {
 	}
 
 	fun <R : Record> UpdateSetStep<R>.setGeneric(entity: GenericEntity, columns: GenericColumns): UpdateSetMoreStep<R> =
-		set(columns.visible, entity.visible)
+		set(columns.visible, entity.isVisible)
 			.set(columns.createdDate, entity.createdAt)
 			.set(columns.createdBy, entity.creatorId)
 			.set(columns.lastModifiedDate, entity.lastUpdateAt)

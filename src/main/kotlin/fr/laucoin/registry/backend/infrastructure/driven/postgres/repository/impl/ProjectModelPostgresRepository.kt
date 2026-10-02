@@ -35,10 +35,10 @@ class ProjectModelPostgresRepository(
 	): Mono<PageModel<ProjectModel>> {
 		return repository.findAll(
 			userId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.dateTimeSearched,
-			searchParams.favoriteSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.dateTime,
+			searchParams.isFavorite,
 			sortFields,
 			pageable.limit,
 			pageable.offset,
@@ -59,10 +59,10 @@ class ProjectModelPostgresRepository(
 		return repository.findAllInProjectIds(
 			userId,
 			projectIds,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.dateTimeSearched,
-			searchParams.favoriteSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.dateTime,
+			searchParams.isFavorite,
 			sortFields,
 			pageable.limit,
 			pageable.offset,
@@ -78,8 +78,8 @@ class ProjectModelPostgresRepository(
 		return repository.findProjectsEligibleForPurge(dateThreshold)
 	}
 
-	override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
-		return repository.findById(id, visibilitySearched)
+	override fun findById(id: UUID, isVisible: Boolean?): Mono<ProjectModel> {
+		return repository.findById(id, isVisible)
 			.map(mapper::toModel)
 	}
 

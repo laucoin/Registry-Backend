@@ -120,13 +120,13 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		assertEquals(5, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
+			query = null,
 			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			type = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			dateTime = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -151,13 +151,13 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findAllByGroupId(
 			projectId,
 			groupId,
-			textSearched = null,
+			query = null,
 			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			type = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			dateTime = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -171,15 +171,15 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			isVisible = null,
+			dateTime = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -190,7 +190,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		repository.findByUserId(projectId, currentUser().id!!).collectList().block()
 
 		// Assert
-		verify(postgresRepository).findByUserId(projectId, currentUser().id!!, dateTimeSearched = null)
+		verify(postgresRepository).findByUserId(projectId, currentUser().id!!, dateTime = null)
 		verify(mapper).toModel(any())
 	}
 
@@ -208,13 +208,13 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		assertEquals(10, result.size)
 		verify(postgresRepository).findWithLimit(
 			projectId,
-			textSearched = null,
+			query = null,
 			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			type = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			dateTime = null,
 			size,
 		)
 		verify(mapper, times(10)).toModel(any())
@@ -223,15 +223,15 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, participantId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, participantId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			participantId,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			isVisible = null,
+			dateTime = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -242,15 +242,15 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			isVisible = null,
+			dateTime = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -294,7 +294,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		@Order(2)
 		fun `Should findBirthdays match on month-day regardless of birth year`() {
 			// Act
-			val result = repository.findBirthdays(projectId, visibilitySearched = null, limit = 1000).collectList().block()!!
+			val result = repository.findBirthdays(projectId, isVisible = null, limit = 1000).collectList().block()!!
 
 			// Assert
 			assertTrue(result.any { it.id == matchingId })
@@ -309,8 +309,8 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			repository.deleteById(nonMatchingId).block()
 
 			// Assert
-			assertNull(repository.findById(projectId, matchingId, visibilitySearched = null).block())
-			assertNull(repository.findById(projectId, nonMatchingId, visibilitySearched = null).block())
+			assertNull(repository.findById(projectId, matchingId, isVisible = null).block())
+			assertNull(repository.findById(projectId, nonMatchingId, isVisible = null).block())
 		}
 	}
 
@@ -354,7 +354,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				groups = listOf(GroupModel().apply { id = groupId })
-				purged = false
+				isPurged = false
 				create(currentUser())
 			}.also { it.projectId = projectId }
 
@@ -367,8 +367,8 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			verify(postgresRepository).findById(
 				eq(projectId),
 				eq(uuid),
-				visibilitySearched = eq(null),
-				dateTimeSearched = eq(null),
+				isVisible = eq(null),
+				dateTime = eq(null),
 				using = any()
 			)
 			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>(), any())
@@ -386,7 +386,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				lastName = "test updated"
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
-				purged = false
+				isPurged = false
 				create(currentUser())
 			}.also { it.projectId = projectId }
 
@@ -399,8 +399,8 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			verify(postgresRepository).findById(
 				eq(projectId),
 				eq(uuid),
-				visibilitySearched = eq(null),
-				dateTimeSearched = eq(null),
+				isVisible = eq(null),
+				dateTime = eq(null),
 				using = any()
 			)
 			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(eq(uuid), eq(listOf(groupId)), any())

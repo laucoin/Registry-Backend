@@ -46,34 +46,34 @@ class ActivityV2Controller(
 		projectId: UUID,
 		page: SortedPageQueryDto,
 		query: String?,
-		visible: Boolean?,
-		available: Boolean?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<ActivityReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ActivitySortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ActivitySearchParamModel(query, visible, available, dateTime)
+		val searchParams = ActivitySearchParamModel(query, isVisible, isAvailable, dateTime)
 
 		return service.findActivitiesPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
 	override fun findActivityById(projectId: UUID, id: UUID): Mono<ActivityReaderDto> {
-		return service.findActivityById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findActivityById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun findActivityMovements(
 		projectId: UUID,
 		id: UUID,
 		page: PageQueryDto,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		type: MovementTypeEnum?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity = null, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = MovementSearchParamModel(isVisible, hasActivity = null, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findActivityMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }

@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LI
 import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
@@ -70,8 +70,8 @@ interface IGroupV2Controller {
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
-		@RequestParam(required = false) present: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
+		@RequestParam(name = "present", required = false) isPresent: Boolean?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<GroupWithoutMemberReaderDto>>
@@ -91,7 +91,7 @@ interface IGroupV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<GroupWithoutMemberReaderDto>
@@ -111,7 +111,7 @@ interface IGroupV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<GroupWithoutMemberReaderDto>
@@ -133,7 +133,7 @@ interface IGroupV2Controller {
 		@RequestParam(name = "q", required = false) query: String?,
 		@RequestParam(required = false) isMajor: Boolean?,
 		@RequestParam(required = false) type: ParticipantTypeEnum?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@RequestParam(required = false) status: PresenceStatusEnum?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
@@ -237,7 +237,7 @@ interface IGroupV2Controller {
 		summary = "Enable Group",
 		description = "Reverse a disable: the Group becomes visible in the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableGroupById(

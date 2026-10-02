@@ -38,7 +38,7 @@ class ProjectReaderDtoMapperTest {
 						begin = CustomDateTimeModel.MIN
 						end = CustomDateTimeModel.MAX
 						options = listOf(VEHICLE)
-						visible = true
+						isVisible = true
 						creation = HistoryModel()
 						lastEdition = HistoryModel()
 					},
@@ -51,7 +51,7 @@ class ProjectReaderDtoMapperTest {
 						begin = CustomDateTimeModel.MIN
 						end = CustomDateTimeModel.MAX
 						options = null
-						visible = true
+						isVisible = true
 						creation = HistoryModel()
 						lastEdition = HistoryModel()
 					},
@@ -89,7 +89,7 @@ class ProjectReaderDtoMapperTest {
 			}
 		}
 		assertEquals(project.options?.size, result.options?.size)
-		assertEquals(project.visible, result.visible)
+		assertEquals(project.isVisible, result.isVisible)
 		assertEquals(project.creation, result.creation)
 		assertEquals(project.lastEdition, result.lastEdition)
 	}

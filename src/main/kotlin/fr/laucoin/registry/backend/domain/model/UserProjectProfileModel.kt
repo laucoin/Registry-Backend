@@ -17,6 +17,6 @@ data class UserProjectProfileModel(
 	var status: ProfileStatusEnum? = INVITED,
 	var startAccess: CustomDateTimeModel? = null,
 	var endAccess: CustomDateTimeModel? = null,
-	var favorite: Boolean = false,
+	var isFavorite: Boolean = false,
 	var project: ProjectModel? = null,
 ): GenericModel()

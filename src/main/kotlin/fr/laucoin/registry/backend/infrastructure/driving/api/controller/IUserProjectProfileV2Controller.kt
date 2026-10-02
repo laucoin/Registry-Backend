@@ -49,12 +49,12 @@ interface IUserProjectProfileV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) available: Boolean?,
-		@RequestParam(required = false) upcoming: Boolean?,
+		@RequestParam(name = "available", required = false) isAvailable: Boolean?,
+		@RequestParam(name = "upcoming", required = false) isUpcoming: Boolean?,
 		@RequestParam(required = false) status: ProfileStatusEnum?,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
-		@RequestParam(required = false) favorite: Boolean?,
+		@RequestParam(name = "favorite", required = false) isFavorite: Boolean?,
 		@RequestParam(required = false) includeCounts: Boolean?,
 	): Mono<PageReaderDto<UserProjectProfileReaderDto>>
 

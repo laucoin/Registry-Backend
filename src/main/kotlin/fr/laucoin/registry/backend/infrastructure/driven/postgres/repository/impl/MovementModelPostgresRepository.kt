@@ -49,11 +49,11 @@ class MovementModelPostgresRepository(
 	): Mono<PageModel<MovementModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.startDateTime,
+			searchParams.endDateTime,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -67,19 +67,19 @@ class MovementModelPostgresRepository(
 		return Mono.zip(
 			repository.countCurrent(
 				projectId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
+				searchParams.isVisible,
+				searchParams.hasActivity,
+				searchParams.type,
+				searchParams.startDateTime,
+				searchParams.endDateTime,
 			),
 			repository.findCurrent(
 				projectId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
+				searchParams.isVisible,
+				searchParams.hasActivity,
+				searchParams.type,
+				searchParams.startDateTime,
+				searchParams.endDateTime,
 				pageable.limit,
 				pageable.offset,
 			).map(mapper::toModel).collectList()
@@ -118,11 +118,11 @@ class MovementModelPostgresRepository(
 		return repository.findAllByParticipantId(
 			projectId,
 			participantId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.startDateTime,
+			searchParams.endDateTime,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -137,11 +137,11 @@ class MovementModelPostgresRepository(
 		return repository.findAllByVehicleId(
 			projectId,
 			vehicleId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.startDateTime,
+			searchParams.endDateTime,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -156,10 +156,10 @@ class MovementModelPostgresRepository(
 		return repository.findAllByActivityId(
 			projectId,
 			activityId,
-			searchParams.visibilitySearched,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.type,
+			searchParams.startDateTime,
+			searchParams.endDateTime,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -172,10 +172,10 @@ class MovementModelPostgresRepository(
 	): Flux<MovementModel> {
 		return repository.findByActivityWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.dateTime,
 			limit,
 		).map { mapper.toModel(it) }
 	}
@@ -188,11 +188,11 @@ class MovementModelPostgresRepository(
 		return repository.countAllByParticipantId(
 			projectId,
 			participantId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.startDateTime,
+			searchParams.endDateTime,
 		)
 	}
 
@@ -204,11 +204,11 @@ class MovementModelPostgresRepository(
 		return repository.countAllByVehicleId(
 			projectId,
 			vehicleId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.startDateTime,
+			searchParams.endDateTime,
 		)
 	}
 
@@ -220,10 +220,10 @@ class MovementModelPostgresRepository(
 		return repository.countAllByActivityId(
 			projectId,
 			activityId,
-			searchParams.visibilitySearched,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.type,
+			searchParams.startDateTime,
+			searchParams.endDateTime,
 		)
 	}
 
@@ -231,9 +231,9 @@ class MovementModelPostgresRepository(
 		return repository.findOlderThanAndUncommentedSince(dateThreshold)
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel> {
 		return Mono.zip(
-			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
+			repository.findById(projectId, id, isVisible).map(mapper::toModel),
 			findContent(projectId, listOf(id)).collectList()
 				.handle<List<MovementContentModel>> { it, handle ->
 					if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(
@@ -261,7 +261,7 @@ class MovementModelPostgresRepository(
 
 	private fun findById(using: DSLContext, projectId: UUID, id: UUID): Mono<MovementModel> {
 		return Mono.zip(
-			repository.findById(projectId, id, visibilitySearched = null, using = using).map(mapper::toModel),
+			repository.findById(projectId, id, isVisible = null, using = using).map(mapper::toModel),
 			contentRepository.findAllByMovementIds(projectId, listOf(id), using = using).map(contentMapper::toModel)
 				.collectList(),
 		).map {

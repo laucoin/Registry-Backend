@@ -42,10 +42,10 @@ object AvailabilityElementExt {
 		return status(available, lastMovementType)
 	}
 
-	private fun status(available: Boolean, lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
+	private fun status(isAvailable: Boolean, lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
 		return when {
-			available && lastMovementType === MovementTypeEnum.IN -> PresenceStatusEnum.IN
-			!available -> PresenceStatusEnum.UNAVAILABLE
+			isAvailable && lastMovementType === MovementTypeEnum.IN -> PresenceStatusEnum.IN
+			!isAvailable -> PresenceStatusEnum.UNAVAILABLE
 			else -> PresenceStatusEnum.OUT
 		}
 	}
@@ -80,7 +80,7 @@ object AvailabilityElementExt {
 		return availability(available)
 	}
 
-	private fun availability(available: Boolean): AvailabilityStatusEnum {
-		return if (available) AvailabilityStatusEnum.AVAILABLE else AvailabilityStatusEnum.UNAVAILABLE
+	private fun availability(isAvailable: Boolean): AvailabilityStatusEnum {
+		return if (isAvailable) AvailabilityStatusEnum.AVAILABLE else AvailabilityStatusEnum.UNAVAILABLE
 	}
 }

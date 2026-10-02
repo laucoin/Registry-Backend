@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
 import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
@@ -66,7 +66,7 @@ interface IAlertV2Controller {
 		@PathVariable projectId: UUID,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@RequestParam(required = false) status: AlertStatusEnum?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<AlertReaderDto>>
@@ -97,7 +97,7 @@ interface IAlertV2Controller {
 		@PathVariable id: UUID,
 		@ParameterObject @Valid page: PageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@ParameterObject dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<CommunicationReaderDto>>
 
@@ -115,7 +115,7 @@ interface IAlertV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<OngoingAlertReaderDto>
@@ -184,7 +184,7 @@ interface IAlertV2Controller {
 		summary = "Enable Alert",
 		description = "Reverse a disable: the Alert becomes visible in the Project again.",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableAlertById(

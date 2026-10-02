@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectSortFieldEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
@@ -69,10 +68,10 @@ class ProjectService(
 
 	override fun findProjectById(
 		id: UUID,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 		currentUser: CurrentUserModel?,
 	): Mono<ProjectModel> {
-		return port.findById(id, visibilitySearched)
+		return port.findById(id, isVisible)
 			.notFoundIfEmpty(id)
 			.flatMap { project ->
 				if (currentUser == null) Mono.just(project)
@@ -98,17 +97,13 @@ class ProjectService(
 	}
 
 	private fun usableProfileSearchParams() = ProjectProfileSearchParamModel(
-		visibilitySearched = true,
-		availabilitySearched = true,
-		statusSearched = listOf(ACCEPTED),
+		isVisible = true,
+		isAvailable = true,
+		status = listOf(ACCEPTED),
 	)
 
-	override fun availableProjectOptions(): Flux<ProjectOptionEnum> {
-		return Flux.fromIterable(ProjectOptionEnum.entries)
-	}
-
 	override fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID> {
-		return findProjectById(id, visibilitySearched = null)
+		return findProjectById(id, isVisible = null)
 			.handle { it, handle ->
 				if (it.isNotInRange(dateTime)) {
 					log.warn("Failed to editing, date {} is out of project range [{}, {}]", dateTime, it.begin, it.end)
@@ -129,7 +124,7 @@ class ProjectService(
 		end: CustomDateTimeModel?,
 		errorCode: String
 	): Mono<UUID> {
-		return findProjectById(id, visibilitySearched = null)
+		return findProjectById(id, isVisible = null)
 			.handle { it, handle ->
 				if (it.isNotInRange(start) || it.isNotInRange(end)) {
 					log.warn(
@@ -165,7 +160,7 @@ class ProjectService(
 	}
 
 	override fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = null)
+		return findProjectById(id, isVisible = null)
 			.validateDates(project)
 			.map {
 				it.apply {
@@ -207,19 +202,19 @@ class ProjectService(
 	}
 
 	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = true)
-			.updateVisibility(visibility = false)
+		return findProjectById(id, isVisible = true)
+			.updateVisibility(isVisible = false)
 			.updateProject(currentUser)
 	}
 
 	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = false)
-			.updateVisibility(visibility = true)
+		return findProjectById(id, isVisible = false)
+			.updateVisibility(isVisible = true)
 			.updateProject(currentUser)
 	}
 
 	override fun deleteProjectById(id: UUID): Mono<Unit> {
-		return findProjectById(id, visibilitySearched = null)
+		return findProjectById(id, isVisible = null)
 			.flatMap {
 				profilePort.findOidcIdsByProjectId(id).collectList()
 					.flatMap { oidcIds ->
@@ -238,8 +233,8 @@ class ProjectService(
 				} else {
 					log.info("Purging project {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Project {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge project {}", it, err) }
+						.doOnNext { purgedId -> log.info("Project {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge project {}", it, error) }
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}

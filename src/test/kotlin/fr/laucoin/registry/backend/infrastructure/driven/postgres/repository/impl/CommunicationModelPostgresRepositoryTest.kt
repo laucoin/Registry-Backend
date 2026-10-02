@@ -79,10 +79,10 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		assertEquals(55, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			startDateTime = null,
+			endDateTime = null,
 			sortFields = emptyList(),
 			limit = pageable.limit,
 			offset = pageable.offset,
@@ -97,14 +97,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -112,14 +112,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, communicationId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, communicationId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			communicationId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -130,14 +130,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}

@@ -51,18 +51,18 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 
 	private fun searchConditions(
 		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		status: List<AlertStatusEnum>?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 	): Condition {
 		val conditions = mutableListOf(TB_ALERT.PROJECT_ID.eq(projectId))
-		conditions += visibleCondition(TB_ALERT.VISIBLE, visibilitySearched)
-		textSearched?.let { conditions += similarity(TB_ALERT.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
-		statusSearched?.let { conditions += TB_ALERT.STATUS.`in`(it) }
-		startDateTimeSearched?.let { conditions += TB_ALERT.DATE_TIME.ge(it) }
-		endDateTimeSearched?.let { conditions += TB_ALERT.DATE_TIME.le(it) }
+		conditions += visibleCondition(TB_ALERT.VISIBLE, isVisible)
+		query?.let { conditions += similarity(TB_ALERT.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
+		status?.let { conditions += TB_ALERT.STATUS.`in`(it) }
+		startDateTime?.let { conditions += TB_ALERT.DATE_TIME.ge(it) }
+		endDateTime?.let { conditions += TB_ALERT.DATE_TIME.le(it) }
 		return DSL.and(conditions)
 	}
 
@@ -74,7 +74,7 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 	}
 
 	// similarityScore sorts first (a no-op constant when there's no text search), TB_ALERT.DATE_TIME
-	// (descending) always stays last as the final tiebreaker (v1's sole, implicit order).
+	// (descending) always stays last as the final tiebreaker.
 	private fun orderFields(
 		similarityScore: Field<Float>,
 		sortFields: List<SortModel<AlertSortFieldEnum>>,
@@ -110,11 +110,11 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		status: List<AlertStatusEnum>?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		sortFields: List<SortModel<AlertSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -122,9 +122,9 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_ALERT.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
@@ -146,11 +146,11 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
-						statusSearched,
-						visibilitySearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						query,
+						status,
+						isVisible,
+						startDateTime,
+						endDateTime
 					)
 				)
 				.orderBy(orderFields(similarityScore, sortFields))
@@ -160,19 +160,19 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		status: List<AlertStatusEnum>?,
+		isVisible: Boolean?,
+		startDateTime: ZonedDateTime?,
+		endDateTime: ZonedDateTime?,
 		limit: Int,
 	): Flux<AlertEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_ALERT.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		return Flux.from(
 			dsl.select(
@@ -192,11 +192,11 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
-						statusSearched,
-						visibilitySearched,
-						startDateTimeSearched,
-						endDateTimeSearched
+						query,
+						status,
+						isVisible,
+						startDateTime,
+						endDateTime
 					)
 				)
 				.orderBy(similarityScore.desc(), TB_ALERT.DATE_TIME.desc())
@@ -204,7 +204,7 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(creator, editor, project) }
 	}
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertEntity> {
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertEntity> {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
@@ -223,7 +223,7 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(creator).on(TB_ALERT.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_ALERT.LAST_MODIFIED_BY.eq(editor.ID))
 				.where(
-					TB_ALERT.PROJECT_ID.eq(projectId).and(visibleCondition(TB_ALERT.VISIBLE, visibilitySearched))
+					TB_ALERT.PROJECT_ID.eq(projectId).and(visibleCondition(TB_ALERT.VISIBLE, isVisible))
 						.and(TB_ALERT.ID.eq(id))
 				)
 		).map { it.toEntity(creator, editor, project) }
@@ -231,20 +231,20 @@ class AlertJooqRepository(private val dsl: DSLContext) {
 
 	fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID> {
 		val lastComment = max(TB_COMMUNICATION.DATE_TIME).`as`("max")
-		val lc = dsl.select(lastComment, TB_COMMUNICATION.ALERT_ID)
+		val commentTable = dsl.select(lastComment, TB_COMMUNICATION.ALERT_ID)
 			.from(TB_COMMUNICATION)
 			.where(TB_COMMUNICATION.ALERT_ID.isNotNull)
 			.groupBy(TB_COMMUNICATION.ALERT_ID)
 			.asTable("lc")
-		val lcMax = field(name("lc", "max"), ZonedDateTime::class.java)
-		val lcAlertId = field(name("lc", "alert_id"), UUID::class.java)
+		val commentMax = field(name("lc", "max"), ZonedDateTime::class.java)
+		val commentAlert = field(name("lc", "alert_id"), UUID::class.java)
 		val thresholdAsTimestamp = DSL.`val`(dateThreshold).cast(TB_ALERT.LAST_MODIFIED_DATE)
 		return Flux.from(
 			dsl.select(TB_ALERT.ID)
 				.from(TB_ALERT)
-				.leftJoin(lc).on(lcAlertId.eq(TB_ALERT.ID))
+				.leftJoin(commentTable).on(commentAlert.eq(TB_ALERT.ID))
 				.where(
-					lcMax.isNull.or(lcMax.lt(thresholdAsTimestamp))
+					commentMax.isNull.or(commentMax.lt(thresholdAsTimestamp))
 						.and(TB_ALERT.LAST_MODIFIED_DATE.lt(thresholdAsTimestamp))
 				)
 		).map { it.value1()!! }

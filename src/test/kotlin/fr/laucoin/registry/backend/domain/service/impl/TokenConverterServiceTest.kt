@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_ANONYMIZED_ACCOUNT
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -82,7 +82,7 @@ class TokenConverterServiceTest {
 		fun `Should convert throw JwtConversionException when user is not visible or purged`(): Stream<Arguments> =
 			Stream.of(
 				Arguments.of(false, false, LOCKED, AUTH_BLOCKED_ACCOUNT),
-				Arguments.of(true, true, CONFLICT, AUTH_IMPERSONATED_ACCOUNT),
+				Arguments.of(true, true, CONFLICT, AUTH_ANONYMIZED_ACCOUNT),
 				Arguments.of(false, true, LOCKED, AUTH_BLOCKED_ACCOUNT),
 			)
 
@@ -141,7 +141,7 @@ class TokenConverterServiceTest {
 		// Arrange
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 
-		val currentUser = currentUser().apply { visible = userVisible; purged = userPurged }
+		val currentUser = currentUser().apply { isVisible = userVisible; isPurged = userPurged }
 		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser))
 
 		// Act
@@ -154,7 +154,7 @@ class TokenConverterServiceTest {
 		assertEquals(expectedMessage, result.message)
 
 		verifyNoInteractions(roleService)
-		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
+		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
 		verifyNoInteractions(profilePort)
 	}
 
@@ -188,7 +188,7 @@ class TokenConverterServiceTest {
 		service.convert(jwt).block()
 
 		// Assert
-		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
+		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
 		verify(userService, times(expectedUserCreation))
 			.createUser(userOidcId, currentUser.email!!, currentUser.firstName, currentUser.lastName)
 
@@ -218,7 +218,7 @@ class TokenConverterServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
 
-		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
+		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verify(userService, never()).linkUserToOidcId(any(), any())
 		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
@@ -242,7 +242,7 @@ class TokenConverterServiceTest {
 		service.convert(jwt).block()
 
 		// Assert
-		verify(userService).findUserByOidcId(userOidcId, visibilitySearched = null)
+		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
 		verify(userService).linkUserToOidcId(existingUser, userOidcId)
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())

@@ -1,15 +1,15 @@
 package fr.laucoin.registry.backend.domain.model
 
 data class UserSearchParamModel(
-	var visibilitySearched: Boolean? = null,
+	var isVisible: Boolean? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-	): this(visibilitySearched) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		query: String? = null,
+		isVisible: Boolean? = null,
+	): this(isVisible) {
+		this.query = if (query.isNullOrBlank()) null else query
 	}
 }
 

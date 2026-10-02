@@ -49,7 +49,7 @@ class ProjectProfileV2Controller(
 		projectId: UUID,
 		page: SortedPageQueryDto,
 		query: String?,
-		available: Boolean?,
+		isAvailable: Boolean?,
 		status: ProfileStatusEnum?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<ProjectProfileReaderDto>> {
@@ -57,14 +57,14 @@ class ProjectProfileV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			ProjectProfileSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = ProjectProfileSearchParamModel(query, available, status, dateTime)
+		val searchParams = ProjectProfileSearchParamModel(query, isAvailable, status, dateTime)
 
 		return service.findProjectProfilesPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
 	override fun findProjectProfileById(projectId: UUID, id: UUID): Mono<ProjectProfileReaderDto> {
-		return service.findProjectProfileById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findProjectProfileById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {

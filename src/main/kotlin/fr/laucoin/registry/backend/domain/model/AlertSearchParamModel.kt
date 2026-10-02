@@ -5,25 +5,25 @@ import java.time.ZonedDateTime
 import java.util.Objects
 
 data class AlertSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	val statusSearched: List<AlertStatusEnum> = AlertStatusEnum.entries.toList(),
-	var startDateTimeSearched: ZonedDateTime? = null,
-	var endDateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	val status: List<AlertStatusEnum> = AlertStatusEnum.entries.toList(),
+	var startDateTime: ZonedDateTime? = null,
+	var endDateTime: ZonedDateTime? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-		statusSearched: AlertStatusEnum? = null,
-		startDateTimeSearched: ZonedDateTime? = null,
-		endDateTimeSearched: ZonedDateTime? = null,
+		query: String? = null,
+		isVisible: Boolean? = null,
+		status: AlertStatusEnum? = null,
+		startDateTime: ZonedDateTime? = null,
+		endDateTime: ZonedDateTime? = null,
 	): this(
-		visibilitySearched,
-		if (Objects.nonNull(statusSearched)) listOf(statusSearched!!) else AlertStatusEnum.entries.toList(),
-		startDateTimeSearched,
-		endDateTimeSearched
+		isVisible,
+		if (Objects.nonNull(status)) listOf(status!!) else AlertStatusEnum.entries.toList(),
+		startDateTime,
+		endDateTime
 	) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		this.query = if (query.isNullOrBlank()) null else query
 	}
 }

@@ -90,42 +90,42 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 
 	private fun searchConditions(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		lastMovementType: Field<String>,
 	): Condition {
 		val conditions = mutableListOf(TB_VEHICLE.PROJECT_ID.eq(projectId))
-		textSearched?.let { conditions += similarity(TB_VEHICLE.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
-		conditions += visibleCondition(TB_VEHICLE.VISIBLE, visibilitySearched)
-		availabilitySearched?.let { conditions += availabilityCondition(it) }
-		presenceSearched?.let { presence ->
+		query?.let { conditions += similarity(TB_VEHICLE.SEARCH_TEXT, DSL.`val`(it)).gt(0f) }
+		conditions += visibleCondition(TB_VEHICLE.VISIBLE, isVisible)
+		isAvailable?.let { conditions += availabilityCondition(it) }
+		isPresent?.let { present ->
 			val isOutOrNull = lastMovementType.isNull.or(lastMovementType.eq("OUT"))
-			conditions += if (presence) isOutOrNull.not() else isOutOrNull
+			conditions += if (present) isOutOrNull.not() else isOutOrNull
 		}
-		dateTimeSearched?.let { conditions += dateInRangeCondition(it) }
+		dateTime?.let { conditions += dateInRangeCondition(it) }
 		return DSL.and(conditions)
 	}
 
-	private fun availabilityCondition(availabilitySearched: Boolean): Condition {
-		val isAvailable = activeNowCondition(
+	private fun availabilityCondition(isAvailable: Boolean): Condition {
+		val activeNow = activeNowCondition(
 			TB_VEHICLE.START_AVAILABILITY_DATE,
 			TB_VEHICLE.START_AVAILABILITY_TIME,
 			TB_VEHICLE.END_AVAILABILITY_DATE,
 			TB_VEHICLE.END_AVAILABILITY_TIME
 		)
-		return if (availabilitySearched) isAvailable else isAvailable.not()
+		return if (isAvailable) activeNow else activeNow.not()
 	}
 
-	private fun dateInRangeCondition(dateTimeSearched: ZonedDateTime): Condition =
+	private fun dateInRangeCondition(dateTime: ZonedDateTime): Condition =
 		activeAtCondition(
 			TB_VEHICLE.START_AVAILABILITY_DATE,
 			TB_VEHICLE.START_AVAILABILITY_TIME,
 			TB_VEHICLE.END_AVAILABILITY_DATE,
 			TB_VEHICLE.END_AVAILABILITY_TIME,
-			dateTimeSearched
+			dateTime
 		)
 
 	private fun VehicleSortFieldEnum.toJooqField(): Field<*> = when (this) {
@@ -137,8 +137,8 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 	}
 
 	// similarityScore sorts first (a no-op constant when there's no text search — Postgres accepts
-	// ordering by a constant), TB_VEHICLE.BRAND always stays last as the final tiebreaker (v1's sole,
-	// implicit order), so pagination stays deterministic whether or not a v2 caller requested a sort,
+	// ordering by a constant), TB_VEHICLE.BRAND always stays last as the final tiebreaker, so pagination stays
+	// deterministic whether or not a caller requested a sort,
 	// and a caller sorting by BRAND itself just repeats the same key harmlessly.
 	private fun orderFields(
 		similarityScore: Field<Float>,
@@ -175,11 +175,11 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		sortFields: List<SortModel<VehicleSortFieldEnum>> = emptyList(),
 		limit: Int,
 		offset: Int,
@@ -190,9 +190,9 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_VEHICLE.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		val fullCount = count().over().`as`("full_count")
 		return Flux.from(
@@ -215,7 +215,7 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 				.join(project).on(TB_VEHICLE.PROJECT_ID.eq(project.ID).and(project.VISIBLE.isTrue))
 				.leftJoin(creator).on(TB_VEHICLE.CREATED_BY.eq(creator.ID))
 				.leftJoin(editor).on(TB_VEHICLE.LAST_MODIFIED_BY.eq(editor.ID))
-				.where(searchConditions(projectId, textSearched, visibilitySearched, availabilitySearched, presenceSearched, dateTimeSearched, lastMovementType))
+				.where(searchConditions(projectId, query, isVisible, isAvailable, isPresent, dateTime, lastMovementType))
 				.orderBy(orderFields(similarityScore, sortFields))
 				.limit(limit).offset(offset)
 		).map { it.toEntity(lastMovementType, lastMovementDateTime, creator, editor, project, fullCount) }
@@ -223,11 +223,11 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 
 	fun countAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 	): Mono<Long> {
 		val lastMovement = lastMovementCte()
 		val lastMovementType = lastMovementTypeField()
@@ -239,18 +239,18 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
-						visibilitySearched,
-						availabilitySearched,
-						presenceSearched,
-						dateTimeSearched,
+						query,
+						isVisible,
+						isAvailable,
+						isPresent,
+						dateTime,
 						lastMovementType
 					)
 				)
 		).map { it.value1().toLong() }
 	}
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleEntity> {
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<VehicleEntity> {
 		if (ids.isEmpty()) return Flux.empty()
 		val lastMovement = lastMovementCte()
 		val lastMovementType = lastMovementTypeField()
@@ -278,7 +278,7 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(editor).on(TB_VEHICLE.LAST_MODIFIED_BY.eq(editor.ID))
 				.where(
 					TB_VEHICLE.PROJECT_ID.eq(projectId).and(TB_VEHICLE.ID.`in`(ids))
-						.and(visibleCondition(TB_VEHICLE.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_VEHICLE.VISIBLE, isVisible))
 				)
 				.orderBy(TB_VEHICLE.BRAND)
 		).map { it.toEntity(lastMovementType, lastMovementDateTime, creator, editor, project) }
@@ -286,11 +286,11 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		dateTime: ZonedDateTime?,
 		limit: Int,
 	): Flux<VehicleEntity> {
 		val lastMovement = lastMovementCte()
@@ -299,9 +299,9 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 		val creator = creatorTable()
 		val editor = editorTable()
 		val project = projectTable()
-		val similarityScore = (if (textSearched == null) DSL.inline(1f) else similarity(
+		val similarityScore = (if (query == null) DSL.inline(1f) else similarity(
 			TB_VEHICLE.SEARCH_TEXT,
-			DSL.`val`(textSearched)
+			DSL.`val`(query)
 		)).`as`("similarity_score")
 		return Flux.from(
 			dsl.with(lastMovement)
@@ -325,11 +325,11 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 				.where(
 					searchConditions(
 						projectId,
-						textSearched,
-						visibilitySearched,
-						availabilitySearched,
-						presenceSearched,
-						dateTimeSearched,
+						query,
+						isVisible,
+						isAvailable,
+						isPresent,
+						dateTime,
 						lastMovementType
 					)
 				)
@@ -338,7 +338,7 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 		).map { it.toEntity(lastMovementType, lastMovementDateTime, creator, editor, project) }
 	}
 
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleEntity> {
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleEntity> {
 		val lastMovement = lastMovementCte()
 		val lastMovementType = lastMovementTypeField()
 		val lastMovementDateTime = lastMovementDateTimeField()
@@ -365,7 +365,7 @@ class VehicleJooqRepository(private val dsl: DSLContext) {
 				.leftJoin(editor).on(TB_VEHICLE.LAST_MODIFIED_BY.eq(editor.ID))
 				.where(
 					TB_VEHICLE.PROJECT_ID.eq(projectId).and(TB_VEHICLE.ID.eq(id))
-						.and(visibleCondition(TB_VEHICLE.VISIBLE, visibilitySearched))
+						.and(visibleCondition(TB_VEHICLE.VISIBLE, isVisible))
 				)
 		).map { it.toEntity(lastMovementType, lastMovementDateTime, creator, editor, project) }
 	}

@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.config
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.binder.MeterBinder
 import io.r2dbc.pool.ConnectionPool
-import io.r2dbc.pool.PoolMetrics
 import io.r2dbc.spi.ConnectionFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

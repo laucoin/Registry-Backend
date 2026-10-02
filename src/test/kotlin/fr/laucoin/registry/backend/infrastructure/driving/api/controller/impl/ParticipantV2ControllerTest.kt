@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_FIRST_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.SORT_FIELD_IS_UNKNOWN
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
@@ -16,18 +16,17 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantDataExportModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.model.ParticipantDataExportModel
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantDataExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantDataExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -37,9 +36,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -62,8 +58,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
+import java.util.stream.Stream
 
-class ParticipantV2ControllerTest: TestContext() {
+class ParticipantV2ControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IParticipantService
 
@@ -95,7 +94,7 @@ class ParticipantV2ControllerTest: TestContext() {
 		fun `Should findArrivingToday and findDepartingToday return 400 on an invalid limit`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(0, PAGE_SIZE_IS_LOWER_THAN_ONE),
-				Arguments.of(51, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
+				Arguments.of(51, PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE),
 			)
 		}
 	}
@@ -121,7 +120,14 @@ class ParticipantV2ControllerTest: TestContext() {
 		verify(service).findParticipantsPage(
 			projectId,
 			pageable,
-			ParticipantSearchParamModel(textSearched = null, isMajor = null, typeSearched = null, visibilitySearched = null, statusSearched = null, dateTimeSearched = null),
+			ParticipantSearchParamModel(
+				query = null,
+				isMajor = null,
+				type = null,
+				isVisible = null,
+				status = null,
+				dateTime = null
+			),
 			emptyList(),
 		)
 		verify(readerMapper, atLeastOnce()).toDto(any())
@@ -239,7 +245,10 @@ class ParticipantV2ControllerTest: TestContext() {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should findArrivingToday and findDepartingToday return 400 on an invalid limit`(limit: Int, expectedCode: String) {
+	fun `Should findArrivingToday and findDepartingToday return 400 on an invalid limit`(
+		limit: Int,
+		expectedCode: String
+	) {
 		// Act
 		val arriving = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
@@ -274,11 +283,11 @@ class ParticipantV2ControllerTest: TestContext() {
 
 		// Assert
 		result.body<ParticipantReaderDto>(OK)
-		verify(service).findParticipantById(projectId, uuid, visibilitySearched = null)
+		verify(service).findParticipantById(projectId, uuid, isVisible = null)
 	}
 
 	@Test
-	fun `Should searchUsers rename textSearched to q`() {
+	fun `Should searchUsers rename query to q`() {
 		// Arrange
 		val searched = "text"
 		whenever(service.searchUsersByText(any(), anyOrNull())).thenReturn(Flux.empty())
@@ -296,7 +305,7 @@ class ParticipantV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should searchGroups rename textSearched to q`() {
+	fun `Should searchGroups rename query to q`() {
 		// Arrange
 		val searched = "text"
 		whenever(service.searchGroupsByText(any(), anyOrNull())).thenReturn(Flux.empty())
@@ -314,11 +323,11 @@ class ParticipantV2ControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findParticipantMovements drop the Searched suffix and call service`() {
+	fun `Should findParticipantMovements  call service`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 20)
-		val searchParams = MovementSearchParamModel(visibilitySearched = true, typeSearched = null)
+		val searchParams = MovementSearchParamModel(isVisible = true, type = null)
 		val page = PageModel(pageable, totalElements = 0, emptyList<MovementModel>())
 		whenever(service.findParticipantMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
 
@@ -343,7 +352,10 @@ class ParticipantV2ControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R),
+				buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R)
+			)
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/data-export", listOf(projectId, uuid), emptyList()))
 			.exchange()
@@ -358,7 +370,9 @@ class ParticipantV2ControllerTest: TestContext() {
 		// Arrange
 		val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
 		val createdId = UUID.randomUUID()
-		whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel().apply { id = createdId }))
+		whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel().apply {
+			id = createdId
+		}))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
 		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto().apply { id = createdId })
 
@@ -424,7 +438,13 @@ class ParticipantV2ControllerTest: TestContext() {
 	fun `Should disableParticipantById use POST and return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.disableParticipantById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+		whenever(
+			service.disableParticipantById(
+				any(),
+				eq(projectId),
+				eq(uuid)
+			)
+		).thenReturn(Mono.just(ParticipantModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
@@ -443,12 +463,18 @@ class ParticipantV2ControllerTest: TestContext() {
 	fun `Should enableParticipantById use POST and return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.enableParticipantById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(ParticipantModel()))
+		whenever(
+			service.enableParticipantById(
+				any(),
+				eq(projectId),
+				eq(uuid)
+			)
+		).thenReturn(Mono.just(ParticipantModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()

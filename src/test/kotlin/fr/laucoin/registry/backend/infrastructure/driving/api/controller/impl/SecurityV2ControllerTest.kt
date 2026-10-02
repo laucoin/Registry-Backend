@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_BLANK
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_EXPIRED
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
@@ -220,14 +220,14 @@ class SecurityV2ControllerTest : TestContext() {
 			.exchange()
 
 		// Assert
-		result.assertError(UNAUTHORIZED, REFRESH_TOKEN_OUTDATED)
+		result.assertError(UNAUTHORIZED, REFRESH_TOKEN_EXPIRED)
 		verifyNoInteractions(authenticationPort)
 	}
 
 	@Test
 	fun `Should findCurrentUser return 200`() {
 		// Arrange
-		whenever(mapper.toDto(any())).thenReturn(CurrentUserReaderDto(authorities = emptyList(), purged = false))
+		whenever(mapper.toDto(any())).thenReturn(CurrentUserReaderDto(authorities = emptyList(), isPurged = false))
 
 		// Act
 		val result = webClient

@@ -13,7 +13,7 @@ data class ProjectProfileEntity(
 	var userLastName: String? = null,
 	var userEmail: String? = null,
 	var userLastLogin: ZonedDateTime? = null,
-	var userPurged: Boolean? = null,
+	var isUserPurged: Boolean? = null,
 	var userOidcId: UUID? = null,
 
 	var role: String? = null,
@@ -22,7 +22,7 @@ data class ProjectProfileEntity(
 	var startAccessTime: OffsetTime? = null,
 	var endAccessDate: LocalDate? = null,
 	var endAccessTime: OffsetTime? = null,
-	var favorite: Boolean? = null,
+	var isFavorite: Boolean? = null,
 
 	var participantsCount: Int? = null,
 	var vehiclesCount: Int? = null,

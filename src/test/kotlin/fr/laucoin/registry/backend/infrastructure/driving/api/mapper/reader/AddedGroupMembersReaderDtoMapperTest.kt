@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AddedGroupMembersReaderDto
 import java.util.UUID
 import java.util.stream.Stream
@@ -54,34 +53,5 @@ class AddedGroupMembersReaderDtoMapperTest {
 
 		// Assert
 		assertEquals(dtos, result)
-	}
-
-	@ParameterizedTest
-	@MethodSource("Pair to AddedGroupMembersReaderDto data")
-	fun `Should toDto convert Pair page to AddedGroupMembersReaderDto page`(
-		model: Pair<List<UUID>, List<UUID>>, dto: AddedGroupMembersReaderDto
-	) {
-		// Arrange
-		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(model),
-		)
-		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(dto),
-			lastRefresh = modelPage.lastRefresh,
-		)
-
-		// Act
-		val result = mapper.toDtoPage(modelPage)
-
-		// Assert
-		assertEquals(dtoPage, result)
 	}
 }

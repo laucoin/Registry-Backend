@@ -28,19 +28,19 @@ interface IGroupPort {
 	fun findByIdWithContent(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		memberVisibilitySearched: Boolean?,
-		memberAvailabilitySearched: Boolean?
+		isVisible: Boolean?,
+		isMemberVisible: Boolean?,
+		isMemberAvailable: Boolean?
 	): Mono<GroupModel>
 
 	fun findContent(
 		projectId: UUID,
 		groupIds: List<UUID>,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
 	): Flux<Pair<UUID, List<ParticipantModel>>>
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
 	fun findArrivingToday(projectId: UUID, limit: Int): Flux<GroupModel>
 	fun findDepartingToday(projectId: UUID, limit: Int): Flux<GroupModel>

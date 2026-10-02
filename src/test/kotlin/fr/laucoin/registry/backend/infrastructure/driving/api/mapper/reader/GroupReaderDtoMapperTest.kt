@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVA
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
@@ -43,7 +42,7 @@ class GroupReaderDtoMapperTest {
 			insideMembersCount = 2
 			outsideMembersCount = 3
 			id = groupId
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -58,7 +57,7 @@ class GroupReaderDtoMapperTest {
 			outsideMembersCount = 3
 			id = groupId
 			members = listOf(participantDto)
-			visible = true
+			isVisible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
 		}
@@ -112,41 +111,6 @@ class GroupReaderDtoMapperTest {
 
 		// Assert
 		assertEquals(dtos, result)
-
-		verify(memberMapper).toDtoList(model.members)
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
-	}
-
-	@ParameterizedTest
-	@MethodSource("GroupModel to GroupReaderDto data")
-	fun `Should toDto convert GroupModel page to GroupReaderDto page`(
-		model: GroupModel,
-		dto: GroupReaderDto,
-		expectedAvailabilityCast: Int,
-	) {
-		// Arrange
-		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(model),
-		)
-		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(dto),
-			lastRefresh = modelPage.lastRefresh,
-		)
-
-		// Act
-		val result = mapper.toDtoPage(modelPage)
-
-		// Assert
-		assertEquals(dtoPage, result)
 
 		verify(memberMapper).toDtoList(model.members)
 		verify(availabilityMapper, times(expectedAvailabilityCast))

@@ -1,10 +1,8 @@
 package fr.laucoin.registry.backend.domain.extension
 
-import fr.laucoin.registry.backend.domain.extension.StringExt.generateRandomString
 import fr.laucoin.registry.backend.domain.extension.StringExt.getStringBetween
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -29,17 +27,5 @@ class StringExtTest {
 
 		// Assert
 		assertEquals(expected, result)
-	}
-
-	@Test
-	fun `Should generateRandomString return random string`() {
-		// Arrange
-		val expectedLength = 10
-
-		// Act
-		val result = generateRandomString()
-
-		// Assert
-		assertEquals(expectedLength, result.length)
 	}
 }

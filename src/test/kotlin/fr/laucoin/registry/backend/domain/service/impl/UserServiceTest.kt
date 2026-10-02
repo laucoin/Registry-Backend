@@ -1,11 +1,10 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -19,7 +18,6 @@ import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.test.ModelExt.commonUser
 import fr.laucoin.registry.backend.test.ModelExt.userId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
@@ -68,6 +66,8 @@ class UserServiceTest {
 	private val serviceAccount = CurrentUserModel().apply { id = serviceAccountId; role = USER_ROLE }
 
 	private companion object {
+		const val USER_ROLE = "role"
+
 		@JvmStatic
 		fun `Should updateUserIfPersonalDataChanged update and return User`(): Stream<Arguments> = Stream.of(
 			Arguments.of(UserModel()),
@@ -95,7 +95,7 @@ class UserServiceTest {
 					UserModel().apply { id = uuid; role = USER_ROLE },
 					emptyArray<UserModel>(),
 					FORBIDDEN,
-					USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN,
+					USER_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER,
 					0,
 					0,
 				),
@@ -338,7 +338,7 @@ class UserServiceTest {
 		// Assert
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService).getLevelByUserRole(userToUpdateRole)
-		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, visibilitySearched = true)
+		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, isVisible = true)
 		verify(port).update(any())
 	}
 
@@ -375,7 +375,7 @@ class UserServiceTest {
 
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService, times(expectedGetRoleLevel)).getLevelByUserRole(USER_ROLE)
-		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, visibilitySearched = true)
+		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, isVisible = true)
 		verify(port, never()).update(any())
 	}
 
@@ -432,7 +432,7 @@ class UserServiceTest {
 		assertEquals(FORBIDDEN, result.status)
 		assertEquals(USER_BLOCK_CURRENT_USER, result.message)
 
-		verify(port).findById(uuid, visibilitySearched = true)
+		verify(port).findById(uuid, isVisible = true)
 		verify(roleService).getAssignableUserRoles(currentUser())
 		verify(roleService, never()).getLevelByUserRole(anyOrNull())
 		verify(userProjectProfileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
@@ -456,41 +456,6 @@ class UserServiceTest {
 		// Assert
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(port).update(any())
-	}
-
-	@Test
-	fun `Should impersonateUserById block and return User`() {
-		// Arrange
-		val uuid = UUID.randomUUID()
-		val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
-		val currentUser = currentUser().apply { role = USER_ROLE }
-
-		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(foundUser))
-		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
-		whenever(
-			userProjectProfileService.validateNotLastProjectRoleLevel0(
-				any(),
-				anyOrNull(),
-				any(),
-				any()
-			)
-		).thenReturn(Mono.just(foundUser))
-
-		// Act
-		service.impersonateUserById(currentUser, uuid).block()
-
-		// Assert
-		verify(roleService).getAssignableUserRoles(currentUser)
-		verify(roleService).getLevelByUserRole(USER_ROLE)
-		verify(port).update(any())
-		verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
-			uuid,
-			projectId = null,
-			foundUser,
-			USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
-		)
 	}
 
 	@Test

@@ -49,7 +49,7 @@ interface IUserV2Controller {
 	fun findUsers(
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 	): Mono<PageReaderDto<UserReaderDto>>
 
 	@Operation(
@@ -99,40 +99,12 @@ interface IUserV2Controller {
 		summary = "Unblock User",
 		description = "Reverse a block: the User can log in again.",
 	)
-	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
+	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/unblock")
 	fun unblockUserById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable id: UUID,
-	): Mono<UserReaderDto>
-
-	@Operation(
-		summary = "Impersonate User",
-		description = """
-			Start a support session as this User: subsequent authenticated calls act on their behalf. Intended for
-			platform administrators investigating an issue on a User's account.
-		""",
-	)
-	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
-	@RateLimited(SENSITIVE)
-	@PostMapping("/{id}/impersonate")
-	fun impersonateUserById(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable id: UUID,
-	): Mono<UserReaderDto>
-
-	@Operation(
-		summary = "Impersonate Current User",
-		description = """
-			Re-authenticate as the caller's own account, ending any ongoing impersonation session started via
-			"Impersonate User" and returning to the caller's own identity.
-		""",
-	)
-	@RateLimited(SENSITIVE)
-	@PostMapping("/impersonate")
-	fun impersonateCurrentUser(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
 	): Mono<UserReaderDto>
 
 	@Operation(

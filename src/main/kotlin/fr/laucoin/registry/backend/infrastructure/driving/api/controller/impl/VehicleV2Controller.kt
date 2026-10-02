@@ -43,7 +43,7 @@ class VehicleV2Controller(
 		projectId: UUID,
 		page: SortedPageQueryDto,
 		query: String?,
-		visible: Boolean?,
+		isVisible: Boolean?,
 		status: PresenceStatusEnum?,
 		dateTime: ZonedDateTime?,
 	): Mono<PageReaderDto<VehicleReaderDto>> {
@@ -51,14 +51,14 @@ class VehicleV2Controller(
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			VehicleSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = VehicleSearchParamModel(query, visible, status, dateTime)
+		val searchParams = VehicleSearchParamModel(query, isVisible, status, dateTime)
 
 		return service.findVehiclesPage(projectId, pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
 	override fun findVehicleById(projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
-		return service.findVehicleById(projectId, id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findVehicleById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun findVehicleMovements(
@@ -66,13 +66,13 @@ class VehicleV2Controller(
 		projectId: UUID,
 		id: UUID,
 		page: PageQueryDto,
-		visible: Boolean?,
-		linkedToActivity: Boolean?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
 		type: MovementTypeEnum?,
 		dateTimeRange: DateTimeRangeQueryDto,
 	): Mono<PageReaderDto<MovementReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
-		val searchParams = MovementSearchParamModel(visible, linkedToActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
+		val searchParams = MovementSearchParamModel(isVisible, hasActivity, type, dateTimeRange.startDateTime, dateTimeRange.endDateTime)
 
 		return service.findVehicleMovementsPage(projectId, id, pageable, searchParams)
 			.map { pageReaderMapper.toDto(it, movementReaderMapper::toDto) }

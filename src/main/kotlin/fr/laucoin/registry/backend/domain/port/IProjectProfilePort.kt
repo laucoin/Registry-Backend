@@ -23,7 +23,7 @@ import reactor.core.publisher.Mono
  */
 interface IProjectProfilePort {
 	fun findAllByCreatorId(userId: UUID): Flux<ProjectProfileModel>
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileModel>
 	fun findProjectProfilesPageByUserId(
 		userId: UUID,
 		pageable: PageableModel,
@@ -64,21 +64,21 @@ interface IProjectProfilePort {
 	fun findUserProjectProfileByUserIdAndId(
 		userId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 	): Mono<UserProjectProfileModel>
 
 	fun findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 		projectId: UUID,
 		userIds: List<UUID>,
 		profileIdToExclude: UUID?,
-		statusSearched: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
-		startDateTimeSearched: ZonedDateTime? = null,
-		endDateTimeSearched: ZonedDateTime? = null,
+		status: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
+		startDateTime: ZonedDateTime? = null,
+		endDateTime: ZonedDateTime? = null,
 	): Flux<UUID>
 
 	fun findProjectProfilesRolesByUserId(userId: UUID): Flux<ProjectProfileRoleModel>
 	fun findOidcIdsByProjectId(projectId: UUID): Flux<UUID>
-	fun findProjectProfileByUserIdAndId(userId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
+	fun findProjectProfileByUserIdAndId(userId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileModel>
 	fun findProjectProfileByProjectAndUserId(
 		projectId: UUID,
 		userId: UUID,
@@ -93,12 +93,12 @@ interface IProjectProfilePort {
 
 	fun findLevel0ProjectProfileRoleByUserId(
 		userId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileRoleCountModel>
 
 	fun findLevel0ProjectProfileRoleByProjectId(
 		projectId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileModel>
 
 	fun saveAll(profiles: List<ProjectProfileModel>): Flux<ProjectProfileModel>

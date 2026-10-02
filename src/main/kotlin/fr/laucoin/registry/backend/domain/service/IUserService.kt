@@ -14,7 +14,7 @@ import java.util.UUID
 
 /**
  * Use-case entry point for Users: search/read, JIT provisioning and personal-data sync from the IDP
- * on login, role assignment, block/unblock/impersonate/delete, and the retention purge sweep. Callers
+ * on login, role assignment, block/unblock/delete, and the retention purge sweep. Callers
  * go through this contract, never the [IUserPort] directly.
  */
 interface IUserService {
@@ -23,9 +23,9 @@ interface IUserService {
 		searchParams: UserSearchParamModel,
 		sortFields: List<SortModel<UserSortFieldEnum>> = emptyList(),
 	): Mono<PageModel<UserModel>>
-	fun findUserById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel>
-	fun findUserByOidcId(id: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
-	fun findUserByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel>
+	fun findUserById(id: UUID, isVisible: Boolean?): Mono<UserModel>
+	fun findUserByOidcId(id: UUID, isVisible: Boolean?): Mono<CurrentUserModel>
+	fun findUserByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel>
 	fun serviceAccount(): UserModel
 	fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String>
 	fun createUser(oidcId: UUID, email: String, firstName: String?, lastName: String?): Mono<CurrentUserModel>
@@ -41,7 +41,6 @@ interface IUserService {
 	fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel>
 	fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
 	fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
-	fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
 	fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
 	fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

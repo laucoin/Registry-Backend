@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ApiConst.API_V2
 import fr.laucoin.registry.backend.domain.constant.ApiConst.DEFAULT_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ApiConst.MAX_DASHBOARD_LIMIT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
@@ -62,13 +62,13 @@ interface IProjectV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@ParameterObject @Valid page: SortedPageQueryDto,
 		@RequestParam(name = "q", required = false) query: String?,
-		@RequestParam(required = false) visible: Boolean?,
+		@RequestParam(name = "visible", required = false) isVisible: Boolean?,
 		@Parameter(description = "\"false\" value will be considered only if you have REGISTRY_PROJECT_R authority.")
 		@RequestParam(required = false, defaultValue = "true") withProfile: Boolean,
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTime: ZonedDateTime?,
 		@Parameter(description = "Only relevant with \"withProfile\" true, since it filters on the caller's own Profile.")
-		@RequestParam(required = false) favorite: Boolean?,
+		@RequestParam(name = "favorite", required = false) isFavorite: Boolean?,
 	): Mono<PageReaderDto<ProjectReaderDto>>
 
 	@Operation(
@@ -86,7 +86,7 @@ interface IProjectV2Controller {
 		@RequestParam(defaultValue = DEFAULT_DASHBOARD_LIMIT)
 		@Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
 			MAX_DASHBOARD_LIMIT,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+			message = PAGE_SIZE_EXCEEDS_MAX_PAGE_SIZE
 		)
 		limit: Int,
 	): Flux<ProjectReaderDto>
@@ -146,7 +146,7 @@ interface IProjectV2Controller {
 		summary = "Enable Project",
 		description = "Reverse a disable: the Project and the Profiles on it become accessible again.",
 	)
-	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
+	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_D')")
 	@RateLimited(SENSITIVE)
 	@PostMapping("/{id}/enable")
 	fun enableProjectById(

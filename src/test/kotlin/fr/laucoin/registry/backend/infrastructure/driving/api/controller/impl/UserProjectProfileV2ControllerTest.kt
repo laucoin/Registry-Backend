@@ -70,7 +70,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 		verify(service).findProjectProfilesPage(
 			currentUser().id!!,
 			pageable,
-			ProjectProfileSearchParamModel(textSearched = null, availabilitySearched = null, statusSearched = null, dateTimeSearched = null),
+			ProjectProfileSearchParamModel(query = null, isAvailable = null, status = null, dateTime = null),
 			emptyList(),
 			false,
 		)
@@ -98,7 +98,7 @@ class UserProjectProfileV2ControllerTest: TestContext() {
 		verify(service).findProjectProfilesPage(
 			currentUser().id!!,
 			pageable,
-			ProjectProfileSearchParamModel(textSearched = null, availabilitySearched = null, statusSearched = null, dateTimeSearched = null, favoriteSearched = true),
+			ProjectProfileSearchParamModel(query = null, isAvailable = null, status = null, dateTime = null, isFavorite = true),
 			emptyList(),
 			false,
 		)

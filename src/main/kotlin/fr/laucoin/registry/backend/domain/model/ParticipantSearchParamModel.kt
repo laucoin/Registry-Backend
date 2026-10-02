@@ -8,29 +8,29 @@ import java.time.ZonedDateTime
 
 data class ParticipantSearchParamModel(
 	var isMajor: Boolean? = null,
-	var typeSearched: ParticipantTypeEnum? = null,
-	var visibilitySearched: Boolean? = null,
-	var availabilitySearched: Boolean? = null,
-	var presenceSearched: Boolean? = null,
-	var dateTimeSearched: ZonedDateTime? = null,
+	var type: ParticipantTypeEnum? = null,
+	var isVisible: Boolean? = null,
+	var isAvailable: Boolean? = null,
+	var isPresent: Boolean? = null,
+	var dateTime: ZonedDateTime? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
+		query: String? = null,
 		isMajor: Boolean? = null,
-		typeSearched: ParticipantTypeEnum? = null,
-		visibilitySearched: Boolean? = null,
-		statusSearched: PresenceStatusEnum? = null,
-		dateTimeSearched: ZonedDateTime?,
+		type: ParticipantTypeEnum? = null,
+		isVisible: Boolean? = null,
+		status: PresenceStatusEnum? = null,
+		dateTime: ZonedDateTime?,
 	): this(
 		isMajor = isMajor,
-		typeSearched = typeSearched,
-		visibilitySearched = visibilitySearched,
-		availabilitySearched = statusSearched.isAvailable(),
-		presenceSearched = statusSearched.isPresent(),
-		dateTimeSearched = dateTimeSearched,
+		type = type,
+		isVisible = isVisible,
+		isAvailable = status.isAvailable(),
+		isPresent = status.isPresent(),
+		dateTime = dateTime,
 	) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		this.query = if (query.isNullOrBlank()) null else query
 	}
 }

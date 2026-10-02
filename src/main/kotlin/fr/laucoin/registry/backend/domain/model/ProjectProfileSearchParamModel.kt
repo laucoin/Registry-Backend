@@ -6,30 +6,30 @@ import java.time.ZonedDateTime
 import java.util.Objects
 
 data class ProjectProfileSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	var availabilitySearched: Boolean? = null,
-	val statusSearched: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
-	var dateTimeSearched: ZonedDateTime? = null,
-	var favoriteSearched: Boolean? = null,
-	var upcomingSearched: Boolean? = null,
+	var isVisible: Boolean? = null,
+	var isAvailable: Boolean? = null,
+	val status: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
+	var dateTime: ZonedDateTime? = null,
+	var isFavorite: Boolean? = null,
+	var isUpcoming: Boolean? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		availabilitySearched: Boolean? = null,
-		statusSearched: ProfileStatusEnum? = null,
-		dateTimeSearched: ZonedDateTime? = null,
-		favoriteSearched: Boolean? = null,
-		upcomingSearched: Boolean? = null,
+		query: String? = null,
+		isAvailable: Boolean? = null,
+		status: ProfileStatusEnum? = null,
+		dateTime: ZonedDateTime? = null,
+		isFavorite: Boolean? = null,
+		isUpcoming: Boolean? = null,
 	): this(
-		if (statusSearched === BLOCKED) false else null,
-		availabilitySearched,
-		if (Objects.nonNull(statusSearched) && statusSearched!! != BLOCKED) listOf(statusSearched) else ProfileStatusEnum.entries.toList(),
-		dateTimeSearched,
-		favoriteSearched,
-		upcomingSearched,
+		if (status === BLOCKED) false else null,
+		isAvailable,
+		if (Objects.nonNull(status) && status!! != BLOCKED) listOf(status) else ProfileStatusEnum.entries.toList(),
+		dateTime,
+		isFavorite,
+		isUpcoming,
 	) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		this.query = if (query.isNullOrBlank()) null else query
 	}
 }

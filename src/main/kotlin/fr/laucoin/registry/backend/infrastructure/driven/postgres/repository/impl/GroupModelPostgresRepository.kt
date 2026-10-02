@@ -46,10 +46,10 @@ class GroupModelPostgresRepository(
 	): Mono<PageModel<GroupModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isPresent,
+			searchParams.dateTime,
 			sortFields,
 			pageable.limit,
 			pageable.offset,
@@ -59,29 +59,29 @@ class GroupModelPostgresRepository(
 	override fun findContent(
 		projectId: UUID,
 		groupIds: List<UUID>,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
 	): Flux<Pair<UUID, List<ParticipantModel>>> {
 		return if (groupIds.isEmpty()) Flux.empty()
-		else contentRepository.findAllByGroupIds(projectId, groupIds, visibilitySearched, availabilitySearched)
+		else contentRepository.findAllByGroupIds(projectId, groupIds, isVisible, isAvailable)
 			.groupBy { it.groupId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
 			}
 	}
 
-	override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel> {
-		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched)
+	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupModel> {
+		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, isVisible)
 			.map(mapper::toModel)
 	}
 
 	override fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isPresent,
+			searchParams.dateTime,
 			limit,
 		).map(mapper::toModel)
 	}
@@ -102,13 +102,13 @@ class GroupModelPostgresRepository(
 	override fun findByIdWithContent(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		memberVisibilitySearched: Boolean?,
-		memberAvailabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		isMemberVisible: Boolean?,
+		isMemberAvailable: Boolean?,
 	): Mono<GroupModel> {
 		return Mono.zip(
-			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
-			findContent(projectId, listOf(id), memberVisibilitySearched, memberAvailabilitySearched).collectList()
+			repository.findById(projectId, id, isVisible).map(mapper::toModel),
+			findContent(projectId, listOf(id), isMemberVisible, isMemberAvailable).collectList()
 				.handle<List<ParticipantModel>> { it, handle ->
 					if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(
 						it.first().second
@@ -135,12 +135,12 @@ class GroupModelPostgresRepository(
 
 	private fun findByIdWithContent(using: DSLContext, projectId: UUID, id: UUID): Mono<GroupModel> {
 		return Mono.zip(
-			repository.findById(projectId, id, visibilitySearched = null, using = using).map(mapper::toModel),
+			repository.findById(projectId, id, isVisible = null, using = using).map(mapper::toModel),
 			contentRepository.findAllByGroupIds(
 				projectId,
 				listOf(id),
-				visibilitySearched = null,
-				availabilitySearched = null,
+				isVisible = null,
+				isAvailable = null,
 				using = using,
 			).map(contentMapper::toModel).collectList(),
 		).map {

@@ -24,7 +24,7 @@ class GroupReaderDtoMapper(
 			membersCount = model.membersCount
 			insideMembersCount = model.insideMembersCount
 			outsideMembersCount = model.outsideMembersCount
-			visible = model.visible
+			isVisible = model.isVisible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}

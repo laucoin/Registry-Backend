@@ -36,20 +36,20 @@ class UserV2Controller(
 	override fun findUsers(
 		page: SortedPageQueryDto,
 		query: String?,
-		visible: Boolean?
+		isVisible: Boolean?
 	): Mono<PageReaderDto<UserReaderDto>> {
 		val pageable = pageQueryMapper.toPageable(page)
 		val sortFields = sortParamMapper.toSortModels(page.sort, page.direction) { key ->
 			UserSortFieldEnum.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
 		}
-		val searchParams = UserSearchParamModel(query, visible)
+		val searchParams = UserSearchParamModel(query, isVisible)
 
 		return service.findUsersPage(pageable, searchParams, sortFields)
 			.map { pageReaderMapper.toDto(it, readerMapper::toDto) }
 	}
 
 	override fun findUserById(id: UUID): Mono<UserReaderDto> {
-		return service.findUserById(id, visibilitySearched = null).map(readerMapper::toDto)
+		return service.findUserById(id, isVisible = null).map(readerMapper::toDto)
 	}
 
 	override fun getAssignableUserRoles(currentUser: CurrentUserModel): Flux<LabelDto> {
@@ -66,14 +66,6 @@ class UserV2Controller(
 
 	override fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserReaderDto> {
 		return service.unblockUserById(currentUser, id).map(readerMapper::toDto)
-	}
-
-	override fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserReaderDto> {
-		return service.impersonateUserById(currentUser, id).map(readerMapper::toDto)
-	}
-
-	override fun impersonateCurrentUser(currentUser: CurrentUserModel): Mono<UserReaderDto> {
-		return service.impersonateUserById(currentUser, currentUser.id!!).map(readerMapper::toDto)
 	}
 
 	override fun exportCurrentUserData(currentUser: CurrentUserModel): Mono<UserDataExportReaderDto> {

@@ -74,38 +74,38 @@ class CommunicationService(
 	override fun findCommunicationById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<CommunicationModel> {
-		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
+		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
 	}
 
 	override fun searchOutMovementWithActivityByText(
 		projectId: UUID,
-		textSearched: String?
+		query: String?
 	): Flux<MovementModel> {
 		return movementPort.findActivityWithLimit(
 			maxActivityResult,
 			projectId,
 			ActivitySearchParamModel(
-				textSearched = textSearched,
-				visibilitySearched = true,
-				availabilitySearched = true,
-				dateTimeSearched = null,
+				query = query,
+				isVisible = true,
+				isAvailable = true,
+				dateTime = null,
 			)
 		)
 	}
 
 	override fun searchAlertByText(
 		projectId: UUID,
-		textSearched: String?
+		query: String?
 	): Flux<AlertModel> {
 		return alertPort.findWithLimit(
 			maxAlertResult,
 			projectId,
 			AlertSearchParamModel(
-				textSearched,
-				visibilitySearched = true,
-				statusSearched = AlertStatusEnum.IN_PROGRESS,
+				query,
+				isVisible = true,
+				status = AlertStatusEnum.IN_PROGRESS,
 			)
 		)
 	}
@@ -124,37 +124,13 @@ class CommunicationService(
 			.flatMap { port.create(communication.apply { create(currentUser) }) }
 	}
 
-	override fun updateCommunicationById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		communication: CommunicationModel
-	): Mono<CommunicationModel> {
-		return projectService.validateDateTime(
-			communication.projectId!!,
-			CustomDateTimeModel(communication.dateTime),
-			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
-		)
-			.flatMap { findCommunicationById(projectId, id, visibilitySearched = null) }
-			.flatMap { validateNoMovementConflict(communication, it) }
-			.flatMap { validateNoAlertConflict(currentUser, communication, it) }
-			.map {
-				it.apply {
-					dateTime = communication.dateTime
-					movement = communication.movement
-					message = communication.message
-				}
-			}
-			.updateCommunication(currentUser)
-	}
-
 	override fun disableCommunicationById(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID
 	): Mono<CommunicationModel> {
-		return findCommunicationById(projectId, id, visibilitySearched = true)
-			.updateVisibility(visibility = false)
+		return findCommunicationById(projectId, id, isVisible = true)
+			.updateVisibility(isVisible = false)
 			.updateCommunication(currentUser)
 	}
 
@@ -163,8 +139,8 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<CommunicationModel> {
-		return findCommunicationById(projectId, id, visibilitySearched = false)
-			.updateVisibility(visibility = true)
+		return findCommunicationById(projectId, id, isVisible = false)
+			.updateVisibility(isVisible = true)
 			.updateCommunication(currentUser)
 	}
 
@@ -173,7 +149,7 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<Unit> {
-		return findCommunicationById(projectId, id, visibilitySearched = null)
+		return findCommunicationById(projectId, id, isVisible = null)
 			.flatMap { port.deleteById(it.id!!) }
 	}
 
@@ -191,8 +167,8 @@ class CommunicationService(
 				} else {
 					log.info("Purging communication {}", it)
 					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Communication {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge communication{}", it, err) }
+						.doOnNext { purgedId -> log.info("Communication {} was deleted", purgedId) }
+						.doOnError { error -> log.error("Failed to purge communication {}", it, error) }
 				}
 			}
 	}
@@ -211,7 +187,7 @@ class CommunicationService(
 		else movementPort.findById(
 			communication.projectId!!,
 			communication.movement!!.id!!,
-			visibilitySearched = null
+			isVisible = null
 		)
 			.switchIfEmpty {
 				Mono.error(
@@ -275,7 +251,7 @@ class CommunicationService(
 			alertPort.findById(
 				communication.projectId!!,
 				communication.alert!!.id!!,
-				visibilitySearched = null
+				isVisible = null
 			)
 				.switchIfEmpty {
 					Mono.error(
