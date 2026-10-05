@@ -4,11 +4,11 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 import java.util.Properties
 
 plugins {
-	kotlin("jvm") version "2.4.10"
-	kotlin("plugin.spring") version "2.4.10"
+	kotlin("jvm") version "2.4.20"
+	kotlin("plugin.spring") version "2.4.20"
 	id("org.springframework.boot") version "4.1.1"
 	id("io.spring.dependency-management") version "1.1.7"
-	id("org.jetbrains.kotlinx.kover") version "0.9.9"
+	id("org.jetbrains.kotlinx.kover") version "0.9.11"
 }
 
 group = "fr.laucoin.registry"
@@ -20,13 +20,13 @@ version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 
 // External libraries 📚
 val apacheTextVersion = "1.15.0"
-val swaggerVersion = "3.1.0"
-val caffeineVersion = "3.2.4"
+val swaggerVersion = "3.1.1"
+val caffeineVersion = "3.3.0"
 
 // Testing 🧪
 val mockWebServer = "5.5.0"
-val testArch = "1.5.0"
-val mockitoKotlinVersion = "6.3.0"
+val testArch = "1.5.1"
+val mockitoKotlinVersion = "6.4.0"
 val testContainerVersion = "2.0.5"
 
 kotlin {
