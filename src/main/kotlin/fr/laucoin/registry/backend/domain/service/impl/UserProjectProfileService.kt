@@ -14,7 +14,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
@@ -31,7 +30,6 @@ import reactor.core.publisher.Mono
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
 	private val roleService: IRoleService,
-	private val preferencesPort: IPreferencesPort,
 	private val transactionalOperator: TransactionalOperator,
 ): IUserProjectProfileService, GenericProfileService(port) {
 	override fun findProjectProfilesPage(
@@ -74,7 +72,6 @@ class UserProjectProfileService(
 		profile.create(currentUser)
 
 		return port.create(profile)
-			.updateSelectedProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -92,17 +89,6 @@ class UserProjectProfileService(
 				port.update(profile)
 			}
 	}
-
-	private fun Mono<ProjectProfileModel>.updateSelectedProfile(currentUser: CurrentUserModel): Mono<ProjectProfileModel> =
-		flatMap { newProfile ->
-			preferencesPort.findByUserId(currentUser.id!!, visibilitySearched = null)
-				.flatMap {
-					if (Objects.isNull(it.selectedProfile)) {
-						it.selectedProfile = newProfile
-						preferencesPort.save(it).thenReturn(newProfile)
-					} else Mono.just(newProfile)
-				}
-		}
 
 	override fun createSupportProjectProfile(
 		currentUser: CurrentUserModel,
@@ -128,7 +114,6 @@ class UserProjectProfileService(
 			profile.endAccess!!.toZonedDateTime(OffsetTime.MAX),
 		)
 			.flatMap { port.create(profile) }
-			.updateSelectedProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
 

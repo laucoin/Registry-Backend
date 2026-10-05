@@ -127,7 +127,7 @@ entries:
   # (blocked-user is visible=false there), so logging in as blocked-user links the account
   # and is then rejected by the backend.
   - model: authentik_core.user
-    id: registry-user-administrator
+    id: 865f44e7-1fe0-4ce4-87e5-8159f581894d
     identifiers:
       username: administrator
     attrs:
@@ -141,7 +141,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-coordinator
+    id: b82d96d3-02e5-4ea5-89fc-a1a50092d8d4
     identifiers:
       username: coordinator
     attrs:
@@ -155,7 +155,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-participant
+    id: 37b3186b-4839-472f-a67a-9bd4e8beae4b
     identifiers:
       username: participant
     attrs:
@@ -169,7 +169,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-blocked-user
+    id: 3f311520-d686-4a3e-88aa-8b9e58a56f88
     identifiers:
       username: blocked-user
     attrs:
@@ -183,7 +183,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-blocked-profile
+    id: ba3ea096-fc25-4e5a-ad3e-71a741358116
     identifiers:
       username: blocked-profile
     attrs:
@@ -192,20 +192,6 @@ entries:
         given_name: Emil
         family_name: BRADFORD
       email: blocked-profile@sgdf.fr
-      password: !Env [ AU_PASS, "dev123" ]
-      is_active: true
-      path: users
-
-  - model: authentik_core.user
-    id: registry-user-unverified
-    identifiers:
-      username: unverified
-    attrs:
-      name: Nina VOGEL
-      attributes:
-        given_name: Nina
-        family_name: VOGEL
-      email: unverified@sgdf.fr
       password: !Env [ AU_PASS, "dev123" ]
       is_active: true
       path: users

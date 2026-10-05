@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
@@ -51,10 +50,9 @@ import reactor.core.publisher.Mono
 class UserProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
 	private val roleService: IRoleService = mock()
-	private val preferencesPort: IPreferencesPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, roleService, preferencesPort, transactionalOperator
+		port, roleService, transactionalOperator
 	)
 
 	private companion object {
@@ -80,13 +78,6 @@ class UserProjectProfileServiceTest {
 			)
 		}
 
-		@JvmStatic
-		fun `Should createUserProjectProfileFromProject create and return a Profile`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(PreferencesModel(), 1),
-				Arguments.of(PreferencesModel().apply { selectedProfile = ProjectProfileModel() }, 0),
-			)
-		}
 	}
 
 	@Test
@@ -170,9 +161,6 @@ class UserProjectProfileServiceTest {
 		).thenReturn(Flux.empty())
 
 		whenever(port.create(any())).thenReturn(Mono.just(profile))
-		whenever(preferencesPort.findByUserId(any(), anyOrNull()))
-			.thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
-
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
@@ -191,7 +179,6 @@ class UserProjectProfileServiceTest {
 		)
 
 		verify(port).create(any())
-		verify(preferencesPort).findByUserId(currentUser().id!!, visibilitySearched = null)
 		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
@@ -213,9 +200,6 @@ class UserProjectProfileServiceTest {
 		).thenReturn(Flux.just(currentUser().id!!))
 
 		whenever(port.create(any())).thenReturn(Mono.just(profile))
-		whenever(preferencesPort.findByUserId(any(), anyOrNull()))
-			.thenReturn(Mono.just(PreferencesModel().apply { selectedProfile = profile }))
-
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
@@ -237,19 +221,12 @@ class UserProjectProfileServiceTest {
 		)
 
 		verify(port, never()).create(any())
-		verify(preferencesPort, never()).findByUserId(any(), anyOrNull())
 	}
 
-	@ParameterizedTest
-	@MethodSource
-	fun `Should createUserProjectProfileFromProject create and return a Profile`(
-		userPreferences: PreferencesModel,
-		expectedCallToUpdatePreferences: Int
-	) {
+	@Test
+	fun `Should createUserProjectProfileFromProject create and return a Profile`() {
 		// Arrange
 		whenever(port.create(any())).thenReturn(Mono.just(commonProjectProfile()))
-		whenever(preferencesPort.findByUserId(any(), anyOrNull())).thenReturn(Mono.just(userPreferences))
-		whenever(preferencesPort.save(any())).thenReturn(Mono.just(userPreferences))
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
@@ -257,8 +234,6 @@ class UserProjectProfileServiceTest {
 
 		// Assert
 		verify(port).create(any())
-		verify(preferencesPort).findByUserId(currentUser().id!!, visibilitySearched = null)
-		verify(preferencesPort, times(expectedCallToUpdatePreferences)).save(any())
 		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
