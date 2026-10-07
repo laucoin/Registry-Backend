@@ -18,20 +18,28 @@ import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.OffsetTime
-import java.util.Objects
-import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
+import java.time.OffsetTime
+import java.util.Objects
+import java.util.UUID
 
 @Service
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
 	private val roleService: IRoleService,
 	private val transactionalOperator: TransactionalOperator,
-): IUserProjectProfileService, GenericProfileService(port) {
+) : IUserProjectProfileService, GenericProfileService(port) {
+	private companion object {
+		private val SEARCH_ACTIVE = ProjectProfileSearchParamModel(
+			visibilitySearched = true,
+			availabilitySearched = true,
+			statusSearched = listOf(ACCEPTED)
+		)
+	}
+
 	override fun findProjectProfilesPage(
 		userId: UUID,
 		pageable: PageableModel,
@@ -41,7 +49,20 @@ class UserProjectProfileService(
 			.findProjectProfilesPageByUserId(userId, pageable, searchParams)
 	}
 
-	override fun <T: GenericModel> validateNotLastProjectRoleLevel0(
+	override fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+	}
+
+	override fun findProjectProfilesByProjectId(
+		currentUser: CurrentUserModel,
+		projectId: UUID
+	): Mono<ProjectProfileModel> {
+		return port.findProjectProfileByProjectAndUserId(
+			projectId, currentUser.id!!, SEARCH_ACTIVE
+		)
+	}
+
+	override fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,
 		projectId: UUID?,
 		result: T,
