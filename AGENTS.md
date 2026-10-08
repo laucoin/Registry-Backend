@@ -112,12 +112,13 @@ Before marking any task or PR step as complete:
 
 - **Scope Rule:** Keep diffs strictly confined to the single testable feature — aim for minimal file changes and under
   **100 lines** where possible, excluding README/doc sync and generated mappers.
-- **Atomic Commits:** Format `<type>(<scope>): [Step N] <short summary>`. `type` ∈
+- **Atomic Commits:** Format `<type>(<scope>): <short summary>` — no step number. `type` ∈
   `feat, fix, chore, docs, style, refactor, perf, test`. Commits **must** follow Conventional Commits — semantic-release
   derives the version, changelog, and tag from them (ADR 009); a non-conventional message produces a wrong or missing
   release.
 - If a step includes multiple testable behaviors (e.g. an endpoint **and** a new cross-field constraint), stop
-  immediately and split it into separate stacked sub-branches/PRs.
+  immediately and split it into separate stacked sub-branches/PRs. When the user asks for a split by commits instead
+  (no dedicated branch), make one atomic commit per behavior on the current branch, each without a step number.
 - Indentation is **tabs** — match the repository convention.
 
 ## 7. Adjustments & Error Recovery
@@ -208,4 +209,6 @@ these:
 Ad hoc rules a developer has added directly to this file — process or behavioral preferences with no spec page to derive
 them from. On regeneration, copy this section verbatim; never rewrite, prune, or re-derive its contents.
 
-- [None yet]
+- **Squash agent fixes.** When the user asks for a fix to a commit the agent made that turned out not to work, commit the
+  fix separately first. Once the user confirms it works, squash it into the original commit (fixup) instead of leaving
+  a separate fix commit.
