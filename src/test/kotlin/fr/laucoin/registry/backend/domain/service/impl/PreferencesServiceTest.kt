@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
 import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
@@ -39,8 +40,9 @@ import reactor.core.publisher.Mono
 
 class PreferencesServiceTest {
 	private val port: IPreferencesPort = mock()
+	private val principalCache: IPrincipalCacheService = mock()
 	private val supportedLocale: List<String> = listOf(EN_US, FR_FR)
-	private val service: IPreferencesService = PreferencesService(port, supportedLocale)
+	private val service: IPreferencesService = PreferencesService(port, principalCache, supportedLocale)
 
 	private companion object {
 		private const val EN_US = "en-US"
@@ -105,7 +107,8 @@ class PreferencesServiceTest {
 	) {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val currentUser = CurrentUserModel().apply { id = uuid }
+		val oidc = UUID.randomUUID()
+		val currentUser = CurrentUserModel().apply { id = uuid; oidcId = oidc }
 		val preference = PreferencesModel().apply { this.theme = theme }
 
 		whenever(port.findByUserId(any(), anyOrNull())).thenReturn(Mono.just(preference))
@@ -117,6 +120,7 @@ class PreferencesServiceTest {
 		// Assert
 		verify(port).findByUserId(uuid, visibilitySearched = null)
 		verify(port, times(expectedCallOnUpdateTheme)).save(any())
+		verify(principalCache, times(expectedCallOnUpdateTheme)).invalidate(oidc)
 	}
 
 	@ParameterizedTest
@@ -128,7 +132,8 @@ class PreferencesServiceTest {
 	) {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val currentUser = CurrentUserModel().apply { id = uuid }
+		val oidc = UUID.randomUUID()
+		val currentUser = CurrentUserModel().apply { id = uuid; oidcId = oidc }
 		val preference = PreferencesModel().apply { this.language = language }
 
 		whenever(port.findByUserId(any(), anyOrNull())).thenReturn(Mono.just(preference))
@@ -140,5 +145,6 @@ class PreferencesServiceTest {
 		// Assert
 		verify(port).findByUserId(uuid, visibilitySearched = null)
 		verify(port, times(expectedCallOnUpdateLanguage)).save(any())
+		verify(principalCache, times(expectedCallOnUpdateLanguage)).invalidate(oidc)
 	}
 }

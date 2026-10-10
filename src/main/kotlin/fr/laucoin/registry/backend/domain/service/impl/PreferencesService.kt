@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.service.GenericService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -14,6 +15,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 @Service
 class PreferencesService(
 	private val port: IPreferencesPort,
+	private val principalCache: IPrincipalCacheService,
 	@param:Value($$"${registry.information.locale.supported}")
 	private val supportedLocales: List<String>,
 ): IPreferencesService, GenericService() {
@@ -34,7 +36,7 @@ class PreferencesService(
 		return findByUser(currentUser).flatMap {
 			if (it.theme !== theme) {
 				it.theme = theme
-				port.save(it.apply { update(currentUser) })
+				save(currentUser, it)
 			} else Mono.just(it)
 		}
 	}
@@ -47,8 +49,13 @@ class PreferencesService(
 		return findByUser(currentUser).flatMap {
 			if (it.language !== language) {
 				it.language = language
-				port.save(it.apply { update(currentUser) })
+				save(currentUser, it)
 			} else Mono.just(it)
 		}
+	}
+
+	private fun save(currentUser: CurrentUserModel, preferences: PreferencesModel): Mono<PreferencesModel> {
+		return port.save(preferences.apply { update(currentUser) })
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 }
