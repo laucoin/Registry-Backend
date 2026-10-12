@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
@@ -10,6 +12,8 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectPort
@@ -44,14 +48,46 @@ class ProjectService(
 		withProfile: Boolean,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
-		return if (!withProfile) {
+		return (if (!withProfile) {
 			port.findPage(pageable, searchParams)
 		} else port.findPage(
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),
 			pageable,
 			searchParams
-		)
+		)).withCurrentUserProfiles(currentUser)
 	}
+
+	override fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
+		return findProjectById(id, visibilitySearched = null).withCurrentUserProfile(currentUser)
+	}
+
+	private fun Mono<ProjectModel>.withCurrentUserProfile(currentUser: CurrentUserModel): Mono<ProjectModel> =
+		flatMap<ProjectModel> { project ->
+			profilePort.findProjectProfilesByUserIdAndProjectIds(
+				currentUser.id!!,
+				listOf(project.id!!),
+				ProjectProfileSearchParamModel(visibilitySearched = null)
+			)
+				.collectList()
+				.mapNotNull { profiles -> profiles.maxByOrNull { it.priority() } }
+				.map { project.apply { profile = it } }
+				.defaultIfEmpty(project)
+		}
+
+	private fun Mono<PageModel<ProjectModel>>.withCurrentUserProfiles(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> =
+		flatMap<PageModel<ProjectModel>> { page ->
+			profilePort.findProjectProfilesByUserIdAndProjectIds(
+				currentUser.id!!,
+				page.content.mapNotNull { it.id },
+				ProjectProfileSearchParamModel(visibilitySearched = null)
+			)
+				.collectList()
+				.map { found -> found.groupBy { it.projectId!! }.mapValues { (_, list) -> list.maxBy { it.priority() } } }
+				.map { profiles ->
+					page.content.forEach { it.profile = profiles[it.id] }
+					page
+				}
+		}
 
 	override fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
 		return port.findById(id, visibilitySearched)
@@ -116,6 +152,7 @@ class ProjectService(
 				userProjectProfileService.createUserProjectProfileFromProject(currentUser, it)
 					.thenReturn(it)
 			}
+			.withCurrentUserProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -141,6 +178,7 @@ class ProjectService(
 					.doOnNext { principalCache.invalidateAll(it) }
 					.thenReturn(updated)
 			}
+			.withCurrentUserProfile(currentUser)
 	}
 
 	private fun Mono<ProjectModel>.validateDates(project: ProjectModel): Mono<ProjectModel> = flatMap {
@@ -198,4 +236,11 @@ class ProjectService(
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}
+
+	/**
+	 * A user may hold several profiles on one project (permanent, temporary support, blocked, rejected...):
+	 * the one that actually grants access, i.e. visible, accepted and available, comes first.
+	 */
+	private fun ProjectProfileModel.priority(): Int =
+		(if (visible) 4 else 0) + (if (status == ACCEPTED) 2 else 0) + (if (availabilityStatus == AVAILABLE) 1 else 0)
 }

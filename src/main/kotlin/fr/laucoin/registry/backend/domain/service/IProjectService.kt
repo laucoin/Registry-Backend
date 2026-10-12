@@ -21,6 +21,7 @@ interface IProjectService {
 	): Mono<PageModel<ProjectModel>>
 
 	fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
+	fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
 	fun availableProjectOptions(): Flux<ProjectOptionEnum>
 	fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID>
 	fun validateDateTimes(

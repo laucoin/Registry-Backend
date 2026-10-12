@@ -57,7 +57,7 @@ class UserControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/users"
+		private const val BASE_URL = "/api/v2/users"
 
 		@JvmStatic
 		fun `Should findUsers return 200`(): Stream<Arguments> = Stream.of(

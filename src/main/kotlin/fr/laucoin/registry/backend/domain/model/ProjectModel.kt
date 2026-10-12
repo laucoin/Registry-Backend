@@ -11,6 +11,9 @@ data class ProjectModel(
 	var end: CustomDateTimeModel? = null,
 	var options: List<ProjectOptionEnum>? = emptyList(),
 ): GenericModel() {
+	// Current user's profile on this project, only filled by user-oriented reads
+	var profile: ProjectProfileModel? = null
+
 	fun isNotInRange(dateTime: CustomDateTimeModel?): Boolean {
 		return dateTime.isInRange(begin, end).not()
 	}

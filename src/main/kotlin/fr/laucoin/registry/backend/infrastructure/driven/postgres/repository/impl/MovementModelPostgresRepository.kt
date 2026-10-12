@@ -236,7 +236,7 @@ class MovementModelPostgresRepository(
 
 	override fun update(element: MovementModel): Mono<MovementModel> {
 		return save(element)
-			.flatMap { findById(element.project!!.id!!, element.id!!, visibilitySearched = null) }
+			.flatMap { findById(element.projectId!!, element.id!!, visibilitySearched = null) }
 			.removeDeletedContent(element)
 			.saveNewContent(element)
 			.`as`(transactionalOperator::transactional)

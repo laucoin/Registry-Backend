@@ -99,7 +99,7 @@ class ProjectProfileControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/profiles"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/profiles"
 
 		@JvmStatic
 		fun `Should findProjectProfiles return 200`(): Stream<Arguments> = Stream.of(

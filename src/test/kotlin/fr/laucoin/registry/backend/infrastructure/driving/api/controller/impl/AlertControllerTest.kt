@@ -82,7 +82,7 @@ class AlertControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/alerts"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/alerts"
 
 		@JvmStatic
 		fun `Should findAlerts prepare param, call service and finally cast the result`(): Stream<Arguments> {

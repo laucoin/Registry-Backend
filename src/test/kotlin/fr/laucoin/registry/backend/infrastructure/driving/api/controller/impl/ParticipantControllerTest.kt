@@ -94,7 +94,7 @@ class ParticipantControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/participants"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/participants"
 
 		@JvmStatic
 		fun `Should findParticipants return 200`(): Stream<Arguments> = Stream.of(

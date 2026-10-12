@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentMod
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementEntityMapper
@@ -312,7 +311,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 			val movement = MovementModel(contentType = REGISTERED).apply {
 				dateTime = movementDateTime
 				type = IN
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -335,7 +334,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				dateTime = movementDateTime
 				type = IN
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				content = listOf(MovementContentModel().apply {
 					participant = ParticipantModel().apply { id = participantId }
 				})
@@ -362,7 +361,7 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				dateTime = movementDateTime
 				type = IN
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				content = emptyList()
 				create(currentUser())
 			}

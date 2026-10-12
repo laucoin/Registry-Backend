@@ -1,6 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_DATE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_NAME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_OPTIONS
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_DATE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_END_ACCESS_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_END_ACCESS_TIME
@@ -46,6 +53,26 @@ data class ProjectProfileEntity(
 	@ReadOnlyProperty
 	@Column(PROJECT_PROFILE_USER_OIDC_ID)
 	var userOidcId: UUID? = null,
+
+	// Project summary, only filled by the user-oriented queries (SELECT_LINKED_PROJECT)
+	@ReadOnlyProperty
+	@Column(LINKED_PROJECT_NAME)
+	var projectName: String? = null,
+	@ReadOnlyProperty
+	@Column(LINKED_PROJECT_START_DATE)
+	var projectStartDate: LocalDate? = null,
+	@ReadOnlyProperty
+	@Column(LINKED_PROJECT_START_TIME)
+	var projectStartTime: OffsetTime? = null,
+	@ReadOnlyProperty
+	@Column(LINKED_PROJECT_END_DATE)
+	var projectEndDate: LocalDate? = null,
+	@ReadOnlyProperty
+	@Column(LINKED_PROJECT_END_TIME)
+	var projectEndTime: OffsetTime? = null,
+	@ReadOnlyProperty
+	@Column(LINKED_PROJECT_OPTIONS)
+	var projectOptions: List<ProjectOptionEnum>? = null,
 
 	@Column(PROJECT_PROFILE_ROLE)
 	var role: String? = null,

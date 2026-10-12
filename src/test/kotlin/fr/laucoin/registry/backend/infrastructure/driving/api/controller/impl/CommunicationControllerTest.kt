@@ -71,7 +71,7 @@ class CommunicationControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/communications"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/communications"
 
 		@JvmStatic
 		fun `Should findCommunications prepare param, call service and finally cast the result`(): Stream<Arguments> {

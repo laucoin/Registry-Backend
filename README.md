@@ -111,7 +111,7 @@ fails the startup loudly instead of silently booting on something unintended.
 
 > [!NOTE]
 > The browser app authenticates via two `HttpOnly`, `SameSite=Lax` cookies (`registry_access_token`, `registry_refresh_token`)
-> set by `/api/v1/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
+> set by `/api/v2/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
 > still works — it's checked first, cookie as fallback — kept solely so Swagger UI's own OAuth2 "try it out" flow keeps
 > working; no other client should send it.
 

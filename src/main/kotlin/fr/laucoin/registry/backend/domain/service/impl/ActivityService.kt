@@ -52,7 +52,7 @@ class ActivityService(
 
 	override fun createActivity(currentUser: CurrentUserModel, activity: ActivityModel): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -66,7 +66,7 @@ class ActivityService(
 		activity: ActivityModel
 	): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -125,7 +125,7 @@ class ActivityService(
 
 	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->
 		movementPort.countAllByActivityId(
-			activityToUpdate.project!!.id!!,
+			activityToUpdate.projectId!!,
 			activityToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->

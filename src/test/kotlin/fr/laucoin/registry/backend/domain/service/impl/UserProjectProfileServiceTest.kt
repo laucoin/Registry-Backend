@@ -6,9 +6,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -33,11 +31,11 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
@@ -230,10 +228,10 @@ class UserProjectProfileServiceTest {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
-		service.createUserProjectProfileFromProject(currentUser(), ProjectModel()).block()
+		service.createUserProjectProfileFromProject(currentUser(), ProjectModel().apply { id = projectId }).block()
 
 		// Assert
-		verify(port).create(any())
+		verify(port).create(argThat { this.projectId == projectId })
 		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 

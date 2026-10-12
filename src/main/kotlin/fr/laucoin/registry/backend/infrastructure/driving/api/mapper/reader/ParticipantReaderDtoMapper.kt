@@ -12,7 +12,6 @@ class ParticipantReaderDtoMapper(
 	private val partialUserMapper: PartialUserReaderDtoMapper,
 	private val typeMapper: ParticipantTypeReaderDtoMapper,
 	private val statusMapper: PresenceStatusReaderDtoMapper,
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val groupMapper: GroupWithoutMemberReaderDtoMapper,
 ): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
 	override fun toDto(model: ParticipantModel): ParticipantReaderDto {
@@ -33,7 +32,6 @@ class ParticipantReaderDtoMapper(
 			purged = model.purged,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

@@ -161,7 +161,7 @@ class ProjectProfileService(
 	}
 
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
-		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.project!!.id!!, it, error)
+		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.projectId!!, it, error)
 	}
 
 	private fun Mono<ProjectProfileModel>.validateRole(

@@ -3,9 +3,14 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectPort
@@ -14,6 +19,7 @@ import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import fr.laucoin.registry.backend.test.ModelExt
 import fr.laucoin.registry.backend.test.ModelExt.commonProject
 import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
 import fr.laucoin.registry.backend.test.ModelExt.projectId
@@ -67,6 +73,7 @@ class ProjectServiceTest {
 	@BeforeEach
 	fun setup() {
 		whenever(profilePort.findOidcIdsByProjectId(any())).thenReturn(Flux.empty())
+		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any())).thenReturn(Flux.empty())
 	}
 
 	private companion object {
@@ -262,6 +269,87 @@ class ProjectServiceTest {
 		// Assert
 		verify(port).findPage(emptyList(), pageable, params)
 		verify(port, never()).findPage(any(), any())
+	}
+
+	@Test
+	fun `Should findProjectWithProfileById attach the current user profile`() {
+		// Arrange
+		val profile = ProjectProfileModel().apply { id = UUID.randomUUID(); this.projectId = ModelExt.projectId }
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any()))
+			.thenReturn(Flux.just(profile))
+
+		// Act
+		val result = service.findProjectWithProfileById(currentUser(), projectId).block()
+
+		// Assert
+		assertEquals(profile, result?.profile)
+		verify(profilePort).findProjectProfilesByUserIdAndProjectIds(
+			eq(currentUser().id!!),
+			eq(listOf(projectId)),
+			any(),
+		)
+	}
+
+	@Test
+	fun `Should findProjectWithProfileById attach the profile that grants access when the user has several`() {
+		// Arrange
+		val blocked = ProjectProfileModel().apply { id = UUID.randomUUID(); visible = false; status = ACCEPTED }
+		val rejected = ProjectProfileModel().apply { id = UUID.randomUUID(); status = REJECTED }
+		val active = ProjectProfileModel().apply {
+			id = UUID.randomUUID(); status = ACCEPTED; availabilityStatus = AVAILABLE
+		}
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any()))
+			.thenReturn(Flux.just(blocked, active, rejected))
+
+		// Act
+		val result = service.findProjectWithProfileById(currentUser(), projectId).block()
+
+		// Assert
+		assertEquals(active, result?.profile)
+	}
+
+	@Test
+	fun `Should findProjectWithProfileById return the project without profile when the user has none`() {
+		// Arrange
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+
+		// Act
+		val result = service.findProjectWithProfileById(currentUser(), projectId).block()
+
+		// Assert
+		assertEquals(commonProject().id, result?.id)
+		assertEquals(null, result?.profile)
+	}
+
+	@Test
+	fun `Should findProjectsPage attach each current user profile to its project`() {
+		// Arrange
+		val withProfile = ProjectModel().apply { id = UUID.randomUUID() }
+		val withoutProfile = ProjectModel().apply { id = UUID.randomUUID() }
+		val profile = ProjectProfileModel().apply { id = UUID.randomUUID(); projectId = withProfile.id }
+		whenever(port.findPage(any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, listOf(withProfile, withoutProfile))))
+		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any()))
+			.thenReturn(Flux.just(profile))
+
+		// Act
+		val result = service.findProjectsPage(
+			currentUser(REGISTRY_PROJECT_R),
+			PageableModel(0, 10),
+			withProfile = false,
+			ProjectSearchParamModel(),
+		).block()
+
+		// Assert
+		assertEquals(profile, result?.content?.first { it.id == withProfile.id }?.profile)
+		assertEquals(null, result?.content?.first { it.id == withoutProfile.id }?.profile)
+		verify(profilePort).findProjectProfilesByUserIdAndProjectIds(
+			eq(currentUser().id!!),
+			eq(listOf(withProfile.id!!, withoutProfile.id!!)),
+			any(),
+		)
 	}
 
 	@Test

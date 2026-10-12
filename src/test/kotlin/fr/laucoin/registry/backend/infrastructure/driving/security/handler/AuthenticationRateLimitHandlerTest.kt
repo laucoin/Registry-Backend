@@ -57,7 +57,7 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter let the request through when the path is not rate-limited`() {
 		// Arrange
 		val limiter = filter(capacity = 1)
-		val exchange = exchange("/api/v1/authentication/login/uri", GET)
+		val exchange = exchange("/api/v2/authentication/login/uri", GET)
 
 		// Act
 		repeat(5) { limiter.filter(exchange, chain).block() }
@@ -70,7 +70,7 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter allow up to capacity requests then return 429`() {
 		// Arrange
 		val limiter = filter(capacity = 2)
-		val exchange = exchange("/api/v1/authentication/token", POST)
+		val exchange = exchange("/api/v2/authentication/token", POST)
 
 		// Act
 		limiter.filter(exchange, chain).block()
@@ -87,8 +87,8 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter rate-limit token refresh independently per client IP`() {
 		// Arrange
 		val limiter = filter(capacity = 1)
-		val clientA = exchange("/api/v1/authentication/token/refresh", POST, "10.0.0.1")
-		val clientB = exchange("/api/v1/authentication/token/refresh", POST, "10.0.0.2")
+		val clientA = exchange("/api/v2/authentication/token/refresh", POST, "10.0.0.1")
+		val clientB = exchange("/api/v2/authentication/token/refresh", POST, "10.0.0.2")
 
 		// Act
 		limiter.filter(clientA, chain).block()
@@ -105,8 +105,8 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter track token and token refresh as independent budgets for the same client`() {
 		// Arrange
 		val limiter = filter(capacity = 1)
-		val token = exchange("/api/v1/authentication/token", POST, "10.0.0.1")
-		val refresh = exchange("/api/v1/authentication/token/refresh", POST, "10.0.0.1")
+		val token = exchange("/api/v2/authentication/token", POST, "10.0.0.1")
+		val refresh = exchange("/api/v2/authentication/token/refresh", POST, "10.0.0.1")
 
 		// Act
 		limiter.filter(token, chain).block()
@@ -122,7 +122,7 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter allow requests again once the window has elapsed`() {
 		// Arrange
 		val limiter = filter(capacity = 1, windowSeconds = 1)
-		val exchange = exchange("/api/v1/authentication/token", POST)
+		val exchange = exchange("/api/v2/authentication/token", POST)
 
 		// Act
 		limiter.filter(exchange, chain).block()

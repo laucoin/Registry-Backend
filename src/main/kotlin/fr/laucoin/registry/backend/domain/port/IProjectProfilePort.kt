@@ -44,6 +44,12 @@ interface IProjectProfilePort {
 		searchParams: ProjectProfileSearchParamModel,
 	): Mono<ProjectProfileModel>
 
+	fun findProjectProfilesByUserIdAndProjectIds(
+		userId: UUID,
+		projectIds: List<UUID>,
+		searchParams: ProjectProfileSearchParamModel,
+	): Flux<ProjectProfileModel>
+
 	fun findLevel0ProjectProfileRoleByUserId(
 		userId: UUID,
 		visibilitySearched: Boolean?

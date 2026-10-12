@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class ActivityReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 ): IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
 	override fun toDto(model: ActivityModel): ActivityReaderDto {
@@ -29,7 +28,6 @@ class ActivityReaderDtoMapper(
 			endAvailability = model.endAvailability,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

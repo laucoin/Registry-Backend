@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ICommunicationEntityRepository
@@ -156,7 +155,7 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				dateTime = ZonedDateTime.now()
 				message = "message"
 				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -180,7 +179,7 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				dateTime = ZonedDateTime.now()
 				message = "message updated"
 				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 

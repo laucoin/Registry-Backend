@@ -77,7 +77,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_PROJECT_PROFILE_USER_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_PROJECT_PROFILE_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$LINKED_PROJECT_ID = :projectId AND $PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, $LINKED_USER_TABLE.$USER_LAST_NAME
@@ -124,6 +124,21 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		availabilitySearched: Boolean?,
 		statusSearched: List<ProfileStatusEnum>,
 	): Flux<ProjectProfileRoleEntity>
+
+	@Query(
+		"""
+        SELECT t.*
+        FROM $PROJECT_PROFILE_TABLE t
+        WHERE t.$PROJECT_PROFILE_USER_ID = :userId AND t.$LINKED_PROJECT_ID IN (:projectIds) AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE
+        """
+	)
+	fun findByUserIdAndProjectIds(
+		userId: UUID,
+		projectIds: List<UUID>,
+		visibilitySearched: Boolean?,
+		availabilitySearched: Boolean?,
+		statusSearched: List<ProfileStatusEnum>,
+	): Flux<ProjectProfileEntity>
 
 	@Query(
 		"""
@@ -182,7 +197,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $PROJECT_ROLE_TABLE ON t.$PROJECT_PROFILE_ROLE = $PROJECT_ROLE_TABLE.$ENTITY_ROLE_NAME
         WHERE $VISIBLE_CLAUSE
@@ -210,7 +225,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$LINKED_PROJECT_ID = :projectId AND t.$ID = :id AND $VISIBLE_CLAUSE
         """

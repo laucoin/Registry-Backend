@@ -53,7 +53,7 @@ class VehicleService(
 
 	override fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel> {
 		return projectService.validateDateTimes(
-			vehicle.project!!.id!!,
+			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -68,7 +68,7 @@ class VehicleService(
 		vehicle: VehicleModel
 	): Mono<VehicleModel> {
 		return projectService.validateDateTimes(
-			vehicle.project!!.id!!,
+			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -126,7 +126,7 @@ class VehicleService(
 
 	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { vehicleToUpdate ->
 		movementPort.countAllByVehicleId(
-			vehicleToUpdate.project!!.id!!,
+			vehicleToUpdate.projectId!!,
 			vehicleToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->

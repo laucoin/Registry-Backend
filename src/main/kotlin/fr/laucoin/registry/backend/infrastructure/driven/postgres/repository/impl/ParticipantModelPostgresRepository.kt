@@ -149,7 +149,7 @@ class ParticipantModelPostgresRepository(
 
 	override fun update(element: ParticipantModel): Mono<ParticipantModel> {
 		return save(element)
-			.flatMap { findById(element.project!!.id!!, element.id!!, visibilitySearched = null) }
+			.flatMap { findById(element.projectId!!, element.id!!, visibilitySearched = null) }
 			.saveNewGroups(element)
 			.removeDeletedGroups(element)
 			.`as`(transactionalOperator::transactional)

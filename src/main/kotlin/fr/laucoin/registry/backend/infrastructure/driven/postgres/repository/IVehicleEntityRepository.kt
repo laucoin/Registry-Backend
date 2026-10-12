@@ -21,7 +21,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -37,7 +36,7 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$VEHICLE_BRAND
@@ -75,7 +74,7 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         ORDER BY t.$VEHICLE_BRAND
@@ -86,7 +85,7 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$VEHICLE_BRAND
@@ -106,7 +105,7 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """

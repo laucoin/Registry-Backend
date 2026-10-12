@@ -19,7 +19,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -34,7 +33,7 @@ import reactor.core.publisher.Mono
 interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
@@ -53,7 +52,7 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         """
@@ -62,7 +61,7 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
@@ -80,7 +79,7 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """

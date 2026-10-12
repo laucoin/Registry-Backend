@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class CommunicationReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val movementMapper: MovementReaderDtoMapper,
 	private val alertMapper: AlertReaderDtoMapper,
 ):
@@ -20,7 +19,6 @@ class CommunicationReaderDtoMapper(
 			alert = Optional.ofNullable(model.alert).map(alertMapper::toDto).orElse(null),
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

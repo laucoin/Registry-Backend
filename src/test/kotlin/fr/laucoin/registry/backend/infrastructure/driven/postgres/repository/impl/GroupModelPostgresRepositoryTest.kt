@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
@@ -246,7 +245,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val group = GroupModel().apply {
 				name = "test"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -268,7 +267,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			val group = GroupModel().apply {
 				id = uuid
 				name = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				members = listOf(ParticipantModel().apply { id = participantId })
 				create(currentUser())
 			}
@@ -296,7 +295,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			val group = GroupModel().apply {
 				id = uuid
 				name = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				members = emptyList()
 				create(currentUser())
 			}

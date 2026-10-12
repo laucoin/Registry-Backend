@@ -21,13 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_DATE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_NAME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_OPTIONS
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_DATE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
@@ -78,7 +72,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_MODEL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_TABLE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
 
 object MovementQueries {
 	const val SELECT_CONTENT = """
@@ -149,9 +142,8 @@ object MovementQueries {
     """
 
 	const val GROUP_BY_MOVEMENT = """
-         t.$ID, t.$MOVEMENT_DATE_TIME, t.$MOVEMENT_TYPE, t.$MOVEMENT_ACTIVITY_ID, t.$MOVEMENT_REASON, $LINKED_ACTIVITY_TABLE.search_text,
-         $LINKED_PROJECT_TABLE.$ID, $LINKED_PROJECT_NAME, $LINKED_PROJECT_START_DATE, $LINKED_PROJECT_START_TIME, $LINKED_PROJECT_END_DATE,
-         $LINKED_PROJECT_END_TIME, $LINKED_PROJECT_OPTIONS, $LINKED_ACTIVITY_TABLE.$ID, $MOVEMENT_ACTIVITY_NAME,
+         t.$ID, t.$MOVEMENT_DATE_TIME, t.$MOVEMENT_TYPE, t.$MOVEMENT_ACTIVITY_ID, t.$MOVEMENT_REASON, $LINKED_ACTIVITY_TABLE.search_text, 
+         $LINKED_ACTIVITY_TABLE.$ID, $MOVEMENT_ACTIVITY_NAME,
          $MOVEMENT_ACTIVITY_DESCRIPTION, $MOVEMENT_ACTIVITY_DURATION, $MOVEMENT_ACTIVITY_MIN_ALLOWED_PARTICIPANTS,
          $MOVEMENT_ACTIVITY_MAX_ALLOWED_PARTICIPANTS, $MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE,
          $MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME, $MOVEMENT_ACTIVITY_END_AVAILABILITY_DATE, $MOVEMENT_ACTIVITY_END_AVAILABILITY_TIME,

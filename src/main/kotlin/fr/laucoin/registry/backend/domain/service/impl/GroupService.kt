@@ -88,12 +88,12 @@ class GroupService(
 
 	override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateMembers(group.project!!.id!!, group, group.members.mapNotNull { p -> p.id }) }
+			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
 			.flatMap { port.create(group.apply { create(currentUser) }) }
 	}
 
@@ -104,7 +104,7 @@ class GroupService(
 		group: GroupModel
 	): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,

@@ -169,6 +169,8 @@ class SecurityConfig(
 		it.matchers(managementPortMatcher()).permitAll()
 		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
 		it.pathMatchers(POST, "/api/*/authentication/token", "/api/*/authentication/token/refresh").permitAll()
+		// Static, non-sensitive labels (enums): public to avoid authentication/authorities resolution on each call
+		it.pathMatchers(GET, "/api/*/metadata/**").permitAll()
 		it.anyExchange().authenticated()
 	}
 

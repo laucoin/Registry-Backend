@@ -104,7 +104,7 @@ class GroupModelPostgresRepository(
 		return save(element)
 			.flatMap {
 				findByIdWithContent(
-					element.project!!.id!!,
+					element.projectId!!,
 					element.id!!,
 					visibilitySearched = null,
 					memberVisibilitySearched = null,

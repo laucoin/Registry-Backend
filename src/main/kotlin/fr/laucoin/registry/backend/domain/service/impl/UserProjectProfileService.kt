@@ -33,11 +33,6 @@ class UserProjectProfileService(
 	private val transactionalOperator: TransactionalOperator,
 ) : IUserProjectProfileService, GenericProfileService(port) {
 	private companion object {
-		private val SEARCH_ACTIVE = ProjectProfileSearchParamModel(
-			visibilitySearched = true,
-			availabilitySearched = true,
-			statusSearched = listOf(ACCEPTED)
-		)
 	}
 
 	override fun findProjectProfilesPage(
@@ -51,15 +46,6 @@ class UserProjectProfileService(
 
 	override fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
-	}
-
-	override fun findProjectProfilesByProjectId(
-		currentUser: CurrentUserModel,
-		projectId: UUID
-	): Mono<ProjectProfileModel> {
-		return port.findProjectProfileByProjectAndUserId(
-			projectId, currentUser.id!!, SEARCH_ACTIVE
-		)
 	}
 
 	override fun <T : GenericModel> validateNotLastProjectRoleLevel0(
@@ -86,6 +72,7 @@ class UserProjectProfileService(
 	): Mono<ProjectProfileModel> {
 		val profile = ProjectProfileModel().apply {
 			this.project = project
+			this.projectId = project.id
 			this.user = currentUser
 			this.role = roleService.getLevel0RoleFromProjectRoles()
 			this.status = ACCEPTED
@@ -119,7 +106,7 @@ class UserProjectProfileService(
 		val nowPlusOneHour = CustomDateTimeModel.now().plusHours(1)
 		val profile = ProjectProfileModel().apply {
 			user = currentUser
-			project = ProjectModel().apply { id = projectId }
+			this.projectId = projectId
 			role = roleService.getLevel0RoleFromProjectRoles()
 			status = ACCEPTED
 			startAccess = now
@@ -143,7 +130,7 @@ class UserProjectProfileService(
 			.flatMap {
 				validateNotLastProjectRoleLevel0(
 					it.user!!.id!!,
-					it.project!!.id!!,
+					it.projectId!!,
 					it,
 					PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 				)

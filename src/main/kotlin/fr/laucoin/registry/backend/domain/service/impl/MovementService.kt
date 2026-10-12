@@ -310,7 +310,7 @@ class MovementService(
 
 	private fun validateMovementDate(movement: MovementModel): Mono<UUID> {
 		return projectService.validateDateTime(
-			movement.project!!.id!!,
+			movement.projectId!!,
 			CustomDateTimeModel(movement.dateTime),
 			MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -329,14 +329,14 @@ class MovementService(
 			.flatMap {
 				Mono.zip(
 					validateParticipantsIfAny(
-						movement.project!!.id!!,
+						movement.projectId!!,
 						movement,
 						movement.content.mapNotNull { c -> c.participant!!.id },
 						movement.content.filter { c -> Objects.nonNull(c.vehicle) }
 							.mapNotNull { c -> c.participant!!.id },
 					),
 					validateVehiclesIfAny(
-						movement.project!!.id!!,
+						movement.projectId!!,
 						movement,
 						movement.content.mapNotNull { c -> c.vehicle?.id },
 					),
@@ -419,7 +419,7 @@ class MovementService(
 		return if (Objects.isNull(movement.activity) || movement.activity?.id == oldMovement?.activity?.id) Mono.just(
 			oldMovement ?: movement
 		)
-		else activityPort.findById(movement.project!!.id!!, movement.activity!!.id!!, visibilitySearched = null)
+		else activityPort.findById(movement.projectId!!, movement.activity!!.id!!, visibilitySearched = null)
 			.switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT)) }
 			.handle { it, handle ->
 				if (it.isNotVisible()) handle.error(
@@ -442,7 +442,7 @@ class MovementService(
 				startDateTimeSearched = null,
 				endDateTimeSearched = movement.dateTime,
 			)
-			communicationPort.countAllByMovementId(movement.project!!.id!!, oldMovement.id!!, params)
+			communicationPort.countAllByMovementId(movement.projectId!!, oldMovement.id!!, params)
 				.handle { it, handle ->
 					if (it > 0L) handle.error(
 						RegistryException(
@@ -474,7 +474,7 @@ class MovementService(
 				}
 			}
 
-		return participantPort.findAllByIds(movement.project!!.id!!, guestIdsToUpdate, visibilitySearched = null)
+		return participantPort.findAllByIds(movement.projectId!!, guestIdsToUpdate, visibilitySearched = null)
 			.map {
 				val updatedGuest = guests.find { g -> g.id == it.id }
 				it.apply {

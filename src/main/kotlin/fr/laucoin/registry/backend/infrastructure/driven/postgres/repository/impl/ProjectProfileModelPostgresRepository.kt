@@ -126,6 +126,21 @@ class ProjectProfileModelPostgresRepository(
 			.switchIfEmpty(Mono.empty())
 	}
 
+	override fun findProjectProfilesByUserIdAndProjectIds(
+		userId: UUID,
+		projectIds: List<UUID>,
+		searchParams: ProjectProfileSearchParamModel,
+	): Flux<ProjectProfileModel> {
+		if (projectIds.isEmpty()) return Flux.empty()
+		return repository.findByUserIdAndProjectIds(
+			userId,
+			projectIds,
+			searchParams.visibilitySearched,
+			searchParams.availabilitySearched,
+			searchParams.statusSearched,
+		).map(mapper::toModel)
+	}
+
 	override fun findLevel0ProjectProfileRoleByUserId(
 		userId: UUID,
 		visibilitySearched: Boolean?

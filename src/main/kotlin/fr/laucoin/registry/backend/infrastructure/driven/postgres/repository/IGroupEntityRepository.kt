@@ -23,7 +23,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -38,7 +37,7 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         ORDER BY t.$GROUP_NAME
@@ -58,7 +57,7 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         """
@@ -68,7 +67,7 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         ORDER BY t.$GROUP_NAME
@@ -87,7 +86,7 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """

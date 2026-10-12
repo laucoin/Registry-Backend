@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
@@ -32,6 +31,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -266,6 +266,58 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findProjectProfilesByUserIdAndProjectIds call repository findByUserIdAndProjectIds`() {
+		// Arrange
+		val params = ProjectProfileSearchParamModel(visibilitySearched = null)
+		val projectIds = listOf(projectId, UUID.randomUUID())
+
+		// Act
+		val result = repository.findProjectProfilesByUserIdAndProjectIds(currentUser().id!!, projectIds, params)
+			.collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(1, result.size)
+		assertEquals(projectId, result.first().projectId)
+		assertNull(result.first().project)
+		verify(postgresRepository).findByUserIdAndProjectIds(
+			currentUser().id!!,
+			projectIds,
+			visibilitySearched = null,
+			availabilitySearched = null,
+			statusSearched = params.statusSearched,
+		)
+		verify(mapper).toModel(any())
+	}
+
+	@Test
+	fun `Should findProjectProfilesByUserIdAndProjectIds return nothing without calling repository when no project`() {
+		// Act
+		val result = repository.findProjectProfilesByUserIdAndProjectIds(
+			currentUser().id!!,
+			emptyList(),
+			ProjectProfileSearchParamModel(visibilitySearched = null)
+		).collectList().block()
+
+		// Assert
+		assertEquals(emptyList(), result)
+		verify(postgresRepository, never()).findByUserIdAndProjectIds(any(), any(), anyOrNull(), anyOrNull(), any())
+	}
+
+	@Test
+	fun `Should findProjectProfilesByUserIdAndProjectIds not return the profile of an unknown user`() {
+		// Act
+		val result = repository.findProjectProfilesByUserIdAndProjectIds(
+			UUID.randomUUID(),
+			listOf(projectId),
+			ProjectProfileSearchParamModel(visibilitySearched = null)
+		).collectList().block()
+
+		// Assert
+		assertEquals(emptyList(), result)
+	}
+
+	@Test
 	fun `Should findLevel0ProjectProfileRoleByUserId call repository findLevel0ProjectProfileRoleByUserId`() {
 		// Act
 		val result =
@@ -309,7 +361,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
 				user = UserModel().apply { id = userIdWithoutProfile }
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
 				create(currentUser())
@@ -332,7 +384,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
 				user = UserModel().apply { id = userIdWithoutProfile }
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = ACCEPTED
 				create(currentUser())
@@ -364,7 +416,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
 				user = UserModel().apply { id = userIdWithoutProfile }
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
 				create(currentUser())

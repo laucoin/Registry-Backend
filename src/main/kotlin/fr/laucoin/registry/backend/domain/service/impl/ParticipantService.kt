@@ -112,19 +112,19 @@ class ParticipantService(
 		participant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return projectService.validateDateTimes(
-			participant.project!!.id!!,
+			participant.projectId!!,
 			participant.startAvailability,
 			participant.endAvailability,
 			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
 			.flatMap {
 				if (Objects.nonNull(participant.user)) {
-					validateNoParticipantForUser(participant.project!!.id!!, participant.user!!.id!!)
+					validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
 				} else Mono.just(emptyList())
 			}
 			.flatMap {
 				if (participant.groups.isNotEmpty()) {
-					validateGroups(participant.project!!.id!!, participant, participant.groups.mapNotNull { g -> g.id })
+					validateGroups(participant.projectId!!, participant, participant.groups.mapNotNull { g -> g.id })
 				} else Mono.just(participant)
 			}
 			.flatMap { port.create(participant.apply { create(currentUser) }) }
@@ -181,7 +181,7 @@ class ParticipantService(
 		participant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return projectService.validateDateTimes(
-			participant.project!!.id!!,
+			participant.projectId!!,
 			participant.startAvailability,
 			participant.endAvailability,
 			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -190,7 +190,7 @@ class ParticipantService(
 			.flatMap { validateNoMovementConflict(participant, it) }
 			.flatMap { toUpdate ->
 				if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
-					validateNoParticipantForUser(participant.project!!.id!!, participant.user!!.id!!)
+					validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
 						.map { toUpdate }
 				} else {
 					Mono.just(toUpdate)
@@ -201,7 +201,7 @@ class ParticipantService(
 				if (newGroup.isEmpty()) {
 					Mono.just(it)
 				} else {
-					validateGroups(participant.project!!.id!!, it, newGroup)
+					validateGroups(participant.projectId!!, it, newGroup)
 				}
 			}
 			.map {
@@ -284,7 +284,7 @@ class ParticipantService(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return movementPort.countAllByParticipantId(
-			oldParticipant.project!!.id!!,
+			oldParticipant.projectId!!,
 			oldParticipant.id!!,
 			MovementSearchParamModel(
 				visibilitySearched = null,
@@ -313,7 +313,7 @@ class ParticipantService(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return movementPort.countAllByParticipantId(
-			oldParticipant.project!!.id!!,
+			oldParticipant.projectId!!,
 			oldParticipant.id!!,
 			MovementSearchParamModel(
 				visibilitySearched = null,
@@ -340,7 +340,7 @@ class ParticipantService(
 
 	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
 		movementPort.countAllByParticipantId(
-			participantToUpdate.project!!.id!!,
+			participantToUpdate.projectId!!,
 			participantToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->
@@ -357,7 +357,7 @@ class ParticipantService(
 		}
 
 		groupPort.findAllByIds(
-			participantToUpdate.project!!.id!!,
+			participantToUpdate.projectId!!,
 			participantToUpdate.groups.mapNotNull { it.id },
 			visibilitySearched = null
 		)

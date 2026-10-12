@@ -82,7 +82,7 @@ class VehicleControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/vehicles"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/vehicles"
 
 		@JvmStatic
 		fun `Should findVehicles prepare param, call service and finally cast the result`(): Stream<Arguments> {

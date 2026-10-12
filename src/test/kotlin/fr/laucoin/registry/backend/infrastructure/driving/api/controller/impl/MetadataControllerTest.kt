@@ -1,6 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
+import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
+import reactor.core.publisher.Flux
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AvailabilityStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PresenceStatusReaderDtoMapper
@@ -33,11 +39,17 @@ class MetadataControllerTest: TestContext() {
 	@MockitoBean
 	private lateinit var profileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper
 
+	@MockitoBean
+	private lateinit var projectService: IProjectService
+
+	@MockitoBean
+	private lateinit var projectOptionsReaderMapper: ProjectOptionsReaderDtoMapper
+
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/metadata"
+		private const val BASE_URL = "/api/v2/metadata"
 	}
 
 	@Test
@@ -114,5 +126,65 @@ class MetadataControllerTest: TestContext() {
 		verify(movementTypeReaderMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(profileStatusReaderMapper)
 		verifyNoInteractions(presenceStatusMapper)
+	}
+
+	@Test
+	fun `Should getAvailableProjectOptions return 200`() {
+		// Arrange
+		whenever(projectService.availableProjectOptions()).thenReturn(Flux.just(COMMUNICATION))
+		whenever(projectOptionsReaderMapper.toDto(any())).thenReturn(
+			ProjectOptionsReaderDto(ACTIVITY, "label", "question", emptyList())
+		)
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder("$BASE_URL/projects/options", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+		verify(projectService).availableProjectOptions()
+		verify(projectOptionsReaderMapper).toDto(any())
+	}
+
+	@Test
+	fun `Should metadata be reachable without authentication`() {
+		// Arrange
+		whenever(movementTypeReaderMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
+
+		// Act
+		val result = webClient
+			.get()
+			.uri(uriBuilder("$BASE_URL/movements/types", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+	}
+
+	@Test
+	fun `Should the other endpoints still require authentication`() {
+		// Act
+		val result = webClient
+			.get()
+			.uri(uriBuilder("/api/v2/projects", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isUnauthorized
+	}
+
+	@Test
+	fun `Should the removed v1 metadata api not exist anymore`() {
+		// Act
+		val result = webClient
+			.get()
+			.uri(uriBuilder("/api/v1/metadata/movements/types", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isNotFound
 	}
 }

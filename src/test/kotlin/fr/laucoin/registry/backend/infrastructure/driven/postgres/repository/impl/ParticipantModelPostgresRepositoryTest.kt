@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ParticipantEntityMapper
@@ -269,7 +268,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "match"
 				birthday = LocalDate.now().minusYears(30)
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 			val bornAnotherDay = ParticipantModel().apply {
@@ -277,7 +276,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "no-match"
 				birthday = LocalDate.now().minusYears(30).minusDays(1)
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -329,7 +328,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "test"
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -355,7 +354,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				groups = listOf(GroupModel().apply { id = groupId })
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				purged = false
 				create(currentUser())
 			}
@@ -382,7 +381,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "test updated"
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				purged = false
 				create(currentUser())
 			}

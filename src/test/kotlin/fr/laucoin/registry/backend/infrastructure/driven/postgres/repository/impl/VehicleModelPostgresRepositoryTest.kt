@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
@@ -178,7 +177,7 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 				licensePlate = "AB-123-CD"
 				brand = "test"
 				model = "test"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -202,7 +201,7 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 				licensePlate = "AB-123-CD"
 				brand = "test update"
 				model = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 

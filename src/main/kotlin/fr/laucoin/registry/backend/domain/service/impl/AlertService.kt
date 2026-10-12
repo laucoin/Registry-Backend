@@ -64,7 +64,7 @@ class AlertService(
 
 	private fun validateAlertDateWithProjectDates(alert: AlertModel): Mono<UUID> {
 		return projectService.validateDateTime(
-			alert.project!!.id!!,
+			alert.projectId!!,
 			CustomDateTimeModel(alert.dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -130,7 +130,7 @@ class AlertService(
 		flatMap { oldAlert ->
 			if (oldAlert.dateTime.isEqual(updatedAlert.dateTime)) Mono.just(oldAlert)
 			else communicationPort.countAllByAlertId(
-				oldAlert.project!!.id!!,
+				oldAlert.projectId!!,
 				oldAlert.id!!,
 				CommunicationSearchParamModel(
 					textSearched = null,
@@ -203,7 +203,7 @@ class AlertService(
 
 	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
 		communicationPort.countAllByAlertId(
-			oldAlert.project!!.id!!,
+			oldAlert.projectId!!,
 			oldAlert.id!!,
 			CommunicationSearchParamModel(),
 		).handle { it, handle ->

@@ -20,7 +20,6 @@ interface IUserProjectProfileService {
 
 	fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
 
-	fun findProjectProfilesByProjectId(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel>
 
 	fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,

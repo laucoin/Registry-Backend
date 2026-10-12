@@ -211,7 +211,7 @@ Each reviewing agent must evaluate the proposed changes, provide feedback if nee
 | `technical/architecture.md`                                 | Hexagonal + reactive shape, request flow, deployment topology                                                                                                                                                    |
 | `technical/security.md`                                     | Enforcement view — auth flow, JWT→user conversion, RBAC enforcement, visibility gating, data protection                                                                                                          |
 | `technical/data-model.md`                                   | PostgreSQL schema, column conventions, tables, trigram search, migration history                                                                                                                                 |
-| `technical/api-reference.md`                                | Every `/api/v1` endpoint grouped by domain, with its required permission                                                                                                                                         |
+| `technical/api-reference.md`                                | Every `/api/v2` endpoint grouped by domain, with its required permission                                                                                                                                         |
 | `technical/getting-started.md`                              | Running the full stack locally                                                                                                                                                                                   |
 | `technical/adr/`                                            | ADRs **001–006, 009, 011** govern the backend (007, 008, 012 are frontend-scoped — ignore them here)                                                                                                             |
 
@@ -297,10 +297,10 @@ Constraints from the ADRs and the "accepted risks" tables — a change must not 
 - **No secret or personal data in logs or responses.** Tokens, client secrets, passwords, and personal data are never
   logged nor returned beyond what the endpoint's contract requires.
 - **CORS is an explicit allow-list**, never `*`.
-- **One API version: `/api/v1`.** There is no `/api/v2`. The irregular endpoints listed in `api-reference.md`
+- **One API version: `/api/v2`.** `/api/v1` was removed (breaking change, single controlled consumer). The irregular endpoints listed in `api-reference.md`
   (`.../profiles/{id}/accept/{accepted}`, `.../alerts/{id}/status/{status}`, the `impersonate` naming) are **frozen** —
   do not "fix" them with a breaking change.
-- **Retention purges are irreversible and gated.** `/api/v1/purge/**` requires `REGISTRY_JOB_C` (held only by
+- **Retention purges are irreversible and gated.** `/api/v2/purge/**` requires `REGISTRY_JOB_C` (held only by
   `USER_ADMINISTRATOR` / the single `SERVICE_ACCOUNT`); `dryRun` **defaults to `true`**; thresholds are configuration,
   not code; the four sweeps are staggered content-before-configuration to respect delete dependencies. There is no
   export before deletion. (ADR 011)

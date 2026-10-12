@@ -11,8 +11,12 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.service.IProjectService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserInvitationReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserInvitationReaderDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -43,13 +47,19 @@ class UserProjectProfileControllerTest: TestContext() {
 	private lateinit var service: IUserProjectProfileService
 
 	@MockitoBean
-	private lateinit var readerMapper: ProjectProfileReaderDtoMapper
+	private lateinit var readerMapper: UserInvitationReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var projectService: IProjectService
+
+	@MockitoBean
+	private lateinit var projectReaderMapper: ProjectWithProfileReaderDtoMapper
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/users/profiles"
+		private const val BASE_URL = "/api/v2/users/profiles"
 
 		@JvmStatic
 		fun `Should findUserProjectProfiles return 200`(): Stream<Arguments> = Stream.of(
@@ -97,7 +107,7 @@ class UserProjectProfileControllerTest: TestContext() {
 		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
 		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(page))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
-			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
+			PageModel(pageable, totalElements = 1, listOf(UserInvitationReaderDto())),
 		)
 
 		// Act
@@ -132,7 +142,8 @@ class UserProjectProfileControllerTest: TestContext() {
 	fun `Should createSupportProjectProfile return 200`() {
 		// Arrange
 		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(projectService.findProjectWithProfileById(any(), eq(projectId))).thenReturn(Mono.just(ProjectModel()))
+		whenever(projectReaderMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -142,8 +153,9 @@ class UserProjectProfileControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
-		verify(readerMapper).toDto(any())
+		result.body<ProjectWithProfileReaderDto>(OK)
+		verify(projectService).findProjectWithProfileById(any(), eq(projectId))
+		verify(projectReaderMapper).toDto(any())
 		verify(service).createSupportProjectProfile(any(), eq(projectId))
 	}
 
@@ -157,7 +169,7 @@ class UserProjectProfileControllerTest: TestContext() {
 				ProjectProfileModel()
 			)
 		)
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserInvitationReaderDto())
 
 		// Act
 		val result = webClient
@@ -167,7 +179,7 @@ class UserProjectProfileControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
+		result.body<UserInvitationReaderDto>(OK)
 
 		verify(readerMapper).toDto(any())
 		verify(service).updateUserProjectProfileStatusById(any(), eq(uuid), eq(if (accepted) ACCEPTED else REJECTED))

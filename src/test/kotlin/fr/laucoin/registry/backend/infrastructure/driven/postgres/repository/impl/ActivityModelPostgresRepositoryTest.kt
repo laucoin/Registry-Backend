@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IActivityEntityRepository
@@ -175,7 +174,7 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 			val activity = ActivityModel().apply {
 				name = "test"
 				description = "test"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -198,7 +197,7 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				name = "test update"
 				description = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
