@@ -90,6 +90,16 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+kover {
+	reports {
+		verify {
+			rule {
+				minBound(89)
+			}
+		}
+	}
+}
+
 tasks.withType<Test>().configureEach {
 	useJUnitPlatform()
 	maxParallelForks = Runtime.getRuntime().availableProcessors()
