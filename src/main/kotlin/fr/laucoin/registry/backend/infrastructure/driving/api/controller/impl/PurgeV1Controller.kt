@@ -1,7 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_IMPLEMENTED_YET
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
@@ -14,13 +12,12 @@ import fr.laucoin.registry.backend.domain.service.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPurgeV1Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectContentPurgeReaderDto
-import java.time.Instant
+import java.time.Clock
 import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Objects
 import java.util.UUID
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
+import org.reactivestreams.Publisher
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
@@ -29,22 +26,23 @@ import reactor.core.publisher.Mono
 @RestController
 class PurgeV1Controller(
 	private val userService: IUserService,
-	@param:Value($$"${registry.feature.purge.users.months-threshold:}")
-	private val userPurgeMonthThreshold: Long?,
+	@param:Value($$"${registry.feature.purge.users.months-threshold}")
+	private val userPurgeMonthThreshold: Long,
 	private val projectService: IProjectService,
-	@param:Value($$"${registry.feature.purge.projects.months-threshold:}")
-	private val projectPurgeMonthThreshold: Long?,
+	@param:Value($$"${registry.feature.purge.projects.months-threshold}")
+	private val projectPurgeMonthThreshold: Long,
 	private val movementService: IMovementService,
 	private val alertService: IAlertService,
 	private val communicationService: ICommunicationService,
-	@param:Value($$"${registry.feature.purge.projects.content.months-threshold:}")
-	private val projectContentPurgeMonthThreshold: Long?,
+	@param:Value($$"${registry.feature.purge.projects.content.months-threshold}")
+	private val projectContentPurgeMonthThreshold: Long,
 	private val activityService: IActivityService,
 	private val vehicleService: IVehicleService,
 	private val participantService: IParticipantService,
 	private val groupService: IGroupService,
-	@param:Value($$"${registry.feature.purge.projects.configuration.months-threshold:}")
-	private val projectConfigurationPurgeMonthThreshold: Long?,
+	private val clock: Clock,
+	@param:Value($$"${registry.feature.purge.projects.configuration.months-threshold}")
+	private val projectConfigurationPurgeMonthThreshold: Long,
 ): IPurgeV1Controller {
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
 		return launchPurgeUsers(dateThreshold, dryRun)
@@ -52,7 +50,7 @@ class PurgeV1Controller(
 
 	@Scheduled(cron = $$"${registry.feature.purge.users.cron}")
 	fun scheduledUsersPurge() {
-		launchPurgeUsers(dateThreshold = null, dryRun = false).subscribe()
+		runScheduled("PurgeUsers", launchPurgeUsers(dateThreshold = null, dryRun = false))
 	}
 
 	private fun launchPurgeUsers(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
@@ -66,7 +64,7 @@ class PurgeV1Controller(
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.cron}")
 	fun scheduledProjectsPurge() {
-		launchPurgeProjects(dateThreshold = null, dryRun = false).subscribe()
+		runScheduled("PurgeProjects", launchPurgeProjects(dateThreshold = null, dryRun = false))
 	}
 
 	private fun launchPurgeProjects(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
@@ -83,7 +81,7 @@ class PurgeV1Controller(
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.content.cron}")
 	fun scheduledProjectsContentsPurge() {
-		launchPurgeProjectsContents(dateThreshold = null, dryRun = false).subscribe()
+		runScheduled("PurgeProjectsContents", launchPurgeProjectsContents(dateThreshold = null, dryRun = false))
 	}
 
 	private fun launchPurgeProjectsContents(
@@ -110,7 +108,7 @@ class PurgeV1Controller(
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.configuration.cron}")
 	fun scheduledProjectsConfigurationsPurge() {
-		launchPurgeProjectsConfigurations(dateThreshold = null, dryRun = false).subscribe()
+		runScheduled("PurgeProjectsConfigurations", launchPurgeProjectsConfigurations(dateThreshold = null, dryRun = false))
 	}
 
 	private fun launchPurgeProjectsConfigurations(
@@ -130,14 +128,18 @@ class PurgeV1Controller(
 		}
 	}
 
-	private fun buildDateThreshold(thresholdInMonth: Long?, dateThreshold: LocalDate?): LocalDate {
-		if (Objects.isNull(thresholdInMonth) && Objects.isNull(dateThreshold)) {
-			throw RegistryException(NOT_IMPLEMENTED, NOT_IMPLEMENTED_YET)
-		}
+	private fun runScheduled(job: String, purge: Publisher<*>) {
+		Mono.from(purge)
+			.doOnError { log.error("Scheduled purge \"{}\" failed", job, it) }
+			.onErrorResume { Mono.empty() }
+			.subscribe()
+	}
 
-		return dateThreshold ?: LocalDate.ofInstant(
-			Instant.now(),
-			ZoneId.of("UTC")
-		).minusMonths(thresholdInMonth!!)
+	private fun buildDateThreshold(thresholdInMonth: Long, dateThreshold: LocalDate?): LocalDate {
+		return dateThreshold ?: LocalDate.now(clock).minusMonths(thresholdInMonth)
+	}
+
+	private companion object {
+		val log = LoggerFactory.getLogger(PurgeV1Controller::class.java)
 	}
 }
