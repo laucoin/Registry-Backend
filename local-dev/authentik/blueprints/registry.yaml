@@ -159,11 +159,11 @@ entries:
     identifiers:
       username: participant
     attrs:
-      name: Charles PINA
+      name: Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V
       attributes:
-        given_name: Charles
-        family_name: PINA
-      email: participant@sgdf.fr
+        given_name: Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte
+        family_name: DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V
+      email: participant.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.fr
       password: !Env [ AU_PASS, "dev123" ]
       is_active: true
       path: users

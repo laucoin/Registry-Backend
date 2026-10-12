@@ -1,6 +1,29 @@
 -- Clear all data from the database
 TRUNCATE TABLE tb_movement_content, tb_communication, tb_movement, tb_activity, tb_vehicle, tb_group_content, tb_group, tb_participant, tb_project_profile, tb_project, tb_preferences, tb_user CASCADE;
 
+-- Session-scoped helper (dropped with the connection): returns a random mock communication message.
+-- Lengths range from a few characters up to the 250-character column limit.
+CREATE OR REPLACE FUNCTION pg_temp.seed_message() RETURNS TEXT AS
+$fn$
+SELECT (ARRAY [
+    'OK',
+    'Arrived',
+    'On my way',
+    'Back at camp',
+    'Group is complete.',
+    'Vehicle is leaving now, ETA 15 minutes.',
+    'Please confirm the headcount before departure.',
+    'Two participants are missing from the list, checking with the group leader.',
+    'Bus delayed by roughly 20 minutes because of traffic on the ring road, the activity start is pushed back accordingly.',
+    'Minor injury during the activity (scraped knee). Handled on site by the first-aid team, the participant is resting and does not need to leave the project.',
+    'Heads up: the weather forecast announces heavy rain from 3 pm. Please bring rain gear, move equipment under shelter and make sure every group has a leader with a phone that is reachable at all times.',
+    'Réception confirmée, départ prévu à 14h30 depuis le parking nord.',
+    'Retour anticipé : un participant est fatigué, le véhicule le ramène au camp.',
+    'Message with special characters: é à ü ñ ç œ – "quotes" & <tags> 100% #42',
+    LEFT(repeat('Maximum length status report, 250 characters. ', 6), 250)
+    ])[1 + FLOOR(RANDOM() * 15)::INT]
+$fn$ LANGUAGE sql VOLATILE;
+
 -- Insert data related to users
 DO
 $$
@@ -24,8 +47,8 @@ $$
                (global_coordinator_id, 'b82d96d3-02e5-4ea5-89fc-a1a50092d8d4', 'USER', 'John', 'DOE',
                 'coordinator@sgdf.fr', 'USER', '1990-01-01', '2025-03-01 15:28:51.144372 +00:00', global_coordinator_id,
                 global_coordinator_id, TRUE),
-               (global_user_id, '37b3186b-4839-472f-a67a-9bd4e8beae4b', 'USER', 'Charles', 'PINA',
-                'participant@sgdf.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00', global_user_id,
+               (global_user_id, '37b3186b-4839-472f-a67a-9bd4e8beae4b', 'USER', 'Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte', 'DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V',
+                'participant.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00', global_user_id,
                 global_user_id, TRUE),
                (global_blocked_user_id, '3f311520-d686-4a3e-88aa-8b9e58a56f88', 'USER', 'Aliyah', 'NIELSEN',
                 'blocked-user@sgdf.fr', 'USER_ADMINISTRATOR', '1970-01-01', '2025-03-01 15:28:51.144372 +00:00',
@@ -71,7 +94,23 @@ $$
         -- i=3: not started yet, far in the future (so the dataset stays realistic without regenerating it every few
         -- minutes); i=8: fully completed (both dates already in the past); i IN (5, 12): perpetual (no dates).
         SELECT CASE WHEN i = 1 THEN global_project_id ELSE gen_random_uuid() END,
-               'Project ' || i,
+               (ARRAY [
+                   'Summer Camp',
+                   'Jamboree 2026',
+                   'Winter Ski Trip',
+                   'Regional Gathering of the Scout Groups of Île-de-France',
+                   'Open Day',
+                   'Pioneers'' Weekend',
+                   'Camp Leaders'' Training Week',
+                   'Spring Hike',
+                   'Lac d''Annecy – Water Sports Week',
+                   'International Exchange Programme with our Partner Associations in Germany, Poland and Belgium',
+                   'Harvest Festival',
+                   'Permanent Reception Desk',
+                   REPEAT('W', 150),
+                   'Cathedral Pilgrimage',
+                   LEFT(repeat('Maximum length project name. ', 6), 150)
+                   ])[i],
                CASE
                    WHEN i IN (5, 12) THEN NULL
                    WHEN i = 3 THEN NOW() + INTERVAL '2 years'
@@ -199,8 +238,19 @@ $$
                 SELECT CASE
                            WHEN i = 1 AND current_project_id = global_project_id THEN global_participant_id
                            ELSE gen_random_uuid() END,
-                       'First ' || i,
-                       'Last ' || i,
+                       CASE
+                           WHEN i % 50 = 7 THEN LEFT(repeat('Maximilien-', 14), 150)
+                           WHEN i % 50 = 8 THEN 'X'
+                           ELSE (ARRAY ['Emma', 'Lucas', 'Léa', 'Hugo', 'Chloé', 'Louis', 'Inès', 'Jules', 'Camille', 'Noah',
+                           'Zoé', 'Adam', 'Anaïs', 'Mohamed', 'Sofia', 'Raphaël', 'Jean-Baptiste', 'Marie-Charlotte',
+                           'Li', 'Eva', 'Maximilien-Alexandre', 'Océane', 'Ahmed', 'Yasmine', 'Thibault'])[1 + FLOOR(RANDOM() * 25)::INT] END,
+                       CASE
+                           WHEN i % 50 = 7 THEN LEFT(repeat('DE LA ROCHE-GUYON ', 9), 150)
+                           WHEN i % 50 = 9 THEN REPEAT('M', 150)
+                           ELSE (ARRAY ['MARTIN', 'BERNARD', 'DUBOIS', 'THOMAS', 'ROBERT', 'RICHARD', 'PETIT', 'DURAND', 'LEROY',
+                           'MOREAU', 'LE GALL', 'DE LA FONTAINE', 'BEN SALAH', 'NGUYEN', 'O''CONNOR', 'DA SILVA',
+                           'LEFEBVRE-DUPONT', 'KOWALSKI', 'FAURE', 'ROUSSEAU', 'DUMOULIN DE SAINT-MARTIN-LE-VIEUX',
+                           'WU', 'ÖZTÜRK', 'GARCÍA', 'MÜLLER'])[1 + FLOOR(RANDOM() * 25)::INT] END,
                        CASE
                            WHEN i % 10 = 0 THEN TIMESTAMP WITH TIME ZONE '1990-01-01 00:00:00+00' + (RANDOM() *
                                                                                                      EXTRACT(EPOCH FROM
@@ -294,7 +344,13 @@ $$
                                               end_availability_date, end_availability_time, project_id, created_by,
                                               last_modified_by, visible)
                         VALUES (current_group_id,
-                                'Group ' || i,
+                                (ARRAY ['Red', 'Blue', 'Wolves', 'Eagles', 'Group A', 'Group B', 'Kitchen team',
+                                    'Night watch', 'Senior scouts (16-17)', 'Cubs', 'Les Petits Écureuils',
+                                    'Staff', 'Medical & first aid', 'Logistics and equipment',
+                                    'Volunteers from the neighbouring districts', 'Team 15', 'Hikers',
+                                    'The Early Risers – wake-up call at 6 am',
+                                    LEFT(repeat('Maximum length group name ', 6), 150),
+                                    REPEAT('G', 150)])[i],
                                 CASE
                                     WHEN i % 10 = 0 THEN current_project_begin_date +
                                                          (RANDOM() * (current_project_ref_date - current_project_begin_date)) *
@@ -380,9 +436,18 @@ $$
                 SELECT CASE
                            WHEN i = 1 AND current_project_id = global_project_id THEN global_vehicle_id
                            ELSE gen_random_uuid() END,
-                       'AB-' || LPAD((i * 2)::TEXT, 3, '0') || '-DC',
-                       'Brand ' || i,
-                       'Model ' || i,
+                       CASE
+                           WHEN i = 1 THEN 'AB-002-DC'
+                           WHEN i = 14 THEN 'ABCDEFGHI-0123456789'
+                           WHEN i % 5 = 0 THEN 'B-' || CHR(65 + (i % 26)) || CHR(66 + (i % 25)) || ' ' || (1000 + i * 37)
+                           ELSE CHR(65 + (i * 3) % 26) || CHR(65 + (i * 5) % 26) || '-' || LPAD((i * 83 % 1000)::TEXT, 3, '0') ||
+                                '-' || CHR(65 + (i * 7) % 26) || CHR(65 + (i * 11) % 26) END,
+                       (ARRAY ['Renault', 'Peugeot', 'Citroën', 'Volkswagen', 'Ford', 'Mercedes-Benz', 'Fiat', 'Toyota',
+                           'Opel', 'Dacia', 'Iveco', 'Škoda', 'Alfa Romeo', 'Land Rover',
+                           LEFT(repeat('Maximum length brand ', 8), 150)])[i],
+                       (ARRAY ['Trafic', '308', 'Berlingo', 'Transporter', 'Transit', 'Sprinter', 'Ducato', 'Hilux',
+                           'Vivaro', 'Duster', 'Daily', 'Octavia Combi', 'Giulia', 'Defender 110 Station Wagon',
+                           LEFT(repeat('Maximum length model ', 8), 150)])[i],
                        CASE
                            WHEN i % 10 = 0 THEN current_project_begin_date +
                                                 (RANDOM() * (current_project_ref_date - current_project_begin_date)) *
@@ -457,8 +522,24 @@ $$
                 SELECT CASE
                            WHEN i = 1 AND current_project_id = global_project_id THEN global_activity_id
                            ELSE gen_random_uuid() END,
-                       'Activity ' || i,
-                       'Description ' || i,
+                       (ARRAY ['Canoeing', 'Rock climbing', 'Campfire', 'Orienteering', 'Archery',
+                           'Treasure hunt', 'Cooking workshop', 'First-aid training', 'Night game',
+                           'Swimming', 'Mountain biking', 'Arts & crafts', 'Talent show',
+                           REPEAT('A', 150),
+                           LEFT(repeat('Maximum length activity name ', 6), 150)])[i],
+                       (ARRAY [NULL, 'Short and sweet.', 'Bring water and a hat.',
+                           'Participants paddle 6 km down the river in pairs. Life jackets are mandatory and provided on site.',
+                           NULL,
+                           'A guided tour of the old town with stops at five historic landmarks, followed by a free time in the market square. Meeting point: main entrance, 10 minutes before departure. Accessible for wheelchair users except for the last stop.',
+                           'Séance d''initiation encadrée par deux animateurs diplômés : consignes de sécurité, démonstration, puis mise en pratique par petits groupes.',
+                           LEFT(repeat('Maximum length description used to test text wrapping and truncation in lists and detail views. ', 25), 2000),
+                           'Emojis and symbols: ☀ ⛺ 🔥 – 5 km → 10 km',
+                           'Meet at the main gate.',
+                           NULL,
+                           'Please inform the team about any allergy or medical condition before registering.',
+                           'Line one' || E'\n' || 'Line two' || E'\n' || 'Line three',
+                           'Mandatory for all participants under 14.',
+                           REPEAT('Z', 2000)])[i],
                        'PT' || (i % 10 + 1) || 'H',
                        FLOOR(RANDOM() * (5 - 1 + 1) + 1),
                        FLOOR(RANDOM() * (20 - 5 + 1) + 20),
@@ -735,7 +816,7 @@ $$
                                                                         (current_project_end_ts -
                                                                          (current_project_begin_date + current_project_begin_time)))) *
                                                     INTERVAL '1 second',
-                       'Message ' || i,
+                       pg_temp.seed_message(),
                        current_movement_id,
                        current_project_id,
                        (SELECT tpp.user_id
@@ -804,7 +885,18 @@ $$
 
                         INSERT INTO tb_alert (id, title, status, project_id, created_by, last_modified_by, visible)
                         VALUES (current_alert_id,
-                                'Alert ' || i,
+                                -- Title is nullable (VARCHAR(50)): every 7th alert has none.
+                                CASE
+                                    WHEN i % 7 = 0 THEN NULL
+                                    ELSE (ARRAY ['Missing child', 'Lost bag', 'Fire', 'Late bus', 'Injury',
+                                        'Allergic reaction', 'Storm warning', 'Vehicle breakdown',
+                                        'Participant not on the list', 'Gate left open',
+                                        'Medical emergency at the north camp', 'Equipment stolen',
+                                        'Food poisoning suspected – kitchen team', 'Power outage',
+                                        'Unauthorised visitor on site', LEFT(repeat('Maximum length alert title. ', 2), 50),
+                                        'Participant refuses to follow instructions',
+                                        'Road to the camp closed (flooding on the D12)',
+                                        REPEAT('W', 50), 'Noise complaint'])[1 + (i - 1) % 20] END,
                                 CASE
                                     WHEN i % 10 = 0 THEN 'IN_PROGRESS'
                                     WHEN i % 20 = 0 THEN 'CANCELED'
@@ -839,7 +931,7 @@ $$
                                                                                 (current_project_end_ts -
                                                                                  (current_project_begin_date + current_project_begin_time)))) *
                                                             INTERVAL '1 second',
-                               'Message ' || j,
+                               pg_temp.seed_message(),
                                current_alert_id,
                                current_project_id,
                                (SELECT tpp.user_id
