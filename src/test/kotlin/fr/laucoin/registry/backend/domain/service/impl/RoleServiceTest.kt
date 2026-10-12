@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -125,6 +126,33 @@ class RoleServiceTest {
 		// Assert
 		verify(port).findUserRoles()
 		verify(port).findProjectRoles()
+	}
+
+	@Test
+	fun `Should onApplicationEvent load the roles from the port`() {
+		// Arrange
+		val event: ContextRefreshedEvent = mock()
+		whenever(port.findUserRoles()).thenReturn(Flux.just(RoleModel("USER_$ROLE_1_1", 1, listOf(PERMISSION_1))))
+		whenever(port.findProjectRoles()).thenReturn(Flux.just(RoleModel("PROJECT_$ROLE_0", 0, listOf(PERMISSION_0))))
+
+		// Act
+		service.onApplicationEvent(event)
+
+		// Assert
+		assertEquals(1, service.getLevelByUserRole("USER_$ROLE_1_1"))
+		assertEquals("PROJECT_$ROLE_0", service.getLevel0RoleFromProjectRoles())
+	}
+
+	@Test
+	fun `Should getLevel0RoleFromProjectRoles fail when no level 0 role is defined`() {
+		// Arrange
+		setField(service, "projectRoles", mapOf(ROLE_1_1 to Pair(1, listOf(PERMISSION_1))))
+
+		// Act
+		val action = { service.getLevel0RoleFromProjectRoles(); Unit }
+
+		// Assert
+		assertThrows(IllegalStateException::class.java, action)
 	}
 
 	@ParameterizedTest
