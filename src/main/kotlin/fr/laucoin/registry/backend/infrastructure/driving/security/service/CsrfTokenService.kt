@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.service.impl
+package fr.laucoin.registry.backend.infrastructure.driving.security.service
 
-import fr.laucoin.registry.backend.domain.service.impl.AuthenticationCookieService.Companion.ACCESS_TOKEN_COOKIE
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService.Companion.ACCESS_TOKEN_COOKIE
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
 import javax.crypto.Mac

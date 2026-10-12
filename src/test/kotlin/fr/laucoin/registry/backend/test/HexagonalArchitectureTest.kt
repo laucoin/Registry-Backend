@@ -132,7 +132,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Handler should end with Handler`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$DOMAIN.handler..")
+		.resideInAPackage("$INFRASTRUCTURE.driving.security.handler..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Handler")
@@ -197,7 +197,10 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Validator should end with Validator`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAnyPackage("$DOMAIN.validator..", "$INFRASTRUCTURE.driving.api.validation.validator..")
+		.resideInAnyPackage(
+			"$INFRASTRUCTURE.driving.security.validator..",
+			"$INFRASTRUCTURE.driving.api.validation.validator..",
+		)
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Validator")

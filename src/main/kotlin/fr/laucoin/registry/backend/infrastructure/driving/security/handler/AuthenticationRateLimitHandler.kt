@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.domain.handler
+package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine

@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.domain.handler
+package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import org.springframework.context.i18n.LocaleContextThreadLocalAccessor
 import org.springframework.stereotype.Component

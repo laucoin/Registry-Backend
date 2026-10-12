@@ -1,7 +1,7 @@
-package fr.laucoin.registry.backend.domain.handler
+package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilter
 import org.springframework.web.server.WebFilterChain

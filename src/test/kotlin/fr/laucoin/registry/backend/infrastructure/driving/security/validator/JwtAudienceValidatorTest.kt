@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.security.validator
 
 import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertFalse

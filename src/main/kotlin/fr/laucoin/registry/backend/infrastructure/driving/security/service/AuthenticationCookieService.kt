@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.domain.service.impl
+package fr.laucoin.registry.backend.infrastructure.driving.security.service
 
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import java.time.Duration

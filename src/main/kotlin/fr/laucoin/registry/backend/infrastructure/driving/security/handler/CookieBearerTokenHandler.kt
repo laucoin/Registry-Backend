@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.handler
+package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
-import fr.laucoin.registry.backend.domain.service.impl.AuthenticationCookieService.Companion.ACCESS_TOKEN_COOKIE
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService.Companion.ACCESS_TOKEN_COOKIE
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken
 import org.springframework.security.oauth2.server.resource.web.server.authentication.ServerBearerTokenAuthenticationConverter

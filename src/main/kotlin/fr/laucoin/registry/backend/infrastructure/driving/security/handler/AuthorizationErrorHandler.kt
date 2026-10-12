@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.domain.handler
+package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.FAILED_TO_LOGIN_FOR_UNKNOWN_REASON

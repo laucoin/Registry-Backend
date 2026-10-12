@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.domain.service.impl
+package fr.laucoin.registry.backend.infrastructure.driving.security.service
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
