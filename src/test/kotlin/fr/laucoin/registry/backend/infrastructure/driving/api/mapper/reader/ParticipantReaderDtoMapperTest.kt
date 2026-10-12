@@ -86,7 +86,6 @@ class ParticipantReaderDtoMapperTest {
 		assertEquals(expectedMajor, result.major)
 		assertEquals(participant.startAvailability, result.startAvailability)
 		assertEquals(participant.endAvailability, result.endAvailability)
-		assertEquals(participant.purged, result.purged)
 		assertEquals(participant.visible, result.visible)
 		assertEquals(participant.creation, result.creation)
 		assertEquals(participant.lastEdition, result.lastEdition)

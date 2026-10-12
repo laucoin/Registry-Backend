@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.prefere
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_THEME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.PREFERENCE_ID
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TYPE
 
 object UserQueries {
@@ -21,7 +20,6 @@ object UserQueries {
         LEFT JOIN $PREFERENCE_TABLE ON t.$ID = $PREFERENCE_TABLE.$PREFERENCE_USER_ID AND $PREFERENCE_TABLE.$VISIBLE IS TRUE
     """
 
-	const val NOT_PURGED_CLAUSE = "t.$USER_PURGED IS FALSE"
 
 	const val NOT_SERVICE_ACCOUNT = "t.$USER_TYPE <> 'SERVICE_ACCOUNT'"
 

@@ -280,46 +280,23 @@ class UserControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should impersonateUserById return 200`() {
+	fun `Should deleteCurrentUser return 200`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		whenever(service.impersonateUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
-
-		// Act
-		val result = webClient
-			.authenticate(REGISTRY_USER_D)
-			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}/impersonate", listOf(uuid), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<UserReaderDto>(OK)
-
-		verify(readerMapper).toDto(any())
-		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), eq(uuid))
-	}
-
-	@Test
-	fun `Should impersonateCurrentUser return 200`() {
-		// Arrange
-		whenever(service.impersonateUserById(any(), any())).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
+		whenever(service.deleteCurrentUser(any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate()
-			.patch()
-			.uri(uriBuilder("$BASE_URL/impersonate", emptyList(), emptyList()))
+			.delete()
+			.uri(uriBuilder("$BASE_URL/current", emptyList(), emptyList()))
 			.exchange()
 
 		// Assert
-		result.body<UserReaderDto>(OK)
+		result.body<Void>(OK)
 
-		verify(readerMapper).toDto(any())
+		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), any())
+		verify(service).deleteCurrentUser(any())
 	}
 
 	@Test

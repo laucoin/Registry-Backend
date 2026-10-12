@@ -102,6 +102,13 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findUnusedSince only select participants created before the threshold`() {
+		// Act & Assert
+		assertTrue(postgresRepository.findUnusedSince(LocalDate.EPOCH).collectList().block()!!.isEmpty())
+		assertTrue(postgresRepository.findUnusedSince(LocalDate.now().plusYears(1)).collectList().block()!!.isNotEmpty())
+	}
+
+	@Test
 	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
@@ -189,6 +196,17 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 		// Assert
 		verify(postgresRepository).findByUserId(projectId, currentUser().id!!, dateTimeSearched = null)
 		verify(mapper).toModel(any())
+	}
+
+	@Test
+	fun `Should findAllByUserId call repository findAllByUserId`() {
+		// Act
+		val result = repository.findAllByUserId(currentUser().id!!).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findAllByUserId(currentUser().id!!)
+		verify(mapper, times(result.size)).toModel(any())
 	}
 
 	@Test
@@ -355,7 +373,6 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				type = REGISTERED
 				groups = listOf(GroupModel().apply { id = groupId })
 				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
-				purged = false
 				create(currentUser())
 			}
 
@@ -382,7 +399,6 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
-				purged = false
 				create(currentUser())
 			}
 

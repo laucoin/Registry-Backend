@@ -100,30 +100,17 @@ interface IUserV2Controller {
 	): Mono<UserReaderDto>
 
 	@Operation(
-		summary = "Impersonate User",
-		description = "Impersonate all User data",
-	)
-	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
-	@PatchMapping("/{id}/impersonate")
-	fun impersonateUserById(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable id: UUID,
-	): Mono<UserReaderDto>
-
-	@Operation(
-		summary = "Impersonate Current User",
-		description = "Impersonate all Current User data",
-	)
-	@PatchMapping("/impersonate")
-	fun impersonateCurrentUser(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-	): Mono<UserReaderDto>
-
-	@Operation(
 		summary = "Delete User",
 		description = "Delete all User data",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_D')")
 	@DeleteMapping("/{id}")
 	fun deleteUserById(@AuthenticationPrincipal currentUser: CurrentUserModel, @PathVariable id: UUID): Mono<Unit>
+
+	@Operation(
+		summary = "Delete Current User",
+		description = "Delete all Current User data",
+	)
+	@DeleteMapping("/current")
+	fun deleteCurrentUser(@AuthenticationPrincipal currentUser: CurrentUserModel): Mono<Unit>
 }

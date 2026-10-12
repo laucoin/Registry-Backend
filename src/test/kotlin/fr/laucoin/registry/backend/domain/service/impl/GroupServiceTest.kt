@@ -59,9 +59,7 @@ class GroupServiceTest {
 		@JvmStatic
 		fun `Should createGroup check date, members and throw because a member is not visible or purged`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(commonParticipant().apply { visible = false; purged = false; type = REGISTERED }),
-				Arguments.of(commonParticipant().apply { purged = true; type = REGISTERED }),
-				Arguments.of(commonParticipant().apply { visible = false; purged = true; type = REGISTERED }),
+				Arguments.of(commonParticipant().apply { visible = false; type = REGISTERED }),
 			)
 		}
 
@@ -178,7 +176,7 @@ class GroupServiceTest {
 	@Test
 	fun `Should createGroup check date, members and call port create`() {
 		// Arrange
-		val participant = commonParticipant().apply { purged = false; type = REGISTERED }
+		val participant = commonParticipant().apply { type = REGISTERED }
 		val group = commonGroup().apply { members = listOf(participant) }
 
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
@@ -260,7 +258,7 @@ class GroupServiceTest {
 			members = updatedParticipantIds.map { commonParticipant().apply { id = it } }
 		}
 		val newParticipants = newParticipantIds.map {
-			commonParticipant().apply { id = it; purged = false; type = REGISTERED }
+			commonParticipant().apply { id = it; type = REGISTERED }
 		}
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(projectId))
@@ -295,7 +293,7 @@ class GroupServiceTest {
 			members = previousParticipantIds.map { commonParticipant().apply { id = it } }
 		}
 		val newParticipants = newParticipantIds.map {
-			commonParticipant().apply { id = it; purged = false; type = REGISTERED }
+			commonParticipant().apply { id = it; type = REGISTERED }
 		}
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(group))

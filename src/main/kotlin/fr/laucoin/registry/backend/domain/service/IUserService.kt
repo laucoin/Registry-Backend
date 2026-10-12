@@ -30,7 +30,7 @@ interface IUserService {
 	fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel>
 	fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
 	fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
-	fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
 	fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
+	fun deleteCurrentUser(currentUser: CurrentUserModel): Mono<Unit>
 	fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

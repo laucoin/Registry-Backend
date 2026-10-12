@@ -19,5 +19,4 @@ object ParticipantFields {
 	const val PARTICIPANT_USER_FIRST_NAME = "user_first_name"
 	const val PARTICIPANT_USER_LAST_NAME = "user_last_name"
 	const val PARTICIPANT_USER_EMAIL = "user_email"
-	const val PARTICIPANT_PURGED = "purged"
 }

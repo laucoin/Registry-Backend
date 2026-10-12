@@ -11,9 +11,11 @@ import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
+import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
@@ -151,6 +153,15 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 			visibilitySearched = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findProjectsEligibleForPurge only select projects created before the threshold`() {
+		// Act & Assert
+		assertTrue(postgresRepository.findProjectsEligibleForPurge(LocalDate.EPOCH).collectList().block()!!.isEmpty())
+		assertTrue(
+			postgresRepository.findProjectsEligibleForPurge(LocalDate.now().plusYears(1)).collectList().block()!!.isNotEmpty()
+		)
 	}
 
 	@Nested

@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.A
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
@@ -170,7 +171,8 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
             LEFT JOIN last_activity_change ON t.$ID = last_activity_change.$LINKED_PROJECT_ID
             LEFT JOIN last_communication_change ON t.$ID = last_communication_change.$LINKED_PROJECT_ID
             LEFT JOIN last_alert_change ON t.$ID = last_alert_change.$LINKED_PROJECT_ID
-            WHERE (last_profile_change.date_time IS NULL OR last_profile_change.date_time < :dateThreshold)
+            WHERE t.$CREATED_AT < :dateThreshold
+                AND (last_profile_change.date_time IS NULL OR last_profile_change.date_time < :dateThreshold)
                 AND (last_movement_change.date_time IS NULL OR last_movement_change.date_time < :dateThreshold)
                 AND (last_participant_change.date_time IS NULL OR last_participant_change.date_time < :dateThreshold)
                 AND (last_group_change.date_time IS NULL OR last_group_change.date_time < :dateThreshold)

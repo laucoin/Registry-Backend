@@ -53,15 +53,11 @@ class UserV2Controller(
 		return service.unblockUserById(currentUser, id).map(readerMapper::toDto)
 	}
 
-	override fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserReaderDto> {
-		return service.impersonateUserById(currentUser, id).map(readerMapper::toDto)
-	}
-
-	override fun impersonateCurrentUser(currentUser: CurrentUserModel): Mono<UserReaderDto> {
-		return service.impersonateUserById(currentUser, currentUser.id!!).map(readerMapper::toDto)
-	}
-
 	override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return service.deleteUserById(currentUser, id)
+	}
+
+	override fun deleteCurrentUser(currentUser: CurrentUserModel): Mono<Unit> {
+		return service.deleteCurrentUser(currentUser)
 	}
 }

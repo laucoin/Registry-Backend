@@ -292,8 +292,8 @@ Constraints from the ADRs and the "accepted risks" tables — a change must not 
   mid-session revocation. (ADR 005)
 - **Authentication stays delegated — no local password store.** Only four public endpoints (`/authentication/login/uri`,
   `/logout/uri`, `/token`, `/token/refresh`); `GET /`, Swagger/`api-docs`, `/actuator/**` are permitted unauthenticated
-  but serve content only when their feature flag is on. The JWT converter refuses blocked (`423`) and anonymized (`409`)
-  accounts and JIT-provisions first-time users with the default `USER` role. (ADR 004)
+  but serve content only when their feature flag is on. The JWT converter refuses blocked (`423`) accounts, rejects
+  email conflicts (`409`), and JIT-provisions first-time users with the default `USER` role. (ADR 004)
 - **No secret or personal data in logs or responses.** Tokens, client secrets, passwords, and personal data are never
   logged nor returned beyond what the endpoint's contract requires.
 - **CORS is an explicit allow-list**, never `*`.

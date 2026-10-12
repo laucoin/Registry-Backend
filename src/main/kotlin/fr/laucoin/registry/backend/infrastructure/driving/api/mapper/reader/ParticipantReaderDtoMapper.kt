@@ -29,7 +29,6 @@ class ParticipantReaderDtoMapper(
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
 			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
-			purged = model.purged,
 		).apply {
 			id = model.id
 			visible = model.visible

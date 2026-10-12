@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TYPE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.NOT_PURGED_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.NOT_SERVICE_ACCOUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.PREFERENCES_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.SELECT_PREFERENCES
@@ -37,7 +36,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit OFFSET :offset
         """
@@ -47,7 +46,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit
         """
@@ -57,7 +56,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND t.$ID = :id AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)
 	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserEntity>
@@ -65,7 +64,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_PURGED_CLAUSE AND t.$USER_TYPE = 'SERVICE_ACCOUNT'
+        WHERE t.$USER_TYPE = 'SERVICE_ACCOUNT'
         """
 	)
 	fun findServiceAccount(): Mono<CurrentUserEntity>
@@ -92,7 +91,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 		"""
         SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $USER_ROLE_TABLE ur ON t.$USER_ROLE = ur.$ENTITY_ROLE_NAME AND ur.$ROLE_LEVEL = :roleLevel
-        WHERE $NOT_PURGED_CLAUSE AND $NOT_SERVICE_ACCOUNT AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $VISIBLE_CLAUSE
         """
 	)
 	fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserEntity>

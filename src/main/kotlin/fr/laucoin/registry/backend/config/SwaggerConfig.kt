@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.security.OAuthFlow
 import io.swagger.v3.oas.models.security.OAuthFlows
+import io.swagger.v3.oas.models.security.Scopes
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2
@@ -57,11 +58,15 @@ class SwaggerConfig(
                             .type(OAUTH2)
                             .flows(
                                 OAuthFlows()
-                                    .implicit(
+                                    .authorizationCode(
                                         OAuthFlow().apply {
                                             authorizationUrl = configAuthUrl
                                             refreshUrl = configTokenUrl
                                             tokenUrl = configTokenUrl
+                                            scopes = Scopes()
+                                                .addString("openid", "OpenID")
+                                                .addString("profile", "Profile")
+                                                .addString("email", "Email")
                                         }
                                     )
                             )

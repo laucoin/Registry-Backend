@@ -7,9 +7,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_APPLICATION_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_CURRENT_USER
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -195,31 +192,37 @@ class UserService(
 			.flatMap { updateUser(currentUser, it) }
 	}
 
-	override fun impersonateUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
-		val allowedRoles = roleService.getAssignableUserRoles(currentUser)
-		return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
-			.validateNotCurrentUser(currentUser, USER_IMPERSONATE_CURRENT_USER)
-			.validateNotLastRoleLevel0(USER_IMPERSONATE_LAST_APPLICATION_ADMINISTRATOR)
-			.validateNotLastProjectRoleLevel0(USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR)
-			.flatMap {
-				it.impersonate()
-				updateUser(currentUser, it)
-			}
-	}
-
 	override fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		val allowedRoles = roleService.getAssignableUserRoles(currentUser)
 		return findUserByIdWithEligibleRole(allowedRoles, id, visibilitySearched = null)
 			.validateNotCurrentUser(currentUser, USER_DELETE_CURRENT_USER)
-			.validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
+			.deleteWithAdministratorGuards()
+	}
+
+	override fun deleteCurrentUser(currentUser: CurrentUserModel): Mono<Unit> {
+		return findUserById(currentUser.id!!, visibilitySearched = null).deleteWithAdministratorGuards()
+	}
+
+	private fun Mono<UserModel>.deleteWithAdministratorGuards(): Mono<Unit> =
+		validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
 			.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
 			.flatMap { port.deleteById(it.id!!).doOnSuccess { _ -> principalCache.invalidate(it.oidcId) } }
-	}
 
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging users inactive since {}", dateThreshold)
+		// Sequential: the "last administrator" checks depend on the users deleted earlier in the same run
 		return port.findUserIdsOlderThanLastLogin(dateThreshold)
-			.flatMap({
+			.concatMap { id ->
+				findUserById(id, visibilitySearched = null)
+					.validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
+					.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
+					.map { it.id!! }
+					.onErrorResume(RegistryException::class.java) {
+						log.info("User {} is not purged: {}", id, it.message)
+						Mono.empty()
+					}
+			}
+			.concatMap {
 				if (dryRun) {
 					log.info("[Dry run] user {} would be deleted", it)
 					Mono.just(it)
@@ -229,7 +232,7 @@ class UserService(
 						.doOnNext { e -> log.info("User {} was deleted", e) }
 						.doOnError { err -> log.error("Failed to purge user {}", it, err) }
 				}
-			}, PURGE_DELETE_CONCURRENCY)
+			}
 	}
 
 	private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) =

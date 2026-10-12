@@ -50,7 +50,6 @@ class ProjectProfileEntityMapper(
 					lastName = entity.userLastName
 					email = entity.userEmail
 					lastLogin = entity.userLastLogin
-					purged = entity.userPurged ?: purged
 				}
 			)
 		}.orElse(null)

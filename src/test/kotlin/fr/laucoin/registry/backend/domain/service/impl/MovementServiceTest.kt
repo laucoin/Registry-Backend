@@ -156,16 +156,6 @@ class MovementServiceTest {
 				MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
 			),
 			Arguments.of(
-				Flux.just(commonParticipant().apply { purged = true }),
-				NOT_FOUND,
-				MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
-			),
-			Arguments.of(
-				Flux.just(commonParticipant().apply { purged = true; visible = false }),
-				NOT_FOUND,
-				MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
-			),
-			Arguments.of(
 				Flux.just(commonParticipant().apply { birthday = LocalDate.now() }),
 				UNPROCESSABLE_CONTENT,
 				MOVEMENT_DRIVERS_NOT_MAJOR,

@@ -45,6 +45,7 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 import org.springframework.web.server.i18n.LocaleContextResolver
+import java.net.URI
 import java.time.Duration
 
 
@@ -64,6 +65,10 @@ class SecurityConfig(
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.server.management-port}")
 	private val managementPort: Int,
+	@param:Value($$"${registry.server.port}")
+	private val apiPort: Int,
+	@param:Value($$"${external.idp.token-uri}")
+	private val idpTokenUri: String,
 	@param:Value($$"${registry.security.rate-limit.auth.capacity}")
 	private val authRateLimitCapacity: Int,
 	@param:Value($$"${registry.security.rate-limit.auth.window-seconds}")
@@ -76,7 +81,7 @@ class SecurityConfig(
 		return http
 			.securityMatcher(documentationMatcher())
 			.authorizeExchange { it.anyExchange().permitAll() }
-			.configureSecurityHeaders(DOCUMENTATION_CONTENT_SECURITY_POLICY)
+			.configureSecurityHeaders(documentationContentSecurityPolicy())
 			// codeql[java/spring-disabled-csrf-protection]: this chain only serves static Swagger/OpenAPI
 			// docs (GET-only, permitAll, no state-changing request ever reaches it) — CSRF is not
 			// applicable here, the same reasoning that already exempts safe HTTP methods on the main chain.
@@ -84,6 +89,11 @@ class SecurityConfig(
 			.formLogin { it.disable() }
 			.logout { it.disable() }
 			.build()
+	}
+
+	private fun documentationContentSecurityPolicy(): String {
+		val idpOrigin = URI(idpTokenUri).let { "${it.scheme}://${it.authority}" }
+		return "default-src 'self'; connect-src 'self' $idpOrigin *:$apiPort; frame-ancestors 'none'"
 	}
 
 	private fun documentationMatcher() = ServerWebExchangeMatcher { exchange ->
@@ -158,8 +168,6 @@ class SecurityConfig(
 		val DOCUMENTATION_PATHS = listOf("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
 
 		const val API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'"
-
-		const val DOCUMENTATION_CONTENT_SECURITY_POLICY = "default-src 'self'; frame-ancestors 'none'"
 
 		const val PERMISSIONS_POLICY =
 			"geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
