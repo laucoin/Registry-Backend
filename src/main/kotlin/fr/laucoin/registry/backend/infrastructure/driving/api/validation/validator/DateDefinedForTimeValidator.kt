@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.domain.annotation.DateDefinedForTime
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.DateDefinedForTime
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects

@@ -122,7 +122,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Annotation should by tagged with Target and Retention`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$DOMAIN.annotation..")
+		.resideInAPackage("$INFRASTRUCTURE.driving.api.validation.annotation..")
 		.should()
 		.beAnnotatedWith(Target::class.java)
 		.andShould()
@@ -197,7 +197,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Validator should end with Validator`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$DOMAIN.validator..")
+		.resideInAnyPackage("$DOMAIN.validator..", "$INFRASTRUCTURE.driving.api.validation.validator..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Validator")

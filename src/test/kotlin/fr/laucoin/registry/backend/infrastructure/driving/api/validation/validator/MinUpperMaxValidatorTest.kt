@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.domain.annotation.MinUpperMax
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MinUpperMax
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PARAMETER_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND_FOR_SPECIFIED_NAME
 import fr.laucoin.registry.backend.domain.model.RegistryException

@@ -1,7 +1,7 @@
-package fr.laucoin.registry.backend.domain.annotation
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED
-import fr.laucoin.registry.backend.domain.validator.ProfileAcceptOrRejectValidator
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator.ProfileAcceptOrRejectValidator
 import jakarta.validation.Constraint
 import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.VALUE_PARAMETER

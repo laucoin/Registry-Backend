@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.annotation
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation
 
-import fr.laucoin.registry.backend.domain.validator.ProjectOptionValidator
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator.ProjectOptionValidator
 import jakarta.validation.Constraint
 import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.FIELD

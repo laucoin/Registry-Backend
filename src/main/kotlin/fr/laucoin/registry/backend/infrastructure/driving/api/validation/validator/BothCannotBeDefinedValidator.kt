@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.domain.annotation.BothCannotBeDefined
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.BothCannotBeDefined
 import fr.laucoin.registry.backend.domain.extension.ListExt.isIterable
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNullOrEmpty
 import jakarta.validation.ConstraintValidatorContext

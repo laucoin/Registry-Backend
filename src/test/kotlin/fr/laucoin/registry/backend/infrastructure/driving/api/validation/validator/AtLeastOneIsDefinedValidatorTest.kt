@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.domain.annotation.AtLeastOneIsDefined
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.AtLeastOneIsDefined
 import jakarta.validation.ConstraintValidatorContext
 import java.util.stream.Stream
 import org.apache.logging.log4j.util.Strings.EMPTY

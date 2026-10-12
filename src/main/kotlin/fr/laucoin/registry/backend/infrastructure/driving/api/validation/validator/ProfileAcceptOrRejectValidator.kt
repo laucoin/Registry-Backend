@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.domain.annotation.ProfileAcceptOrReject
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.ProfileAcceptOrReject
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED

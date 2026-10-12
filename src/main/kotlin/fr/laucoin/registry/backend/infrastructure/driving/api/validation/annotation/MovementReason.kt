@@ -1,7 +1,7 @@
-package fr.laucoin.registry.backend.domain.annotation
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.validator.MovementReasonValidator
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator.MovementReasonValidator
 import jakarta.validation.Constraint
 import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.CLASS

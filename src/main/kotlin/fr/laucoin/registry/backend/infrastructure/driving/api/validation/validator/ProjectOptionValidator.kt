@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.domain.annotation.ProjectOptionDependencies
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.ProjectOptionDependencies
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_OPTIONS_MISSING
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.RegistryException

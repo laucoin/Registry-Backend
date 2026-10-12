@@ -1,6 +1,6 @@
-package fr.laucoin.registry.backend.domain.validator
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.domain.annotation.MovementGuestContent
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementGuestContent
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNotEmpty
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNullOrEmpty

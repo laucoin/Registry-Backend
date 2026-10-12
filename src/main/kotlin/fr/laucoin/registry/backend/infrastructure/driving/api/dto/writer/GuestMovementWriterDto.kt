@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
-import fr.laucoin.registry.backend.domain.annotation.MovementGuestContent
-import fr.laucoin.registry.backend.domain.annotation.MovementReason
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementGuestContent
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementReason
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ODD_GUEST_CONTENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_AND_REASON_ARE_INCOMPATIBLE
