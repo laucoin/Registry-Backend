@@ -41,6 +41,7 @@ interface IExportV2Controller {
 		description = "Export the personal data of a Participant, limited to its Project. " +
 			"Allowed for the linked User or for a Project administrator",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@GetMapping("/projects/{projectId}/participants/{id}/export")
 	fun exportParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
