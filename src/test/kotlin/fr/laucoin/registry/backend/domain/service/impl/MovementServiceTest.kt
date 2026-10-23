@@ -279,6 +279,7 @@ class MovementServiceTest {
 		).thenReturn(Mono.just(defaultProjectId))
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 		whenever(participantPort.refreshEffectiveDates(any())).thenReturn(Mono.just(Unit))
+		whenever(participantPort.lockByIds(any())).thenReturn(Flux.empty())
 	}
 
 	@Test
@@ -645,6 +646,7 @@ class MovementServiceTest {
 
 		// Assert
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
+		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(port).create(any())
 	}
 
@@ -817,6 +819,7 @@ class MovementServiceTest {
 
 		// Assert
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
+		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 		verify(port).create(any())
 	}
@@ -841,6 +844,7 @@ class MovementServiceTest {
 
 		// Assert
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
+		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 		verify(port).create(any())
 	}
@@ -1075,6 +1079,7 @@ class MovementServiceTest {
 		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
+		verify(participantPort).lockByIds(listOf(previousParticipantId, defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(previousParticipantId, defaultParticipantId))
 	}
 
@@ -1093,6 +1098,7 @@ class MovementServiceTest {
 		service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
+		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 	}
 
@@ -1112,6 +1118,7 @@ class MovementServiceTest {
 		service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
+		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 	}
 
@@ -1131,6 +1138,7 @@ class MovementServiceTest {
 
 		// Assert
 		verify(port).deleteById(defaultMovementId)
+		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 	}
 
