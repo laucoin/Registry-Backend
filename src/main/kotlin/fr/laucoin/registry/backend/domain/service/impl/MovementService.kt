@@ -412,9 +412,17 @@ class MovementService(
 					),
 				)
 			}
-			.flatMap { port.create(movement.apply { create(currentUser) }) }
+			.flatMap { lockParticipants(movement.participantIds()).then(Mono.defer { createMovement(currentUser, movement) }) }
 			.refreshParticipantsEffectiveDates()
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun createMovement(currentUser: CurrentUserModel, movement: MovementModel): Mono<MovementModel> {
+		return port.create(movement.apply { create(currentUser) })
+	}
+
+	private fun lockParticipants(ids: List<UUID>): Mono<Unit> {
+		return participantPort.lockByIds(ids).then(Mono.just(Unit))
 	}
 
 	override fun updateMovementById(
@@ -460,12 +468,15 @@ class MovementService(
 		movement: MovementModel,
 	): Mono<MovementModel> {
 		val previousParticipantIds = oldMovement.participantIds()
-		return Mono.just(oldMovement.apply {
-			dateTime = movement.dateTime
-			reason = movement.reason
-			activity = movement.activity
-			content = movement.content
-		})
+		return lockParticipants((previousParticipantIds + movement.participantIds()).distinct())
+			.then(Mono.fromCallable {
+				oldMovement.apply {
+					dateTime = movement.dateTime
+					reason = movement.reason
+					activity = movement.activity
+					content = movement.content
+				}
+			})
 			.updateMovement(currentUser)
 			.refreshParticipantsEffectiveDates(previousParticipantIds)
 	}
@@ -701,6 +712,7 @@ class MovementService(
 	override fun disableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
 		return findMovementById(projectId, id, isVisible = true)
 			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_DISABLED)
+			.lockItsParticipants()
 			.updateVisibility(visibility = false)
 			.updateMovement(currentUser)
 			.refreshParticipantsEffectiveDates()
@@ -710,6 +722,7 @@ class MovementService(
 	override fun enableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
 		return findMovementById(projectId, id, isVisible = false)
 			.validateMovementIsAlterable(MOVEMENT_CANNOT_BE_ENABLED)
+			.lockItsParticipants()
 			.updateVisibility(visibility = true)
 			.updateMovement(currentUser)
 			.refreshParticipantsEffectiveDates()
@@ -723,8 +736,13 @@ class MovementService(
 			.`as`(transactionalOperator::transactional)
 	}
 
+	private fun Mono<MovementModel>.lockItsParticipants(): Mono<MovementModel> = flatMap { movement ->
+		lockParticipants(movement.participantIds()).thenReturn(movement)
+	}
+
 	private fun deleteAndRefresh(id: UUID, movement: MovementModel): Mono<Unit> {
-		return port.deleteById(id)
+		return lockParticipants(movement.participantIds())
+			.then(port.deleteById(id))
 			.then(participantPort.refreshEffectiveDates(movement.participantIds()))
 	}
 

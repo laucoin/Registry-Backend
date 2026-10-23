@@ -279,6 +279,9 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		limit: Int,
 	): Flux<GroupContentEntity>
 
+	@Query("SELECT t.$ID FROM $PARTICIPANT_TABLE t WHERE t.$ID IN (:ids) ORDER BY t.$ID FOR UPDATE OF t")
+	fun lockByIds(ids: List<UUID>): Flux<UUID>
+
 	@Modifying
 	@Query(UPDATE_PARTICIPANT_EFFECTIVE_DATES)
 	fun refreshEffectiveDates(ids: List<UUID>): Mono<Long>

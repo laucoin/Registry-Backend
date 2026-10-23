@@ -46,6 +46,8 @@ interface IParticipantPort {
 	): Flux<Pair<UUID, ParticipantModel>>
 
 	fun refreshEffectiveDates(ids: List<UUID>): Mono<Unit>
+
+	fun lockByIds(ids: List<UUID>): Flux<UUID>
 	fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel>
 	fun deleteAll(ids: List<UUID>): Mono<Unit>
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
