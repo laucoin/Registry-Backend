@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
-import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.FAILED_TO_LOGIN_FOR_UNKNOWN_REASON
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.INVALID_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_AUTHENTICATED
@@ -29,12 +28,13 @@ import org.springframework.stereotype.Component
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
+import tools.jackson.databind.ObjectMapper
 
 @Component
 class AuthorizationErrorHandler(
 	private val translateService: ITranslateService,
 	private val localeContextResolver: LocaleContextResolver,
-	private val gson: Gson,
+	private val objectMapper: ObjectMapper,
 ): ServerAuthenticationFailureHandler {
 	override fun onAuthenticationFailure(
 		webFilterExchange: WebFilterExchange,
@@ -104,6 +104,6 @@ class AuthorizationErrorHandler(
 			code = errorCode,
 		)
 
-		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))
+		return Mono.just(response.bufferFactory().wrap(objectMapper.writeValueAsBytes(error)))
 	}
 }

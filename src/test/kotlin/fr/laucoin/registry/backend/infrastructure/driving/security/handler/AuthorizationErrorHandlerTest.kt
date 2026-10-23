@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
-import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.FAILED_TO_LOGIN_FOR_UNKNOWN_REASON
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.INVALID_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_AUTHENTICATED
@@ -30,11 +29,13 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException
 import org.springframework.security.web.server.WebFilterExchange
 import org.springframework.web.server.i18n.LocaleContextResolver
+import tools.jackson.databind.json.JsonMapper
 
 class AuthorizationErrorHandlerTest {
 	private val translateService: ITranslateService = mock()
 	private val localeContextResolver: LocaleContextResolver = mock()
-	private val handler = AuthorizationErrorHandler(translateService, localeContextResolver, Gson())
+	private val objectMapper = JsonMapper.builder().build()
+	private val handler = AuthorizationErrorHandler(translateService, localeContextResolver, objectMapper)
 
 	init {
 		whenever(translateService.getError(any(), anyOrNull(), anyOrNull(), any())).thenReturn("translated")
@@ -44,12 +45,12 @@ class AuthorizationErrorHandlerTest {
 	private fun exchange() = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v2/users/current"))
 
 	private fun assertProblem(exchange: MockServerWebExchange, status: HttpStatus, code: String) {
-		val body = Gson().fromJson(exchange.response.bodyAsString.block(), Map::class.java)
+		val body = objectMapper.readValue(exchange.response.bodyAsString.block(), Map::class.java)
 
 		assertEquals(status, exchange.response.statusCode)
 		assertEquals(APPLICATION_PROBLEM_JSON, exchange.response.headers.contentType)
 		assertEquals("about:blank", body["type"])
-		assertEquals(status.value().toDouble(), body["status"])
+		assertEquals(status.value(), body["status"])
 		assertEquals(code, body["code"])
 		assertEquals("/api/v2/users/current", body["instance"])
 		assertEquals("translated", body["detail"])
