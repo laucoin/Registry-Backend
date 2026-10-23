@@ -28,6 +28,8 @@ class ParticipantReaderDtoMapper(
 				.orElse(null),
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
+			effectiveArrival = model.effectiveArrival,
+			effectiveDeparture = model.effectiveDeparture,
 			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
 		).apply {
 			id = model.id

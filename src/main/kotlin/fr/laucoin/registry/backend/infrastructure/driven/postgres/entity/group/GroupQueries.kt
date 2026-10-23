@@ -26,6 +26,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
@@ -39,7 +40,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.partici
 object GroupQueries {
 	const val WITH_PARTICIPANT_GROUPS = """
         participants_groups AS (
-            SELECT t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME,
+            SELECT t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME, t.$PARTICIPANT_EFFECTIVE_DEPARTURE,
                 JSON_AGG($GROUP_TABLE.$ID) FILTER (WHERE $GROUP_TABLE.$ID IS NOT NULL) as participant_groups,
                 JSON_AGG(group_presence.$ID) FILTER (WHERE group_presence.$ID IS NOT NULL) as participant_groups_available
             FROM $PARTICIPANT_TABLE t
@@ -54,7 +55,7 @@ object GroupQueries {
                     )
                 )
             WHERE t.$LINKED_PROJECT_ID = :projectId AND t.$VISIBLE IS TRUE
-            GROUP BY t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME
+            GROUP BY t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME, t.$PARTICIPANT_EFFECTIVE_DEPARTURE
         )
     """
 
@@ -92,7 +93,7 @@ object GroupQueries {
                     COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) > CURRENT_DATE
                     OR (COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
                 )
-            )
+            ) AND participants_groups.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
             GROUP BY $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID
         )
     """

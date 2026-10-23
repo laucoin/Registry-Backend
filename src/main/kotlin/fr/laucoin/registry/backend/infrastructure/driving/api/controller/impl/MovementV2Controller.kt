@@ -3,6 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
@@ -21,6 +23,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Movemen
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PlannedMovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
@@ -31,11 +34,13 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Move
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementContentReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PlannedMovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestMovementWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantMovementWriterDtoMapper
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.apache.commons.text.similarity.JaroWinklerSimilarity
@@ -50,6 +55,7 @@ import reactor.core.publisher.Mono
 class MovementV2Controller(
 	private val service: IMovementService,
 	private val readerMapper: MovementReaderDtoMapper,
+	private val plannedReaderMapper: PlannedMovementReaderDtoMapper,
 	private val readerContentMapper: MovementContentReaderDtoMapper,
 	private val reasonReaderMapper: MovementReasonReaderDtoMapper,
 	private val activityReasonReaderMapper: MovementActivityReasonReaderDtoMapper,
@@ -174,6 +180,14 @@ class MovementV2Controller(
 
 	override fun searchVehicles(projectId: UUID, query: String?): Flux<VehicleReaderDto> {
 		return service.searchVehiclesByText(projectId, query).map(vehiclesMapper::toDto)
+	}
+
+	override fun findPlannedArrivals(projectId: UUID, date: LocalDate?): Flux<PlannedMovementReaderDto> {
+		return service.findPlannedMovements(projectId, IN, date).map(plannedReaderMapper::toDto)
+	}
+
+	override fun findPlannedDepartures(projectId: UUID, date: LocalDate?): Flux<PlannedMovementReaderDto> {
+		return service.findPlannedMovements(projectId, OUT, date).map(plannedReaderMapper::toDto)
 	}
 
 	override fun findMovementCommunications(

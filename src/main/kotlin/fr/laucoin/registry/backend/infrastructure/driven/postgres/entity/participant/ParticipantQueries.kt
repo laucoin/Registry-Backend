@@ -3,6 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.partic
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
@@ -13,19 +15,23 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.G
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_PARTICIPANT_ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_REASON
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_ARRIVAL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_AVAILABLE_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_STATUS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_EMAIL
@@ -52,11 +58,6 @@ object ParticipantQueries {
                 GROUP BY $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
             ) AS plm ON plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
         )
-    """
-
-	const val SELECT_LAST_MOVEMENT = """
-        last_movement.type AS $PARTICIPANT_LAST_MOVEMENT_TYPE,
-        last_movement.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME
     """
 
 	const val LAST_MOVEMENT_JOIN = """
@@ -89,6 +90,7 @@ object ParticipantQueries {
                       (group_presence.$GROUP_END_AVAILABILITY_DATE + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::time))::timestamptz
                   END
             ) AS max_end_availability,
+            BOOL_OR($GROUP_TABLE.$GROUP_END_AVAILABILITY_DATE IS NULL) FILTER (WHERE $GROUP_TABLE.$ID IS NOT NULL) AS has_open_ended_group,
             JSON_AGG(group_presence.$ID) FILTER (WHERE group_presence.$ID IS NOT NULL) as $PARTICIPANT_AVAILABLE_GROUPS,
             JSON_AGG(group_presence_on_date.$ID) FILTER (WHERE group_presence_on_date.$ID IS NOT NULL) as available_groups_on_date
             FROM $PARTICIPANT_TABLE t
@@ -149,23 +151,88 @@ object ParticipantQueries {
 
 	const val PARTICIPANT_TYPE_SEARCH_CLAUSE = "(:type IS NULL OR t.type = :type)"
 
-	const val PARTICIPANT_AVAILABILITY_CLAUSE = """
+	const val UPDATE_PARTICIPANT_EFFECTIVE_DATES = """
+        UPDATE $PARTICIPANT_TABLE p SET
+            $PARTICIPANT_EFFECTIVE_ARRIVAL = (
+                SELECT MIN(m.$MOVEMENT_DATE_TIME)
+                FROM $MOVEMENT_TABLE m
+                INNER JOIN $MOVEMENT_CONTENT_TABLE mc ON mc.$MOVEMENT_CONTENT_MOVEMENT_ID = m.$ID
+                WHERE mc.$MOVEMENT_CONTENT_PARTICIPANT_ID = p.$ID AND m.$VISIBLE IS TRUE AND m.$MOVEMENT_TYPE = 'IN'
+            ),
+            $PARTICIPANT_EFFECTIVE_DEPARTURE = (
+                SELECT MAX(m.$MOVEMENT_DATE_TIME)
+                FROM $MOVEMENT_TABLE m
+                INNER JOIN $MOVEMENT_CONTENT_TABLE mc ON mc.$MOVEMENT_CONTENT_MOVEMENT_ID = m.$ID
+                WHERE mc.$MOVEMENT_CONTENT_PARTICIPANT_ID = p.$ID AND m.$VISIBLE IS TRUE AND m.$MOVEMENT_TYPE = 'OUT'
+                    AND (m.$MOVEMENT_REASON = 'DEFINITIVE_DEPARTURE' OR p.$PARTICIPANT_TYPE = 'GUEST')
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM $MOVEMENT_TABLE later
+                        INNER JOIN $MOVEMENT_CONTENT_TABLE later_content ON later_content.$MOVEMENT_CONTENT_MOVEMENT_ID = later.$ID
+                        WHERE later_content.$MOVEMENT_CONTENT_PARTICIPANT_ID = p.$ID AND later.$VISIBLE IS TRUE
+                            AND later.$MOVEMENT_TYPE = 'IN' AND later.$MOVEMENT_DATE_TIME > m.$MOVEMENT_DATE_TIME
+                    )
+            )
+        WHERE p.$ID IN (:ids)
+    """
+
+	const val PARTICIPANT_NOT_DEPARTED_CLAUSE = "t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL"
+
+	const val PARTICIPANT_IN_PLANNED_RANGE = """
         (
-            :isAvailable IS NULL OR :isAvailable = (
-                (
-                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
-                ) AND
-                (
-                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
-                )
+            (
+                COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
+                OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
+            ) AND
+            (
+                COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
+                OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
             )
         )
     """
 
-	const val PARTICIPANT_PRESENCE_CLAUSE =
-		"(:isPresent IS NULL OR :isPresent != (last_movement.type IS NULL OR last_movement.type = 'OUT'))"
+	const val PARTICIPANT_PRESENCE_EXPRESSION = """
+        CASE
+            WHEN t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NOT NULL THEN 'UNAVAILABLE'
+            WHEN t.$PARTICIPANT_EFFECTIVE_ARRIVAL IS NOT NULL THEN (CASE WHEN last_movement.$MOVEMENT_TYPE = 'IN' THEN 'IN' ELSE 'OUT' END)
+            WHEN $PARTICIPANT_IN_PLANNED_RANGE THEN 'OUT'
+            ELSE 'UNAVAILABLE'
+        END
+    """
+
+	const val PARTICIPANT_PLANNED_END_PASSED = """
+        (
+            (
+                t.$PARTICIPANT_END_AVAILABILITY_DATE IS NOT NULL
+                AND (t.$PARTICIPANT_END_AVAILABILITY_DATE + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) < CURRENT_TIMESTAMP
+            ) OR (
+                t.$PARTICIPANT_END_AVAILABILITY_DATE IS NULL
+                AND fg.$PARTICIPANT_GROUPS IS NOT NULL
+                AND fg.has_open_ended_group IS FALSE
+                AND fg.$PARTICIPANT_AVAILABLE_GROUPS IS NULL
+            )
+        )
+    """
+
+	const val PARTICIPANT_STATUS_EXPRESSION = """
+        CASE
+            WHEN t.$PARTICIPANT_EFFECTIVE_ARRIVAL IS NOT NULL AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
+                AND $PARTICIPANT_PLANNED_END_PASSED THEN 'OVERDUE'
+            ELSE $PARTICIPANT_PRESENCE_EXPRESSION
+        END
+    """
+
+	const val SELECT_LAST_MOVEMENT = """
+        $PARTICIPANT_STATUS_EXPRESSION AS $PARTICIPANT_STATUS,
+        last_movement.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME
+    """
+
+	const val PARTICIPANT_AVAILABILITY_CLAUSE =
+		"(:isAvailable IS NULL OR :isAvailable = ($PARTICIPANT_IN_PLANNED_RANGE AND $PARTICIPANT_NOT_DEPARTED_CLAUSE))"
+
+	const val PARTICIPANT_STATUS_CLAUSE = "(:status IS NULL OR $PARTICIPANT_STATUS_EXPRESSION = :status)"
+
+	const val PARTICIPANT_PRESENCE_CLAUSE = "(:presence IS NULL OR $PARTICIPANT_PRESENCE_EXPRESSION = :presence)"
 
 	const val DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE = """
         (
@@ -179,7 +246,8 @@ object ParticipantQueries {
                 ) AND
                 (
                     (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:at AS TIMESTAMPTZ)
-                )
+                ) AND
+                (t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL OR t.$PARTICIPANT_EFFECTIVE_DEPARTURE > CAST(:at AS TIMESTAMPTZ))
             )
         )
     """
@@ -206,6 +274,40 @@ object ParticipantQueries {
         (
             (CAST(:birthdayFrom AS DATE) IS NULL OR t.$PARTICIPANT_BIRTHDAY >= CAST(:birthdayFrom AS DATE)) AND
             (CAST(:birthdayTo AS DATE) IS NULL OR t.$PARTICIPANT_BIRTHDAY <= CAST(:birthdayTo AS DATE))
+        )
+    """
+
+	const val PARTICIPANT_PLANNED_ELIGIBLE_CLAUSE = """
+        (
+            t.$PARTICIPANT_TYPE = 'REGISTERED'
+            AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
+            AND (NOT :isArrival OR last_movement.$MOVEMENT_TYPE IS DISTINCT FROM 'IN')
+        )
+    """
+
+	const val PARTICIPANT_OWN_PLANNED_DATE_CLAUSE = """
+        (CASE WHEN :isArrival THEN t.$PARTICIPANT_START_AVAILABILITY_DATE ELSE t.$PARTICIPANT_END_AVAILABILITY_DATE END) = :day
+    """
+
+	const val PARTICIPANT_WITHOUT_OWN_PLANNED_DATE_CLAUSE = """
+        (CASE WHEN :isArrival THEN t.$PARTICIPANT_START_AVAILABILITY_DATE ELSE t.$PARTICIPANT_END_AVAILABILITY_DATE END) IS NULL
+    """
+
+	const val GROUP_PLANNED_DATE_CLAUSE = """
+        (CASE WHEN :isArrival THEN g.$GROUP_START_AVAILABILITY_DATE ELSE g.$GROUP_END_AVAILABILITY_DATE END) = :day
+    """
+
+	const val GROUP_DRIVES_PARTICIPANT_PLANNED_DATE_CLAUSE = """
+        NOT EXISTS (
+            SELECT 1
+            FROM $GROUP_CONTENT_TABLE other_content
+            INNER JOIN $GROUP_TABLE other_group ON other_group.$ID = other_content.$GROUP_CONTENT_GROUP_ID AND other_group.$VISIBLE IS TRUE
+            WHERE other_content.$GROUP_CONTENT_PARTICIPANT_ID = t.$ID AND (
+                CASE WHEN :isArrival
+                    THEN COALESCE(other_group.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < g.$GROUP_START_AVAILABILITY_DATE
+                    ELSE (other_group.$GROUP_END_AVAILABILITY_DATE IS NULL OR other_group.$GROUP_END_AVAILABILITY_DATE > g.$GROUP_END_AVAILABILITY_DATE)
+                END
+            )
         )
     """
 }

@@ -72,6 +72,8 @@ interface IMovementService {
 		searchParams: CommunicationSearchParamModel,
 	): Mono<PageModel<CommunicationModel>>
 
+	fun findPlannedMovements(projectId: UUID, type: MovementTypeEnum, date: LocalDate?): Flux<MovementModel>
+
 	fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel>
 
 	fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusModel>
