@@ -42,35 +42,16 @@ class AuthorizationErrorHandler(
 	): Mono<Void> {
 		val exchange = webFilterExchange.exchange
 		val response = exchange.response
-		return when (exception) {
-			is JwtConversionException -> response.writeWith(
-				buildBody(
-					exchange,
-					response,
-					exception.status,
-					exception.code,
-					exception.args?.toArray(),
-				)
-			)
+		return response.writeWith(
+			when (exception) {
+				is JwtConversionException ->
+					buildBody(exchange, response, exception.status, exception.code, exception.args?.toArray())
 
-			is InvalidBearerTokenException -> response.writeWith(
-				buildBody(
-					exchange,
-					response,
-					UNAUTHORIZED,
-					INVALID_TOKEN,
-				)
-			)
+				is InvalidBearerTokenException -> buildBody(exchange, response, UNAUTHORIZED, INVALID_TOKEN)
 
-			else -> response.writeWith(
-				buildBody(
-					exchange,
-					response,
-					INTERNAL_SERVER_ERROR,
-					FAILED_TO_LOGIN_FOR_UNKNOWN_REASON,
-				)
-			)
-		}
+				else -> buildBody(exchange, response, INTERNAL_SERVER_ERROR, FAILED_TO_LOGIN_FOR_UNKNOWN_REASON)
+			}
+		)
 	}
 
 	@Bean

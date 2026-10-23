@@ -208,7 +208,10 @@ class ListSortingContractTest : TestContext() {
 		val fixedQuery: List<Pair<String, Any?>> = emptyList(),
 	)
 
-	private fun pickers(): List<Picker> {
+	private fun pickers(): List<Picker> =
+		participantPickers() + profilePickers() + communicationPickers() + movementPickers()
+
+	private fun participantPickers(): List<Picker> {
 		val inProject = listOf<Any>(defaultProjectId)
 		return listOf(
 			Picker(
@@ -229,12 +232,24 @@ class ListSortingContractTest : TestContext() {
 				inProject,
 				listOf(perm(REGISTRY_PROJECT_PARTICIPANT_METADATA_R))
 			),
+		)
+	}
+
+	private fun profilePickers(): List<Picker> {
+		val inProject = listOf<Any>(defaultProjectId)
+		return listOf(
 			Picker(
 				"profile users",
 				"$project/profiles/search/users",
 				inProject,
 				listOf(perm(REGISTRY_PROJECT_PROFILE_METADATA_R))
 			),
+		)
+	}
+
+	private fun communicationPickers(): List<Picker> {
+		val inProject = listOf<Any>(defaultProjectId)
+		return listOf(
 			Picker(
 				"communication movements",
 				"$project/communications/search/movements",
@@ -247,6 +262,12 @@ class ListSortingContractTest : TestContext() {
 				inProject,
 				listOf(option(REGISTRY_PROJECT_OPTION_ALERT), perm(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))
 			),
+		)
+	}
+
+	private fun movementPickers(): List<Picker> {
+		val inProject = listOf<Any>(defaultProjectId)
+		return listOf(
 			Picker(
 				"movement reasons",
 				"$project/movements/search/reasons",
@@ -270,7 +291,8 @@ class ListSortingContractTest : TestContext() {
 		)
 	}
 
-	private fun endpoints(): List<ListEndpoint> = projectEndpoints() + movementEndpoints() + globalEndpoints()
+	private fun endpoints(): List<ListEndpoint> =
+		projectEndpoints() + groupEndpoints() + peopleEndpoints() + movementEndpoints() + globalEndpoints()
 
 	private fun projectEndpoints(): List<ListEndpoint> {
 		val inProject = listOf<Any>(defaultProjectId)
@@ -296,6 +318,12 @@ class ListSortingContractTest : TestContext() {
 				listOf(option(REGISTRY_PROJECT_OPTION_ALERT), perm(REGISTRY_PROJECT_ALERT_COMMUNICATION_R)),
 				CommunicationSearchParamModel.SORT_FIELDS
 			),
+		)
+	}
+
+	private fun groupEndpoints(): List<ListEndpoint> {
+		val inProject = listOf<Any>(defaultProjectId)
+		return listOf(
 			ListEndpoint(
 				"groups",
 				"$project/groups",
@@ -310,6 +338,12 @@ class ListSortingContractTest : TestContext() {
 				listOf(perm(REGISTRY_PROJECT_GROUP_R)),
 				ParticipantSearchParamModel.SORT_FIELDS
 			),
+		)
+	}
+
+	private fun peopleEndpoints(): List<ListEndpoint> {
+		val inProject = listOf<Any>(defaultProjectId)
+		return listOf(
 			ListEndpoint(
 				"participants",
 				"$project/participants",

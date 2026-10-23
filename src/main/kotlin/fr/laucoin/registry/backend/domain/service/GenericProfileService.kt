@@ -29,28 +29,28 @@ open class GenericProfileService(
 			to = endAccess,
 		)
 			.collectList()
-			.handle { userIdsWithConflictualProfile, handle ->
-				when {
-					userIdsWithConflictualProfile.size == userIds.size -> {
-						log.warn(
-							"Another profile already exist for the user(s) \"{}\" on the project \"{}\".",
-							userIds,
-							projectId
-						)
-						handle.error(RegistryException(CONFLICT, PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE))
-					}
-
-					userIdsWithConflictualProfile.isNotEmpty() -> {
-						log.warn(
-							"Partial request because, profile already exist for the user(s) \"{}\" on the project \"{}\".",
-							userIds.filter { userIdsWithConflictualProfile.contains(it) },
-							projectId
-						)
-						handle.next(userIds.filter { !userIdsWithConflictualProfile.contains(it) })
-					}
-
-					else -> handle.next(userIds)
+			.handle { conflicting, handle ->
+				if (conflicting.size == userIds.size) {
+					log.warn(
+						"Another profile already exist for the user(s) \"{}\" on the project \"{}\".",
+						userIds,
+						projectId
+					)
+					handle.error(RegistryException(CONFLICT, PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE))
+				} else {
+					handle.next(usersWithoutConflict(projectId, userIds, conflicting))
 				}
 			}
+	}
+
+	private fun usersWithoutConflict(projectId: UUID, userIds: List<UUID>, conflicting: List<UUID>): List<UUID> {
+		if (conflicting.isEmpty()) return userIds
+
+		log.warn(
+			"Partial request because, profile already exist for the user(s) \"{}\" on the project \"{}\".",
+			userIds.filter { conflicting.contains(it) },
+			projectId
+		)
+		return userIds.filter { !conflicting.contains(it) }
 	}
 }

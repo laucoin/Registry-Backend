@@ -220,27 +220,31 @@ class UserService(
 		log.info("Purging users inactive since {}", dateThreshold)
 		// Sequential: the "last administrator" checks depend on the users deleted earlier in the same run
 		return port.findUserIdsOlderThanLastLogin(dateThreshold)
-			.concatMap { id ->
-				findUserById(id, isVisible = null)
-					.validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
-					.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
-					.map { it.id!! }
-					.onErrorResume(RegistryException::class.java) {
-						log.info("User {} is not purged: {}", id, it.message)
-						Mono.empty()
-					}
+			.concatMap(::keepIfPurgeable)
+			.concatMap { purgeUser(it, dryRun) }
+	}
+
+	private fun keepIfPurgeable(id: UUID): Mono<UUID> {
+		return findUserById(id, isVisible = null)
+			.validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
+			.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
+			.map { it.id!! }
+			.onErrorResume(RegistryException::class.java) {
+				log.info("User {} is not purged: {}", id, it.message)
+				Mono.empty()
 			}
-			.concatMap {
-				if (dryRun) {
-					log.info("[Dry run] user {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging user {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("User {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge user {}", it, err) }
-				}
-			}
+	}
+
+	private fun purgeUser(id: UUID, dryRun: Boolean): Mono<UUID> {
+		if (dryRun) {
+			log.info("[Dry run] user {} would be deleted", id)
+			return Mono.just(id)
+		}
+
+		log.info("Purging user {}", id)
+		return port.deleteById(id).thenReturn(id)
+			.doOnNext { log.info("User {} was deleted", it) }
+			.doOnError { log.error("Failed to purge user {}", id, it) }
 	}
 
 	private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) =

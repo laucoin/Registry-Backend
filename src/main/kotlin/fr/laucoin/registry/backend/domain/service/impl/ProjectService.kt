@@ -167,29 +167,31 @@ class ProjectService(
 		errorCode: String
 	): Mono<UUID> {
 		return findProjectById(id, isVisible = null)
-			.handle { it, handle ->
-				if (it.isNotInRange(start) || it.isNotInRange(end)) {
-					log.warn(
-						"Failed to editing, one or more dates ({}, {}) are out of project range [{}, {}]",
-						start,
-						end,
-						it.begin,
-						it.end
-					)
-					handle.error(
-						RegistryException(
-							status = UNPROCESSABLE_CONTENT,
-							code = errorCode,
-							args = arrayListOf(
-								start.toString(),
-								end.toString(),
-								it.begin.toString(),
-								it.end.toString()
-							),
-						)
-					)
+			.handle { project, handle ->
+				if (project.isNotInRange(start) || project.isNotInRange(end)) {
+					handle.error(outOfRange(project, start, end, errorCode))
 				} else handle.next(id)
 			}
+	}
+
+	private fun outOfRange(
+		project: ProjectModel,
+		start: CustomDateTimeModel?,
+		end: CustomDateTimeModel?,
+		errorCode: String,
+	): RegistryException {
+		log.warn(
+			"Failed to editing, one or more dates ({}, {}) are out of project range [{}, {}]",
+			start,
+			end,
+			project.begin,
+			project.end
+		)
+		return RegistryException(
+			status = UNPROCESSABLE_CONTENT,
+			code = errorCode,
+			args = arrayListOf(start.toString(), end.toString(), project.begin.toString(), project.end.toString()),
+		)
 	}
 
 	override fun createProject(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {

@@ -197,6 +197,28 @@ class SecurityConfig(
 			return "default-src 'self'; connect-src $connectSources; frame-ancestors 'none'"
 		}
 
+		val CORS_ALLOWED_METHODS = listOf(
+			HEAD.name(),
+			GET.name(),
+			POST.name(),
+			PUT.name(),
+			DELETE.name(),
+			PATCH.name(),
+			OPTIONS.name(),
+		)
+
+		val CORS_ALLOWED_HEADERS = listOf(
+			AUTHORIZATION,
+			CACHE_CONTROL,
+			CONTENT_TYPE,
+			ACCEPT_LANGUAGE,
+			ACCESS_CONTROL_ALLOW_ORIGIN,
+			ACCESS_CONTROL_ALLOW_HEADERS,
+			ACCESS_CONTROL_EXPOSE_HEADERS,
+			IF_MATCH,
+			HEADER_NAME,
+		)
+
 		const val API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'"
 
 		const val PERMISSIONS_POLICY =
@@ -244,27 +266,9 @@ class SecurityConfig(
 	fun corsConfigurationSource(): CorsConfigurationSource {
 		val configuration = CorsConfiguration()
 		configuration.allowedOrigins = corsUrls
-		configuration.allowedMethods = listOf(
-			HEAD.name(),
-			GET.name(),
-			POST.name(),
-			PUT.name(),
-			DELETE.name(),
-			PATCH.name(),
-			OPTIONS.name(),
-		)
+		configuration.allowedMethods = CORS_ALLOWED_METHODS
 		configuration.allowCredentials = true
-		configuration.allowedHeaders = listOf(
-			AUTHORIZATION,
-			CACHE_CONTROL,
-			CONTENT_TYPE,
-			ACCEPT_LANGUAGE,
-			ACCESS_CONTROL_ALLOW_ORIGIN,
-			ACCESS_CONTROL_ALLOW_HEADERS,
-			ACCESS_CONTROL_EXPOSE_HEADERS,
-			IF_MATCH,
-			HEADER_NAME,
-		)
+		configuration.allowedHeaders = CORS_ALLOWED_HEADERS
 		configuration.exposedHeaders = listOf(HEADER_NAME, ETAG, LOCATION)
 		val source = UrlBasedCorsConfigurationSource()
 		source.registerCorsConfiguration("/**", configuration)

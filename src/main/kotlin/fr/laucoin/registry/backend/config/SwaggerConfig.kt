@@ -50,30 +50,28 @@ class SwaggerConfig(
     fun openApi(): OpenAPI {
         val openAPI = OpenAPI()
         if (Objects.nonNull(configAuthUrl) && Objects.nonNull(configTokenUrl)) {
-            openAPI.components(
-                Components()
-                    .addSecuritySchemes(
-                        CLIENT_NAME,
-                        SecurityScheme()
-                            .type(OAUTH2)
-                            .flows(
-                                OAuthFlows()
-                                    .authorizationCode(
-                                        OAuthFlow().apply {
-                                            authorizationUrl = configAuthUrl
-                                            refreshUrl = configTokenUrl
-                                            tokenUrl = configTokenUrl
-                                            scopes = Scopes()
-                                                .addString("openid", "OpenID")
-                                                .addString("profile", "Profile")
-                                                .addString("email", "Email")
-                                        }
-                                    )
-                            )
-                    )
-            ).security(listOf(SecurityRequirement().addList(CLIENT_NAME)))
+            openAPI.components(Components().addSecuritySchemes(CLIENT_NAME, oauth2Scheme()))
+                .security(listOf(SecurityRequirement().addList(CLIENT_NAME)))
         }
         return openAPI
+    }
+
+    private fun oauth2Scheme(): SecurityScheme {
+        return SecurityScheme()
+            .type(OAUTH2)
+            .flows(OAuthFlows().authorizationCode(authorizationCodeFlow()))
+    }
+
+    private fun authorizationCodeFlow(): OAuthFlow {
+        return OAuthFlow().apply {
+            authorizationUrl = configAuthUrl
+            refreshUrl = configTokenUrl
+            tokenUrl = configTokenUrl
+            scopes = Scopes()
+                .addString("openid", "OpenID")
+                .addString("profile", "Profile")
+                .addString("email", "Email")
+        }
     }
 
     @Bean
