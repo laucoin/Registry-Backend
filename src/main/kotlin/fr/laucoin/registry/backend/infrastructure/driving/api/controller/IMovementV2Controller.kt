@@ -28,6 +28,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Movemen
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PlannedMovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
@@ -38,9 +39,11 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Size
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.format.annotation.DateTimeFormat.ISO.DATE
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.ResponseEntity
@@ -186,6 +189,32 @@ interface IMovementV2Controller {
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, message")
 		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<CommunicationReaderDto>>
+
+	@Operation(
+		summary = "Find planned arrivals",
+		description = "Find movement drafts (without date-time) of the participants planned to arrive on a day. Participants with their own planned dates come one per draft; the others are grouped by group, with the group name as pool name",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
+	@GetMapping("/planned/arrivals")
+	fun findPlannedArrivals(
+		@PathVariable projectId: UUID,
+		@Parameter(description = "Planned day (ISO date), today when omitted")
+		@RequestParam(required = false)
+		@DateTimeFormat(iso = DATE) date: LocalDate?,
+	): Flux<PlannedMovementReaderDto>
+
+	@Operation(
+		summary = "Find planned departures",
+		description = "Find definitive-departure movement drafts (without date-time) of the participants planned to leave on a day. Participants with their own planned dates come one per draft; the others are grouped by group, with the group name as pool name",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
+	@GetMapping("/planned/departures")
+	fun findPlannedDepartures(
+		@PathVariable projectId: UUID,
+		@Parameter(description = "Planned day (ISO date), today when omitted")
+		@RequestParam(required = false)
+		@DateTimeFormat(iso = DATE) date: LocalDate?,
+	): Flux<PlannedMovementReaderDto>
 
 	@Operation(
 		summary = "Find participants status",

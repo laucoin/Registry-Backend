@@ -18,6 +18,8 @@ data class ParticipantModel(
 	var startAvailability: CustomDateTimeModel? = null,
 	var endAvailability: CustomDateTimeModel? = null,
 	var user: UserModel? = null,
+	var effectiveArrival: ZonedDateTime? = null,
+	var effectiveDeparture: ZonedDateTime? = null,
 ): GenericProjectModel() {
 	fun isNotUsable() = isNotVisible()
 

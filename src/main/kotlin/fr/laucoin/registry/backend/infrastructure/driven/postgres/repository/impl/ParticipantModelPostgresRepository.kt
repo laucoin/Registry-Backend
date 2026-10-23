@@ -1,12 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ParticipantEntityMapper
@@ -39,7 +41,8 @@ class ParticipantModelPostgresRepository(
 			searchParams.type,
 			searchParams.isVisible,
 			searchParams.isAvailable,
-			searchParams.isPresent,
+			searchParams.status,
+			searchParams.presence,
 			searchParams.at,
 			searchParams.hasUser,
 			searchParams.birthdayFrom,
@@ -67,7 +70,8 @@ class ParticipantModelPostgresRepository(
 			searchParams.type,
 			searchParams.isVisible,
 			searchParams.isAvailable,
-			searchParams.isPresent,
+			searchParams.status,
+			searchParams.presence,
 			searchParams.at,
 			searchParams.hasUser,
 			searchParams.birthdayFrom,
@@ -89,7 +93,8 @@ class ParticipantModelPostgresRepository(
 			searchParams.type,
 			searchParams.isVisible,
 			searchParams.isAvailable,
-			searchParams.isPresent,
+			searchParams.status,
+			searchParams.presence,
 			searchParams.at,
 			searchParams.hasUser,
 			searchParams.birthdayFrom,
@@ -126,18 +131,51 @@ class ParticipantModelPostgresRepository(
 			searchParams.type,
 			searchParams.isVisible,
 			searchParams.isAvailable,
-			searchParams.isPresent,
+			searchParams.status,
+			searchParams.presence,
 			searchParams.at,
 			limit,
 		).map(mapper::toModel)
 	}
 
-	override fun updateAllEndAvailability(
-		ids: List<UUID>,
-		endAvailability: CustomDateTimeModel
+	override fun findPlannedOnOwnDate(
+		projectId: UUID,
+		type: MovementTypeEnum,
+		day: LocalDate,
+		limit: Int,
 	): Flux<ParticipantModel> {
-		return if (ids.isEmpty()) Flux.empty()
-		else repository.updateAllEndAvailability(ids, endAvailability.time, endAvailability.date).map(mapper::toModel)
+		return repository.findIdsPlannedOnOwnDate(projectId, true, type == IN, day, limit)
+			.collectList()
+			.flatMapMany { ids -> findAllByIds(projectId, ids, true).sortedLike(ids) }
+	}
+
+	override fun findPlannedOnGroupDate(
+		projectId: UUID,
+		type: MovementTypeEnum,
+		day: LocalDate,
+		limit: Int,
+	): Flux<Pair<UUID, ParticipantModel>> {
+		return repository.findGroupContentsPlannedOnGroupDate(projectId, true, type == IN, day, limit)
+			.collectList()
+			.flatMapMany { contents -> withParticipants(projectId, contents) }
+	}
+
+	private fun withParticipants(
+		projectId: UUID,
+		contents: List<GroupContentEntity>,
+	): Flux<Pair<UUID, ParticipantModel>> {
+		val groupIdByParticipantId = contents.associate { it.participantId!! to it.groupId!! }
+		return findAllByIds(projectId, groupIdByParticipantId.keys.toList(), true)
+			.map { Pair(groupIdByParticipantId.getValue(it.id!!), it) }
+	}
+
+	private fun Flux<ParticipantModel>.sortedLike(ids: List<UUID>): Flux<ParticipantModel> {
+		return collectList().flatMapMany { Flux.fromIterable(it.sortedBy { participant -> ids.indexOf(participant.id) }) }
+	}
+
+	override fun refreshEffectiveDates(ids: List<UUID>): Mono<Unit> {
+		return if (ids.isEmpty()) Mono.just(Unit)
+		else repository.refreshEffectiveDates(ids).thenReturn(Unit)
 	}
 
 	override fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel> {
@@ -161,6 +199,7 @@ class ParticipantModelPostgresRepository(
 	override fun create(element: ParticipantModel): Mono<ParticipantModel> {
 		return save(element)
 			.saveNewGroups(element)
+			.reload()
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -169,7 +208,12 @@ class ParticipantModelPostgresRepository(
 			.flatMap { findById(element.projectId!!, element.id!!, isVisible = null) }
 			.saveNewGroups(element)
 			.removeDeletedGroups(element)
+			.reload()
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun Mono<ParticipantModel>.reload(): Mono<ParticipantModel> {
+		return flatMap { findById(it.projectId!!, it.id!!, isVisible = null) }
 	}
 
 	fun Mono<ParticipantModel>.saveNewGroups(element: ParticipantModel): Mono<ParticipantModel> {

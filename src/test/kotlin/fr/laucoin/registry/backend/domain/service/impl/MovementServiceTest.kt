@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_ENABLED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_IN_FUTURE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
@@ -35,13 +36,13 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -67,6 +68,7 @@ import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -83,12 +85,17 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
+import java.time.Clock
+import java.time.ZoneOffset
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -104,7 +111,7 @@ class MovementServiceTest {
 	private val groupPort: IGroupPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 
-	private val service = MovementService(
+	private fun buildService(clock: Clock) = MovementService(
 		projectService,
 		port,
 		participantPort,
@@ -113,17 +120,23 @@ class MovementServiceTest {
 		communicationPort,
 		groupPort,
 		transactionalOperator,
+		clock,
 		MAX_PARTICIPANTS,
 		MAX_GROUPS,
 		MAX_VEHICLES,
 		MAX_ACTIVITIES,
+		MAX_PLANNED,
 	)
+
+	private val service = buildService(Clock.systemUTC())
 
 	private companion object {
 		private const val MAX_PARTICIPANTS = 1
 		private const val MAX_GROUPS = 2
 		private const val MAX_VEHICLES = 3
 		private const val MAX_ACTIVITIES = 4
+		private const val MAX_PLANNED = 5
+		private val PLANNED_DAY = LocalDate.of(2026, 7, 14)
 
 		@JvmStatic
 		fun `Should searchReasonsByText return filtered reason depending params`(): Stream<Arguments> {
@@ -258,6 +271,7 @@ class MovementServiceTest {
 	fun setup() {
 		whenever(projectService.validateDateTime(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(projectId))
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
+		whenever(participantPort.refreshEffectiveDates(any())).thenReturn(Mono.just(Unit))
 	}
 
 	@Test
@@ -474,7 +488,7 @@ class MovementServiceTest {
 			query = null,
 			isMajor = true,
 			type = REGISTERED,
-			status = PresenceStatusEnum.IN,
+			presence = PresenceStatusEnum.IN,
 			isVisible = true,
 			at = null
 		)
@@ -483,7 +497,7 @@ class MovementServiceTest {
 			query = null,
 			isMajor = true,
 			type = REGISTERED,
-			status = PresenceStatusEnum.OUT,
+			presence = PresenceStatusEnum.OUT,
 			isVisible = true,
 			at = null
 		)
@@ -492,7 +506,7 @@ class MovementServiceTest {
 			query = null,
 			isMajor = false,
 			type = REGISTERED,
-			status = PresenceStatusEnum.IN,
+			presence = PresenceStatusEnum.IN,
 			isVisible = true,
 			at = null
 		)
@@ -501,7 +515,7 @@ class MovementServiceTest {
 			query = null,
 			isMajor = false,
 			type = REGISTERED,
-			status = PresenceStatusEnum.OUT,
+			presence = PresenceStatusEnum.OUT,
 			isVisible = true,
 			at = null
 		)
@@ -510,7 +524,7 @@ class MovementServiceTest {
 			query = null,
 			isMajor = null,
 			type = GUEST,
-			status = PresenceStatusEnum.IN,
+			presence = PresenceStatusEnum.IN,
 			isVisible = true,
 			at = null
 		)
@@ -572,6 +586,38 @@ class MovementServiceTest {
 
 		verify(vehiclePort).countAll(projectId, presentVehicleSearch)
 		verify(vehiclePort).countAll(projectId, absentVehicleSearch)
+	}
+
+	@Test
+	fun `Should createMovement throw on a movement dated in the future`() {
+		// Arrange
+		val movement = commonMovement().apply { dateTime = ZonedDateTime.now().plusMinutes(5) }
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createMovement(currentUser(), movement).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(BAD_REQUEST, result.status)
+		assertEquals(MOVEMENT_DATETIME_IN_FUTURE, result.code)
+		verifyNoInteractions(port)
+	}
+
+	@Test
+	fun `Should updateMovementById throw on a movement dated in the future`() {
+		// Arrange
+		val movement = commonMovement().apply { dateTime = ZonedDateTime.now().plusMinutes(5) }
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateMovementById(currentUser(), projectId, movementId, movement).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(BAD_REQUEST, result.status)
+		assertEquals(MOVEMENT_DATETIME_IN_FUTURE, result.code)
+		verifyNoInteractions(port)
 	}
 
 	@Test
@@ -753,15 +799,14 @@ class MovementServiceTest {
 		}
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(commonParticipant()))
-		whenever(participantPort.updateAllEndAvailability(any(), any())).thenReturn(Flux.just(commonParticipant()))
-		whenever(port.create(any())).thenReturn(Mono.just(commonMovement()))
+		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
 		service.createMovement(currentUser(), movement).block()
 
 		// Assert
 		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
-		verify(participantPort).updateAllEndAvailability(listOf(participantId), CustomDateTimeModel(movementDate))
+		verify(participantPort).refreshEffectiveDates(listOf(participantId))
 		verify(port).create(any())
 	}
 
@@ -778,15 +823,14 @@ class MovementServiceTest {
 		}
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(commonParticipant()))
-		whenever(participantPort.updateAllEndAvailability(any(), any())).thenReturn(Flux.just(commonParticipant()))
-		whenever(port.create(any())).thenReturn(Mono.just(commonMovement()))
+		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
 		service.createMovement(currentUser(), movement).block()
 
 		// Assert
 		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
-		verify(participantPort).updateAllEndAvailability(listOf(participantId), CustomDateTimeModel(movementDate))
+		verify(participantPort).refreshEffectiveDates(listOf(participantId))
 		verify(port).create(any())
 	}
 
@@ -990,6 +1034,82 @@ class MovementServiceTest {
 	}
 
 	@Test
+	fun `Should updateMovementById refresh the effective dates of the previous and the new participants`() {
+		// Arrange
+		val previousParticipantId = UUID.randomUUID()
+		val previousContent = MovementContentModel().apply { participant = ParticipantModel().apply { id = previousParticipantId } }
+		val newContent = MovementContentModel().apply { participant = commonParticipant() }
+		val oldMovement = commonMovement().apply { type = IN; contentType = REGISTERED; content = listOf(previousContent) }
+		val updatedMovement = commonMovement().apply { type = IN; contentType = REGISTERED; content = listOf(newContent) }
+
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(commonParticipant()))
+		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
+
+		// Act
+		service.updateMovementById(currentUser(), projectId, movementId, updatedMovement).block()
+
+		// Assert
+		verify(participantPort).refreshEffectiveDates(listOf(previousParticipantId, participantId))
+	}
+
+	@Test
+	fun `Should disableMovementById refresh the effective dates of its participants`() {
+		// Arrange
+		val movement = commonMovement().apply {
+			contentType = REGISTERED
+			content = listOf(MovementContentModel().apply { participant = commonParticipant() })
+		}
+
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.update(any())).thenReturn(Mono.just(movement))
+
+		// Act
+		service.disableMovementById(currentUser(), projectId, movementId).block()
+
+		// Assert
+		verify(participantPort).refreshEffectiveDates(listOf(participantId))
+	}
+
+	@Test
+	fun `Should enableMovementById refresh the effective dates of its participants`() {
+		// Arrange
+		val movement = commonMovement().apply {
+			contentType = REGISTERED
+			visible = false
+			content = listOf(MovementContentModel().apply { participant = commonParticipant() })
+		}
+
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.update(any())).thenReturn(Mono.just(movement))
+
+		// Act
+		service.enableMovementById(currentUser(), projectId, movementId).block()
+
+		// Assert
+		verify(participantPort).refreshEffectiveDates(listOf(participantId))
+	}
+
+	@Test
+	fun `Should deleteMovementById refresh the effective dates of its participants`() {
+		// Arrange
+		val movement = commonMovement().apply {
+			contentType = REGISTERED
+			content = listOf(MovementContentModel().apply { participant = commonParticipant() })
+		}
+
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
+
+		// Act
+		service.deleteMovementById(projectId, movementId).block()
+
+		// Assert
+		verify(port).deleteById(movementId)
+		verify(participantPort).refreshEffectiveDates(listOf(participantId))
+	}
+
+	@Test
 	fun `Should disableMovementById hide and return a Movement`() {
 		// Arrange
 		val movement = commonMovement().apply { contentType = REGISTERED }
@@ -1126,5 +1246,147 @@ class MovementServiceTest {
 		// Assert
 		verify(port).findOlderThanAndUncommentedSince(date)
 		verify(port, never()).deleteById(any())
+	}
+
+	@Test
+	fun `Should findPlannedMovements build one arrival draft per participant planned on its own date`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		val participants = listOf(plannedParticipant(), plannedParticipant())
+		stubPlanned(projectId, IN, own = participants)
+
+		// Act
+		val drafts = service.findPlannedMovements(projectId, IN, PLANNED_DAY)
+
+		// Assert
+		StepVerifier.create(drafts)
+			.expectNextMatches { it.isDraft(IN, null, null, participants[0]) }
+			.expectNextMatches { it.isDraft(IN, null, null, participants[1]) }
+			.verifyComplete()
+	}
+
+	@Test
+	fun `Should findPlannedMovements build definitive departure drafts for participants planned on their own date`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		val participant = plannedParticipant()
+		stubPlanned(projectId, OUT, own = listOf(participant))
+
+		// Act
+		val drafts = service.findPlannedMovements(projectId, OUT, PLANNED_DAY)
+
+		// Assert
+		StepVerifier.create(drafts)
+			.expectNextMatches { it.isDraft(OUT, DEFINITIVE_DEPARTURE, null, participant) }
+			.verifyComplete()
+	}
+
+	@Test
+	fun `Should findPlannedMovements build one arrival draft per group with the group name as pool name`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		val group = GroupModel(name = "Alpha").apply { id = UUID.randomUUID() }
+		val members = listOf(plannedParticipant(), plannedParticipant())
+		stubPlanned(projectId, IN, inherited = members.map { group.id!! to it }, groups = listOf(group))
+
+		// Act
+		val drafts = service.findPlannedMovements(projectId, IN, PLANNED_DAY)
+
+		// Assert
+		StepVerifier.create(drafts)
+			.expectNextMatches { it.type == IN && it.reason == null && it.content.map { c -> c.poolName }.all { n -> n == "Alpha" } }
+			.verifyComplete()
+	}
+
+	@Test
+	fun `Should findPlannedMovements sort the group drafts by group name and gather their members`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		val alpha = GroupModel(name = "Alpha").apply { id = UUID.randomUUID() }
+		val beta = GroupModel(name = "Beta").apply { id = UUID.randomUUID() }
+		val (first, second, third) = listOf(plannedParticipant(), plannedParticipant(), plannedParticipant())
+		val inherited = listOf(beta.id!! to third, alpha.id!! to first, alpha.id!! to second)
+		stubPlanned(projectId, OUT, inherited = inherited, groups = listOf(beta, alpha))
+
+		// Act
+		val drafts = service.findPlannedMovements(projectId, OUT, PLANNED_DAY)
+
+		// Assert
+		StepVerifier.create(drafts)
+			.expectNextMatches { it.content.map { c -> c.participant } == listOf(first, second) && it.reason == DEFINITIVE_DEPARTURE }
+			.expectNextMatches { it.content.map { c -> c.participant } == listOf(third) && it.content.single().poolName == "Beta" }
+			.verifyComplete()
+	}
+
+	@Test
+	fun `Should findPlannedMovements list the individual drafts before the group drafts`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		val group = GroupModel(name = "Alpha").apply { id = UUID.randomUUID() }
+		val alone = plannedParticipant()
+		stubPlanned(projectId, IN, own = listOf(alone), inherited = listOf(group.id!! to plannedParticipant()), groups = listOf(group))
+
+		// Act
+		val drafts = service.findPlannedMovements(projectId, IN, PLANNED_DAY)
+
+		// Assert
+		StepVerifier.create(drafts)
+			.expectNextMatches { it.content.single().participant == alone && it.content.single().poolName == null }
+			.expectNextMatches { it.content.single().poolName == "Alpha" }
+			.verifyComplete()
+	}
+
+	@Test
+	fun `Should findPlannedMovements drop the members of a group that can no longer be resolved`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		stubPlanned(projectId, IN, inherited = listOf(UUID.randomUUID() to plannedParticipant()), groups = emptyList())
+
+		// Act
+		val drafts = service.findPlannedMovements(projectId, IN, PLANNED_DAY)
+
+		// Assert
+		StepVerifier.create(drafts).verifyComplete()
+	}
+
+	@Test
+	fun `Should findPlannedMovements default to the clock date`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		val fixedClock = Clock.fixed(Instant.parse("2026-07-14T23:59:59Z"), ZoneOffset.UTC)
+		stubPlanned(projectId, IN)
+
+		// Act
+		val drafts = buildService(fixedClock).findPlannedMovements(projectId, IN, null)
+
+		// Assert
+		StepVerifier.create(drafts).verifyComplete()
+		verify(participantPort).findPlannedOnOwnDate(projectId, IN, PLANNED_DAY, MAX_PLANNED)
+		verify(participantPort).findPlannedOnGroupDate(projectId, IN, PLANNED_DAY, MAX_PLANNED)
+	}
+
+	private fun plannedParticipant() = ParticipantModel().apply { id = UUID.randomUUID() }
+
+	private fun MovementModel.isDraft(
+		expectedType: MovementTypeEnum,
+		expectedReason: MovementReasonEnum?,
+		expectedPoolName: String?,
+		expectedParticipant: ParticipantModel,
+	): Boolean {
+		val content = content.single()
+		return type == expectedType && reason == expectedReason && contentType == REGISTERED &&
+			content.poolName == expectedPoolName && content.participant == expectedParticipant
+	}
+
+	private fun stubPlanned(
+		projectId: UUID,
+		type: MovementTypeEnum,
+		own: List<ParticipantModel> = emptyList(),
+		inherited: List<Pair<UUID, ParticipantModel>> = emptyList(),
+		groups: List<GroupModel> = emptyList(),
+	) {
+		whenever(participantPort.findPlannedOnOwnDate(projectId, type, PLANNED_DAY, MAX_PLANNED)).thenReturn(Flux.fromIterable(own))
+		whenever(participantPort.findPlannedOnGroupDate(projectId, type, PLANNED_DAY, MAX_PLANNED)).thenReturn(Flux.fromIterable(inherited))
+		whenever(groupPort.findAllByIds(eq(projectId), any(), eq(true))).thenReturn(Flux.fromIterable(groups))
 	}
 }

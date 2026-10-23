@@ -8,28 +8,12 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
-import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import java.util.Objects
 
 object AvailabilityElementExt {
-	fun ParticipantModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
-		val now = CustomDateTimeModel.now()
-		val available = (
-				(
-						Objects.isNull(startAvailability) && (groups.isEmpty() || availableGroups.isNotEmpty())
-								|| now.asStartIsAfterOther(startAvailability)
-						) &&
-						(
-								Objects.isNull(endAvailability) && (groups.isEmpty() || availableGroups.isNotEmpty())
-										|| now.asEndIsBeforeOther(endAvailability)
-								)
-				)
-		return status(available, lastMovementType)
-	}
-
 	fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
 		val now = CustomDateTimeModel.now()
 		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)

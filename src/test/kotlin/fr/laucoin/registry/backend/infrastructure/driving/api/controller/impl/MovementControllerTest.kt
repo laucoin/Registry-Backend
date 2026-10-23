@@ -52,6 +52,8 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Move
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementContentReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PlannedMovementReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PlannedMovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementTypeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
@@ -103,6 +105,9 @@ class MovementControllerTest: TestContext() {
 	private lateinit var readerMapper: MovementReaderDtoMapper
 
 	@MockitoBean
+	private lateinit var plannedReaderMapper: PlannedMovementReaderDtoMapper
+
+	@MockitoBean
 	private lateinit var readerContentMapper: MovementContentReaderDtoMapper
 
 	@MockitoBean
@@ -128,6 +133,20 @@ class MovementControllerTest: TestContext() {
 
 	private companion object {
 		private const val BASE_URL = "/api/v2/projects/{projectId}/movements"
+
+		@JvmStatic
+		fun `Planned endpoints`(): Stream<Arguments> = Stream.of(
+			Arguments.of("arrivals", IN),
+			Arguments.of("departures", OUT),
+		)
+
+		@JvmStatic
+		fun `Planned endpoints with a wrong day`(): Stream<Arguments> = Stream.of(
+			Arguments.of("arrivals", "not-a-date"),
+			Arguments.of("arrivals", "2026-13-40"),
+			Arguments.of("departures", "2026-07-14T10:00:00Z"),
+			Arguments.of("departures", "14/07/2026"),
+		)
 
 		@JvmStatic
 		fun `Should findMovements return 200`(): Stream<Arguments> = Stream.of(
@@ -865,6 +884,85 @@ class MovementControllerTest: TestContext() {
 			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("activityId", UUID.randomUUID()))))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+		verifyNoInteractions(service)
+	}
+
+	@ParameterizedTest
+	@MethodSource("Planned endpoints")
+	fun `Should findPlanned return 200 and default the day`(path: String, type: MovementTypeEnum) {
+		// Arrange
+		whenever(service.findPlannedMovements(any(), any(), anyOrNull())).thenReturn(Flux.just(MovementModel(contentType = REGISTERED)))
+		whenever(plannedReaderMapper.toDto(any())).thenReturn(PlannedMovementReaderDto(contentType = REGISTERED))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.get()
+			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(projectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+
+		verify(service).findPlannedMovements(projectId, type, null)
+		verify(plannedReaderMapper).toDto(any())
+	}
+
+	@ParameterizedTest
+	@MethodSource("Planned endpoints")
+	fun `Should findPlanned forward the requested day`(path: String, type: MovementTypeEnum) {
+		// Arrange
+		val date = LocalDate.of(2026, 7, 14)
+		whenever(service.findPlannedMovements(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.get()
+			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(projectId), listOf(Pair("date", date))))
+			.exchange()
+
+		// Assert
+		result.body<List<*>>(OK)
+
+		verify(service).findPlannedMovements(projectId, type, date)
+	}
+
+	@ParameterizedTest
+	@MethodSource("Planned endpoints with a wrong day")
+	fun `Should findPlanned return 400 with a wrong day`(path: String, date: String) {
+		// Arrange
+		val authority = buildAuthority(REGISTRY_PROJECT_MOVEMENT_C)
+
+		// Act
+		val result = webClient
+			.authenticate(authority)
+			.get()
+			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(projectId), listOf(Pair("date", date))))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isBadRequest
+
+		verifyNoInteractions(service)
+	}
+
+	@ParameterizedTest
+	@MethodSource("Planned endpoints")
+	fun `Should findPlanned return 403 without the movement creation permission`(path: String) {
+		// Arrange
+		val authority = buildAuthority(REGISTRY_PROJECT_MOVEMENT_R)
+
+		// Act
+		val result = webClient
+			.authenticate(authority)
+			.get()
+			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(projectId), emptyList()))
 			.exchange()
 
 		// Assert
