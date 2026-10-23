@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.springframework.http.HttpStatus.FORBIDDEN
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
@@ -52,11 +55,17 @@ class ProjectService(
 	override fun findProjectsPage(
 		currentUser: CurrentUserModel,
 		pageable: PageableModel,
-		withProfile: Boolean,
+		withProfile: Boolean?,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
+		// Without the global read authority, only the Projects the User has a valid Profile on are visible
+		val canReadAll = currentUser.hasAuthority(REGISTRY_PROJECT_R)
+		if (!canReadAll && withProfile == false) {
+			return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
+		}
+
 		searchParams.userId = currentUser.id
-		return (if (!withProfile) {
+		return (if (!(withProfile ?: !canReadAll)) {
 			port.findPage(pageable, searchParams)
 		} else port.findPage(
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),

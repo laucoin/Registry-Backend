@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DELETE_HAS_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_STATUS_IS_NOT_UPDATABLE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -42,11 +43,24 @@ class AlertService(
 	private val transactionalOperator: TransactionalOperator,
 ): IAlertService, GenericService() {
 	override fun findAlertsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel
 	): Mono<PageModel<AlertModel>> {
 		return port.findPage(projectId, pageable, searchParams)
+			.doOnNext { page -> page.content.forEach { restrictToReadableFields(currentUser, it) } }
+	}
+
+	override fun findAlertForUser(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel> {
+		return findAlertById(projectId, id, isVisible = null).map { restrictToReadableFields(currentUser, it) }
+	}
+
+	private fun restrictToReadableFields(currentUser: CurrentUserModel, alert: AlertModel): AlertModel {
+		if (!currentUser.hasAuthority(alert.projectId!!, REGISTRY_PROJECT_ALERT_COMMUNICATION_R)) {
+			alert.lastCommunication = null
+		}
+		return alert
 	}
 
 	override fun findAlertById(
@@ -90,6 +104,7 @@ class AlertService(
 						newAlert
 					}
 			}
+			.map { restrictToReadableFields(currentUser, it) }
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -158,7 +173,7 @@ class AlertService(
 		}
 
 	private fun Mono<AlertModel>.updateAlert(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser) }).map { updated -> restrictToReadableFields(currentUser, updated) }
 	}
 
 	override fun disableAlertById(

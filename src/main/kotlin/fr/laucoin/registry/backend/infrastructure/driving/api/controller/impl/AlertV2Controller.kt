@@ -3,10 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
-import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -64,13 +62,11 @@ class AlertV2Controller(
 			sort = sort.toSortModel(AlertSearchParamModel.SORT_FIELDS),
 		)
 
-		return service.findAlertsPage(projectId, pageable, searchParams)
-			.map { it.apply { content.forEach { alert -> alert.restrictTo(currentUser, projectId) } } }
-			.map(readerMapper::toDtoPage)
+		return service.findAlertsPage(currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun findAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertReaderDto> {
-		return service.findAlertById(projectId, id, isVisible = null).map { toReaderDto(currentUser, projectId, it) }
+		return service.findAlertForUser(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun findAlertCommunications(
@@ -102,7 +98,7 @@ class AlertV2Controller(
 	): Mono<ResponseEntity<AlertReaderDto>> {
 		val alertModel = creationWriterMapper.toModel(alert, projectId)
 		return service.createAlert(currentUser, alertModel)
-			.map { toReaderDto(currentUser, projectId, it) }
+			.map(readerMapper::toDto)
 			.map { exchange.created(it) }
 	}
 
@@ -120,7 +116,7 @@ class AlertV2Controller(
 			exchange.expectedLastEditions(),
 			current = { service.findAlertById(projectId, id, isVisible = null) },
 			action = { service.updateAlertById(currentUser, projectId, id, alertModel) },
-		).map { toReaderDto(currentUser, projectId, it) }
+		).map(readerMapper::toDto)
 	}
 
 	override fun updateAlertStatusById(
@@ -129,7 +125,7 @@ class AlertV2Controller(
 		id: UUID,
 		status: AlertStatusEnum
 	): Mono<AlertReaderDto> {
-		return service.updateAlertStatusById(currentUser, projectId, id, status).map { toReaderDto(currentUser, projectId, it) }
+		return service.updateAlertStatusById(currentUser, projectId, id, status).map(readerMapper::toDto)
 	}
 
 	override fun disableAlertById(
@@ -137,7 +133,7 @@ class AlertV2Controller(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertReaderDto> {
-		return service.disableAlertById(currentUser, projectId, id).map { toReaderDto(currentUser, projectId, it) }
+		return service.disableAlertById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun enableAlertById(
@@ -145,7 +141,7 @@ class AlertV2Controller(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertReaderDto> {
-		return service.enableAlertById(currentUser, projectId, id).map { toReaderDto(currentUser, projectId, it) }
+		return service.enableAlertById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun deleteAlertById(
@@ -156,12 +152,4 @@ class AlertV2Controller(
 		return service.deleteAlertById(currentUser, projectId, id)
 	}
 
-	private fun toReaderDto(currentUser: CurrentUserModel, projectId: UUID, alert: AlertModel): AlertReaderDto {
-		return readerMapper.toDto(alert.restrictTo(currentUser, projectId))
-	}
-
-	private fun AlertModel.restrictTo(currentUser: CurrentUserModel, projectId: UUID): AlertModel {
-		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_ALERT_COMMUNICATION_R)) lastCommunication = null
-		return this
-	}
 }

@@ -1,5 +1,10 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertNotNull
+import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DELETE_HAS_COMMUNICATION
@@ -73,7 +78,7 @@ class AlertServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findAlertsPage(defaultProjectId, pageable, params).block()
+		service.findAlertsPage(currentUser(), defaultProjectId, pageable, params).block()
 
 		// Assert
 		verify(port).findPage(defaultProjectId, pageable, params)
@@ -161,10 +166,90 @@ class AlertServiceTest {
 		whenever(communicationPort.create(any())).thenReturn(Mono.just(createdCommunication))
 
 		// Act
-		val result = service.createAlert(currentUser(), alert).block()!!
+		val result = service.createAlert(currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R)), alert).block()!!
 
 		// Assert
 		assertEquals(createdCommunication, result.lastCommunication)
+	}
+
+	@Test
+	fun `Should createAlert hide the last communication from a user who cannot read communications`() {
+		// Arrange
+		val alert = defaultAlert().apply { communications = listOf(CommunicationModel()) }
+
+		whenever(port.create(any())).thenReturn(Mono.just(alert))
+		whenever(communicationPort.create(any())).thenReturn(Mono.just(defaultCommunication()))
+
+		// Act
+		val result = service.createAlert(currentUser(), alert).block()!!
+
+		// Assert
+		assertNull(result.lastCommunication)
+	}
+
+	@Test
+	fun `Should findAlertsPage hide the last communication of every alert from a user who cannot read communications`() {
+		// Arrange
+		val alerts = listOf(
+			defaultAlert().apply { lastCommunication = defaultCommunication() },
+			defaultAlert().apply { lastCommunication = defaultCommunication() },
+		)
+		whenever(port.findPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(PageableModel(0, 10), totalElements = 2, alerts)))
+
+		// Act
+		service.findAlertsPage(currentUser(), defaultProjectId, PageableModel(0, 10), AlertSearchParamModel()).block()
+
+		// Assert
+		assertTrue(alerts.all { it.lastCommunication == null })
+	}
+
+	@Test
+	fun `Should findAlertsPage keep the last communication for a user who can read communications`() {
+		// Arrange
+		val alert = defaultAlert().apply { lastCommunication = defaultCommunication() }
+		whenever(port.findPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(PageableModel(0, 10), totalElements = 1, listOf(alert))))
+
+		// Act
+		service.findAlertsPage(
+			currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R)),
+			defaultProjectId,
+			PageableModel(0, 10),
+			AlertSearchParamModel(),
+		).block()
+
+		// Assert
+		assertNotNull(alert.lastCommunication)
+	}
+
+	@Test
+	fun `Should findAlertForUser hide the last communication from a user who cannot read communications`() {
+		// Arrange
+		val alert = defaultAlert().apply { lastCommunication = defaultCommunication() }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
+
+		// Act
+		val result = service.findAlertForUser(currentUser(), defaultProjectId, defaultAlertId).block()!!
+
+		// Assert
+		assertNull(result.lastCommunication)
+		verify(port).findById(defaultProjectId, defaultAlertId, null)
+	}
+
+	@Test
+	fun `Should findAlertForUser keep the last communication for a user who can read communications`() {
+		// Arrange
+		val alert = defaultAlert().apply { lastCommunication = defaultCommunication() }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
+
+		// Act
+		val result = service
+			.findAlertForUser(currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R)), defaultProjectId, defaultAlertId)
+			.block()!!
+
+		// Assert
+		assertNotNull(result.lastCommunication)
 	}
 
 	@Test

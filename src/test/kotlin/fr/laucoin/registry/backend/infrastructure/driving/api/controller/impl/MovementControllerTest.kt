@@ -274,7 +274,7 @@ class MovementControllerTest : TestContext() {
 			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
-		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(service.findMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
@@ -303,7 +303,7 @@ class MovementControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findMovementsPage(defaultProjectId, pageable, searchParams)
+		verify(service).findMovementsPage(any(), eq(defaultProjectId), eq(pageable), eq(searchParams))
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -896,7 +896,7 @@ class MovementControllerTest : TestContext() {
 		val activityId = UUID.randomUUID()
 		val pageable = PageableModel(0, 20)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(MovementModel()))
-		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(service.findMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
@@ -912,25 +912,11 @@ class MovementControllerTest : TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findMovementsPage(
-			defaultProjectId,
-			pageable,
-			MovementSearchParamModel(type = null, activityId = activityId)
+			any(),
+			eq(defaultProjectId),
+			eq(pageable),
+			eq(MovementSearchParamModel(type = null, activityId = activityId)),
 		)
-	}
-
-	@Test
-	fun `Should findMovements refuse the activity filter without the activity option`() {
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
-			.get()
-			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("activityId", UUID.randomUUID()))))
-			.exchange()
-
-		// Assert
-		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-
-		verifyNoInteractions(service)
 	}
 
 	@ParameterizedTest

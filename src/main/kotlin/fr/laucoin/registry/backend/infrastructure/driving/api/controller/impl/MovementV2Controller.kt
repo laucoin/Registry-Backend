@@ -2,8 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.IConcurrencyService
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
@@ -16,7 +14,6 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementV2Controller
@@ -30,6 +27,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Vehicle
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LabelSearchExt.matchesQuery
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementActivityReasonReaderDtoMapper
@@ -45,8 +43,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.Part
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
-import org.apache.commons.text.similarity.JaroWinklerSimilarity
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
@@ -69,7 +65,6 @@ class MovementV2Controller(
 	private val guestMovementWriterMapper: GuestMovementWriterDtoMapper,
 	private val guestWriterMapper: GuestWriterDtoMapper,
 ): IMovementV2Controller {
-	private val similarity: JaroWinklerSimilarity = JaroWinklerSimilarity()
 
 	override fun findMovements(
 		currentUser: CurrentUserModel,
@@ -85,8 +80,6 @@ class MovementV2Controller(
 		activityId: UUID?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
-		requireActivityOption(currentUser, projectId, hasActivity == true || activityId != null)
-
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
 			isVisible,
@@ -98,25 +91,20 @@ class MovementV2Controller(
 			sort = sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
 		)
 
-		return movementsPage(isCurrent, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
-	}
-
-	private fun requireActivityOption(currentUser: CurrentUserModel, projectId: UUID, isActivityRequested: Boolean) {
-		if (isActivityRequested && !currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY)) {
-			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
-		}
+		return movementsPage(isCurrent, currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	private fun movementsPage(
 		isCurrent: Boolean,
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>> {
 		return if (isCurrent) {
-			service.findCurrentMovementsPage(projectId, pageable, searchParams)
+			service.findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)
 		} else {
-			service.findMovementsPage(projectId, pageable, searchParams)
+			service.findMovementsPage(currentUser, projectId, pageable, searchParams)
 		}
 	}
 
@@ -166,9 +154,7 @@ class MovementV2Controller(
 	): Flux<MovementReasonsReaderDto> {
 		return service.searchReasonsByText(contentType, type)
 			.map(reasonReaderMapper::toDto)
-			.map { Pair(it, similarity.apply(it.label, query ?: it.label)) }
-			.filter { it.second > 0 }
-			.map(Pair<MovementReasonsReaderDto, Double>::first)
+			.filter { it.label.matchesQuery(query) }
 	}
 
 	override fun searchParticipantsAndGroups(

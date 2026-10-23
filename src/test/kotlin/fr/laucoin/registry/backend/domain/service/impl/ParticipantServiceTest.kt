@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.mockito.kotlin.verifyNoInteractions
+import org.springframework.http.HttpStatus.FORBIDDEN
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DISABLE_LAST_GROUP_MEMBER
@@ -300,6 +303,24 @@ class ParticipantServiceTest {
 	}
 
 	@Test
+	fun `Should findParticipantMovementsPage refuse the hasActivity filter without the activity option`() {
+		// Arrange
+		val params = MovementSearchParamModel(type = null, hasActivity = true)
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.findParticipantMovementsPage(
+				currentUser(), defaultProjectId, defaultParticipantId, PageableModel(0, 10), params,
+			).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(NOT_ENOUGH_PERMISSION, result.code)
+		verifyNoInteractions(movementPort)
+	}
+
+	@Test
 	fun `Should findParticipantMovementsPage call movementPort findPageByParticipantId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
@@ -308,7 +329,7 @@ class ParticipantServiceTest {
 		whenever(movementPort.findPageByParticipantId(any(), any(), any(), any())).thenReturn(Mono.empty())
 
 		// Act
-		service.findParticipantMovementsPage(defaultProjectId, defaultParticipantId, pageable, params).block()
+		service.findParticipantMovementsPage(currentUser(), defaultProjectId, defaultParticipantId, pageable, params).block()
 
 		// Assert
 		verify(movementPort).findPageByParticipantId(defaultProjectId, defaultParticipantId, pageable, params)
