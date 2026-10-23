@@ -181,6 +181,10 @@ class ParticipantModelPostgresRepository(
 		else repository.refreshEffectiveDates(ids).thenReturn(Unit)
 	}
 
+	override fun lockByIds(ids: List<UUID>): Flux<UUID> {
+		return if (ids.isEmpty()) Flux.empty() else repository.lockByIds(ids)
+	}
+
 	override fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel> {
 		return if (guests.isEmpty()) Flux.empty()
 		else repository.saveAll(guests.map(mapper::toEntity)).map(mapper::toModel)

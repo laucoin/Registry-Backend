@@ -1,9 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres
 
 import fr.laucoin.registry.backend.domain.port.IGroupPort
+import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
+import fr.laucoin.registry.backend.test.ModelExt.defaultParticipantId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import io.r2dbc.spi.R2dbcException
@@ -18,6 +20,9 @@ import reactor.test.StepVerifier
 class RowLockContentionTest : TestContext() {
 	@Autowired
 	private lateinit var userPort: IUserPort
+
+	@Autowired
+	private lateinit var participantPort: IParticipantPort
 
 	@Autowired
 	private lateinit var groupPort: IGroupPort
@@ -92,6 +97,30 @@ class RowLockContentionTest : TestContext() {
 
 		// Act
 		val waiting = groupPort.lockByIds(listOf(groupId)).then().`as`(transactionalOperator::transactional)
+
+		// Assert
+		StepVerifier.create(waiting)
+			.expectErrorMatches { error -> generateSequence(error) { it.cause }.any(::isLockTimeout) }
+			.verify(Duration.ofSeconds(15))
+		release.tryEmitEmpty()
+		holder.dispose()
+	}
+
+	@Test
+	fun `Should a second transaction fail with a lock timeout while a participant is locked`() {
+		// Arrange
+		val participantId = defaultParticipantId
+		val locked = Sinks.one<Boolean>()
+		val release = Sinks.empty<Void>()
+		val holder = participantPort.lockByIds(listOf(participantId))
+			.then(Mono.fromRunnable<Void> { locked.tryEmitValue(true) })
+			.then(release.asMono())
+			.`as`(transactionalOperator::transactional)
+			.subscribe()
+		locked.asMono().block(Duration.ofSeconds(10))
+
+		// Act
+		val waiting = participantPort.lockByIds(listOf(participantId)).then().`as`(transactionalOperator::transactional)
 
 		// Assert
 		StepVerifier.create(waiting)
