@@ -249,7 +249,7 @@ class UserService(
 
 	private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) =
 		handle { it, handle ->
-			if (it.id === currentUser.id) {
+			if (it.id == currentUser.id) {
 				log.warn("The user {} is the current user", currentUser.id)
 				handle.error(RegistryException(FORBIDDEN, error))
 			} else handle.next(it)
