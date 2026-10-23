@@ -10,6 +10,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -61,7 +63,7 @@ interface IAlertV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the alert title")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@RequestParam(required = false) status: AlertStatusEnum?,
@@ -72,7 +74,7 @@ interface IAlertV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: title, dateTime, status")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<AlertReaderDto>>
 
 	@Operation(
@@ -101,7 +103,7 @@ interface IAlertV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the communication message")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@Parameter(description = "Start (inclusive) of the period that must contain the element date-time")
@@ -111,7 +113,7 @@ interface IAlertV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, message")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<CommunicationReaderDto>>
 
 	@Operation(

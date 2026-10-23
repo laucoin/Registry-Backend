@@ -23,12 +23,9 @@ import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
@@ -206,22 +203,6 @@ class CommunicationServiceTest {
 				),
 			)
 		}
-	}
-
-	@Test
-	fun `Should findCommunicationsPage call port findPage`() {
-		// Arrange
-		val pageable = PageableModel(0, 10)
-		val params = CommunicationSearchParamModel()
-
-		whenever(port.findPage(any(), any(), any()))
-			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
-
-		// Act
-		service.findCommunicationPage(projectId, pageable, params).block()
-
-		// Assert
-		verify(port).findPage(projectId, pageable, params)
 	}
 
 	@Test

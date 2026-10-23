@@ -11,6 +11,9 @@ import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.driven.idp.entity.IdpTokenEntity
 import fr.laucoin.registry.backend.infrastructure.driven.idp.mapper.AuthenticationTokenEntityMapper
 import io.netty.channel.ChannelOption
+import java.net.URLEncoder
+import java.time.Duration
+import kotlin.text.Charsets.UTF_8
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
@@ -22,7 +25,6 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.resources.ConnectionProvider
-import java.time.Duration
 
 @Service
 class IdpAuthenticationAdapter(
@@ -74,7 +76,7 @@ class IdpAuthenticationAdapter(
 
 	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
 		return AuthenticationUriModel(
-			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=$redirectUri"
+			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=${redirectUri.urlEncoded()}"
 		)
 	}
 
@@ -83,11 +85,18 @@ class IdpAuthenticationAdapter(
 		accessToken: String?,
 		refreshToken: String?
 	): Mono<AuthenticationUriModel> {
+		return revokeTokens(accessToken, refreshToken)
+			.thenReturn(AuthenticationUriModel(uri = "$endSessionUri?redirect_uri=${redirectUri.urlEncoded()}"))
+	}
+
+	private fun revokeTokens(accessToken: String?, refreshToken: String?): Mono<Void> {
 		return Mono.`when`(
 			revokeToken(accessToken, "access_token"),
 			revokeToken(refreshToken, "refresh_token"),
-		).thenReturn(AuthenticationUriModel(uri = "$endSessionUri?redirect_uri=$redirectUri"))
+		)
 	}
+
+	private fun String.urlEncoded(): String = URLEncoder.encode(this, UTF_8)
 
 	private fun revokeToken(token: String?, tokenTypeHint: String): Mono<Void> {
 		if (token.isNullOrBlank()) return Mono.empty()

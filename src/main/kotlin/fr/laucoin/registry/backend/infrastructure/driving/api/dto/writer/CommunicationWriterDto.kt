@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.COMMUNICATION_MESSAGE_MAX
 import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.AtLeastOneIsDefined
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
@@ -13,7 +14,7 @@ import java.util.UUID
 data class CommunicationWriterDto(
 	@field:NotNull(message = COMMUNICATION_DATETIME_NULL)
 	var dateTime: ZonedDateTime?,
-	@field:Size(max = 250, message = COMMUNICATION_MESSAGE_TOO_LONG)
+	@field:Size(max = COMMUNICATION_MESSAGE_MAX, message = COMMUNICATION_MESSAGE_TOO_LONG)
 	var message: String? = null,
 	var movementId: UUID?,
 	var alertId: UUID?,

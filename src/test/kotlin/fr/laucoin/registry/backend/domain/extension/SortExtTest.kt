@@ -69,4 +69,28 @@ class SortExtTest {
 		// Assert
 		assertEquals(arrayListOf<Any?>("a".repeat(32), "name, startDate"), exception.args)
 	}
+
+	@Test
+	fun `Should strip control characters from the echoed field`() {
+		// Arrange
+		val raw = "-ab\ncd\u0000e"
+
+		// Act
+		val exception = assertThrows(RegistryException::class.java) { raw.toSortModel(allowed) }
+
+		// Assert
+		assertEquals(arrayListOf<Any?>("abcde", "name, startDate"), exception.args)
+	}
+
+	@Test
+	fun `Should keep the underscores of the echoed field`() {
+		// Arrange
+		val raw = "start_date"
+
+		// Act
+		val exception = assertThrows(RegistryException::class.java) { raw.toSortModel(allowed) }
+
+		// Assert
+		assertEquals(arrayListOf<Any?>("start_date", "name, startDate"), exception.args)
+	}
 }

@@ -11,6 +11,9 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_U
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.GROUP_MEMBER_IDS_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -68,7 +71,7 @@ interface IGroupV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the group name (accent-insensitive substring)")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@Parameter(description = "Group availability filter at the current time: true keeps groups currently in their availability window, false keeps the others, omitted keeps both")
@@ -77,7 +80,7 @@ interface IGroupV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: name, startAvailability, endAvailability")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<GroupWithoutMemberReaderDto>>
 
 	@Operation(
@@ -95,7 +98,7 @@ interface IGroupV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the member first name and last name")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Age filter: true keeps adults (18 or older) only, false keeps minors only, omitted keeps both")
 		@RequestParam(required = false) isMajor: Boolean?,
 		@RequestParam(required = false) type: ParticipantTypeEnum?,
@@ -114,7 +117,7 @@ interface IGroupV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE) birthdayTo: LocalDate?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: firstName, lastName, birthday, type, startAvailability, endAvailability")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<ParticipantReaderDto>>
 
 	@Operation(
@@ -137,7 +140,7 @@ interface IGroupV2Controller {
 	fun searchParticipants(
 		@PathVariable projectId: UUID,
 		@Parameter(description = "Text matched against the participant first name and last name")
-		@RequestParam("q") @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?
+		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?
 	): Flux<ParticipantReaderDto>
 
 	@Operation(
@@ -177,7 +180,7 @@ interface IGroupV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestBody @Valid @NotEmpty(message = GROUP_MEMBERS_EMPTY) @Size(max = 200, message = GROUP_MEMBERS_TOO_MANY) memberIds: List<UUID>,
+		@RequestBody @Valid @NotEmpty(message = GROUP_MEMBERS_EMPTY) @Size(max = GROUP_MEMBER_IDS_MAX, message = GROUP_MEMBERS_TOO_MANY) memberIds: List<UUID>,
 	): Mono<ResponseEntity<AddedGroupMembersReaderDto>>
 
 	@Operation(

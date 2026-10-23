@@ -69,7 +69,10 @@ class ETagResponseFilter(private val objectMapper: ObjectMapper) : WebFilter {
 		override fun writeWith(body: Publisher<out DataBuffer>): Mono<Void> {
 			if (!isJsonSuccess()) return super.writeWith(body)
 
-			return Flux.from(body).collectList().flatMap(::writeBuffered)
+			return Flux.from(body)
+				.collectList()
+				.doOnDiscard(DataBuffer::class.java, DataBufferUtils::release)
+				.flatMap(::writeBuffered)
 		}
 
 		private fun isJsonSuccess(): Boolean {
@@ -89,21 +92,19 @@ class ETagResponseFilter(private val objectMapper: ObjectMapper) : WebFilter {
 		}
 
 		private fun readAndRelease(buffers: List<DataBuffer>): ByteArray {
-			val output = ByteArrayOutputStream()
-			buffers.forEach { buffer ->
-				try {
-					output.write(ByteArray(buffer.readableByteCount()).also(buffer::read))
-				} finally {
-					DataBufferUtils.release(buffer)
-				}
+			try {
+				val output = ByteArrayOutputStream()
+				buffers.forEach { buffer -> output.write(ByteArray(buffer.readableByteCount()).also(buffer::read)) }
+				return output.toByteArray()
+			} finally {
+				buffers.forEach(DataBufferUtils::release)
 			}
-			return output.toByteArray()
 		}
 
 		private fun eTag(bytes: ByteArray): String? {
 			val node = try {
 				objectMapper.readTree(bytes)
-			} catch (exception: JacksonException) {
+			} catch (_: JacksonException) {
 				log.debug("The body is not a JSON document, no ETag is computed")
 				return null
 			}
@@ -117,10 +118,10 @@ class ETagResponseFilter(private val objectMapper: ObjectMapper) : WebFilter {
 					node.isNumber -> decimalToInstant(node.decimalValue()).toETag()
 					else -> null
 				}
-			} catch (exception: DateTimeException) {
+			} catch (_: DateTimeException) {
 				log.debug("The last edition date-time is not a valid instant, no ETag is computed")
 				null
-			} catch (exception: ArithmeticException) {
+			} catch (_: ArithmeticException) {
 				log.debug("The last edition date-time is out of range, no ETag is computed")
 				null
 			}

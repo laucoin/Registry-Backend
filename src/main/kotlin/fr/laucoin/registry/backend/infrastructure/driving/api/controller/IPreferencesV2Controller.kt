@@ -1,11 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PREFERENCES_LANGUAGE_MAX
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Size
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -33,6 +37,6 @@ interface IPreferencesV2Controller {
 	fun updateLanguage(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@Parameter(description = "Language code, e.g. 'en', 'en-US', 'fr', 'fr-FR', etc.")
-		@RequestParam(required = true) language: String,
+		@RequestParam(required = true) @Valid @Size(max = PREFERENCES_LANGUAGE_MAX, message = PARAMETER_TOO_LONG) language: String,
 	): Mono<PreferencesModel>
 }

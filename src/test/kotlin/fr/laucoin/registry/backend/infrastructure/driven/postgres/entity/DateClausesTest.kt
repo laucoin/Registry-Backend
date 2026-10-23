@@ -117,4 +117,75 @@ class DateClausesTest : TestContext() {
             ) t ${resource.extraJoin} WHERE ${resource.clause}
         """
 	}
+
+	private fun matches(resource: WindowResource, fixture: String, at: ZonedDateTime): Boolean {
+		val sql = "SELECT 1 FROM ($fixture) t ${resource.extraJoin} WHERE ${resource.clause}"
+		return databaseClient.sql(sql).bind("at", at).fetch().all().collectList().block()!!.isNotEmpty()
+	}
+
+	private fun fixtureOf(resource: WindowResource, startDate: String, startTime: String, endDate: String, endTime: String): String {
+		val (startDateColumn, startTimeColumn, endDateColumn, endTimeColumn) = resource.columns
+		return "SELECT CAST($startDate AS DATE) AS $startDateColumn, CAST($startTime AS TIME WITH TIME ZONE) AS $startTimeColumn, " +
+			"CAST($endDate AS DATE) AS $endDateColumn, CAST($endTime AS TIME WITH TIME ZONE) AS $endTimeColumn"
+	}
+
+	@TestFactory
+	fun `Should treat a missing date as an open end of the window`(): Stream<DynamicTest> {
+		return WINDOWS.stream().flatMap { resource ->
+			Stream.of(
+				Triple("no start", fixtureOf(resource, "NULL", "NULL", "'2024-05-02'", "'10:00:00+02'"), listOf(parse("1999-01-01T00:00:00Z") to true, parse("2024-05-02T08:00:01Z") to false)),
+				Triple("no end", fixtureOf(resource, "'2024-05-01'", "'10:00:00+02'", "NULL", "NULL"), listOf(parse("2024-05-01T07:59:59Z") to false, parse("2999-01-01T00:00:00Z") to true)),
+				Triple("no bounds", fixtureOf(resource, "NULL", "NULL", "NULL", "NULL"), listOf(parse("1999-01-01T00:00:00Z") to true, parse("2999-01-01T00:00:00Z") to true)),
+			).map { (label, fixture, expectations) ->
+				dynamicTest("${resource.name} with $label") {
+					// Arrange
+					val resourceFixture = fixture
+
+					// Act
+					val results = expectations.map { (at, _) -> matches(resource, resourceFixture, at) }
+
+					// Assert
+					assertEquals(expectations.map { it.second }, results)
+				}
+			}
+		}
+	}
+
+	@TestFactory
+	fun `Should cover a whole day when a date has no time`(): Stream<DynamicTest> {
+		return WINDOWS.stream().map { resource ->
+			dynamicTest("${resource.name} from the 1st to the 3rd without time") {
+				// Arrange
+				val fixture = fixtureOf(resource, "'2024-05-01'", "NULL", "'2024-05-03'", "NULL")
+
+				// Act
+				val results = listOf("2024-04-29T12:00:00Z", "2024-05-02T12:00:00Z", "2024-05-05T12:00:00Z").map { matches(resource, fixture, parse(it)) }
+
+				// Assert
+				assertEquals(listOf(false, true, false), results)
+			}
+		}
+	}
+
+	@TestFactory
+	fun `Should require an available group when a participant belongs to groups`(): Stream<DynamicTest> {
+		val participants = WINDOWS.first { it.name == "participants" }
+		return Stream.of(
+			Triple("no group", "CAST(NULL AS JSON)", "CAST(NULL AS JSON)") to true,
+			Triple("groups but none available", "CAST('[{}]' AS JSON)", "CAST('[]' AS JSON)") to false,
+			Triple("groups with one available", "CAST('[{}]' AS JSON)", "CAST('[{}]' AS JSON)") to true,
+		).map { (groups, expected) ->
+			dynamicTest("participants with ${groups.first}") {
+				// Arrange
+				val fixture = fixtureOf(participants, "NULL", "NULL", "NULL", "NULL")
+				val sql = "SELECT 1 FROM ($fixture) t CROSS JOIN (SELECT ${groups.second} AS groups, ${groups.third} AS available_groups_on_date) fg WHERE ${participants.clause}"
+
+				// Act
+				val result = databaseClient.sql(sql).bind("at", parse("2024-05-01T12:00:00Z")).fetch().all().collectList().block()!!
+
+				// Assert
+				assertEquals(expected, result.isNotEmpty())
+			}
+		}
+	}
 }

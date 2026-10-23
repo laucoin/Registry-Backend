@@ -10,6 +10,8 @@ external:
     connect-timeout-millis: 2000
     response-timeout-millis: 5000
     max-connections: 20
+    allowed-redirect-uris: https://registry.test/callback
+    allowed-logout-redirect-uris: https://registry.test
     swagger:
       client-id: client-swagger
   cors:
@@ -132,6 +134,9 @@ server:
   port: ${registry.server.port}
 
 spring:
+  http:
+    codecs:
+      max-in-memory-size: 512KB
   application:
     name: ${registry.information.name}
   flyway:

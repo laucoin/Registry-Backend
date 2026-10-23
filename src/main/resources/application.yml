@@ -10,6 +10,8 @@ external:
     connect-timeout-millis: ${IDP_CONNECT_TIMEOUT_MILLIS:2000}
     response-timeout-millis: ${IDP_RESPONSE_TIMEOUT_MILLIS:5000}
     max-connections: ${IDP_MAX_CONNECTIONS:20}
+    allowed-redirect-uris: ${IDP_ALLOWED_REDIRECT_URIS}
+    allowed-logout-redirect-uris: ${IDP_ALLOWED_LOGOUT_REDIRECT_URIS}
     swagger:
       client-id: ${IDP_PUBLIC_CLIENT_ID}
   cors:
@@ -141,6 +143,9 @@ spring:
     password: ${registry.datasource.password}
     locations:
       - classpath:db/migrations
+  http:
+    codecs:
+      max-in-memory-size: ${REGISTRY_CODEC_MAX_IN_MEMORY_SIZE:512KB}
   main:
     web-application-type: reactive
     banner-mode: off
@@ -158,6 +163,7 @@ springdoc:
   use-management-port: true
   api-docs:
     enabled: ${registry.feature.documentation.enabled}
+    version: openapi_3_0
   swagger-ui:
     enabled: ${registry.feature.documentation.enabled}
     oauth:

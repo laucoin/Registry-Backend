@@ -10,12 +10,6 @@ import reactor.core.publisher.Mono
 
 interface ICommunicationPort {
 	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<CommunicationModel>
-	fun findPage(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel,
-	): Mono<PageModel<CommunicationModel>>
-
 	fun findByMovementIdsWithLimit(
 		limit: Int,
 		projectId: UUID,

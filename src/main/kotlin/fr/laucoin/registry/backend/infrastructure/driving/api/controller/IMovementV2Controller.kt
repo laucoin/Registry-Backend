@@ -14,6 +14,9 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.MOVEMENT_IDS_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -89,7 +92,7 @@ interface IMovementV2Controller {
 		@Parameter(description = "Only the movements of this activity. Considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
 		@RequestParam(required = false) activityId: UUID?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, type")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<MovementReaderDto>>
 
 	@Operation(
@@ -101,7 +104,7 @@ interface IMovementV2Controller {
 	fun findMovementsContents(
 		@PathVariable projectId: UUID,
 		@Parameter(description = "IDs of the movements, 100 at most")
-		@RequestParam(required = true) @Valid @Size(max = 100, message = MOVEMENT_IDS_TOO_MANY) movementIds: List<UUID>,
+		@RequestParam(required = true) @Valid @Size(max = MOVEMENT_IDS_MAX, message = MOVEMENT_IDS_TOO_MANY) movementIds: List<UUID>,
 		@Parameter(description = "\"isCurrent\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
 		@RequestParam(required = false, defaultValue = "false") isCurrent: Boolean,
 	): Flux<Pair<UUID, List<MovementContentReaderDto>>>
@@ -128,7 +131,7 @@ interface IMovementV2Controller {
 		@RequestParam(required = true) type: MovementTypeEnum,
 		@RequestParam(required = true) contentType: ParticipantTypeEnum,
 		@Parameter(description = "Text matched against the name and description of the activity")
-		@RequestParam("q") @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 	): Flux<MovementReasonsReaderDto>
 
 	@Operation(
@@ -141,7 +144,7 @@ interface IMovementV2Controller {
 		@PathVariable projectId: UUID,
 		@RequestParam(required = true) contentType: ParticipantTypeEnum,
 		@Parameter(description = "Text matched against the participant first name and last name, or the group name")
-		@RequestParam("q") @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 	): Mono<MovementParticipantsAndGroupsReaderDto>
 
 	@Operation(
@@ -153,7 +156,7 @@ interface IMovementV2Controller {
 	fun searchVehicles(
 		@PathVariable projectId: UUID,
 		@Parameter(description = "Text matched against the vehicle license plate, brand and model")
-		@RequestParam("q") @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?
+		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?
 	): Flux<VehicleReaderDto>
 
 	@Operation(
@@ -171,7 +174,7 @@ interface IMovementV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the communication message")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@Parameter(description = "Start (inclusive) of the period that must contain the element date-time")
@@ -181,7 +184,7 @@ interface IMovementV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, message")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<CommunicationReaderDto>>
 
 	@Operation(

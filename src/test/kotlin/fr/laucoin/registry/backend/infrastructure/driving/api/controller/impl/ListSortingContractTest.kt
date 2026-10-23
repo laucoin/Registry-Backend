@@ -6,16 +6,20 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_R
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_HISTORY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_R
@@ -129,6 +133,91 @@ class ListSortingContractTest : TestContext() {
 		}
 	}
 
+	@TestFactory
+	fun `Should refuse a text search over its length cap on every picker`(): Stream<DynamicTest> {
+		return pickers().stream().map { picker ->
+			dynamicTest(picker.name) {
+				// Arrange
+				val uri = uriBuilder(picker.uri, picker.params, picker.fixedQuery + Pair("q", "a".repeat(101)))
+
+				// Act
+				val result = webClient
+					.authenticate(*picker.authorities.toTypedArray())
+					.get()
+					.uri(uri)
+					.exchange()
+
+				// Assert
+				result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+			}
+		}
+	}
+
+	@TestFactory
+	fun `Should accept a text search at exactly its length cap on every picker`(): Stream<DynamicTest> {
+		return pickers().stream().map { picker ->
+			dynamicTest(picker.name) {
+				// Arrange
+				val uri = uriBuilder(picker.uri, picker.params, picker.fixedQuery + Pair("q", "a".repeat(100)))
+
+				// Act
+				val result = webClient
+					.authenticate(*picker.authorities.toTypedArray())
+					.get()
+					.uri(uri)
+					.exchange()
+
+				// Assert
+				result.expectStatus().isOk
+			}
+		}
+	}
+
+	@TestFactory
+	fun `Should accept a sort and a text search at exactly their length cap on every list`(): Stream<DynamicTest> {
+		return endpoints().stream().flatMap { endpoint ->
+			Stream.of(Pair("sort", 32), Pair("q", 100)).filter { (name, _) -> name == "sort" || endpoint.hasQuery }.map { (name, length) ->
+				dynamicTest("${endpoint.name} with a $name of $length characters") {
+					// Arrange
+					val uri = uriBuilder(endpoint.uri, endpoint.params, listOf(Pair(name, "a".repeat(length))))
+
+					// Act
+					val result = webClient
+						.authenticate(*endpoint.authorities.toTypedArray())
+						.get()
+						.uri(uri)
+						.exchange()
+
+					// Assert
+					if (name == "sort") result.assertError(BAD_REQUEST, SORT_FIELD_NOT_SUPPORTED) else result.expectStatus().isOk
+				}
+			}
+		}
+	}
+
+	private data class Picker(
+		val name: String,
+		val uri: String,
+		val params: List<Any>,
+		val authorities: List<String>,
+		val fixedQuery: List<Pair<String, Any?>> = emptyList(),
+	)
+
+	private fun pickers(): List<Picker> {
+		val inProject = listOf<Any>(projectId)
+		return listOf(
+			Picker("group participants", "$project/groups/search/participants", inProject, listOf(perm(REGISTRY_PROJECT_GROUP_METADATA_R))),
+			Picker("participant users", "$project/participants/search/users", inProject, listOf(perm(REGISTRY_PROJECT_PARTICIPANT_METADATA_R))),
+			Picker("participant groups", "$project/participants/search/groups", inProject, listOf(perm(REGISTRY_PROJECT_PARTICIPANT_METADATA_R))),
+			Picker("profile users", "$project/profiles/search/users", inProject, listOf(perm(REGISTRY_PROJECT_PROFILE_METADATA_R))),
+			Picker("communication movements", "$project/communications/search/movements", inProject, listOf(option(REGISTRY_PROJECT_OPTION_COMMUNICATION), perm(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))),
+			Picker("communication alerts", "$project/communications/search/alerts", inProject, listOf(option(REGISTRY_PROJECT_OPTION_ALERT), perm(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))),
+			Picker("movement reasons", "$project/movements/search/reasons", inProject, listOf(perm(REGISTRY_PROJECT_MOVEMENT_METADATA_R)), listOf(Pair("type", "IN"), Pair("contentType", "REGISTERED"))),
+			Picker("movement participants and groups", "$project/movements/search/participants-and-groups", inProject, listOf(perm(REGISTRY_PROJECT_MOVEMENT_METADATA_R)), listOf(Pair("contentType", "REGISTERED"))),
+			Picker("movement vehicles", "$project/movements/search/vehicles", inProject, listOf(perm(REGISTRY_PROJECT_MOVEMENT_METADATA_R))),
+		)
+	}
+
 	private fun endpoints(): List<ListEndpoint> = projectEndpoints() + movementEndpoints() + globalEndpoints()
 
 	private fun projectEndpoints(): List<ListEndpoint> {
@@ -137,7 +226,6 @@ class ListSortingContractTest : TestContext() {
 			ListEndpoint("activities", "$project/activities", inProject, listOf(option(REGISTRY_PROJECT_OPTION_ACTIVITY), perm(REGISTRY_PROJECT_ACTIVITY_R)), ActivitySearchParamModel.SORT_FIELDS),
 			ListEndpoint("alerts", "$project/alerts", inProject, listOf(option(REGISTRY_PROJECT_OPTION_ALERT), perm(REGISTRY_PROJECT_ALERT_R)), AlertSearchParamModel.SORT_FIELDS),
 			ListEndpoint("alert communications", "$project/alerts/{id}/communications", listOf(projectId, alertId), listOf(option(REGISTRY_PROJECT_OPTION_ALERT), perm(REGISTRY_PROJECT_ALERT_COMMUNICATION_R)), CommunicationSearchParamModel.SORT_FIELDS),
-			ListEndpoint("communications", "$project/communications", inProject, listOf(option(REGISTRY_PROJECT_OPTION_COMMUNICATION), perm(REGISTRY_PROJECT_COMMUNICATION_R)), CommunicationSearchParamModel.SORT_FIELDS),
 			ListEndpoint("groups", "$project/groups", inProject, listOf(perm(REGISTRY_PROJECT_GROUP_R)), GroupSearchParamModel.SORT_FIELDS),
 			ListEndpoint("group members", "$project/groups/{id}/members", listOf(projectId, groupId), listOf(perm(REGISTRY_PROJECT_GROUP_R)), ParticipantSearchParamModel.SORT_FIELDS),
 			ListEndpoint("participants", "$project/participants", inProject, listOf(perm(REGISTRY_PROJECT_PARTICIPANT_R)), ParticipantSearchParamModel.SORT_FIELDS),
