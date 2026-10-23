@@ -187,33 +187,32 @@ class ProjectProfileService(
 			)
 		)
 			.handle { it, handle ->
-				val eligibleRoles = roleService.getAssignableProjectRoles(it)
-				if (!eligibleRoles.contains(profileToUpdate.role)) {
-					log.warn(
-						"User \"{}\" cannot update project profile with a role higher up the breast.",
-						currentUser.id,
-					)
-					handle.error(
-						RegistryException(
-							FORBIDDEN,
-							PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER,
-							arrayListOf(profileToUpdate.role)
-						)
-					)
-				} else if (!eligibleRoles.contains(profile.role)) {
-					log.warn(
-						"User \"{}\" tried to update project profile with a role higher up the breast.",
-						currentUser.id,
-					)
-					handle.error(
-						RegistryException(
-							FORBIDDEN,
-							PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER,
-							arrayListOf(profile.role)
-						)
-					)
-				} else handle.next(profileToUpdate)
+				val error = roleError(currentUser, roleService.getAssignableProjectRoles(it), profileToUpdate, profile)
+				if (error != null) handle.error(error) else handle.next(profileToUpdate)
 			}
+	}
+
+	private fun roleError(
+		currentUser: CurrentUserModel,
+		eligibleRoles: List<String>,
+		profileToUpdate: ProjectProfileModel,
+		profile: ProjectProfileModel,
+	): RegistryException? = when {
+		!eligibleRoles.contains(profileToUpdate.role) -> {
+			log.warn("User \"{}\" cannot update project profile with a role higher up the breast.", currentUser.id)
+			RegistryException(
+				FORBIDDEN,
+				PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER,
+				arrayListOf(profileToUpdate.role),
+			)
+		}
+
+		!eligibleRoles.contains(profile.role) -> {
+			log.warn("User \"{}\" tried to update project profile with a role higher up the breast.", currentUser.id)
+			RegistryException(FORBIDDEN, PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER, arrayListOf(profile.role))
+		}
+
+		else -> null
 	}
 
 	private fun Mono<ProjectProfileModel>.updateProjectProfile(currentUser: CurrentUserModel) = flatMap { profile ->

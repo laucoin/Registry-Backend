@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectCurrentProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import java.util.Optional
 import org.springframework.stereotype.Component
@@ -21,23 +22,25 @@ class ProjectWithProfileReaderDtoMapper(
 			options = project.options,
 			counts = project.counts,
 			favorite = model.favorite,
-			profile = Optional.ofNullable(model.profile).map(profileMapper::toDto).map {
-				ProjectCurrentProfileReaderDto(
-					role = it.role,
-					availabilityStatus = it.availabilityStatus,
-					status = it.status,
-					startAccess = it.startAccess,
-					endAccess = it.endAccess,
-				).apply {
-					id = it.id
-					visible = it.visible
-				}
-			}.orElse(null),
+			profile = Optional.ofNullable(model.profile).map(profileMapper::toDto).map(::toCurrentProfile).orElse(null),
 		).apply {
 			id = project.id
 			visible = project.visible
 			creation = project.creation
 			lastEdition = project.lastEdition
+		}
+	}
+
+	private fun toCurrentProfile(profile: ProjectProfileReaderDto): ProjectCurrentProfileReaderDto {
+		return ProjectCurrentProfileReaderDto(
+			role = profile.role,
+			availabilityStatus = profile.availabilityStatus,
+			status = profile.status,
+			startAccess = profile.startAccess,
+			endAccess = profile.endAccess,
+		).apply {
+			id = profile.id
+			visible = profile.visible
 		}
 	}
 }

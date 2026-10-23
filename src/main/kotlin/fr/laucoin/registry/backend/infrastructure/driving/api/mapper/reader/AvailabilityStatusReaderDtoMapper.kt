@@ -10,8 +10,6 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import org.springframework.stereotype.Component
-import java.time.Duration
-import java.time.LocalTime
 import java.util.Objects
 
 @Component
@@ -44,46 +42,16 @@ class AvailabilityStatusReaderDtoMapper(
 		endAvailability: CustomDateTimeModel?,
 	): String {
 		val now = CustomDateTimeModel.now()
+		val durationPrefix = "${subject.keyPrefix}$DURATION_PREFIX"
 		return when {
-			Objects.nonNull(startAvailability) && AvailabilityStatusEnum.AVAILABLE === model -> {
-				val interval = Duration.between(
-					startAvailability?.toZonedDateTime(
-						LocalTime.MIN, now.zone()!!
-					), now.toZonedDateTime()
-				)
+			Objects.nonNull(startAvailability) && AvailabilityStatusEnum.AVAILABLE === model ->
+				durationMessage("$durationPrefix$model", sinceStart(now, startAvailability))
 
-				translateService.getMessage(
-					code = "${subject.keyPrefix}$DURATION_PREFIX$model",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
+			startAvailability.asStartIsAfterOther(now) ->
+				durationMessage("${durationPrefix}NOT_YET", untilStart(now, startAvailability))
 
-			startAvailability.asStartIsAfterOther(now) -> {
-				val interval = Duration.between(
-					now.toZonedDateTime(),
-					startAvailability?.toZonedDateTime(
-						LocalTime.MIN, now.zone()!!
-					)
-				)
-
-				translateService.getMessage(
-					code = "${subject.keyPrefix}${DURATION_PREFIX}NOT_YET",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
-
-			endAvailability.asEndIsBeforeOther(now) -> {
-				val interval = Duration.between(
-					endAvailability?.toZonedDateTime(
-						LocalTime.MAX, now.zone()!!
-					), now.toZonedDateTime()
-				)
-
-				translateService.getMessage(
-					code = "${subject.keyPrefix}${DURATION_PREFIX}NO_MORE",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
+			endAvailability.asEndIsBeforeOther(now) ->
+				durationMessage("${durationPrefix}NO_MORE", sinceEnd(now, endAvailability))
 
 			else -> translateService.getMessage(code = "${subject.keyPrefix}$model")
 		}

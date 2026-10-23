@@ -278,61 +278,11 @@ class MovementService(
 
 	override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel> {
 		return zip(
-			participantPort.countAll(
-				projectId,
-				searchParams = ParticipantSearchParamModel(
-					query = null,
-					isMajor = true,
-					type = REGISTERED,
-					presence = PresenceStatusEnum.IN,
-					isVisible = true,
-					at = null
-				)
-			),
-			participantPort.countAll(
-				projectId,
-				searchParams = ParticipantSearchParamModel(
-					query = null,
-					isMajor = true,
-					type = REGISTERED,
-					presence = PresenceStatusEnum.OUT,
-					isVisible = true,
-					at = null
-				)
-			),
-			participantPort.countAll(
-				projectId,
-				ParticipantSearchParamModel(
-					query = null,
-					isMajor = false,
-					type = REGISTERED,
-					presence = PresenceStatusEnum.IN,
-					isVisible = true,
-					at = null
-				)
-			),
-			participantPort.countAll(
-				projectId,
-				searchParams = ParticipantSearchParamModel(
-					query = null,
-					isMajor = false,
-					type = REGISTERED,
-					presence = PresenceStatusEnum.OUT,
-					isVisible = true,
-					at = null
-				)
-			),
-			participantPort.countAll(
-				projectId,
-				searchParams = ParticipantSearchParamModel(
-					query = null,
-					isMajor = null,
-					type = GUEST,
-					presence = PresenceStatusEnum.IN,
-					isVisible = true,
-					at = null
-				)
-			)
+			countParticipants(projectId, isMajor = true, type = REGISTERED, presence = PresenceStatusEnum.IN),
+			countParticipants(projectId, isMajor = true, type = REGISTERED, presence = PresenceStatusEnum.OUT),
+			countParticipants(projectId, isMajor = false, type = REGISTERED, presence = PresenceStatusEnum.IN),
+			countParticipants(projectId, isMajor = false, type = REGISTERED, presence = PresenceStatusEnum.OUT),
+			countParticipants(projectId, isMajor = null, type = GUEST, presence = PresenceStatusEnum.IN),
 		)
 			.map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentMinor, registeredAbsentMinor, guestPresent) ->
 				ProjectStatusModel(
@@ -347,33 +297,38 @@ class MovementService(
 			}
 	}
 
+	private fun countParticipants(
+		projectId: UUID,
+		isMajor: Boolean?,
+		type: ParticipantTypeEnum,
+		presence: PresenceStatusEnum,
+	): Mono<Long> {
+		return participantPort.countAll(
+			projectId,
+			ParticipantSearchParamModel(
+				query = null,
+				isMajor = isMajor,
+				type = type,
+				presence = presence,
+				isVisible = true,
+				at = null,
+			),
+		)
+	}
+
 	override fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusModel> {
 		return zip(
-			vehiclePort.countAll(
-				projectId,
-				searchParams = VehicleSearchParamModel(
-					query = null,
-					isVisible = true,
-					status = PresenceStatusEnum.IN,
-					at = null
-				)
-			),
-			vehiclePort.countAll(
-				projectId,
-				searchParams = VehicleSearchParamModel(
-					query = null,
-					isVisible = true,
-					status = PresenceStatusEnum.OUT,
-					at = null
-				)
-			)
+			countVehicles(projectId, PresenceStatusEnum.IN),
+			countVehicles(projectId, PresenceStatusEnum.OUT),
 		)
-			.map { (vehiclePresent, vehicleAbsent) ->
-				VehicleStatusModel(
-					present = vehiclePresent,
-					absent = vehicleAbsent
-				)
-			}
+			.map { (vehiclePresent, vehicleAbsent) -> VehicleStatusModel(present = vehiclePresent, absent = vehicleAbsent) }
+	}
+
+	private fun countVehicles(projectId: UUID, status: PresenceStatusEnum): Mono<Long> {
+		return vehiclePort.countAll(
+			projectId,
+			VehicleSearchParamModel(query = null, isVisible = true, status = status, at = null),
+		)
 	}
 
 	private fun validateMovementDate(movement: MovementModel): Mono<UUID> {
@@ -405,25 +360,22 @@ class MovementService(
 			validateActivity(movement),
 			saveGuestsIfNecessary(currentUser, movement, movement, newGuests),
 		)
-			.flatMap {
-				Mono.zip(
-					validateParticipantsIfAny(
-						movement.projectId!!,
-						movement,
-						movement.content.mapNotNull { c -> c.participant!!.id },
-						movement.content.filter { c -> Objects.nonNull(c.vehicle) }
-							.mapNotNull { c -> c.participant!!.id },
-					),
-					validateVehiclesIfAny(
-						movement.projectId!!,
-						movement,
-						movement.content.mapNotNull { c -> c.vehicle?.id },
-					),
-				)
-			}
+			.flatMap { validateNewMovementContent(movement) }
 			.flatMap { lockParticipants(movement.participantIds()).then(Mono.defer { createMovement(currentUser, movement) }) }
 			.refreshParticipantsEffectiveDates()
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateNewMovementContent(movement: MovementModel): Mono<*> {
+		return Mono.zip(
+			validateParticipantsIfAny(
+				movement.projectId!!,
+				movement,
+				movement.content.mapNotNull { c -> c.participant!!.id },
+				movement.content.filter { c -> Objects.nonNull(c.vehicle) }.mapNotNull { c -> c.participant!!.id },
+			),
+			validateVehiclesIfAny(movement.projectId!!, movement, movement.content.mapNotNull { c -> c.vehicle?.id }),
+		)
 	}
 
 	private fun createMovement(currentUser: CurrentUserModel, movement: MovementModel): Mono<MovementModel> {
@@ -452,23 +404,21 @@ class MovementService(
 					saveGuestsIfNecessary(currentUser, movement, oldMovement, newGuests),
 				).thenReturn(oldMovement)
 			}
-			.flatMap { oldMovement ->
-				Mono.zip(
-					validateParticipantsIfAny(
-						projectId,
-						oldMovement,
-						oldMovement.getNewContentParticipantIds(movement),
-						oldMovement.getNewContentDriverIds(movement),
-					),
-					validateVehiclesIfAny(
-						projectId,
-						oldMovement,
-						oldMovement.getNewContentVehicleIds(movement),
-					),
-				).thenReturn(oldMovement)
-			}
+			.flatMap { validateUpdatedContent(projectId, it, movement).thenReturn(it) }
 			.flatMap { applyUpdate(currentUser, it, movement) }
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateUpdatedContent(projectId: UUID, oldMovement: MovementModel, movement: MovementModel): Mono<*> {
+		return Mono.zip(
+			validateParticipantsIfAny(
+				projectId,
+				oldMovement,
+				oldMovement.getNewContentParticipantIds(movement),
+				oldMovement.getNewContentDriverIds(movement),
+			),
+			validateVehiclesIfAny(projectId, oldMovement, oldMovement.getNewContentVehicleIds(movement)),
+		)
 	}
 
 	private fun applyUpdate(
@@ -559,7 +509,6 @@ class MovementService(
 	): Mono<MovementModel> {
 		if (movement.type !== IN || guests.isEmpty()) return Mono.just(oldMovement)
 
-		val guestIdsToUpdate: List<UUID> = guests.mapNotNull { it.id }
 		val guestsToCreate: List<ParticipantModel> = guests
 			.filter { Objects.isNull(it.id) }
 			.map {
@@ -569,39 +518,55 @@ class MovementService(
 				}
 			}
 
+		return findGuestsToUpdate(currentUser, movement, guests)
+			.map { it.apply { addAll(guestsToCreate) } }
+			.flatMap { saveGuests(it, movement, oldMovement) }
+	}
+
+	private fun findGuestsToUpdate(
+		currentUser: CurrentUserModel,
+		movement: MovementModel,
+		guests: List<ParticipantModel>,
+	): Mono<MutableList<ParticipantModel>> {
+		val guestIdsToUpdate: List<UUID> = guests.mapNotNull { it.id }
+
 		return participantPort.findAllByIds(movement.projectId!!, guestIdsToUpdate, isVisible = null)
-			.map {
-				val updatedGuest = guests.find { g -> g.id == it.id }
-				it.apply {
-					firstName = updatedGuest?.firstName
-					lastName = updatedGuest?.lastName
-					birthday = updatedGuest?.birthday
-					startAvailability = CustomDateTimeModel(movement.dateTime)
-					update(currentUser)
-				}
-			}
+			.map { existing -> refreshGuest(existing, guests.find { g -> g.id == existing.id }, movement, currentUser) }
 			.collectList()
 			.handle { it, handle ->
 				if (it.size != guestIdsToUpdate.size) handle.error(
-					RegistryException(
-						NOT_FOUND,
-						MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT,
-					)
+					RegistryException(NOT_FOUND, MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT)
 				)
 				else handle.next(it)
 			}
-			.switchIfEmpty { Mono.just(emptyList<ParticipantModel>()) }
-			.map {
-				it.addAll(guestsToCreate)
-				it
-			}
-			.flatMap {
-				participantPort.saveAllGuest(it)
-					.collectList()
-					.map { l ->
-						movement.content = l.map { p -> MovementContentModel(participant = p) }
-						oldMovement
-					}
+			.switchIfEmpty { Mono.just(mutableListOf<ParticipantModel>()) }
+	}
+
+	private fun refreshGuest(
+		existing: ParticipantModel,
+		updatedGuest: ParticipantModel?,
+		movement: MovementModel,
+		currentUser: CurrentUserModel,
+	): ParticipantModel {
+		return existing.apply {
+			firstName = updatedGuest?.firstName
+			lastName = updatedGuest?.lastName
+			birthday = updatedGuest?.birthday
+			startAvailability = CustomDateTimeModel(movement.dateTime)
+			update(currentUser)
+		}
+	}
+
+	private fun saveGuests(
+		guests: List<ParticipantModel>,
+		movement: MovementModel,
+		oldMovement: MovementModel,
+	): Mono<MovementModel> {
+		return participantPort.saveAllGuest(guests)
+			.collectList()
+			.map { saved ->
+				movement.content = saved.map { p -> MovementContentModel(participant = p) }
+				oldMovement
 			}
 	}
 
@@ -613,32 +578,27 @@ class MovementService(
 	): Mono<MovementModel> {
 		return participantPort.findAllByIds(projectId, newParticipantIds, isVisible = null)
 			.collectList()
-			.handle { it, handle ->
-				when {
-					it.size != newParticipantIds.size -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT,
-						)
-					)
-
-					it.any(ParticipantModel::isNotUsable) -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
-						)
-					)
-
-					it.any { p -> !p.birthday.isMajor() && driverIds.contains(p.id) } -> handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							MOVEMENT_DRIVERS_NOT_MAJOR,
-						)
-					)
-
-					else -> handle.next(oldMovement)
-				}
+			.handle { found, handle ->
+				val error = participantsError(found, newParticipantIds, driverIds)
+				if (error != null) handle.error(error) else handle.next(oldMovement)
 			}
+	}
+
+	private fun participantsError(
+		found: List<ParticipantModel>,
+		requestedIds: List<UUID>,
+		driverIds: List<UUID>,
+	): RegistryException? = when {
+		found.size != requestedIds.size ->
+			RegistryException(NOT_FOUND, MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT)
+
+		found.any(ParticipantModel::isNotUsable) ->
+			RegistryException(NOT_FOUND, MOVEMENT_PARTICIPANTS_NOT_VISIBLE)
+
+		found.any { p -> !p.birthday.isMajor() && driverIds.contains(p.id) } ->
+			RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_DRIVERS_NOT_MAJOR)
+
+		else -> null
 	}
 
 	private fun Mono<MovementModel>.refreshParticipantsEffectiveDates(

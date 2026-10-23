@@ -6,7 +6,9 @@ import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel.HistoryUserModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericProjectEntity
+import java.time.ZonedDateTime
 import java.util.Objects
+import java.util.UUID
 
 object GenericExt {
 	fun <M: GenericProjectModel, E: GenericProjectEntity> M.fillWithProjectAndEntity(entity: E): M {
@@ -21,26 +23,19 @@ object GenericExt {
 		id = entity.id
 		visible = entity.visible ?: visible
 
-		creation = if (Objects.isNull(entity.createdAt)) null
-		else HistoryModel(
-			dateTime = entity.createdAt!!,
-			user = if (Objects.nonNull(entity.creatorId)) HistoryUserModel(
-				id = entity.creatorId,
-				firstName = entity.creatorFirstName,
-				lastName = entity.creatorLastName,
-				email = entity.creatorEmail
-			) else null
+		creation = historyOf(
+			entity.createdAt,
+			entity.creatorId,
+			entity.creatorFirstName,
+			entity.creatorLastName,
+			entity.creatorEmail,
 		)
-
-		lastEdition = if (Objects.isNull(entity.lastUpdateAt)) null
-		else HistoryModel(
-			dateTime = entity.lastUpdateAt!!,
-			user = if (Objects.nonNull(entity.lastEditorId)) HistoryUserModel(
-				id = entity.lastEditorId,
-				firstName = entity.lastEditorFirstName,
-				lastName = entity.lastEditorLastName,
-				email = entity.lastEditorEmail
-			) else null
+		lastEdition = historyOf(
+			entity.lastUpdateAt,
+			entity.lastEditorId,
+			entity.lastEditorFirstName,
+			entity.lastEditorLastName,
+			entity.lastEditorEmail,
 		)
 
 		return this
@@ -65,5 +60,20 @@ object GenericExt {
 		lastEditorId = model.lastEdition?.user?.id
 
 		return this
+	}
+
+	private fun historyOf(
+		dateTime: ZonedDateTime?,
+		userId: UUID?,
+		firstName: String?,
+		lastName: String?,
+		email: String?,
+	): HistoryModel? {
+		if (Objects.isNull(dateTime)) return null
+
+		return HistoryModel(
+			dateTime = dateTime!!,
+			user = if (Objects.nonNull(userId)) HistoryUserModel(userId, firstName, lastName, email) else null,
+		)
 	}
 }

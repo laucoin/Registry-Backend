@@ -26,20 +26,22 @@ class MinUpperMaxValidator: GenericValidator<MinUpperMax, Any>() {
 			startValue is Float && endValue is Float -> startValue <= endValue
 			startValue is Long && endValue is Long -> startValue <= endValue
 			Objects.isNull(startValue) || Objects.isNull(endValue) -> true
-			else -> {
-				val exception = RegistryException(
-					INTERNAL_SERVER_ERROR,
-					COMPARING_WRONG_PARAMETER_TYPE,
-					arrayListOf(startValue, endValue),
-				)
-				log.error(
-					"The two fields ({}, {}) are not of the same type or the type is not supported (we support only nullable ZonedDateTime and ZonedDateTime).",
-					startValue,
-					endValue,
-					exception
-				)
-				throw exception
-			}
+			else -> throw unsupportedTypes(startValue, endValue)
 		}
+	}
+
+	private fun unsupportedTypes(startValue: Any?, endValue: Any?): RegistryException {
+		val exception = RegistryException(
+			INTERNAL_SERVER_ERROR,
+			COMPARING_WRONG_PARAMETER_TYPE,
+			arrayListOf(startValue, endValue),
+		)
+		log.error(
+			"The two fields ({}, {}) are not of the same type or the type is not supported (we support only nullable ZonedDateTime and ZonedDateTime).",
+			startValue,
+			endValue,
+			exception
+		)
+		return exception
 	}
 }
