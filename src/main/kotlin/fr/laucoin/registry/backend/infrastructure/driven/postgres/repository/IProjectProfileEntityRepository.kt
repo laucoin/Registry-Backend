@@ -205,6 +205,23 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 
 	@Query(
 		"""
+        SELECT t.$ID
+        FROM $PROJECT_PROFILE_TABLE t
+        INNER JOIN $PROJECT_ROLE_TABLE tpr ON t.$PROJECT_PROFILE_ROLE = tpr.$ENTITY_ROLE_NAME AND tpr.$ROLE_LEVEL = 0
+        WHERE t.$LINKED_PROJECT_ID IN (
+            SELECT up.$LINKED_PROJECT_ID
+            FROM $PROJECT_PROFILE_TABLE up
+            INNER JOIN $PROJECT_ROLE_TABLE upr ON up.$PROJECT_PROFILE_ROLE = upr.$ENTITY_ROLE_NAME AND upr.$ROLE_LEVEL = 0
+            WHERE up.$PROJECT_PROFILE_USER_ID = :userId
+        )
+        ORDER BY t.$ID
+        FOR UPDATE OF t
+        """
+	)
+	fun lockLevel0ProjectProfilesByUserId(userId: UUID): Flux<UUID>
+
+	@Query(
+		"""
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $PROJECT_ROLE_TABLE ON t.$PROJECT_PROFILE_ROLE = $PROJECT_ROLE_TABLE.$ENTITY_ROLE_NAME

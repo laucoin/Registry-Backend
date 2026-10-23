@@ -17,6 +17,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import org.springframework.http.HttpStatus.CONFLICT
@@ -32,6 +33,7 @@ class UserProjectProfileService(
 	private val port: IProjectProfilePort,
 	private val favoritePort: IProjectFavoritePort,
 	private val roleService: IRoleService,
+	private val principalCache: IPrincipalCacheService,
 	private val transactionalOperator: TransactionalOperator,
 ) : IUserProjectProfileService, GenericProfileService(port) {
 	private companion object {
@@ -77,9 +79,9 @@ class UserProjectProfileService(
 		result: T,
 		error: String
 	): Mono<T> {
-		return port.findLevel0ProjectProfileRoleByUserId(userId, isVisible = true)
-			.filter { Objects.isNull(projectId) || Objects.equals(it.project!!.id, projectId) }
-			.collectList()
+		return port.lockLevel0ProjectProfilesByUserId(userId)
+			.then(Mono.defer { port.findLevel0ProjectProfileRoleByUserId(userId, isVisible = true).collectList() })
+			.map { counts -> counts.filter { c -> Objects.isNull(projectId) || Objects.equals(c.project!!.id, projectId) } }
 			.handle { it, handle ->
 				val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
 				if (projects.isNotEmpty()) {
@@ -119,6 +121,7 @@ class UserProjectProfileService(
 				profile.update(currentUser)
 				port.update(profile)
 			}
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	override fun createSupportProjectProfile(
@@ -146,10 +149,12 @@ class UserProjectProfileService(
 		)
 			.flatMap { port.create(profile) }
 			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
+			.notFoundIfEmpty(id)
 			.flatMap {
 				validateNotLastProjectRoleLevel0(
 					it.user!!.id!!,
@@ -159,5 +164,7 @@ class UserProjectProfileService(
 				)
 			}
 			.flatMap { port.deleteById(id) }
+			.`as`(transactionalOperator::transactional)
+			.doOnSuccess { principalCache.invalidate(currentUser.oidcId) }
 	}
 }

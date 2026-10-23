@@ -52,6 +52,8 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import org.springframework.transaction.reactive.TransactionalOperator
+import org.junit.jupiter.api.BeforeEach
 import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
@@ -62,9 +64,16 @@ class ParticipantServiceTest {
 	private val userPort: IUserPort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val groupPort: IGroupPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IParticipantService = ParticipantService(
-		projectService, port, userPort, movementPort, groupPort, MAX_USERS, MAX_GROUPS
+		projectService, port, userPort, movementPort, groupPort, transactionalOperator, MAX_USERS, MAX_GROUPS
 	)
+
+	@BeforeEach
+	fun setUp() {
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+		whenever(groupPort.lockByIds(any())).thenReturn(Flux.empty())
+	}
 
 	private companion object {
 		private const val MAX_USERS = 1

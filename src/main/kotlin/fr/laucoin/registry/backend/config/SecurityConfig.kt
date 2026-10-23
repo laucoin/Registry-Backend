@@ -48,6 +48,9 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 import org.springframework.web.server.i18n.LocaleContextResolver
+import org.springframework.security.web.server.header.ContentSecurityPolicyServerHttpHeadersWriter.CONTENT_SECURITY_POLICY
+import org.springframework.web.server.ServerWebExchange
+import reactor.core.publisher.Mono
 import java.net.URI
 import java.time.Duration
 
@@ -84,7 +87,8 @@ class SecurityConfig(
 		return http
 			.securityMatcher(documentationMatcher())
 			.authorizeExchange { it.anyExchange().permitAll() }
-			.configureSecurityHeaders(documentationContentSecurityPolicy())
+			.configureSecurityHeaders(null)
+			.documentationContentSecurityPolicy()
 			// codeql[java/spring-disabled-csrf-protection]: this chain only serves static Swagger/OpenAPI
 			// docs (GET-only, permitAll, no state-changing request ever reaches it) — CSRF is not
 			// applicable here, the same reasoning that already exempts safe HTTP methods on the main chain.
@@ -94,9 +98,18 @@ class SecurityConfig(
 			.build()
 	}
 
-	private fun documentationContentSecurityPolicy(): String {
+	private fun ServerHttpSecurity.documentationContentSecurityPolicy() = headers { headerSpec ->
+		headerSpec.writer { exchange ->
+			exchange.response.headers.set(CONTENT_SECURITY_POLICY, documentationContentSecurityPolicy(exchange))
+			Mono.empty()
+		}
+	}
+
+	private fun documentationContentSecurityPolicy(exchange: ServerWebExchange): String {
 		val idpOrigin = URI(idpTokenUri).let { "${it.scheme}://${it.authority}" }
-		return "default-src 'self'; connect-src 'self' $idpOrigin *:$apiPort; frame-ancestors 'none'"
+		val apiOrigin = exchange.request.headers.host?.hostName
+			?.let { apiOrigin(exchange.request.uri.scheme, it, apiPort) }
+		return documentationContentSecurityPolicy(idpOrigin, apiOrigin)
 	}
 
 	private fun documentationMatcher() = ServerWebExchangeMatcher { exchange ->
@@ -124,8 +137,8 @@ class SecurityConfig(
 
 	private fun ServerHttpSecurity.resolveLocaleContext() = addFilterBefore(localeContextHandler, FIRST)
 
-	private fun ServerHttpSecurity.configureSecurityHeaders(contentSecurityPolicy: String) = headers { headerSpec ->
-		headerSpec.contentSecurityPolicy { it.policyDirectives(contentSecurityPolicy) }
+	private fun ServerHttpSecurity.configureSecurityHeaders(contentSecurityPolicy: String?) = headers { headerSpec ->
+		if (contentSecurityPolicy != null) headerSpec.contentSecurityPolicy { it.policyDirectives(contentSecurityPolicy) }
 		headerSpec.permissionsPolicy { it.policy(PERMISSIONS_POLICY) }
 		headerSpec.hsts {
 			it.maxAge(Duration.ofDays(365))
@@ -162,13 +175,24 @@ class SecurityConfig(
 		if (!isSafeMethod && !hasBearerAuth && !isExemptPath) MatchResult.match() else MatchResult.notMatch()
 	}
 
-	private companion object {
+	companion object {
 		val pathMatcher = AntPathMatcher()
 		val CSRF_SAFE_METHODS = setOf(GET, HEAD, OPTIONS, TRACE)
 
 		val CSRF_EXEMPT_PATHS = listOf("/api/*/authentication/token", "/api/*/authentication/token/refresh")
 
 		val DOCUMENTATION_PATHS = listOf("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+
+		private val HOST_NAME_PATTERN = Regex("[A-Za-z0-9.\\-\\[\\]:]+")
+
+		internal fun apiOrigin(scheme: String, hostName: String, apiPort: Int): String? {
+			return if (HOST_NAME_PATTERN.matches(hostName)) "$scheme://$hostName:$apiPort" else null
+		}
+
+		internal fun documentationContentSecurityPolicy(idpOrigin: String, apiOrigin: String?): String {
+			val connectSources = listOfNotNull("'self'", idpOrigin, apiOrigin).joinToString(" ")
+			return "default-src 'self'; connect-src $connectSources; frame-ancestors 'none'"
+		}
 
 		const val API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'"
 

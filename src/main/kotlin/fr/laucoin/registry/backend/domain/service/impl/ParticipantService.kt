@@ -38,6 +38,7 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -48,6 +49,7 @@ class ParticipantService(
 	private val userPort: IUserPort,
 	private val movementPort: IMovementPort,
 	private val groupPort: IGroupPort,
+	private val transactionalOperator: TransactionalOperator,
 	@param:Value($$"${registry.feature.participant.searched.max-user-result}")
 	private val maxUserResult: Int,
 	@param:Value($$"${registry.feature.participant.searched.max-group-result}")
@@ -231,6 +233,7 @@ class ParticipantService(
 			.validateNotLastGroupMember(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER)
 			.updateVisibility(visibility = false)
 			.updateParticipant(currentUser)
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun enableParticipantById(
@@ -248,6 +251,7 @@ class ParticipantService(
 			.validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
 			.validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
 			.flatMap { port.deleteById(it.id!!) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun purgeParticipantsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
@@ -351,17 +355,19 @@ class ParticipantService(
 		}
 	}
 
+	private fun findLockedGroups(projectId: UUID, groupIds: List<UUID>): Mono<List<GroupModel>> {
+		return groupPort.lockByIds(groupIds)
+			.then(Mono.defer { groupPort.findAllByIds(projectId, groupIds, isVisible = null).collectList() })
+	}
+
 	private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
 		if (participantToUpdate.groups.isEmpty()) {
 			return@flatMap Mono.just(participantToUpdate)
 		}
 
-		groupPort.findAllByIds(
-			participantToUpdate.projectId!!,
-			participantToUpdate.groups.mapNotNull { it.id },
-			isVisible = null
-		)
-			.any { it.members.size == 1 }
+		val groupIds = participantToUpdate.groups.mapNotNull { it.id }
+		findLockedGroups(participantToUpdate.projectId!!, groupIds)
+			.map { groups -> groups.any { it.members.size == 1 } }
 			.flatMap { isLastMemberOfAGroup ->
 				if (isLastMemberOfAGroup) {
 					log.warn("The participant {} is the last member of the group(s)", participantToUpdate.id)

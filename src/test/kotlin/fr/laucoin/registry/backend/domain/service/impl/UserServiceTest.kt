@@ -64,6 +64,10 @@ class UserServiceTest {
 		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, principalCache
 	)
 
+	init {
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+	}
+
 	private val serviceAccountId = UUID.randomUUID()
 	private val serviceAccount = CurrentUserModel().apply { id = serviceAccountId; role = USER_ROLE }
 
@@ -341,6 +345,7 @@ class UserServiceTest {
 
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
 		whenever(port.findById(any(), any())).thenReturn(Mono.just(userToUpdate))
+		whenever(port.lockLevel0Users()).thenReturn(Flux.empty())
 		whenever(port.findByRoleLevel(any(), any())).thenReturn(Flux.just(UserModel()))
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(currentRoleLevel)
 		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
@@ -373,6 +378,7 @@ class UserServiceTest {
 
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(assignableRoles)
 		whenever(port.findById(any(), any())).thenReturn(Mono.just(userToUpdate))
+		whenever(port.lockLevel0Users()).thenReturn(Flux.empty())
 		whenever(port.findByRoleLevel(any(), any())).thenReturn(Flux.just(*level0Users))
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(currentRoleLevel)
 		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))

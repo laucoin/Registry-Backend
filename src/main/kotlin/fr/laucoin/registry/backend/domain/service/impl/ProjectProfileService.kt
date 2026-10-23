@@ -27,6 +27,7 @@ import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -37,6 +38,7 @@ class ProjectProfileService(
 	private val roleService: IRoleService,
 	private val userPort: IUserPort,
 	private val principalCache: IPrincipalCacheService,
+	private val transactionalOperator: TransactionalOperator,
 	@param:Value($$"${registry.feature.profile.searched.max-user-result}")
 	private val maxUserResult: Int,
 ): IProjectProfileService, GenericProfileService(port) {
@@ -131,6 +133,7 @@ class ProjectProfileService(
 				}
 			}
 			.updateProjectProfile(currentUser)
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun blockProjectProfileById(
@@ -142,6 +145,7 @@ class ProjectProfileService(
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR)
 			.updateVisibility(visibility = false)
 			.updateProjectProfile(currentUser)
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun unblockProjectProfileById(
@@ -158,6 +162,7 @@ class ProjectProfileService(
 		return findProjectProfileById(projectId, id, isVisible = null)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR)
 			.flatMap { port.deleteById(id).doOnSuccess { _ -> principalCache.invalidate(it.user?.oidcId) } }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {

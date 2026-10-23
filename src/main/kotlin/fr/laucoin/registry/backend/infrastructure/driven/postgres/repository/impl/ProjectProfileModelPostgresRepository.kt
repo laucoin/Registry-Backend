@@ -154,6 +154,10 @@ class ProjectProfileModelPostgresRepository(
 		return repository.findLevel0ProjectProfileRoleByUserId(userId, isVisible).map(roleCountMapper::toModel)
 	}
 
+	override fun lockLevel0ProjectProfilesByUserId(userId: UUID): Flux<UUID> {
+		return repository.lockLevel0ProjectProfilesByUserId(userId)
+	}
+
 	override fun findLevel0ProjectProfileRoleByProjectId(
 		projectId: UUID,
 		isVisible: Boolean?
