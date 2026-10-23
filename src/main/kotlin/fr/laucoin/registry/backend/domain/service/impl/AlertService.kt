@@ -29,6 +29,11 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages the lifecycle of project alerts and their status transitions.
+ * Scope: Alert creation, status changes and criticality rules.
+ * Limits: Does not send communications; those belong to CommunicationService.
+ */
 @Service
 class AlertService(
 	private val projectService: IProjectService,

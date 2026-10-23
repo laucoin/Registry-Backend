@@ -29,6 +29,11 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the project activity endpoints.
+ * Scope: Maps activity models to DTOs and delegates to IActivityService.
+ * Limits: Holds no business rule.
+ */
 @RestController
 class ActivityV2Controller(
 	private val service: IActivityService,

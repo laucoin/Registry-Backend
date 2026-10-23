@@ -29,6 +29,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages the groups of a project and their membership.
+ * Scope: Group CRUD, member add/remove and last-member safety rules.
+ * Limits: Does not move groups; movements belong to MovementService.
+ */
 @Service
 class GroupService(
 	private val projectService: IProjectService,

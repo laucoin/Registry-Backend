@@ -41,6 +41,11 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * Purpose: Manages the communications attached to an alert.
+ * Scope: Creation and reading of communications and their alert links.
+ * Limits: Does not own alert status rules; those belong to AlertService.
+ */
 @Service
 class CommunicationService(
 	private val projectService: IProjectService,

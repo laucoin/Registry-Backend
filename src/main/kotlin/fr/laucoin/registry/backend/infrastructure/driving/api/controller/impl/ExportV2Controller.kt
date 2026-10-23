@@ -15,6 +15,11 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the personal data export endpoints.
+ * Scope: Maps export models to DTOs and sets the download headers.
+ * Limits: Holds no business rule; delegates to IExportService.
+ */
 @RestController
 class ExportV2Controller(
 	private val service: IExportService,

@@ -78,6 +78,11 @@ import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * Purpose: Manages the arrivals, departures and planned movements of participants, groups and vehicles.
+ * Scope: Movement validation, effective dates, presence status and availability updates.
+ * Limits: Does not manage participant or group definitions.
+ */
 @Service
 class MovementService(
 	private val projectService: IProjectService,

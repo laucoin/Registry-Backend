@@ -42,6 +42,11 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages the participants of a project.
+ * Scope: Participant CRUD, effective dates and group membership consistency.
+ * Limits: Does not record movements; those belong to MovementService.
+ */
 @Service
 class ParticipantService(
 	private val projectService: IProjectService,
