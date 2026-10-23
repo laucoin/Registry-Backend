@@ -52,6 +52,11 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the project profile endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Project's Profiles management", description = "API for Project's Profiles-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/profiles")
 interface IProjectProfileV2Controller {

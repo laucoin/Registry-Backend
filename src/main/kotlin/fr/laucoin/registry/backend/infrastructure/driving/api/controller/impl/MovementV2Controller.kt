@@ -49,6 +49,11 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the movement endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the movement use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class MovementV2Controller(
 	private val service: IMovementService,

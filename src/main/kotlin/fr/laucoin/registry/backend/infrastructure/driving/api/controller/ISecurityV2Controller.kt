@@ -23,6 +23,11 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the security endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Security management", description = "API for security operations")
 @RequestMapping("/api/v2/authentication")
 interface ISecurityV2Controller {

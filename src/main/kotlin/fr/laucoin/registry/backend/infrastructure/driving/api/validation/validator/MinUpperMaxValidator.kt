@@ -7,6 +7,11 @@ import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
+/**
+ * Purpose: Validator of the MinUpperMax constraint.
+ * Scope: Compares two numeric fields and passes when the minimum is not above the maximum.
+ * Limits: Supports Int, Long, Float and Double; any other pair is a server error.
+ */
 class MinUpperMaxValidator: GenericValidator<MinUpperMax, Any>() {
 	private lateinit var startField: String
 	private lateinit var endField: String

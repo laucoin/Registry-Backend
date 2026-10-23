@@ -13,6 +13,11 @@ import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 
+/**
+ * Purpose: Validator of the MovementReason constraint.
+ * Scope: Checks the compatibility between movement type, reason, participant type and activity.
+ * Limits: Does not check that the activity exists.
+ */
 class MovementReasonValidator: GenericValidator<MovementReason, Any>() {
 	private lateinit var participantType: ParticipantTypeEnum
 	private var hasActivity: Boolean = false

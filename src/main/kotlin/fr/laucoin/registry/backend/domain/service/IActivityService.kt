@@ -12,6 +12,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the activity.
+ * Scope: Declares what the controllers and other services can ask for activity.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IActivityService {
 	fun findActivitiesPage(
 		projectId: UUID,

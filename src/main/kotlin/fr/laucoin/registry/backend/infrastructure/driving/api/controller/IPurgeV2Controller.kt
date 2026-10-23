@@ -20,6 +20,11 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the purge endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Scheduled job management", description = "API for Scheduled job management")
 @RequestMapping("/api/v2/purge")
 interface IPurgeV2Controller {

@@ -10,6 +10,11 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Pref
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the preferences endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the preferences use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class PreferencesV2Controller(
 	private val service: IPreferencesService,

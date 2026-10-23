@@ -24,6 +24,11 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the metadata endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the metadata use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class MetadataV2Controller(
 	private val presenceStatusMapper: PresenceStatusReaderDtoMapper,

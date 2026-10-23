@@ -9,17 +9,22 @@ import java.time.ZonedDateTime
 import java.util.Objects
 import org.springframework.http.HttpStatus.BAD_REQUEST
 
+/**
+ * Purpose: Compares and validates date and time values.
+ * Scope: Owns the ordering rules for custom date-times and the date range check.
+ * Limits: Pure functions; no I/O.
+ */
 object DateExt {
 	fun requireOrderedRange(from: LocalDate?, to: LocalDate?) {
-		if (from != null && to != null && from.isAfter(to)) {
-			throw RegistryException(BAD_REQUEST, DATE_RANGE_FROM_LATER_THAN_TO)
-		}
+		requireNotReversed(from != null && to != null && from.isAfter(to))
 	}
 
 	fun requireOrderedRange(from: ZonedDateTime?, to: ZonedDateTime?) {
-		if (from != null && to != null && from.isAfter(to)) {
-			throw RegistryException(BAD_REQUEST, DATE_RANGE_FROM_LATER_THAN_TO)
-		}
+		requireNotReversed(from != null && to != null && from.isAfter(to))
+	}
+
+	private fun requireNotReversed(isReversed: Boolean) {
+		if (isReversed) throw RegistryException(BAD_REQUEST, DATE_RANGE_FROM_LATER_THAN_TO)
 	}
 
 	fun CustomDateTimeModel?.asStartIsAfterOther(other: CustomDateTimeModel?): Boolean {

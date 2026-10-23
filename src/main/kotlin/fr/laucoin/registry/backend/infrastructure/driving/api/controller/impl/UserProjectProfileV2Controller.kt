@@ -18,6 +18,11 @@ import reactor.core.publisher.Mono
 import java.time.ZonedDateTime
 import java.util.UUID
 
+/**
+ * Purpose: REST adapter of the user project profile endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the user project profile use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class UserProjectProfileV2Controller(
 	private val service: IUserProjectProfileService,

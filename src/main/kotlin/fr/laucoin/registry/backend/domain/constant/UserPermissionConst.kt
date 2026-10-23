@@ -1,5 +1,10 @@
 package fr.laucoin.registry.backend.domain.constant
 
+/**
+ * Purpose: Declares the platform-scoped permission names.
+ * Scope: Names matching the seeded `tb_user_permission` rows and the `@PreAuthorize` expressions.
+ * Limits: Holds names only; granting is data in the role tables.
+ */
 object UserPermissionConst {
 	const val REGISTRY_USER_R = "REGISTRY_USER_R"
 	const val REGISTRY_USER_METADATA_R = "REGISTRY_USER_METADATA_R"

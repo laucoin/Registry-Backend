@@ -10,6 +10,11 @@ import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Shares the profile conflict check between profile services.
+ * Scope: Detects users who already hold an overlapping profile on a project.
+ * Limits: Does not create or update profiles.
+ */
 open class GenericProfileService(
 	private val repository: IProjectProfilePort,
 ): GenericService() {

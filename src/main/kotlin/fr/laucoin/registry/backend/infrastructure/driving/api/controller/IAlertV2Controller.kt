@@ -47,6 +47,11 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the alert endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Alerts management", description = "API for Alerts-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/alerts")
 interface IAlertV2Controller {

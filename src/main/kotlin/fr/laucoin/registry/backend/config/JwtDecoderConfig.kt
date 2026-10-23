@@ -11,6 +11,11 @@ import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import java.net.URI
 
+/**
+ * Purpose: Builds the JWT decoder of the resource server.
+ * Scope: Wires the JWKS source with the audience and issuer origin validators.
+ * Limits: Does not map claims to authorities; the token converter does.
+ */
 @Configuration
 class JwtDecoderConfig(
 	@param:Value($$"${registry.security.oauth2.jwks-uri}")

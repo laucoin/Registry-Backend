@@ -21,6 +21,11 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the security endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the security use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class SecurityV2Controller(
 	private val authenticationService: IAuthenticationService,

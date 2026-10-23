@@ -10,6 +10,11 @@ import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
 import org.springframework.security.access.PermissionEvaluator
 import org.springframework.security.core.Authentication
 
+/**
+ * Purpose: Evaluates the project-scoped permissions of `hasPermission`.
+ * Scope: Matches the `{projectId}_{PERMISSION}` authorities of the caller.
+ * Limits: Only the object form is supported; the id and type form fails.
+ */
 class PermissionService: PermissionEvaluator {
 	private val log = LoggerFactory.getLogger(this::class.java)
 
@@ -42,6 +47,6 @@ class PermissionService: PermissionEvaluator {
 
 	private fun hasPrivilege(authentication: Authentication?, targetId: String, permission: Any?): Boolean {
 		val invalidData = Objects.isNull(authentication) || targetId.isBlank() || permission !is String
-        return !invalidData && authentication!!.authorities.any { it.authority == "${targetId}_$permission" }
-    }
+		return !invalidData && authentication!!.authorities.any { it.authority == "${targetId}_$permission" }
+	}
 }

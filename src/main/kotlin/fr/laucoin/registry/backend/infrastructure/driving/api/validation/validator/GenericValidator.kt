@@ -9,6 +9,11 @@ import kotlin.reflect.full.memberProperties
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
+/**
+ * Purpose: Base of the field-pair validators.
+ * Scope: Reads a named field of the validated object by reflection.
+ * Limits: Provides the reading only; each validator owns its rule.
+ */
 abstract class GenericValidator<A: Annotation?, T>: ConstraintValidator<A, T> {
 	protected val log = LoggerFactory.getLogger(this::class.java)
 

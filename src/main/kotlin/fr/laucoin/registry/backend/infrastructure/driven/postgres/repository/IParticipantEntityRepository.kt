@@ -62,6 +62,11 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Reactive entity repository of the participant table.
+ * Scope: Holds the parameterized SQL queries (filters, sort, pagination, locks) on participant.
+ * Limits: Used by the Postgres adapter only; returns entities, never domain models.
+ */
 @Repository
 interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntity, UUID> {
 	companion object {

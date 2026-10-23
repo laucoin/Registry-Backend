@@ -14,6 +14,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the participant.
+ * Scope: Declares what the controllers and other services can ask for participant.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IParticipantService {
 	fun findParticipantsPage(
 		projectId: UUID,
