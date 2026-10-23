@@ -13,6 +13,9 @@ data class ProjectModel(
 ): GenericModel() {
 	// Current user's profile on this project, only filled by user-oriented reads
 	var profile: ProjectProfileModel? = null
+	var favorite: Boolean = false
+
+	var counts: ProjectCountsModel? = null
 
 	fun isNotInRange(dateTime: CustomDateTimeModel?): Boolean {
 		return dateTime.isInRange(begin, end).not()

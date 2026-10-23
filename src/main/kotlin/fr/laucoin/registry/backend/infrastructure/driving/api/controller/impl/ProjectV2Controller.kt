@@ -1,11 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
@@ -16,6 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Proj
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
 import java.time.ZonedDateTime
 import java.util.UUID
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
@@ -33,16 +36,27 @@ class ProjectV2Controller(
 		size: Int,
 		query: String?,
 		isVisible: Boolean?,
+		isFavorite: Boolean?,
+		withProfile: Boolean?,
 		at: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<ProjectWithProfileReaderDto>> {
 		val pageable = PageableModel(page * size, size)
-		val searchParams = ProjectSearchParamModel(query, isVisible, at, sort = sort.toSortModel(ProjectSearchParamModel.SORT_FIELDS))
+		val searchParams = ProjectSearchParamModel(
+			query = query,
+			isVisible = isVisible,
+			at = at,
+			sort = sort.toSortModel(ProjectSearchParamModel.SORT_FIELDS),
+			isFavorite = isFavorite,
+		)
 
 		// Without the global read authority, only the Projects the User has a valid Profile on are visible
-		val withProfile = !currentUser.hasAuthority(REGISTRY_PROJECT_R)
+		val canReadAll = currentUser.hasAuthority(REGISTRY_PROJECT_R)
+		if (!canReadAll && withProfile == false) {
+			return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
+		}
 
-		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams).map(readerMapper::toDtoPage)
+		return service.findProjectsPage(currentUser, pageable, withProfile ?: !canReadAll, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun findProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
@@ -77,6 +91,14 @@ class ProjectV2Controller(
 
 	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
 		return service.enableProjectById(currentUser, id).map(readerMapper::toDto)
+	}
+
+	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return service.addFavoriteProject(currentUser, id)
+	}
+
+	override fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return service.removeFavoriteProject(currentUser, id)
 	}
 
 	override fun deleteProjectById(id: UUID): Mono<Unit> = service.deleteProjectById(id)

@@ -161,10 +161,10 @@ object MovementQueries {
         (
             :isAvailable IS NULL OR :isAvailable = (
                 (
-                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CURRENT_TIMESTAMP
+                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CURRENT_TIMESTAMP
+                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                 )
             )
         )
@@ -184,18 +184,14 @@ object MovementQueries {
     """
 
 	const val WITH_CURRENT_MOVEMENT = """
-        last_participant_movement AS (
-            SELECT t.$ID, t.$MOVEMENT_TYPE, plm.$MOVEMENT_CONTENT_PARTICIPANT_ID
+        last_participant_movement AS MATERIALIZED (
+            SELECT DISTINCT ON ($MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID) t.$ID, t.$MOVEMENT_TYPE, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
             FROM $MOVEMENT_TABLE t
-            INNER JOIN (
-                SELECT MAX(t.$MOVEMENT_DATE_TIME) as last_participant_movement_date_time, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
-                FROM $MOVEMENT_TABLE t
-                INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-                WHERE t.$VISIBLE IS TRUE
-                GROUP BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
-            ) AS plm ON plm.last_participant_movement_date_time = t.date_time
+            INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+            WHERE t.$VISIBLE IS TRUE AND t.$LINKED_PROJECT_ID = :projectId
+            ORDER BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID, t.$MOVEMENT_DATE_TIME DESC, t.$ID
         ),
-        filtered_groups AS (
+        filtered_groups AS MATERIALIZED (
             SELECT t.$ID as $GROUP_CONTENT_PARTICIPANT_ID,
             JSON_AGG(
                 JSON_BUILD_OBJECT(
@@ -225,9 +221,9 @@ object MovementQueries {
             LEFT JOIN $GROUP_TABLE group_presence ON group_presence.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID AND group_presence.$VISIBLE IS TRUE
                 AND (
                     (
-                        (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(group_presence.start_availability_time, '00:00:00.000000'::TIMETZ)) <= CURRENT_TIMESTAMP
+                        (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(group_presence.start_availability_time, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                     ) AND (
-                        (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CURRENT_TIMESTAMP
+                        (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                     )
                 )
             WHERE t.$LINKED_PROJECT_ID = :projectId
@@ -240,12 +236,12 @@ object MovementQueries {
             LEFT JOIN filtered_groups fg ON t.$ID = fg.$GROUP_CONTENT_PARTICIPANT_ID
             WHERE t.$VISIBLE IS TRUE AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
                 (
-                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CAST(:#{now} AS DATE)
+                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CAST(:#{now} AS TIMETZ))
                 ) AND
                 (
-                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CAST(:#{now} AS DATE)
+                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CAST(:#{now} AS TIMETZ))
                 )
             )
         )

@@ -46,7 +46,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 
 object ParticipantQueries {
 	private const val PARTICIPANT_PREFIX = "participant_"
-	const val WITH_PARTICIPANT_LAST_MOVEMENT = """
+	private const val LAST_MOVEMENT_HEAD = """
         last_movement AS (
             SELECT plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME, plm.$PARTICIPANT_PREFIX$ID, t.$MOVEMENT_TYPE
             FROM $MOVEMENT_TABLE t
@@ -54,11 +54,27 @@ object ParticipantQueries {
                 SELECT MAX(t.$MOVEMENT_DATE_TIME) as $PARTICIPANT_LAST_MOVEMENT_DATE_TIME, $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
                 FROM $MOVEMENT_TABLE t
                 INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-                WHERE t.$VISIBLE IS TRUE
+                WHERE
+    """
+
+	private const val LAST_MOVEMENT_INNER_PROJECT_FILTER = "t.$LINKED_PROJECT_ID = :projectId AND"
+
+	private const val LAST_MOVEMENT_BODY = """
+                t.$VISIBLE IS TRUE
                 GROUP BY $MOVEMENT_CONTENT_TABLE.$PARTICIPANT_PREFIX$ID
             ) AS plm ON plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
-        )
+            INNER JOIN $MOVEMENT_CONTENT_TABLE last_content
+                ON last_content.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID AND last_content.$PARTICIPANT_PREFIX$ID = plm.$PARTICIPANT_PREFIX$ID
     """
+
+	private const val LAST_MOVEMENT_OUTER_PROJECT_FILTER = "WHERE t.$LINKED_PROJECT_ID = :projectId"
+
+	private const val LAST_MOVEMENT_TAIL = ")"
+
+	const val WITH_PARTICIPANT_LAST_MOVEMENT =
+		"$LAST_MOVEMENT_HEAD $LAST_MOVEMENT_INNER_PROJECT_FILTER $LAST_MOVEMENT_BODY $LAST_MOVEMENT_OUTER_PROJECT_FILTER $LAST_MOVEMENT_TAIL"
+
+	const val WITH_PARTICIPANT_LAST_MOVEMENT_ALL_PROJECTS = "$LAST_MOVEMENT_HEAD $LAST_MOVEMENT_BODY $LAST_MOVEMENT_TAIL"
 
 	const val LAST_MOVEMENT_JOIN = """
         LEFT JOIN last_movement ON last_movement.$PARTICIPANT_PREFIX$ID = t.$ID
@@ -99,9 +115,9 @@ object ParticipantQueries {
             LEFT JOIN $GROUP_TABLE group_presence ON group_presence.$ID = $GROUP_CONTENT_TABLE.$GROUP_PREFIX$ID AND group_presence.$VISIBLE IS TRUE
                 AND (
                     (
-                        (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(group_presence.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CURRENT_TIMESTAMP
+                        (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(group_presence.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                     ) AND (
-                        (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CURRENT_TIMESTAMP
+                        (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                     )
                 )
             LEFT JOIN $GROUP_TABLE group_presence_on_date ON group_presence_on_date.$ID = $GROUP_CONTENT_TABLE.$GROUP_PREFIX$ID AND group_presence_on_date.$VISIBLE IS TRUE
@@ -147,7 +163,7 @@ object ParticipantQueries {
 	// A participant is an adult when born on or before today minus 18 years.
 	// Mirrors DateExt.isMajor(), which the driver check relies on — keep both in sync.
 	const val PARTICIPANT_MAJOR_CLAUSE =
-		"(:isMajor IS NULL OR :isMajor = (t.$PARTICIPANT_BIRTHDAY <= CURRENT_DATE - INTERVAL '18 years'))"
+		"(:isMajor IS NULL OR :isMajor = (t.$PARTICIPANT_BIRTHDAY <= CAST(:#{now} AS DATE) - INTERVAL '18 years'))"
 
 	const val PARTICIPANT_TYPE_SEARCH_CLAUSE = "(:type IS NULL OR t.type = :type)"
 
@@ -181,12 +197,12 @@ object ParticipantQueries {
 	const val PARTICIPANT_IN_PLANNED_RANGE = """
         (
             (
-                COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
-                OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CAST(:#{now} AS DATE)
+                OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CAST(:#{now} AS TIMETZ))
             ) AND
             (
-                COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
-                OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CAST(:#{now} AS DATE)
+                OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CAST(:#{now} AS TIMETZ))
             )
         )
     """
@@ -204,7 +220,7 @@ object ParticipantQueries {
         (
             (
                 t.$PARTICIPANT_END_AVAILABILITY_DATE IS NOT NULL
-                AND (t.$PARTICIPANT_END_AVAILABILITY_DATE + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) < CURRENT_TIMESTAMP
+                AND (t.$PARTICIPANT_END_AVAILABILITY_DATE + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) < CAST(:#{now} AS TIMESTAMPTZ)
             ) OR (
                 t.$PARTICIPANT_END_AVAILABILITY_DATE IS NULL
                 AND fg.$PARTICIPANT_GROUPS IS NOT NULL
@@ -219,6 +235,15 @@ object ParticipantQueries {
             WHEN t.$PARTICIPANT_EFFECTIVE_ARRIVAL IS NOT NULL AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
                 AND $PARTICIPANT_PLANNED_END_PASSED THEN 'OVERDUE'
             ELSE $PARTICIPANT_PRESENCE_EXPRESSION
+        END
+    """
+
+	const val PARTICIPANT_STATUS_RANK = """
+        CASE $PARTICIPANT_STATUS_EXPRESSION
+            WHEN 'OVERDUE' THEN 0
+            WHEN 'OUT' THEN 1
+            WHEN 'IN' THEN 2
+            ELSE 3
         END
     """
 
@@ -265,6 +290,15 @@ object ParticipantQueries {
         CASE WHEN CAST(:sortField AS TEXT) = 'startAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
         CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
         CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'status' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN $PARTICIPANT_STATUS_RANK END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'status' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN $PARTICIPANT_STATUS_RANK END DESC NULLS LAST,
+    """
+
+	const val PARTICIPANT_ON_SITE_CLAUSE = """
+        (
+            CAST(:isOnSite AS BOOLEAN) IS NULL
+            OR CAST(:isOnSite AS BOOLEAN) = (t.$PARTICIPANT_EFFECTIVE_ARRIVAL IS NOT NULL AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL)
+        )
     """
 
 	const val PARTICIPANT_USER_LINK_CLAUSE =

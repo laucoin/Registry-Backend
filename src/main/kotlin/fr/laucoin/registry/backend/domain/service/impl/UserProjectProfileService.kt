@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
@@ -29,6 +30,7 @@ import java.util.UUID
 @Service
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
+	private val favoritePort: IProjectFavoritePort,
 	private val roleService: IRoleService,
 	private val transactionalOperator: TransactionalOperator,
 ) : IUserProjectProfileService, GenericProfileService(port) {
@@ -42,11 +44,32 @@ class UserProjectProfileService(
 	): Mono<PageModel<ProjectProfileModel>> {
 		return port
 			.findProjectProfilesPageByUserId(userId, pageable, searchParams)
+			.withFavorites(userId)
 	}
 
 	override fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
+			.withFavorite(currentUser.id!!)
 	}
+
+	private fun Mono<ProjectProfileModel>.withFavorite(userId: UUID): Mono<ProjectProfileModel> =
+		flatMap { profile ->
+			val projectId = profile.project?.id ?: return@flatMap Mono.just(profile)
+			favoritePort.findFavoriteProjectIds(userId, listOf(projectId))
+				.hasElements()
+				.map { profile.apply { project?.favorite = it } }
+		}
+
+	private fun Mono<PageModel<ProjectProfileModel>>.withFavorites(userId: UUID): Mono<PageModel<ProjectProfileModel>> =
+		flatMap { page ->
+			favoritePort.findFavoriteProjectIds(userId, page.content.mapNotNull { it.project?.id }.distinct())
+				.collectList()
+				.map { it.toSet() }
+				.map { favoriteIds ->
+					page.content.forEach { profile -> profile.project?.let { it.favorite = it.id in favoriteIds } }
+					page
+				}
+		}
 
 	override fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,

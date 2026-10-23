@@ -19,17 +19,14 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Communi
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CommunicationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.CommunicationWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.movementId
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultMovementId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -52,8 +49,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
 
-class CommunicationControllerTest: TestContext() {
+class CommunicationControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: ICommunicationService
 
@@ -75,7 +75,7 @@ class CommunicationControllerTest: TestContext() {
 				CommunicationWriterDto(
 					dateTime = null,
 					alertId = null,
-					movementId = movementId,
+					movementId = defaultMovementId,
 				),
 				COMMUNICATION_DATETIME_NULL
 			),
@@ -92,7 +92,7 @@ class CommunicationControllerTest: TestContext() {
 					dateTime = ZonedDateTime.now(),
 					message = "Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message.",
 					alertId = null,
-					movementId = movementId,
+					movementId = defaultMovementId,
 				),
 				COMMUNICATION_MESSAGE_TOO_LONG
 			),
@@ -113,13 +113,13 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<CommunicationReaderDto>(OK)
 
-		verify(service).findCommunicationById(projectId, uuid, isVisible = null)
+		verify(service).findCommunicationById(defaultProjectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
@@ -129,7 +129,7 @@ class CommunicationControllerTest: TestContext() {
 		// Arrange
 		val createdId = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
 
 		whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto().apply { id = createdId })
@@ -142,17 +142,18 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(communication)
 			.exchange()
 
 		// Assert
-		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.expectHeader()
+			.valueEquals("Location", "${BASE_URL.replace("{projectId}", defaultProjectId.toString())}/$createdId")
 		result.body<CommunicationReaderDto>(CREATED)
 
 		verify(service).createCommunication(any(), any())
 		verify(readerMapper).toDto(any())
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 	}
 
 	@ParameterizedTest
@@ -165,7 +166,7 @@ class CommunicationControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(communication)
 			.exchange()
 
@@ -183,7 +184,7 @@ class CommunicationControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
@@ -203,16 +204,16 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(communication)
 			.exchange()
 
 		// Assert
 		result.body<CommunicationReaderDto>(OK)
 
-		verify(service).updateCommunicationById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateCommunicationById(any(), eq(defaultProjectId), eq(uuid), any())
 		verify(readerMapper).toDto(any())
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -220,7 +221,7 @@ class CommunicationControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
@@ -233,7 +234,9 @@ class CommunicationControllerTest: TestContext() {
 		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
 		whenever(service.findCommunicationById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(CommunicationModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(CommunicationModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
@@ -243,7 +246,7 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1791885731000\"")
 			.bodyValue(communication)
 			.exchange()
@@ -251,9 +254,9 @@ class CommunicationControllerTest: TestContext() {
 		// Assert
 		result.body<CommunicationReaderDto>(OK)
 
-		verify(service).updateCommunicationById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateCommunicationById(any(), eq(defaultProjectId), eq(uuid), any())
 		verify(readerMapper).toDto(any())
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -261,7 +264,7 @@ class CommunicationControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
@@ -273,7 +276,9 @@ class CommunicationControllerTest: TestContext() {
 		).thenReturn(Mono.just(CommunicationModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
 		whenever(service.findCommunicationById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(CommunicationModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(CommunicationModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
@@ -283,7 +288,7 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1\"")
 			.bodyValue(communication)
 			.exchange()
@@ -291,7 +296,7 @@ class CommunicationControllerTest: TestContext() {
 		// Assert
 		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
 
-		verify(service, never()).updateCommunicationById(any(), eq(projectId), eq(uuid), any())
+		verify(service, never()).updateCommunicationById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -307,7 +312,7 @@ class CommunicationControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(communication)
 			.exchange()
 
@@ -324,7 +329,7 @@ class CommunicationControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.disableCommunicationById(any(), eq(projectId), eq(uuid))).thenReturn(
+		whenever(service.disableCommunicationById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				CommunicationModel()
 			)
@@ -338,13 +343,13 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<CommunicationReaderDto>(OK)
 
-		verify(service).disableCommunicationById(any(), eq(projectId), eq(uuid))
+		verify(service).disableCommunicationById(any(), eq(defaultProjectId), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
@@ -354,7 +359,7 @@ class CommunicationControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.enableCommunicationById(any(), eq(projectId), eq(uuid))).thenReturn(
+		whenever(service.enableCommunicationById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				CommunicationModel()
 			)
@@ -368,13 +373,13 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<CommunicationReaderDto>(OK)
 
-		verify(service).enableCommunicationById(any(), eq(projectId), eq(uuid))
+		verify(service).enableCommunicationById(any(), eq(defaultProjectId), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
@@ -393,7 +398,7 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.delete()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -401,7 +406,7 @@ class CommunicationControllerTest: TestContext() {
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).deleteCommunicationById(any(), eq(projectId), eq(uuid))
+		verify(service).deleteCommunicationById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -416,13 +421,13 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("q", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/movements", listOf(defaultProjectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(service).searchOutMovementWithActivityByText(projectId, "a")
+		verify(service).searchOutMovementWithActivityByText(defaultProjectId, "a")
 	}
 
 	@Test
@@ -431,7 +436,7 @@ class CommunicationControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("q", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/movements", listOf(defaultProjectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert
@@ -452,13 +457,13 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT)
 			)
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("q", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(defaultProjectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(service).searchAlertByText(projectId, "a")
+		verify(service).searchAlertByText(defaultProjectId, "a")
 	}
 
 	@Test
@@ -467,7 +472,7 @@ class CommunicationControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("q", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(defaultProjectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert

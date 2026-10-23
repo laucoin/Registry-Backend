@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
@@ -24,5 +25,12 @@ class PreferencesV2Controller(
 		language: String
 	): Mono<PreferencesModel> {
 		return service.updateLanguage(currentUser, language)
+	}
+
+	override fun updateRefreshMode(
+		currentUser: CurrentUserModel,
+		mode: RefreshModeEnum
+	): Mono<PreferencesModel> {
+		return service.updateRefreshMode(currentUser, mode)
 	}
 }

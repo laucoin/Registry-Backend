@@ -17,6 +17,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
+import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
+import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum.HIGH
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.model.AlertModel
@@ -35,18 +37,16 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Aler
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -68,8 +68,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
-class AlertControllerTest: TestContext() {
+class AlertControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IAlertService
 
@@ -94,15 +99,16 @@ class AlertControllerTest: TestContext() {
 		@JvmStatic
 		fun `Should findAlerts prepare param, call service and finally cast the result`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of("not locale", null, null, null, null, null, null, null),
-				Arguments.of(null, 0, null, null, null, null, null, null),
-				Arguments.of(null, null, 200, null, null, null, null, null),
-				Arguments.of(null, null, null, null, null, null, null, null),
-				Arguments.of(null, null, null, "text", null, null, null, null),
-				Arguments.of(null, null, null, null, true, null, null, null),
-				Arguments.of(null, null, null, null, null, IN_PROGRESS, null, null),
-				Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
-				Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+				Arguments.of("not locale", null, null, null, null, null, null, null, null),
+				Arguments.of(null, 0, null, null, null, null, null, null, null),
+				Arguments.of(null, null, 200, null, null, null, null, null, null),
+				Arguments.of(null, null, null, null, null, null, null, null, null),
+				Arguments.of(null, null, null, "text", null, null, null, null, null),
+				Arguments.of(null, null, null, null, true, null, null, null, null),
+				Arguments.of(null, null, null, null, null, IN_PROGRESS, null, null, null),
+				Arguments.of(null, null, null, null, null, null, HIGH, null, null),
+				Arguments.of(null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
+				Arguments.of(null, null, null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
 			)
 		}
 
@@ -111,7 +117,7 @@ class AlertControllerTest: TestContext() {
 			return Stream.of(
 				Arguments.of("not uuid", null, null, null, null, null, null, null, PARAMETER_TYPE_MISMATCH),
 				Arguments.of(
-					projectId.toString(),
+					defaultProjectId.toString(),
 					-1,
 					null,
 					null,
@@ -121,9 +127,19 @@ class AlertControllerTest: TestContext() {
 					null,
 					PAGE_NUMBER_IS_LOWER_THAN_ZERO
 				),
-				Arguments.of(projectId.toString(), null, 0, null, null, null, null, null, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(
-					projectId.toString(),
+					defaultProjectId.toString(),
+					null,
+					0,
+					null,
+					null,
+					null,
+					null,
+					null,
+					PAGE_SIZE_IS_LOWER_THAN_ONE
+				),
+				Arguments.of(
+					defaultProjectId.toString(),
 					null,
 					201,
 					null,
@@ -134,7 +150,7 @@ class AlertControllerTest: TestContext() {
 					PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 				),
 				Arguments.of(
-					projectId.toString(),
+					defaultProjectId.toString(),
 					null,
 					null,
 					null,
@@ -145,7 +161,7 @@ class AlertControllerTest: TestContext() {
 					PARAMETER_TYPE_MISMATCH
 				),
 				Arguments.of(
-					projectId.toString(),
+					defaultProjectId.toString(),
 					null,
 					null,
 					null,
@@ -156,7 +172,7 @@ class AlertControllerTest: TestContext() {
 					PARAMETER_TYPE_MISMATCH
 				),
 				Arguments.of(
-					projectId.toString(),
+					defaultProjectId.toString(),
 					null,
 					null,
 					null,
@@ -167,7 +183,7 @@ class AlertControllerTest: TestContext() {
 					PARAMETER_TYPE_MISMATCH
 				),
 				Arguments.of(
-					projectId.toString(),
+					defaultProjectId.toString(),
 					null,
 					null,
 					null,
@@ -178,7 +194,7 @@ class AlertControllerTest: TestContext() {
 					PARAMETER_TYPE_MISMATCH
 				),
 				Arguments.of(
-					projectId.toString(),
+					defaultProjectId.toString(),
 					null,
 					null,
 					null,
@@ -299,6 +315,7 @@ class AlertControllerTest: TestContext() {
 		query: String?,
 		isVisible: Boolean?,
 		status: AlertStatusEnum?,
+		criticality: AlertCriticalityEnum?,
 		from: String?,
 		to: String?,
 	) {
@@ -310,6 +327,7 @@ class AlertControllerTest: TestContext() {
 			query = query,
 			isVisible = isVisible,
 			status = status,
+			criticality = criticality,
 			from = from?.let {
 				ZonedDateTime.parse(
 					it,
@@ -331,13 +349,14 @@ class AlertControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
 						Pair("q", query),
 						Pair("isVisible", isVisible),
 						Pair("status", status),
+						Pair("criticality", criticality),
 						Pair("from", from),
 						Pair("to", to),
 					),
@@ -349,7 +368,7 @@ class AlertControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findAlertsPage(projectId, pageable, searchParams)
+		verify(service).findAlertsPage(defaultProjectId, pageable, searchParams)
 		verify(readerMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -400,6 +419,91 @@ class AlertControllerTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findAlerts return 400 with an unknown criticality`() {
+		// Arrange
+		val criticality = "not a criticality"
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("criticality", criticality))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TYPE_MISMATCH)
+
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findAlertById keep the last communication for a caller allowed to read communications`() {
+		// Arrange
+		val alert = AlertModel(lastCommunication = CommunicationModel(message = "message"))
+		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_ALERT_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT),
+				buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R),
+			)
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<AlertReaderDto>(OK)
+
+		verify(readerMapper).toDto(alert)
+		assertNotNull(alert.lastCommunication)
+	}
+
+	@Test
+	fun `Should findAlertById drop the last communication for a caller not allowed to read communications`() {
+		// Arrange
+		val alert = AlertModel(lastCommunication = CommunicationModel(message = "message"))
+		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<AlertReaderDto>(OK)
+
+		verify(readerMapper).toDto(alert)
+		assertNull(alert.lastCommunication)
+	}
+
+	@Test
+	fun `Should findAlerts drop the last communication of every alert for a caller not allowed to read communications`() {
+		// Arrange
+		val alerts = listOf(AlertModel(lastCommunication = CommunicationModel()), AlertModel(lastCommunication = CommunicationModel()))
+		val page = PageModel(PageableModel(0, 20), totalElements = 2, alerts)
+		whenever(service.findAlertsPage(any(), any(), any())).thenReturn(Mono.just(page))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(PageModel(PageableModel(0, 20), totalElements = 0, emptyList()))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		assertTrue(alerts.all { it.lastCommunication == null })
+	}
+
+	@Test
 	fun `Should findAlertById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
@@ -410,13 +514,13 @@ class AlertControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).findAlertById(projectId, uuid, isVisible = null)
+		verify(service).findAlertById(defaultProjectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(communicationReaderMapper)
@@ -464,7 +568,7 @@ class AlertControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/{id}/communications",
-					listOf(projectId, uuid),
+					listOf(defaultProjectId, uuid),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -480,7 +584,7 @@ class AlertControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findAlertCommunicationsPage(projectId, uuid, pageable, searchParams)
+		verify(service).findAlertCommunicationsPage(defaultProjectId, uuid, pageable, searchParams)
 		verify(communicationReaderMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
@@ -506,7 +610,7 @@ class AlertControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/{id}/communications",
-					listOf(projectId, uuid),
+					listOf(defaultProjectId, uuid),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -543,17 +647,18 @@ class AlertControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_C), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(alert)
 			.exchange()
 
 		// Assert
-		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.expectHeader()
+			.valueEquals("Location", "${BASE_URL.replace("{projectId}", defaultProjectId.toString())}/$createdId")
 		result.body<AlertReaderDto>(CREATED)
 
 		verify(service).createAlert(any(), any())
 		verify(readerMapper).toDto(any())
-		verify(creationWriterMapper).toModel(any(), eq(projectId))
+		verify(creationWriterMapper).toModel(any(), eq(defaultProjectId))
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(communicationReaderMapper)
 	}
@@ -568,7 +673,7 @@ class AlertControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(alert)
 			.exchange()
 
@@ -597,18 +702,18 @@ class AlertControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(alert)
 			.exchange()
 
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).updateAlertById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateAlertById(any(), eq(defaultProjectId), eq(uuid), any())
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -621,14 +726,16 @@ class AlertControllerTest: TestContext() {
 		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(AlertModel())
 		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(AlertModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(AlertModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1791885731000\"")
 			.bodyValue(alert)
 			.exchange()
@@ -636,11 +743,11 @@ class AlertControllerTest: TestContext() {
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).updateAlertById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateAlertById(any(), eq(defaultProjectId), eq(uuid), any())
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -651,14 +758,16 @@ class AlertControllerTest: TestContext() {
 
 		whenever(writerMapper.toModel(any(), any())).thenReturn(AlertModel())
 		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(AlertModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(AlertModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1\"")
 			.bodyValue(alert)
 			.exchange()
@@ -666,7 +775,7 @@ class AlertControllerTest: TestContext() {
 		// Assert
 		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
 
-		verify(service, never()).updateAlertById(any(), eq(projectId), eq(uuid), any())
+		verify(service, never()).updateAlertById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -682,7 +791,7 @@ class AlertControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(alert)
 			.exchange()
 
@@ -711,7 +820,7 @@ class AlertControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/{id}/status/{status}",
-					listOf(projectId, uuid, IN_PROGRESS),
+					listOf(defaultProjectId, uuid, IN_PROGRESS),
 					emptyList(),
 				)
 			)
@@ -720,7 +829,7 @@ class AlertControllerTest: TestContext() {
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).updateAlertStatusById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateAlertStatusById(any(), eq(defaultProjectId), eq(uuid), any())
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
@@ -732,20 +841,20 @@ class AlertControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.disableAlertById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(AlertModel()))
+		whenever(service.disableAlertById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.just(AlertModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).disableAlertById(any(), eq(projectId), eq(uuid))
+		verify(service).disableAlertById(any(), eq(defaultProjectId), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(creationWriterMapper)
 		verifyNoInteractions(communicationReaderMapper)
@@ -757,20 +866,20 @@ class AlertControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.enableAlertById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(AlertModel()))
+		whenever(service.enableAlertById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.just(AlertModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).enableAlertById(any(), eq(projectId), eq(uuid))
+		verify(service).enableAlertById(any(), eq(defaultProjectId), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
@@ -788,7 +897,7 @@ class AlertControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_D), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.delete()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -798,6 +907,6 @@ class AlertControllerTest: TestContext() {
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).deleteAlertById(any(), eq(projectId), eq(uuid))
+		verify(service).deleteAlertById(any(), eq(defaultProjectId), eq(uuid))
 	}
 }

@@ -64,10 +64,10 @@ object VehicleQueries {
         (
             :isAvailable IS NULL OR :isAvailable = (
                 (
-                    (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CURRENT_TIMESTAMP
+                    (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CURRENT_TIMESTAMP
+                    (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                 )
             )
         )

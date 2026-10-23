@@ -29,6 +29,8 @@ class ProjectModelPostgresRepository(
 			searchParams.query,
 			searchParams.isVisible,
 			searchParams.at,
+			searchParams.isFavorite,
+			searchParams.userId,
 			searchParams.sort?.field,
 			searchParams.sort?.isDescending,
 			pageable.limit,
@@ -50,6 +52,8 @@ class ProjectModelPostgresRepository(
 			searchParams.query,
 			searchParams.isVisible,
 			searchParams.at,
+			searchParams.isFavorite,
+			searchParams.userId,
 			searchParams.sort?.field,
 			searchParams.sort?.isDescending,
 			pageable.limit,
@@ -81,7 +85,15 @@ class ProjectModelPostgresRepository(
 	}
 
 	private fun save(element: ProjectModel): Mono<ProjectModel> {
-		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+		return repository.save(mapper.toEntity(element))
+			.flatMap(::reloadWithCounts)
+			.map(mapper::toModel)
+	}
+
+	private fun reloadWithCounts(saved: ProjectEntity): Mono<ProjectEntity> {
+		return Mono.justOrEmpty(saved.id)
+			.flatMap { repository.findById(it, null) }
+			.switchIfEmpty(Mono.error(IllegalStateException("Project ${saved.id} not found after save")))
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

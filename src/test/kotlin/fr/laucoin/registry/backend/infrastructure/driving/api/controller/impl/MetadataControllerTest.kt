@@ -2,9 +2,12 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
+import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertCriticalityMetadataReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertCriticalityMetadataReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import reactor.core.publisher.Flux
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AvailabilityStatusReaderDtoMapper
@@ -38,6 +41,9 @@ class MetadataControllerTest: TestContext() {
 
 	@MockitoBean
 	private lateinit var profileStatusReaderMapper: ProjectProfileStatusReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var alertCriticalityMetadataReaderMapper: AlertCriticalityMetadataReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var projectService: IProjectService
@@ -126,6 +132,24 @@ class MetadataControllerTest: TestContext() {
 		verify(movementTypeReaderMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(profileStatusReaderMapper)
 		verifyNoInteractions(presenceStatusMapper)
+	}
+
+	@Test
+	fun `Should getAlertCriticality return 200 with all the levels`() {
+		// Arrange
+		val metadata = AlertCriticalityMetadataReaderDto(listOf(LabelDto("value", "label")), "rule")
+		whenever(alertCriticalityMetadataReaderMapper.toDto(any())).thenReturn(metadata)
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.get()
+			.uri(uriBuilder("$BASE_URL/alerts/criticality", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<AlertCriticalityMetadataReaderDto>(OK)
+		verify(alertCriticalityMetadataReaderMapper).toDto(AlertCriticalityEnum.entries)
 	}
 
 	@Test

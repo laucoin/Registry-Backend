@@ -28,7 +28,7 @@ class UserInvitationReaderDtoMapperTest {
 			id = UUID.randomUUID()
 			this.projectId = projectId
 			project = ProjectModel(name = "Project", begin = CustomDateTimeModel.MIN, end = CustomDateTimeModel.MAX)
-				.apply { id = projectId }
+				.apply { id = projectId; favorite = true }
 		}
 		whenever(profileMapper.toDto(any())).thenReturn(
 			ProjectProfileReaderDto(role = role, status = status, startAccess = CustomDateTimeModel.MIN).apply {
@@ -42,7 +42,6 @@ class UserInvitationReaderDtoMapperTest {
 
 		// Assert
 		assertEquals(model.id, result.id)
-		assertEquals(projectId, result.projectId)
 		assertEquals(role, result.role)
 		assertEquals(status, result.status)
 		assertEquals(CustomDateTimeModel.MIN, result.startAccess)
@@ -50,6 +49,7 @@ class UserInvitationReaderDtoMapperTest {
 		assertEquals("Project", result.project?.name)
 		assertEquals(CustomDateTimeModel.MIN, result.project?.begin)
 		assertEquals(CustomDateTimeModel.MAX, result.project?.end)
+		assertEquals(true, result.project?.favorite)
 	}
 
 	@Test

@@ -18,15 +18,9 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -34,10 +28,16 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @TestInstance(PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class ParticipantOverdueStatusRepositoryTest: TestContext() {
+class ParticipantOverdueStatusRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var participantPort: IParticipantPort
 
@@ -113,7 +113,17 @@ class ParticipantOverdueStatusRepositoryTest: TestContext() {
 
 		// Assert
 		assertTrue(overdue.containsAll(listOf("ownPast", "groupEnded", "groupGap", "outOverdue").map { ids[it] }))
-		assertTrue(overdue.none { listOf("ownFuture", "groupOverlap", "groupPermanent", "noGroup", "ownEndWins", "departed", "neverArrived").map { n -> ids[n] }.contains(it) })
+		assertTrue(overdue.none {
+			listOf(
+				"ownFuture",
+				"groupOverlap",
+				"groupPermanent",
+				"noGroup",
+				"ownEndWins",
+				"departed",
+				"neverArrived"
+			).map { n -> ids[n] }.contains(it)
+		})
 	}
 
 	@Test
@@ -133,10 +143,11 @@ class ParticipantOverdueStatusRepositoryTest: TestContext() {
 		assertTrue(present.none { absent.contains(it) })
 	}
 
-	private fun statusOf(name: String): PresenceStatusEnum? = participantPort.findById(projectId, ids[name]!!, null).block()!!.status
+	private fun statusOf(name: String): PresenceStatusEnum? =
+		participantPort.findById(defaultProjectId, ids[name]!!, null).block()!!.status
 
 	private fun idsWith(params: ParticipantSearchParamModel): List<UUID> {
-		return participantPort.findPage(projectId, pageable, params).block()!!.content.mapNotNull { it.id }
+		return participantPort.findPage(defaultProjectId, pageable, params).block()!!.content.mapNotNull { it.id }
 	}
 
 	private fun createGroup(start: Long?, end: Long?): UUID = createGroup("group", start, end)
@@ -146,7 +157,7 @@ class ParticipantOverdueStatusRepositoryTest: TestContext() {
 			this.name = name
 			startAvailability = start?.let { CustomDateTimeModel(LocalDate.now().plusDays(it)) }
 			endAvailability = end?.let { CustomDateTimeModel(LocalDate.now().plusDays(it)) }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		return groupPort.create(group).block()!!.id!!
@@ -174,7 +185,7 @@ class ParticipantOverdueStatusRepositoryTest: TestContext() {
 			type = REGISTERED
 			endAvailability = ownEnd?.let { CustomDateTimeModel(LocalDate.now().plusDays(it)) }
 			this.groups = groups.map { GroupModel().apply { id = it } }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		return participantPort.create(participant).block()!!.id!!
@@ -186,8 +197,9 @@ class ParticipantOverdueStatusRepositoryTest: TestContext() {
 			dateTime = base.minusHours(5).plusMinutes(minutes)
 			type = movementType
 			this.reason = reason
-			content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			content =
+				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		movementPort.create(movement).block()

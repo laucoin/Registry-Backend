@@ -3,13 +3,9 @@ package fr.laucoin.registry.backend.test
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.userId
-import fr.laucoin.registry.backend.test.ModelExt.userOidcId
-import java.net.URI
-import java.util.Objects
-import java.util.function.Function
-import kotlin.test.assertNotNull
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserOidcId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
@@ -25,6 +21,10 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
+import java.net.URI
+import java.util.Objects
+import java.util.function.Function
+import kotlin.test.assertNotNull
 
 object WebTestClientExt {
 	private const val FIRST_NAME = "John"
@@ -32,13 +32,13 @@ object WebTestClientExt {
 
 
 	private val user = UserModel(
-		oidcId = userOidcId,
+		oidcId = defaultUserOidcId,
 		firstName = FIRST_NAME,
 		lastName = LAST_NAME,
 		email = "$FIRST_NAME.$LAST_NAME@test.com"
-	).apply { id = userId }
+	).apply { id = defaultUserId }
 
-	fun buildAuthority(authority: String): String = "${projectId}_$authority"
+	fun buildAuthority(authority: String): String = "${defaultProjectId}_$authority"
 
 	fun WebTestClient.authenticate(vararg authorities: String): WebTestClient {
 		val currentUser = currentUser(*authorities)

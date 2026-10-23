@@ -53,29 +53,6 @@ class MovementModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
-		return Mono.zip(
-			countCurrent(projectId, searchParams),
-			currentMovements(projectId, pageable, searchParams),
-		).map { PageModel(pageable, it.t1, it.t2) }
-	}
-
-	private fun countCurrent(projectId: UUID, searchParams: MovementSearchParamModel): Mono<Long> {
-		return repository.countCurrent(
-			projectId,
-			searchParams.isVisible,
-			searchParams.hasActivity,
-			searchParams.activityId,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
-		)
-	}
-
-	private fun currentMovements(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: MovementSearchParamModel,
-	): Mono<List<MovementModel>> {
 		return repository.findCurrent(
 			projectId,
 			searchParams.isVisible,
@@ -88,9 +65,7 @@ class MovementModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		)
-			.map(mapper::toModel)
-			.collectList()
+		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findContent(projectId: UUID, movementIds: List<UUID>): Flux<Pair<UUID, List<MovementContentModel>>> {

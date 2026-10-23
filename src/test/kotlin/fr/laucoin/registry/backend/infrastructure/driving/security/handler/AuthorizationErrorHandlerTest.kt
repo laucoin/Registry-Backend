@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest
 import org.springframework.mock.web.server.MockServerWebExchange
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException
@@ -113,7 +114,7 @@ class AuthorizationErrorHandlerTest {
 		val exchange = exchange()
 
 		// Act
-		handler.accessDeniedHandler().handle(exchange, org.springframework.security.access.AccessDeniedException("denied")).block()
+		handler.accessDeniedHandler().handle(exchange, AccessDeniedException("denied")).block()
 
 		// Assert
 		assertProblem(exchange, FORBIDDEN, NOT_ENOUGH_PERMISSION)

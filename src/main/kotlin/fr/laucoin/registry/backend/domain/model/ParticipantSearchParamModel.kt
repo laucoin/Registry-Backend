@@ -15,6 +15,7 @@ data class ParticipantSearchParamModel(
 	var presence: PresenceStatusEnum? = null,
 	var at: ZonedDateTime? = null,
 	var hasUser: Boolean? = null,
+	var isOnSite: Boolean? = null,
 	var birthdayFrom: LocalDate? = null,
 	var birthdayTo: LocalDate? = null,
 	var sort: SortModel? = null,
@@ -37,6 +38,7 @@ data class ParticipantSearchParamModel(
 		birthdayTo: LocalDate? = null,
 		sort: SortModel? = null,
 		presence: PresenceStatusEnum? = null,
+		isOnSite: Boolean? = null,
 	): this(
 		isMajor = isMajor,
 		type = type,
@@ -46,6 +48,7 @@ data class ParticipantSearchParamModel(
 		presence = presence,
 		at = at,
 		hasUser = hasUser,
+		isOnSite = isOnSite,
 		birthdayFrom = birthdayFrom,
 		birthdayTo = birthdayTo,
 		sort = sort,
@@ -55,7 +58,7 @@ data class ParticipantSearchParamModel(
 
 	companion object {
 		val SORT_FIELDS = setOf(
-			"firstName", "lastName", "birthday", "type", "startAvailability", "endAvailability",
+			"firstName", "lastName", "birthday", "type", "startAvailability", "endAvailability", "status",
 		)
 	}
 }

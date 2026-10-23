@@ -13,16 +13,11 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.Project
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleCountEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectProfileRoleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectProfileEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
-import fr.laucoin.registry.backend.test.ModelExt.userIdWithoutProfile
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectProfileId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserIdWithoutProfile
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -39,8 +34,13 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class ProjectProfileModelPostgresRepositoryTest: TestContext() {
+class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IProjectProfileEntityRepository
 
@@ -92,13 +92,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 200)
 		val all = repository.findProjectProfilesPageByProjectId(
-			projectId, pageable, ProjectProfileSearchParamModel(status = null),
+			defaultProjectId, pageable, ProjectProfileSearchParamModel(status = null),
 		).block()!!.content
 		val role = all.mapNotNull { it.role }.first()
 
 		// Act
 		val result = repository.findProjectProfilesPageByProjectId(
-			projectId, pageable, ProjectProfileSearchParamModel(status = null, role = role),
+			defaultProjectId, pageable, ProjectProfileSearchParamModel(status = null, role = role),
 		).block()!!
 
 		// Assert
@@ -113,7 +113,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
-		val result = repository.findProjectProfilesPageByProjectId(projectId, pageable, params).block()
+		val result = repository.findProjectProfilesPageByProjectId(defaultProjectId, pageable, params).block()
 
 		// Assert
 		assertNotNull(result)
@@ -122,7 +122,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		assertEquals(4, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findByProjectId(
-			projectId,
+			defaultProjectId,
 			query = null,
 			isVisible = null,
 			isAvailable = null,
@@ -141,7 +141,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findUserIdsWithProjectProfileForProjectWithProfileExclusion call repository findUserIdsWithProjectProfileForProjectWithProfileExclusion`() {
 		// Act
 		val result = repository.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId,
+			defaultProjectId,
 			listOf(currentUser().id!!),
 			profileIdToExclude = null,
 			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
@@ -152,7 +152,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		// Assert
 		assertEquals(1, result?.size)
 		verify(postgresRepository).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId,
+			defaultProjectId,
 			listOf(currentUser().id!!),
 			profileIdToExclude = null,
 			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
@@ -184,7 +184,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		// Act
 		val result = repository.findProjectProfileByUserIdAndId(
 			currentUser().id!!,
-			projectProfileId,
+			defaultProjectProfileId,
 			isVisible = null
 		).block()
 
@@ -192,7 +192,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).findByUserIdAndId(
 			currentUser().id!!,
-			projectProfileId,
+			defaultProjectProfileId,
 			isVisible = null,
 		)
 		verify(mapper).toModel(any())
@@ -220,13 +220,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findByProjectIdAndId`() {
 		// Act
-		val result = repository.findById(projectId, projectProfileId, isVisible = null).block()
+		val result = repository.findById(defaultProjectId, defaultProjectProfileId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findByProjectIdAndId(
-			projectId,
-			projectProfileId,
+			defaultProjectId,
+			defaultProjectProfileId,
 			isVisible = null,
 		)
 		verify(mapper).toModel(any())
@@ -238,12 +238,12 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, isVisible = null).block()
+		val result = repository.findById(defaultProjectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findByProjectIdAndId(
-			projectId,
+			defaultProjectId,
 			uuid,
 			isVisible = null,
 		)
@@ -256,12 +256,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
-		val result = repository.findProjectProfileByProjectAndUserId(projectId, currentUser().id!!, params).block()
+		val result =
+			repository.findProjectProfileByProjectAndUserId(defaultProjectId, currentUser().id!!, params).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findProjectProfileByProjectAndUserId(
-			projectId,
+			defaultProjectId,
 			currentUser().id!!,
 			isVisible = null,
 			isAvailable = null,
@@ -277,12 +278,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		val params = ProjectProfileSearchParamModel(status = null)
 
 		// Act
-		val result = repository.findProjectProfileByProjectAndUserId(projectId, uuid, searchParams = params).block()
+		val result =
+			repository.findProjectProfileByProjectAndUserId(defaultProjectId, uuid, searchParams = params).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findProjectProfileByProjectAndUserId(
-			projectId,
+			defaultProjectId,
 			uuid,
 			isVisible = null,
 			isAvailable = null,
@@ -295,7 +297,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findProjectProfilesByUserIdAndProjectIds call repository findByUserIdAndProjectIds`() {
 		// Arrange
 		val params = ProjectProfileSearchParamModel(isVisible = null)
-		val projectIds = listOf(projectId, UUID.randomUUID())
+		val projectIds = listOf(defaultProjectId, UUID.randomUUID())
 
 		// Act
 		val result = repository.findProjectProfilesByUserIdAndProjectIds(currentUser().id!!, projectIds, params)
@@ -304,7 +306,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		// Assert
 		assertNotNull(result)
 		assertEquals(1, result.size)
-		assertEquals(projectId, result.first().projectId)
+		assertEquals(defaultProjectId, result.first().projectId)
 		assertNull(result.first().project)
 		verify(postgresRepository).findByUserIdAndProjectIds(
 			currentUser().id!!,
@@ -335,7 +337,7 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		// Act
 		val result = repository.findProjectProfilesByUserIdAndProjectIds(
 			UUID.randomUUID(),
-			listOf(projectId),
+			listOf(defaultProjectId),
 			ProjectProfileSearchParamModel(isVisible = null)
 		).collectList().block()
 
@@ -363,13 +365,13 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 	fun `Should findLevel0ProjectProfileRoleByProjectId call repository findLevel0ProjectProfileRoleByProjectId`() {
 		// Act
 		val result =
-			repository.findLevel0ProjectProfileRoleByProjectId(projectId, isVisible = null).collectList()
+			repository.findLevel0ProjectProfileRoleByProjectId(defaultProjectId, isVisible = null).collectList()
 				.block()
 
 		// Assert
 		assertFalse(result.isNullOrEmpty())
 		verify(postgresRepository).findLevel0ProjectProfileRoleByProjectId(
-			projectId,
+			defaultProjectId,
 			isVisible = null,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -386,8 +388,8 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		fun `Should create call repository save`() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
-				user = UserModel().apply { id = userIdWithoutProfile }
-				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+				user = UserModel().apply { id = defaultUserIdWithoutProfile }
+				this.projectId = defaultProjectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
 				create(currentUser())
@@ -409,8 +411,8 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		fun `Should update call repository save`() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
-				user = UserModel().apply { id = userIdWithoutProfile }
-				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+				user = UserModel().apply { id = defaultUserIdWithoutProfile }
+				this.projectId = defaultProjectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = ACCEPTED
 				create(currentUser())
@@ -441,8 +443,8 @@ class ProjectProfileModelPostgresRepositoryTest: TestContext() {
 		fun `Should saveAll call repository saveAll`() {
 			// Arrange
 			val projectProfile = ProjectProfileModel().apply {
-				user = UserModel().apply { id = userIdWithoutProfile }
-				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+				user = UserModel().apply { id = defaultUserIdWithoutProfile }
+				this.projectId = defaultProjectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
 				create(currentUser())

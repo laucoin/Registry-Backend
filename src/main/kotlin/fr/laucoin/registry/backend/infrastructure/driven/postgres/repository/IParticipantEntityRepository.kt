@@ -30,6 +30,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.partici
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_BIRTHDAY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_MAJOR_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_PRESENCE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_ON_SITE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_STATUS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_TEXT_SEARCH_CLAUSE
@@ -43,6 +44,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.partici
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.USER_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT_ALL_PROJECTS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_CLAUSE
@@ -71,7 +73,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_ON_SITE_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         ORDER BY $PARTICIPANT_SORT similarity_score DESC, t.$PARTICIPANT_LAST_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -87,6 +89,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		presence: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		hasUser: Boolean?,
+		isOnSite: Boolean?,
 		birthdayFrom: LocalDate?,
 		birthdayTo: LocalDate?,
 		sortField: String?,
@@ -100,7 +103,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT COUNT(t.$ID)
         FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN $GROUPS_JOIN
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_ON_SITE_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         """
 	)
 	fun countAll(
@@ -114,6 +117,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		presence: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		hasUser: Boolean?,
+		isOnSite: Boolean?,
 		birthdayFrom: LocalDate?,
 		birthdayTo: LocalDate?,
 	): Mono<Long>
@@ -124,7 +128,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $GROUP_CONTENT_TABLE ON t.id = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID AND $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID = :groupId
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_ON_SITE_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         ORDER BY $PARTICIPANT_SORT similarity_score DESC, t.$PARTICIPANT_LAST_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -141,6 +145,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		presence: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		hasUser: Boolean?,
+		isOnSite: Boolean?,
 		birthdayFrom: LocalDate?,
 		birthdayTo: LocalDate?,
 		sortField: String?,
@@ -154,8 +159,8 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE
-            AND EXTRACT(MONTH FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(DAY FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(DAY FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(MONTH FROM CAST(:#{now} AS DATE))
+            AND EXTRACT(DAY FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(DAY FROM CAST(:#{now} AS DATE))
             AND $VISIBLE_CLAUSE
         LIMIT $MAX_UNPAGINATED_RESULT
         """
@@ -280,7 +285,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 
 	@Query(
 		"""
-        WITH $WITH_PARTICIPANT_LAST_MOVEMENT
+        WITH $WITH_PARTICIPANT_LAST_MOVEMENT_ALL_PROJECTS
         SELECT t.$ID FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN
         WHERE (last_movement.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME IS NULL OR last_movement.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME < :dateThreshold) AND t.$CREATED_AT < :dateThreshold
         """

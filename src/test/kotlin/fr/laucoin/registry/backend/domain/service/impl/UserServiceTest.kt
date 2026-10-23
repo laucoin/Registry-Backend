@@ -19,13 +19,9 @@ import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
-import fr.laucoin.registry.backend.test.ModelExt.commonUser
-import fr.laucoin.registry.backend.test.ModelExt.userId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUser
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
@@ -52,6 +48,10 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
 class UserServiceTest {
 	private val port: IUserPort = mock()
@@ -71,7 +71,7 @@ class UserServiceTest {
 		@JvmStatic
 		fun `Should updateUserIfPersonalDataChanged update and return User`(): Stream<Arguments> = Stream.of(
 			Arguments.of(UserModel()),
-			Arguments.of(commonUser()),
+			Arguments.of(defaultUser()),
 		)
 
 		@JvmStatic
@@ -190,13 +190,13 @@ class UserServiceTest {
 		// Arrange
 		val onlyVisible = true
 
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonUser()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultUser()))
 
 		// Act
-		service.findUserById(userId, onlyVisible).block()
+		service.findUserById(defaultUserId, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(userId, onlyVisible)
+		verify(port).findById(defaultUserId, onlyVisible)
 	}
 
 	@Test
@@ -396,7 +396,7 @@ class UserServiceTest {
 	fun `Should blockUserById block and return User`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val foundUser = commonUser().apply { id = uuid; role = USER_ROLE }
+		val foundUser = defaultUser().apply { id = uuid; role = USER_ROLE }
 		val currentUser = currentUser().apply { role = USER_ROLE }
 
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
@@ -464,7 +464,7 @@ class UserServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
 
 		// Act
-		service.unblockUserById(currentUser, userId).block()
+		service.unblockUserById(currentUser, defaultUserId).block()
 
 		// Assert
 		verify(roleService).getAssignableUserRoles(currentUser)

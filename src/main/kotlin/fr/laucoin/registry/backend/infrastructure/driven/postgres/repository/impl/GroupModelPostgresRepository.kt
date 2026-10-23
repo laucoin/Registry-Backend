@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupOnSiteCountsEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
@@ -37,11 +38,34 @@ class GroupModelPostgresRepository(
 			searchParams.isVisible,
 			searchParams.isPresent,
 			searchParams.at,
+			searchParams.memberUserId,
+			searchParams.hasOnSiteMembers,
 			searchParams.sort?.field,
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, GroupEntity::fullCount, mapper::toModel)
+			.flatMap { withOnSiteCounts(projectId, it) }
+	}
+
+	private fun withOnSiteCounts(projectId: UUID, page: PageModel<GroupModel>): Mono<PageModel<GroupModel>> {
+		val ids = page.content.mapNotNull { it.id }
+		if (ids.isEmpty()) return Mono.just(page)
+		return contentRepository.findOnSiteCounts(projectId, ids, at = null)
+			.collectMap { it.groupId!! }
+			.map { counts -> applyOnSiteCounts(page, counts) }
+	}
+
+	private fun applyOnSiteCounts(page: PageModel<GroupModel>, counts: Map<UUID, GroupOnSiteCountsEntity>): PageModel<GroupModel> {
+		page.content.forEach { it.fillOnSiteCounts(counts[it.id]) }
+		return page
+	}
+
+	private fun GroupModel.fillOnSiteCounts(counts: GroupOnSiteCountsEntity?) {
+		onSiteMembersCount = counts?.onSiteMembers ?: 0
+		inMembersCount = counts?.inMembers ?: 0
+		outMembersCount = counts?.outMembers ?: 0
+		overdueMembersCount = counts?.overdueMembers ?: 0
 	}
 
 	override fun findContent(

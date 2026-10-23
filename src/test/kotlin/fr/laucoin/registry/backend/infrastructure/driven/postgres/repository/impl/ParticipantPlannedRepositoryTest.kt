@@ -20,19 +20,19 @@ import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.test.ModelExt
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
-import java.util.UUID
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+import kotlin.test.assertEquals
 
 @TestInstance(PER_CLASS)
-class ParticipantPlannedRepositoryTest: TestContext() {
+class ParticipantPlannedRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var participantPort: IParticipantPort
 
@@ -42,7 +42,7 @@ class ParticipantPlannedRepositoryTest: TestContext() {
 	@Autowired
 	private lateinit var movementPort: IMovementPort
 
-	private val tenantId: UUID = ModelExt.projectId
+	private val tenantId: UUID = ModelExt.defaultProjectId
 	private val base: ZonedDateTime = ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)
 	private val day: LocalDate = LocalDate.of(2099, 1, 15)
 	private var minutes = 0L
@@ -67,6 +67,20 @@ class ParticipantPlannedRepositoryTest: TestContext() {
 
 		// Assert
 		assertEquals(expected, names)
+	}
+
+	@Test
+	fun `Should return the own planned participants with their planned dates`() {
+		// Arrange
+		val expected = CustomDateTimeModel(day)
+
+		// Act
+		val arrival = participantPort.findPlannedOnOwnDate(tenantId, IN, day, 200).blockFirst()!!
+		val departure = participantPort.findPlannedOnOwnDate(tenantId, OUT, day, 200).blockFirst()!!
+
+		// Assert
+		assertEquals(expected, arrival.startAvailability)
+		assertEquals(expected, departure.endAvailability)
 	}
 
 	@Test
@@ -241,7 +255,8 @@ class ParticipantPlannedRepositoryTest: TestContext() {
 			dateTime = base.minusHours(5).plusMinutes(minutes)
 			type = movementType
 			this.reason = reason
-			content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
+			content =
+				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
 			projectId = tenantId
 			create(currentUser())
 		}

@@ -64,6 +64,7 @@ interface IGroupV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@GetMapping
 	fun findGroups(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
 		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -79,6 +80,10 @@ interface IGroupV2Controller {
 		@Parameter(description = "Instant that must fall inside the validity window")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
+		@Parameter(description = "Membership filter: true keeps the groups having a member linked to the signed-in user, omitted or false keeps every group")
+		@RequestParam(required = false) mine: Boolean?,
+		@Parameter(description = "On-site members filter: true keeps the groups having a member that arrived and has not left yet, false keeps the others, omitted keeps both")
+		@RequestParam(required = false) hasOnSiteMembers: Boolean?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: name, startAvailability, endAvailability")
 		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<GroupWithoutMemberReaderDto>>
@@ -110,13 +115,15 @@ interface IGroupV2Controller {
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Account filter: true keeps participants linked to a user only, false keeps the others only, omitted keeps both")
 		@RequestParam(required = false) hasUser: Boolean?,
+		@Parameter(description = "On-site filter: true keeps participants that arrived and have not left yet, false keeps the others, omitted keeps both")
+		@RequestParam(required = false) onSite: Boolean?,
 		@Parameter(description = "Earliest birthday (inclusive), ISO date. Participants without birthday are excluded")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE) birthdayFrom: LocalDate?,
 		@Parameter(description = "Latest birthday (inclusive), ISO date. Participants without birthday are excluded")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE) birthdayTo: LocalDate?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: firstName, lastName, birthday, type, startAvailability, endAvailability")
+		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: firstName, lastName, birthday, type, startAvailability, endAvailability, status (OVERDUE, OUT, IN, UNAVAILABLE)")
 		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<ParticipantReaderDto>>
 

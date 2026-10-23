@@ -9,5 +9,7 @@ data class ProjectWithProfileReaderDto(
 	var begin: CustomDateTimeModel? = null,
 	var end: CustomDateTimeModel? = null,
 	var options: List<LabelDto>? = emptyList(),
+	var counts: ProjectCountsReaderDto? = null,
 	var profile: ProjectCurrentProfileReaderDto? = null,
+	var favorite: Boolean = false,
 ): GenericReaderDto()

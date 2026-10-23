@@ -19,17 +19,13 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Project
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserInvitationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserInvitationReaderDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -41,15 +37,18 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
-import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
 
-class UserProjectProfileControllerTest: TestContext() {
+class UserProjectProfileControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IUserProjectProfileService
 
@@ -149,21 +148,25 @@ class UserProjectProfileControllerTest: TestContext() {
 	fun `Should createSupportProjectProfile return 200`() {
 		// Arrange
 		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(projectService.findProjectWithProfileById(any(), eq(projectId))).thenReturn(Mono.just(ProjectModel()))
+		whenever(projectService.findProjectWithProfileById(any(), eq(defaultProjectId))).thenReturn(
+			Mono.just(
+				ProjectModel()
+			)
+		)
 		whenever(projectReaderMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(REGISTRY_PROFILE_C)
 			.post()
-			.uri(uriBuilder("$BASE_URL/{projectId}/support", listOf(projectId), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{projectId}/support", listOf(defaultProjectId), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
-		verify(projectService).findProjectWithProfileById(any(), eq(projectId))
+		verify(projectService).findProjectWithProfileById(any(), eq(defaultProjectId))
 		verify(projectReaderMapper).toDto(any())
-		verify(service).createSupportProjectProfile(any(), eq(projectId))
+		verify(service).createSupportProjectProfile(any(), eq(defaultProjectId))
 	}
 
 	@ParameterizedTest

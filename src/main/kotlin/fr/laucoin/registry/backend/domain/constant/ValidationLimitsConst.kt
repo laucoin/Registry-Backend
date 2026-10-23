@@ -29,7 +29,7 @@ object ValidationLimitsConst {
 	const val GUEST_MOVEMENT_CONTENT_MAX = 200
 	const val GUEST_MOVEMENT_GUESTS_MAX = 200
 
-	const val MOVEMENT_IDS_MAX = 100
+	const val MOVEMENT_IDS_MAX = 80
 	const val MOVEMENT_POOL_NAME_MAX = 150
 	const val PARTICIPANT_MOVEMENT_CONTENT_MAX = 200
 

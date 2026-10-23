@@ -40,6 +40,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.PlannedMovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -206,7 +207,7 @@ class MovementService(
 		)
 	}
 
-	override fun findPlannedMovements(projectId: UUID, type: MovementTypeEnum, date: LocalDate?): Flux<MovementModel> {
+	override fun findPlannedMovements(projectId: UUID, type: MovementTypeEnum, date: LocalDate?): Flux<PlannedMovementModel> {
 		val day = date ?: LocalDate.now(clock)
 		return Flux.concat(
 			findIndividualPlannedMovements(projectId, type, day),
@@ -216,14 +217,14 @@ class MovementService(
 
 	private fun findIndividualPlannedMovements(
 		projectId: UUID, type: MovementTypeEnum, day: LocalDate
-	): Flux<MovementModel> {
+	): Flux<PlannedMovementModel> {
 		return participantPort.findPlannedOnOwnDate(projectId, type, day, maxPlannedResult)
-			.map { plannedMovement(type, listOf(plannedContent(it, null))) }
+			.map { PlannedMovementModel(type, plannedAt(type, it.startAvailability, it.endAvailability), listOf(it)) }
 	}
 
 	private fun findGroupPlannedMovements(
 		projectId: UUID, type: MovementTypeEnum, day: LocalDate
-	): Flux<MovementModel> {
+	): Flux<PlannedMovementModel> {
 		return participantPort.findPlannedOnGroupDate(projectId, type, day, maxPlannedResult)
 			.collectList()
 			.flatMapMany { members -> withGroupNames(projectId, type, members) }
@@ -231,7 +232,7 @@ class MovementService(
 
 	private fun withGroupNames(
 		projectId: UUID, type: MovementTypeEnum, members: List<Pair<UUID, ParticipantModel>>
-	): Flux<MovementModel> {
+	): Flux<PlannedMovementModel> {
 		if (members.isEmpty()) return Flux.empty()
 		val membersByGroupId = members.groupBy({ it.first }, { it.second })
 		return groupPort.findAllByIds(projectId, membersByGroupId.keys.toList(), true)
@@ -241,17 +242,15 @@ class MovementService(
 
 	private fun groupPlannedMovement(
 		type: MovementTypeEnum, group: GroupModel, members: List<ParticipantModel>
-	): MovementModel {
-		return plannedMovement(type, members.map { plannedContent(it, group.name) })
+	): PlannedMovementModel {
+		val plannedAt = plannedAt(type, group.startAvailability, group.endAvailability)
+		return PlannedMovementModel(type, plannedAt, members, group.name.orEmpty())
 	}
 
-	private fun plannedContent(participant: ParticipantModel, poolName: String?): MovementContentModel {
-		return MovementContentModel(poolName = poolName, participant = participant)
-	}
-
-	private fun plannedMovement(type: MovementTypeEnum, content: List<MovementContentModel>): MovementModel {
-		val reason = if (type == IN) null else MovementReasonEnum.DEFINITIVE_DEPARTURE
-		return MovementModel(type = type, reason = reason, contentType = REGISTERED, content = content)
+	private fun plannedAt(
+		type: MovementTypeEnum, start: CustomDateTimeModel?, end: CustomDateTimeModel?
+	): CustomDateTimeModel? {
+		return if (type == IN) start else end
 	}
 
 	override fun findMovementCommunicationsPage(

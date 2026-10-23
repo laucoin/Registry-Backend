@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
@@ -34,6 +35,7 @@ class CurrentUserEntityMapper(
 				id = it
 				theme = entity.preferenceTheme ?: ThemeEnum.SYSTEM
 				language = entity.preferenceLanguage
+				refreshMode = entity.preferenceRefreshMode ?: RefreshModeEnum.NORMAL
 			})
 		}.orElse(null)
 	}

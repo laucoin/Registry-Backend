@@ -1,42 +1,28 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.LIGHT
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.SYSTEM
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
-import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
-import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
-import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.http.HttpStatus.NOT_FOUND
-import reactor.core.Exceptions
 import reactor.core.publisher.Mono
+import java.util.UUID
+import java.util.stream.Stream
 
 class PreferencesServiceTest {
 	private val port: IPreferencesPort = mock()
@@ -61,6 +47,15 @@ class PreferencesServiceTest {
 				Arguments.of(DARK, DARK, 0),
 				Arguments.of(SYSTEM, LIGHT, 1),
 				Arguments.of(LIGHT, LIGHT, 0),
+			)
+		}
+
+		@JvmStatic
+		fun `Should updateRefreshMode update refresh mode if necessary`(): Stream<Arguments> {
+			return Stream.of(
+				Arguments.of(RefreshModeEnum.NORMAL, RefreshModeEnum.FAST, 1),
+				Arguments.of(RefreshModeEnum.NORMAL, RefreshModeEnum.NORMAL, 0),
+				Arguments.of(RefreshModeEnum.OFF, RefreshModeEnum.ECO, 1),
 			)
 		}
 
@@ -146,5 +141,30 @@ class PreferencesServiceTest {
 		verify(port).findByUserId(uuid, isVisible = null)
 		verify(port, times(expectedCallOnUpdateLanguage)).save(any())
 		verify(principalCache, times(expectedCallOnUpdateLanguage)).invalidate(oidc)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should updateRefreshMode update refresh mode if necessary`(
+		refreshMode: RefreshModeEnum,
+		newRefreshMode: RefreshModeEnum,
+		expectedCallOnSave: Int,
+	) {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val oidc = UUID.randomUUID()
+		val currentUser = CurrentUserModel().apply { id = uuid; oidcId = oidc }
+		val preference = PreferencesModel().apply { this.refreshMode = refreshMode }
+
+		whenever(port.findByUserId(any(), anyOrNull())).thenReturn(Mono.just(preference))
+		whenever(port.save(any())).thenReturn(Mono.just(preference))
+
+		// Act
+		service.updateRefreshMode(currentUser, newRefreshMode).block()
+
+		// Assert
+		verify(port).findByUserId(uuid, isVisible = null)
+		verify(port, times(expectedCallOnSave)).save(any())
+		verify(principalCache, times(expectedCallOnSave)).invalidate(oidc)
 	}
 }
