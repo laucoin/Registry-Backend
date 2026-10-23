@@ -77,6 +77,15 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	)
 	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupEntity>
 
+	@Query(
+		"""
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $GROUP_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_CLAUSE AND t.$ID = :id
+        """
+	)
+	fun findSummaryById(projectId: UUID, id: UUID): Mono<GroupEntity>
+
 	@Query("SELECT t.$ID FROM $GROUP_TABLE t WHERE t.$ID IN (:ids) ORDER BY t.$ID FOR UPDATE OF t")
 	fun lockByIds(ids: List<UUID>): Flux<UUID>
 

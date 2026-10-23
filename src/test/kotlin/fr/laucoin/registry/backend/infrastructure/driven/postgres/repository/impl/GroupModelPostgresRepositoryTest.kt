@@ -36,6 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull
 
 class GroupModelPostgresRepositoryTest : TestContext() {
@@ -167,6 +168,28 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findSummaryById return the group with its last edition and without its members`() {
+		// Act
+		val result = repository.findSummaryById(defaultProjectId, defaultGroupId).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(defaultGroupId, result.id)
+		assertNotNull(result.lastEdition)
+		assertTrue(result.members.isEmpty())
+		verify(postgresRepository).findSummaryById(defaultProjectId, defaultGroupId)
+	}
+
+	@Test
+	fun `Should findSummaryById return nothing for a group of another project`() {
+		// Act
+		val result = repository.findSummaryById(UUID.randomUUID(), defaultGroupId).block()
+
+		// Assert
+		assertNull(result)
 	}
 
 	@Test
