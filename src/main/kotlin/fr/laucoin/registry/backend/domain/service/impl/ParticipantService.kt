@@ -101,17 +101,14 @@ class ParticipantService(
 	}
 
 	override fun findParticipantMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
-		return movementPort.findPageByParticipantId(
-			projectId,
-			id,
-			pageable,
-			searchParams
-		)
+		return Mono.defer { movementPort.findPageByParticipantId(projectId, id, pageable, searchParams) }
+			.requireActivityOption(currentUser, projectId, searchParams.hasActivity == true)
 	}
 
 	override fun createParticipant(

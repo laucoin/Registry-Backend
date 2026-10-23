@@ -109,20 +109,26 @@ class MovementService(
 	private val futureTolerance: Duration,
 ) : IMovementService, GenericService() {
 	override fun findMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>> {
-		return port.findPage(projectId, pageable, searchParams)
+		return Mono.defer { port.findPage(projectId, pageable, searchParams) }
+			.requireActivityOption(currentUser, projectId, searchParams.isActivityRequested())
 	}
 
 	override fun findCurrentMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
-		return port.findCurrentPage(projectId, pageable, searchParams)
+		return Mono.defer { port.findCurrentPage(projectId, pageable, searchParams) }
+			.requireActivityOption(currentUser, projectId, searchParams.isActivityRequested())
 	}
+
+	private fun MovementSearchParamModel.isActivityRequested() = hasActivity == true || activityId != null
 
 	override fun findMovementsContent(
 		projectId: UUID,

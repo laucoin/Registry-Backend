@@ -26,12 +26,14 @@ import reactor.util.function.Tuple2
 
 interface IMovementService {
 	fun findMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>>
 
 	fun findCurrentMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,

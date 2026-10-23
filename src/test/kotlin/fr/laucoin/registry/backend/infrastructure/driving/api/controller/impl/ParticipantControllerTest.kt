@@ -342,7 +342,7 @@ class ParticipantControllerTest : TestContext() {
 			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
-		whenever(service.findParticipantMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(service.findParticipantMovementsPage(any(), any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(movementReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
@@ -370,7 +370,7 @@ class ParticipantControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findParticipantMovementsPage(defaultProjectId, uuid, pageable, searchParams)
+		verify(service).findParticipantMovementsPage(any(), eq(defaultProjectId), eq(uuid), eq(pageable), eq(searchParams))
 		verify(movementReaderMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)

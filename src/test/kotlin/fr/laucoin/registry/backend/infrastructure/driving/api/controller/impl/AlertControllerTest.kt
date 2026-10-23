@@ -337,7 +337,7 @@ class AlertControllerTest : TestContext() {
 			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(AlertModel()))
-		whenever(service.findAlertsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(service.findAlertsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(AlertReaderDto())),
 		)
@@ -368,7 +368,7 @@ class AlertControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findAlertsPage(defaultProjectId, pageable, searchParams)
+		verify(service).findAlertsPage(any(), eq(defaultProjectId), eq(pageable), eq(searchParams))
 		verify(readerMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -437,77 +437,10 @@ class AlertControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should findAlertById keep the last communication for a caller allowed to read communications`() {
-		// Arrange
-		val alert = AlertModel(lastCommunication = CommunicationModel(message = "message"))
-		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
-		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
-
-		// Act
-		val result = webClient
-			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_ALERT_R),
-				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT),
-				buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R),
-			)
-			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<AlertReaderDto>(OK)
-
-		verify(readerMapper).toDto(alert)
-		assertNotNull(alert.lastCommunication)
-	}
-
-	@Test
-	fun `Should findAlertById drop the last communication for a caller not allowed to read communications`() {
-		// Arrange
-		val alert = AlertModel(lastCommunication = CommunicationModel(message = "message"))
-		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
-		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
-
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
-			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<AlertReaderDto>(OK)
-
-		verify(readerMapper).toDto(alert)
-		assertNull(alert.lastCommunication)
-	}
-
-	@Test
-	fun `Should findAlerts drop the last communication of every alert for a caller not allowed to read communications`() {
-		// Arrange
-		val alerts = listOf(AlertModel(lastCommunication = CommunicationModel()), AlertModel(lastCommunication = CommunicationModel()))
-		val page = PageModel(PageableModel(0, 20), totalElements = 2, alerts)
-		whenever(service.findAlertsPage(any(), any(), any())).thenReturn(Mono.just(page))
-		whenever(readerMapper.toDtoPage(any())).thenReturn(PageModel(PageableModel(0, 20), totalElements = 0, emptyList()))
-
-		// Act
-		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
-			.get()
-			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<PageModel<*>>(OK)
-
-		assertTrue(alerts.all { it.lastCommunication == null })
-	}
-
-	@Test
 	fun `Should findAlertById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(Mono.just(AlertModel()))
+		whenever(service.findAlertForUser(any(), any(), any())).thenReturn(Mono.just(AlertModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
 
 		// Act
@@ -520,7 +453,7 @@ class AlertControllerTest : TestContext() {
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).findAlertById(defaultProjectId, uuid, isVisible = null)
+		verify(service).findAlertForUser(any(), eq(defaultProjectId), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(communicationReaderMapper)

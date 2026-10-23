@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.springframework.http.HttpStatus.FORBIDDEN
+import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DELETED
@@ -295,7 +299,55 @@ class MovementServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findMovementsPage(defaultProjectId, pageable, params).block()
+		service.findMovementsPage(currentUser(), defaultProjectId, pageable, params).block()
+
+		// Assert
+		verify(port).findPage(defaultProjectId, pageable, params)
+	}
+
+	@Test
+	fun `Should findMovementsPage refuse an activity filter without the activity option`() {
+		// Arrange
+		val params = MovementSearchParamModel(type = null, activityId = UUID.randomUUID())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.findMovementsPage(currentUser(), defaultProjectId, PageableModel(0, 10), params).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(NOT_ENOUGH_PERMISSION, result.code)
+		verifyNoInteractions(port)
+	}
+
+	@Test
+	fun `Should findCurrentMovementsPage refuse the hasActivity filter without the activity option`() {
+		// Arrange
+		val params = MovementSearchParamModel(type = null, hasActivity = true)
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.findCurrentMovementsPage(currentUser(), defaultProjectId, PageableModel(0, 10), params).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		verifyNoInteractions(port)
+	}
+
+	@Test
+	fun `Should findMovementsPage accept an activity filter with the activity option`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = MovementSearchParamModel(type = null, activityId = UUID.randomUUID())
+		whenever(port.findPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
+
+		// Act
+		service.findMovementsPage(
+			currentUser(buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY)), defaultProjectId, pageable, params,
+		).block()
 
 		// Assert
 		verify(port).findPage(defaultProjectId, pageable, params)
@@ -311,7 +363,7 @@ class MovementServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findCurrentMovementsPage(defaultProjectId, pageable, params).block()
+		service.findCurrentMovementsPage(currentUser(), defaultProjectId, pageable, params).block()
 
 		// Assert
 		verify(port).findCurrentPage(defaultProjectId, pageable, params)

@@ -29,6 +29,7 @@ interface IParticipantService {
 	fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel>
 
 	fun findParticipantMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
 		pageable: PageableModel,

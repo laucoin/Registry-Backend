@@ -168,7 +168,6 @@ class ProjectControllerTest : TestContext() {
 		// Arrange
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val expectedWithProfile = !authorities.contains(REGISTRY_PROJECT_R)
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = ProjectSearchParamModel(
 			query = query,
@@ -176,7 +175,7 @@ class ProjectControllerTest : TestContext() {
 			at = at?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectModel()))
-		whenever(service.findProjectsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(service.findProjectsPage(any(), any(), anyOrNull(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectWithProfileReaderDto())),
 		)
@@ -207,7 +206,7 @@ class ProjectControllerTest : TestContext() {
 		verify(service).findProjectsPage(
 			currentUser(*authorities.toTypedArray()),
 			pageable,
-			expectedWithProfile,
+			null,
 			searchParams
 		)
 		verify(readerMapper).toDtoPage(any())
@@ -219,7 +218,7 @@ class ProjectControllerTest : TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
 		val captor = argumentCaptor<ProjectSearchParamModel>()
-		whenever(service.findProjectsPage(any(), any(), any(), any()))
+		whenever(service.findProjectsPage(any(), any(), anyOrNull(), any()))
 			.thenReturn(Mono.just(PageModel(pageable, totalElements = 0, emptyList())))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(PageModel(pageable, totalElements = 0, emptyList()))
 
@@ -233,7 +232,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findProjectsPage(any(), any(), any(), captor.capture())
+		verify(service).findProjectsPage(any(), any(), anyOrNull(), captor.capture())
 		assertEquals(true, captor.firstValue.isFavorite)
 		assertEquals(SortModel("favorite", isDescending = true), captor.firstValue.sort)
 	}
