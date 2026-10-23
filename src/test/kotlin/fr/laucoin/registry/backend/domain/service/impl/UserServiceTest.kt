@@ -157,6 +157,19 @@ class UserServiceTest {
 	}
 
 	@Test
+	fun `Should onApplicationEvent fail when the service account is missing`() {
+		// Arrange
+		val event: ContextRefreshedEvent = mock()
+		whenever(port.findServiceAccount()).thenReturn(Mono.empty())
+
+		// Act
+		val action = { service.onApplicationEvent(event) }
+
+		// Assert
+		assertThrows(IllegalStateException::class.java, action)
+	}
+
+	@Test
 	fun `Should findUsersPage call port findPage`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)

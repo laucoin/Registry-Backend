@@ -1,0 +1,25 @@
+#!/bin/sh
+# Asks for confirmation before pushing to a protected branch or force-pushing.
+# Git feeds "<local ref> <local sha> <remote ref> <remote sha>" lines on stdin.
+
+PROTECTED='refs/heads/main refs/heads/master refs/heads/develop'
+ZERO=0000000000000000000000000000000000000000
+
+confirm() {
+    [ -r /dev/tty ] || { echo "$1 (no terminal, aborting)" >&2; exit 1; }
+    printf '%s (y/N): ' "$1" > /dev/tty
+    read -r ANSWER < /dev/tty
+    case "$ANSWER" in y|Y|yes|YES) ;; *) echo "Aborting the push." >&2; exit 1 ;; esac
+}
+
+while read -r _ LOCAL_SHA REMOTE_REF REMOTE_SHA; do
+    [ "$LOCAL_SHA" = "$ZERO" ] && continue # branch deletion
+    for BRANCH in $PROTECTED; do
+        [ "$REMOTE_REF" = "$BRANCH" ] && confirm "Pushing on \"${BRANCH#refs/heads/}\". Are you sure?"
+    done
+    # Non fast-forward = the remote commit is not an ancestor of what we push
+    if [ "$REMOTE_SHA" != "$ZERO" ] && ! git merge-base --is-ancestor "$REMOTE_SHA" "$LOCAL_SHA" 2>/dev/null; then
+        confirm "Force push detected on \"${REMOTE_REF#refs/heads/}\". Are you sure?"
+    fi
+done
+exit 0

@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -30,38 +30,36 @@ class PreferencesControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should updateSelectedProjectProfile return 200`() {
+	fun `Should updateTheme return 200`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		whenever(service.updateUserPreferenceSelectedProjectProfileById(any(), any())).thenReturn(Mono.empty())
+		whenever(service.updateTheme(any(), any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder("$BASE_URL/profile/select", emptyList(), listOf(Pair("profileId", uuid))))
+			.uri(uriBuilder("$BASE_URL/theme", emptyList(), listOf(Pair("theme", DARK))))
 			.exchange()
 
 		// Assert
 		result.body<PreferencesModel>(OK)
-		verify(service).updateUserPreferenceSelectedProjectProfileById(any(), eq(uuid))
+		verify(service).updateTheme(any(), eq(DARK))
 	}
 
 	@Test
-	fun `Should updateSelectedProjectProfileWithProjectId return 200`() {
+	fun `Should updateLanguage return 200`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		whenever(service.updateUserPreferenceSelectedProjectProfileByProjectId(any(), any())).thenReturn(Mono.empty())
+		whenever(service.updateLanguage(any(), any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder("$BASE_URL/projects/{projectId}/profile/select", listOf(uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/language", emptyList(), listOf(Pair("language", "fr-FR"))))
 			.exchange()
 
 		// Assert
 		result.body<PreferencesModel>(OK)
-		verify(service).updateUserPreferenceSelectedProjectProfileByProjectId(any(), eq(uuid))
+		verify(service).updateLanguage(any(), eq("fr-FR"))
 	}
 }

@@ -51,7 +51,8 @@ class UserService(
 
 	// Blocking is deliberate: this runs once on the context-refresh thread
 	override fun onApplicationEvent(event: ContextRefreshedEvent) {
-		serviceAccount = port.findServiceAccount().block()!!
+		serviceAccount = port.findServiceAccount().blockOptional()
+			.orElseThrow { IllegalStateException("Service account not found") }
 	}
 
 	override fun findUsersPage(

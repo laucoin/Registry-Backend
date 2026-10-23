@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
-import fr.laucoin.registry.backend.domain.annotation.BothCannotBeDefined
-import fr.laucoin.registry.backend.domain.annotation.MovementReason
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.BothCannotBeDefined
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementReason
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_AND_REASON_ARE_DEFINED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL

@@ -35,20 +35,6 @@ class CurrentUserEntityMapper(
 				id = it
 				theme = entity.preferenceTheme ?: ThemeEnum.SYSTEM
 				language = entity.preferenceLanguage
-				selectedProfileId = entity.preferenceSelectedProfileId
-				selectedProfileRole = entity.preferenceSelectedProfileRole
-				selectedProfileStatus = entity.preferenceSelectedProfileStatus
-				selectedProfileStartAccessDate = entity.preferenceSelectedProfileStartAccessDate
-				selectedProfileStartAccessTime = entity.preferenceSelectedProfileStartAccessTime
-				selectedProfileEndAccessDate = entity.preferenceSelectedProfileEndAccessDate
-				selectedProfileEndAccessTime = entity.preferenceSelectedProfileEndAccessTime
-				selectedProfileProjectId = entity.preferenceSelectedProfileProjectId
-				selectedProfileProjectName = entity.preferenceSelectedProfileProjectName
-				selectedProfileProjectStartDate = entity.preferenceSelectedProfileProjectStartDate
-				selectedProfileProjectStartTime = entity.preferenceSelectedProfileProjectStartTime
-				selectedProfileProjectEndDate = entity.preferenceSelectedProfileProjectEndDate
-				selectedProfileProjectEndTime = entity.preferenceSelectedProfileProjectEndTime
-				selectedProfileProjectOptions = entity.preferenceSelectedProfileProjectOptions
 			})
 		}.orElse(null)
 	}

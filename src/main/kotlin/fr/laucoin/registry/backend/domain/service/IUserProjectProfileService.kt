@@ -8,8 +8,8 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import java.util.UUID
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 interface IUserProjectProfileService {
 	fun findProjectProfilesPage(
@@ -18,7 +18,11 @@ interface IUserProjectProfileService {
 		searchParams: ProjectProfileSearchParamModel,
 	): Mono<PageModel<ProjectProfileModel>>
 
-	fun <T: GenericModel> validateNotLastProjectRoleLevel0(
+	fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
+
+	fun findProjectProfilesByProjectId(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel>
+
+	fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,
 		projectId: UUID?,
 		result: T,

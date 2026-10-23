@@ -13,8 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
@@ -26,6 +24,8 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @Tag(name = "User's Profiles management", description = "API for User's Profiles-related operations")
 @RequestMapping("/api/v1/users/profiles")
@@ -48,6 +48,26 @@ interface IUserProjectProfileV1Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) dateTimeSearched: ZonedDateTime?,
 	): Mono<PageModel<ProjectProfileReaderDto>>
+
+	@Operation(
+		summary = "Find User's Profiles",
+		description = "Find or get paginated User's Profiles",
+	)
+	@GetMapping("/{id}")
+	fun findUserProjectProfileById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable id: UUID,
+	): Mono<ProjectProfileReaderDto>
+
+	@Operation(
+		summary = "Find User's Profiles by Project ID",
+		description = "Find or get paginated User's Profiles by Project ID",
+	)
+	@GetMapping("/project/{id}")
+	fun findUserProjectProfileByProjectId(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable id: UUID,
+	): Mono<ProjectProfileReaderDto>
 
 	@Operation(
 		summary = "Accept or Reject Project's invitation",

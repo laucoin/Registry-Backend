@@ -84,17 +84,37 @@ class HexagonalArchitectureTest {
 			.check(classes)
 
 	@ArchTest
-	fun `Services should implement contract interface`(classes: JavaClasses) =
-		noClasses()
+	fun `Domain services should implement a domain contract interface`(classes: JavaClasses) =
+		classes()
 			.that()
 			.areAnnotatedWith(Service::class.java)
+			.and()
+			.resideInAPackage("$DOMAIN.service..")
 			.should()
-			.resideOutsideOfPackages(
-				"$DOMAIN.service..",
-				"$INFRASTRUCTURE.driven.postgres..repository.impl..",
-				"$INFRASTRUCTURE.driven..adapter..",
-			)
+			.implement(resideInAnyPackage("$DOMAIN.service"))
 			.check(classes)
+
+	@ArchTest
+	fun `Domain should not depend on infrastructure or config`(classes: JavaClasses) = noClasses()
+		.that()
+		.resideInAPackage("$DOMAIN..")
+		.should()
+		.dependOnClassesThat()
+		.resideInAnyPackage("$INFRASTRUCTURE..", "$CONFIG..")
+		.check(classes)
+
+	@ArchTest
+	fun `Domain should not depend on web adapters`(classes: JavaClasses) = noClasses()
+		.that()
+		.resideInAPackage("$DOMAIN..")
+		.should()
+		.dependOnClassesThat()
+		.resideInAnyPackage(
+			"org.springframework.web..",
+			"org.springframework.http.server..",
+			"org.springframework.security.web..",
+		)
+		.check(classes)
 
 	@ArchTest
 	fun `Backend package should only contain specified sub-packages`(classes: JavaClasses) = noClasses()
@@ -122,7 +142,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Annotation should by tagged with Target and Retention`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$DOMAIN.annotation..")
+		.resideInAPackage("$INFRASTRUCTURE.driving.api.validation.annotation..")
 		.should()
 		.beAnnotatedWith(Target::class.java)
 		.andShould()
@@ -132,7 +152,7 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Handler should end with Handler`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$DOMAIN.handler..")
+		.resideInAPackage("$INFRASTRUCTURE.driving.security.handler..")
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Handler")
@@ -197,7 +217,10 @@ class HexagonalArchitectureTest {
 	@ArchTest
 	fun `Validator should end with Validator`(classes: JavaClasses) = classes()
 		.that()
-		.resideInAPackage("$DOMAIN.validator..")
+		.resideInAnyPackage(
+			"$INFRASTRUCTURE.driving.security.validator..",
+			"$INFRASTRUCTURE.driving.api.validation.validator..",
+		)
 		.and().areTopLevelClasses()
 		.should()
 		.haveSimpleNameEndingWith("Validator")

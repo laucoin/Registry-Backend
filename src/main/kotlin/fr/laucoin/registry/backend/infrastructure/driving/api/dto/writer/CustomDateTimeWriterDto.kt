@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
-import fr.laucoin.registry.backend.domain.annotation.DateDefinedForTime
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.DateDefinedForTime
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_IS_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.TIME_IS_SET_BUT_NOT_DATE
 import jakarta.validation.constraints.NotNull
