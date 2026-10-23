@@ -2,7 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import java.time.Duration
+import java.time.LocalTime
 
 abstract class GenericDurationReaderDtoMapper(
 	private val translateService: ITranslateService,
@@ -14,6 +16,22 @@ abstract class GenericDurationReaderDtoMapper(
 		const val MONTHS_PER_YEAR = 12L
 		const val HOURS_PER_DAY = 24L
 		const val MINUTES_PER_HOUR = 60L
+	}
+
+	protected fun durationMessage(code: String, interval: Duration): String {
+		return translateService.getMessage(code = code, args = arrayOf(formatDuration(interval)))
+	}
+
+	protected fun untilStart(now: CustomDateTimeModel, start: CustomDateTimeModel?): Duration {
+		return Duration.between(now.toZonedDateTime(), start?.toZonedDateTime(LocalTime.MIN, now.zone()!!))
+	}
+
+	protected fun sinceStart(now: CustomDateTimeModel, start: CustomDateTimeModel?): Duration {
+		return Duration.between(start?.toZonedDateTime(LocalTime.MIN, now.zone()!!), now.toZonedDateTime())
+	}
+
+	protected fun sinceEnd(now: CustomDateTimeModel, end: CustomDateTimeModel?): Duration {
+		return Duration.between(end?.toZonedDateTime(LocalTime.MAX, now.zone()!!), now.toZonedDateTime())
 	}
 
 	fun formatDuration(duration: Duration): String {

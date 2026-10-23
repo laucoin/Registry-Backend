@@ -194,52 +194,28 @@ class CommunicationService(
 		val communicationToReturn = oldCommunication ?: communication
 		return if (Objects.isNull(communication.movement) || communication.movement!!.id == oldCommunication?.movement?.id)
 			Mono.just(communicationToReturn)
-		else movementPort.findById(
-			communication.projectId!!,
-			communication.movement!!.id!!,
-			isVisible = null
-		)
+		else movementPort.findById(communication.projectId!!, communication.movement!!.id!!, isVisible = null)
 			.switchIfEmpty {
-				Mono.error(
-					RegistryException(
-						NOT_FOUND,
-						COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT
-					)
-				)
+				Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
 			}
-			.handle { it, handle ->
-				when {
-					it.isNotVisible() -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							COMMUNICATION_MOVEMENT_NOT_VISIBLE,
-						)
-					)
-
-					it.dateTime.isAfter(communication.dateTime) -> handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION,
-						)
-					)
-
-					it.contentType !== REGISTERED -> handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED,
-						)
-					)
-
-					it.type !== OUT -> handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							COMMUNICATION_MOVEMENT_TYPE_NOT_OUT,
-						)
-					)
-
-					else -> handle.next(communicationToReturn)
-				}
+			.handle { movement, handle ->
+				val error = movementConflict(movement, communication)
+				if (error != null) handle.error(error) else handle.next(communicationToReturn)
 			}
+	}
+
+	private fun movementConflict(movement: MovementModel, communication: CommunicationModel): RegistryException? = when {
+		movement.isNotVisible() -> RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_VISIBLE)
+
+		movement.dateTime.isAfter(communication.dateTime) ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION)
+
+		movement.contentType !== REGISTERED ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED)
+
+		movement.type !== OUT -> RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_TYPE_NOT_OUT)
+
+		else -> null
 	}
 
 	private fun validateNoAlertConflict(
@@ -252,51 +228,29 @@ class CommunicationService(
 			Mono.just(communicationToReturn)
 		else {
 			if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
-				throw RegistryException(
-					status = FORBIDDEN,
-					code = NOT_ENOUGH_PERMISSION,
-				)
+				throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
 			}
 
-			alertPort.findById(
-				communication.projectId!!,
-				communication.alert!!.id!!,
-				isVisible = null
-			)
+			alertPort.findById(communication.projectId!!, communication.alert!!.id!!, isVisible = null)
 				.switchIfEmpty {
-					Mono.error(
-						RegistryException(
-							NOT_FOUND,
-							COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
-						)
-					)
+					Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
 				}
-				.handle { it, handle ->
-					when {
-						it.isNotVisible() -> handle.error(
-							RegistryException(
-								NOT_FOUND,
-								COMMUNICATION_ALERT_NOT_VISIBLE,
-							)
-						)
-
-						it.dateTime.isAfter(communication.dateTime) -> handle.error(
-							RegistryException(
-								UNPROCESSABLE_CONTENT,
-								COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION,
-							)
-						)
-
-						it.status !== AlertStatusEnum.IN_PROGRESS -> handle.error(
-							RegistryException(
-								UNPROCESSABLE_CONTENT,
-								COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION,
-							)
-						)
-
-						else -> handle.next(communicationToReturn)
-					}
+				.handle { alert, handle ->
+					val error = alertConflict(alert, communication)
+					if (error != null) handle.error(error) else handle.next(communicationToReturn)
 				}
 		}
+	}
+
+	private fun alertConflict(alert: AlertModel, communication: CommunicationModel): RegistryException? = when {
+		alert.isNotVisible() -> RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_VISIBLE)
+
+		alert.dateTime.isAfter(communication.dateTime) ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION)
+
+		alert.status !== AlertStatusEnum.IN_PROGRESS ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION)
+
+		else -> null
 	}
 }

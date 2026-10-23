@@ -88,27 +88,31 @@ class TokenConverterService(
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
 		userService.findUserByEmail(email, isVisible = null)
 			.collectList()
-			.flatMap { matches ->
-				when {
-					matches.isEmpty() -> {
-						log.info("No user found with the given email, creating a new user with OIDC ID \"{}\"", oidcId)
-						userService.createUser(oidcId, email, firstName, lastName)
-					}
-
-					matches.size == 1 -> {
-						log.info("Linking existing user with the given email to OIDC ID \"{}\"", oidcId)
-						userService.linkUserToOidcId(matches.first(), oidcId)
-					}
-
-					else -> {
-						log.warn("Multiple users found with the given email, cannot link OIDC ID \"{}\"", oidcId)
-						Mono.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
-					}
-				}
-			}
+			.flatMap { matches -> provisionFromEmailMatches(matches, oidcId, email, firstName, lastName) }
 			.onErrorMap(DataIntegrityViolationException::class.java) {
 				JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email))
 			}
+	}
+
+	private fun provisionFromEmailMatches(
+		matches: List<CurrentUserModel>, oidcId: UUID, email: String, firstName: String?, lastName: String?
+	): Mono<CurrentUserModel> {
+		return when {
+			matches.isEmpty() -> {
+				log.info("No user found with the given email, creating a new user with OIDC ID \"{}\"", oidcId)
+				userService.createUser(oidcId, email, firstName, lastName)
+			}
+
+			matches.size == 1 -> {
+				log.info("Linking existing user with the given email to OIDC ID \"{}\"", oidcId)
+				userService.linkUserToOidcId(matches.first(), oidcId)
+			}
+
+			else -> {
+				log.warn("Multiple users found with the given email, cannot link OIDC ID \"{}\"", oidcId)
+				Mono.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
+			}
+		}
 	}
 
 	private fun Mono<CurrentUserModel>.buildAuthorities(): Mono<CurrentUserModel> = flatMap {

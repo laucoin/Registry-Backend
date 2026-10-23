@@ -192,34 +192,35 @@ class ParticipantService(
 		)
 			.flatMap { findParticipantById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(participant, it) }
-			.flatMap { toUpdate ->
-				if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
-					validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
-						.map { toUpdate }
-				} else {
-					Mono.just(toUpdate)
-				}
-			}
-			.flatMap {
-				val newGroup: List<UUID> = it.getNewGroupIds(participant)
-				if (newGroup.isEmpty()) {
-					Mono.just(it)
-				} else {
-					validateGroups(participant.projectId!!, it, newGroup)
-				}
-			}
-			.map {
-				it.apply {
-					firstName = participant.firstName
-					lastName = participant.lastName
-					birthday = participant.birthday
-					groups = participant.groups
-					user = participant.user
-					startAvailability = participant.startAvailability
-					endAvailability = participant.endAvailability
-				}
-			}
+			.flatMap { validateUserLink(it, participant) }
+			.flatMap { validateNewGroups(it, participant) }
+			.map { applyUpdate(it, participant) }
 			.updateParticipant(currentUser)
+	}
+
+	private fun validateUserLink(toUpdate: ParticipantModel, participant: ParticipantModel): Mono<ParticipantModel> {
+		return if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
+			validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!).map { toUpdate }
+		} else {
+			Mono.just(toUpdate)
+		}
+	}
+
+	private fun validateNewGroups(toUpdate: ParticipantModel, participant: ParticipantModel): Mono<ParticipantModel> {
+		val newGroup: List<UUID> = toUpdate.getNewGroupIds(participant)
+		return if (newGroup.isEmpty()) Mono.just(toUpdate) else validateGroups(participant.projectId!!, toUpdate, newGroup)
+	}
+
+	private fun applyUpdate(toUpdate: ParticipantModel, participant: ParticipantModel): ParticipantModel {
+		return toUpdate.apply {
+			firstName = participant.firstName
+			lastName = participant.lastName
+			birthday = participant.birthday
+			groups = participant.groups
+			user = participant.user
+			startAvailability = participant.startAvailability
+			endAvailability = participant.endAvailability
+		}
 	}
 
 	private fun Mono<ParticipantModel>.updateParticipant(currentUser: CurrentUserModel) = flatMap {
@@ -289,59 +290,39 @@ class ParticipantService(
 	private fun validateNoMovementConflictBefore(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
-		return movementPort.countAllByParticipantId(
-			oldParticipant.projectId!!,
-			oldParticipant.id!!,
-			MovementSearchParamModel(
-				isVisible = null,
-				type = null,
-				to = participant.startAvailability!!.toZonedDateTime(),
-			)
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn(
-					"The participant {} already has {} movement(s) before the new end date",
-					oldParticipant.id,
-					it
-				)
-				handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						PARTICIPANT_OUT_OF_MOVEMENT_DATETIME,
-						arrayListOf(it),
-					)
-				)
-			} else handle.next(oldParticipant)
-		}
+		val searchParams = MovementSearchParamModel(
+			isVisible = null,
+			type = null,
+			to = participant.startAvailability!!.toZonedDateTime(),
+		)
+		return rejectMovements(oldParticipant, searchParams, "before the new end date")
 	}
 
 	private fun validateNoMovementConflictAfter(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
-		return movementPort.countAllByParticipantId(
-			oldParticipant.projectId!!,
-			oldParticipant.id!!,
-			MovementSearchParamModel(
-				isVisible = null,
-				type = null,
-				from = participant.endAvailability!!.toZonedDateTime(),
-			)
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn(
-					"The participant {} already has {} movement(s) after the new start date",
-					oldParticipant.id,
-					it
-				)
-				handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						PARTICIPANT_OUT_OF_MOVEMENT_DATETIME,
-						arrayListOf(it),
+		val searchParams = MovementSearchParamModel(
+			isVisible = null,
+			type = null,
+			from = participant.endAvailability!!.toZonedDateTime(),
+		)
+		return rejectMovements(oldParticipant, searchParams, "after the new start date")
+	}
+
+	private fun rejectMovements(
+		oldParticipant: ParticipantModel,
+		searchParams: MovementSearchParamModel,
+		relation: String,
+	): Mono<ParticipantModel> {
+		return movementPort.countAllByParticipantId(oldParticipant.projectId!!, oldParticipant.id!!, searchParams)
+			.handle { count, handle ->
+				if (count > 0) {
+					log.warn("The participant {} already has {} movement(s) {}", oldParticipant.id, count, relation)
+					handle.error(
+						RegistryException(UNPROCESSABLE_CONTENT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(count))
 					)
-				)
-			} else handle.next(oldParticipant)
-		}
+				} else handle.next(oldParticipant)
+			}
 	}
 
 	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
