@@ -8,8 +8,8 @@ import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
-import fr.laucoin.registry.backend.domain.service.impl.AuthenticationCookieService.Companion.ACCESS_TOKEN_COOKIE
-import fr.laucoin.registry.backend.domain.service.impl.AuthenticationCookieService.Companion.REFRESH_TOKEN_COOKIE
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService.Companion.ACCESS_TOKEN_COOKIE
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService.Companion.REFRESH_TOKEN_COOKIE
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CurrentUserReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError

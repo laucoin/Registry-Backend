@@ -9,16 +9,16 @@ import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserProjectProfileV1Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @RestController
 class UserProjectProfileController(
 	private val service: IUserProjectProfileService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
-): IUserProjectProfileV1Controller {
+) : IUserProjectProfileV1Controller {
 	override fun findUserProjectProfiles(
 		currentUser: CurrentUserModel,
 		pageNumber: Int,
@@ -34,6 +34,20 @@ class UserProjectProfileController(
 		)
 
 		return service.findProjectProfilesPage(currentUser.id!!, pageable, searchParams).map(readerMapper::toDtoPage)
+	}
+
+	override fun findUserProjectProfileById(
+		currentUser: CurrentUserModel,
+		id: UUID
+	): Mono<ProjectProfileReaderDto> {
+		return service.findProjectProfilesById(currentUser, id).map(readerMapper::toDto)
+	}
+
+	override fun findUserProjectProfileByProjectId(
+		currentUser: CurrentUserModel,
+		id: UUID
+	): Mono<ProjectProfileReaderDto> {
+		return service.findProjectProfilesByProjectId(currentUser, id).map(readerMapper::toDto)
 	}
 
 	override fun manageUserProjectProfileAcceptance(

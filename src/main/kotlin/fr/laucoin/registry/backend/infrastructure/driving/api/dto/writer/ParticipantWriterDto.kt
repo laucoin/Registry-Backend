@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
-import fr.laucoin.registry.backend.domain.annotation.StartBeforeEnd
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_BIRTHDAY_FUTURE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_BIRTHDAY_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_FIRST_NAME_NULL_OR_BLANK

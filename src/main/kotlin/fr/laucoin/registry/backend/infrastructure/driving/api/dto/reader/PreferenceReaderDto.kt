@@ -7,6 +7,5 @@ import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 @JsonInclude(NON_NULL)
 data class PreferenceReaderDto(
 	var theme: ThemeEnum = ThemeEnum.SYSTEM,
-	var language: String? = null,
-	var selectedProfile: ProjectProfileReaderDto? = null
+	var language: String? = null
 )
