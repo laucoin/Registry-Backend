@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.config
 
-import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler
@@ -53,6 +52,7 @@ import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 import java.net.URI
 import java.time.Duration
+import tools.jackson.databind.ObjectMapper
 
 
 @Configuration
@@ -65,7 +65,7 @@ class SecurityConfig(
 	private val localeContextResolver: LocaleContextResolver,
 	private val cookieBearerTokenHandler: CookieBearerTokenHandler,
 	private val translateService: ITranslateService,
-	private val gson: Gson,
+	private val objectMapper: ObjectMapper,
 	private val csrfTokenService: CsrfTokenService,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
@@ -79,6 +79,8 @@ class SecurityConfig(
 	private val authRateLimitCapacity: Int,
 	@param:Value($$"${registry.security.rate-limit.auth.window-seconds}")
 	private val authRateLimitWindowSeconds: Long,
+	@param:Value($$"${registry.security.rate-limit.auth.max-tracked-clients}")
+	private val authRateLimitMaxTrackedClients: Long,
 ) {
 
 	@Bean
@@ -151,9 +153,10 @@ class SecurityConfig(
 		AuthenticationRateLimitHandler(
 			translateService,
 			localeContextResolver,
-			gson,
+			objectMapper,
 			authRateLimitCapacity,
 			authRateLimitWindowSeconds,
+			authRateLimitMaxTrackedClients,
 		),
 		FIRST,
 	)
