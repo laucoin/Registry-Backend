@@ -26,6 +26,7 @@ import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -40,6 +41,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -50,8 +52,15 @@ class GroupServiceTest {
 	private val projectService: IProjectService = mock()
 	private val port: IGroupPort = mock()
 	private val participantPort: IParticipantPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IGroupService =
-		GroupService(projectService, port, participantPort, MAX_PARTICIPANTS)
+		GroupService(projectService, port, participantPort, transactionalOperator, MAX_PARTICIPANTS)
+
+	@BeforeEach
+	fun setUp() {
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+		whenever(port.lockByIds(any())).thenReturn(Flux.empty())
+	}
 
 	private companion object {
 		private const val MAX_PARTICIPANTS = 1
@@ -275,6 +284,7 @@ class GroupServiceTest {
 		verify(projectService).validateDateTimes(
 			defaultProjectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
+		verify(port).lockByIds(listOf(defaultGroupId))
 		verify(participantPort, times(exceptedCallOnParticipantIds))
 			.findAllByIds(defaultProjectId, newParticipantIds, isVisible = null)
 		verify(port).update(any())
@@ -372,6 +382,7 @@ class GroupServiceTest {
 		service.removeMemberFromGroupById(currentUser(), defaultProjectId, defaultGroupId, uuid3).block()
 
 		// Assert
+		verify(port).lockByIds(listOf(defaultGroupId))
 		verify(port).findByIdWithContent(
 			defaultProjectId,
 			defaultGroupId,
