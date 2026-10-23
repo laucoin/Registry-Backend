@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
@@ -15,7 +17,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupRe
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GroupWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AddedGroupMembersReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupReaderDtoMapper
@@ -36,6 +38,7 @@ import reactor.core.publisher.Mono
 @RestController
 class GroupV2Controller(
 	private val service: IGroupService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: GroupReaderDtoMapper,
 	private val readerLightMapper: GroupWithoutMemberReaderDtoMapper,
 	private val participantReaderMapper: ParticipantReaderDtoMapper,
@@ -131,7 +134,10 @@ class GroupV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<GroupWithoutMemberReaderDto> {
 		val groupModel = writerMapper.toModel(group, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.GROUP,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findGroupById(projectId, id, null, null, null) },
 			action = { service.updateGroupById(currentUser, projectId, id, groupModel) },
 		).map(readerLightMapper::toDto)

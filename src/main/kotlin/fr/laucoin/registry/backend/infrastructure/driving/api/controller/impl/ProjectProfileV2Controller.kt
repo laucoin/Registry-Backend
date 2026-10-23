@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -14,7 +16,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Partial
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfilesWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CreatedProjectProfilesReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
@@ -34,6 +36,7 @@ import reactor.core.publisher.Mono
 @RestController
 class ProjectProfileV2Controller(
 	private val service: IProjectProfileService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
 	private val projectProfileRoleReaderMapper: ProjectProfileRoleReaderDtoMapper,
@@ -96,7 +99,10 @@ class ProjectProfileV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<ProjectProfileReaderDto> {
 		val profileModel = writerMapper.toModel(profile, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.PROJECT_PROFILE,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findProjectProfileById(projectId, id, isVisible = null) },
 			action = { service.updateProjectProfileById(currentUser, projectId, id, profileModel) },
 		).map(readerMapper::toDto)

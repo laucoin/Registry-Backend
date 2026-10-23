@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
@@ -16,7 +18,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertRe
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
@@ -32,6 +34,7 @@ import reactor.core.publisher.Mono
 @RestController
 class AlertV2Controller(
 	private val service: IAlertService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: AlertReaderDtoMapper,
 	private val communicationReaderMapper: CommunicationReaderDtoMapper,
 	private val writerMapper: AlertWriterDtoMapper,
@@ -111,7 +114,10 @@ class AlertV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<AlertReaderDto> {
 		val alertModel = writerMapper.toModel(alert, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.ALERT,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findAlertById(projectId, id, isVisible = null) },
 			action = { service.updateAlertById(currentUser, projectId, id, alertModel) },
 		).map { toReaderDto(currentUser, projectId, it) }
