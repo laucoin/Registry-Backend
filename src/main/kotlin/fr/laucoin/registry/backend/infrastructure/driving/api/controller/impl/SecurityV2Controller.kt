@@ -73,7 +73,7 @@ class SecurityV2Controller(
 			.then()
 	}
 
-	override fun findCurrentUser(currentUser: CurrentUserModel): CurrentUserReaderDto {
-		return mapper.toDto(currentUser)
+	override fun findCurrentUser(currentUser: CurrentUserModel): Mono<CurrentUserReaderDto> {
+		return Mono.fromSupplier { mapper.toDto(currentUser) }
 	}
 }

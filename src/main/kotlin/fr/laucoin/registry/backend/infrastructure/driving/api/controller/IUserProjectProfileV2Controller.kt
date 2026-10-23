@@ -46,6 +46,7 @@ interface IUserProjectProfileV2Controller {
 		summary = "Find User's Profiles",
 		description = "Find or get paginated User's Profiles",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@GetMapping
 	fun findUserProjectProfiles(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -75,6 +76,7 @@ interface IUserProjectProfileV2Controller {
 		summary = "Find User's Profile",
 		description = "Find User's Profile (invitation) by ID",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@GetMapping("/{id}")
 	fun findUserProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -85,6 +87,7 @@ interface IUserProjectProfileV2Controller {
 		summary = "Accept or Reject Project's invitation",
 		description = "Allow User to access the concerned Project if accepted",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@PostMapping("/{id}/accept/{accepted}")
 	fun manageUserProjectProfileAcceptance(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -107,6 +110,7 @@ interface IUserProjectProfileV2Controller {
 		summary = "Delete User's Profile",
 		description = "Delete User's Profile",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@DeleteMapping("/{id}")
 	@ResponseStatus(NO_CONTENT)
 	fun deleteUserProfileById(

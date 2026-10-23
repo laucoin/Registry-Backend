@@ -22,6 +22,7 @@ interface IExportV2Controller {
 		summary = "Export Current User data",
 		description = "Export the personal data of the Current User, including every Participant linked to them",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@GetMapping("/users/current/export")
 	fun exportCurrentUser(@AuthenticationPrincipal currentUser: CurrentUserModel): Mono<ResponseEntity<UserExportReaderDto>>
 
