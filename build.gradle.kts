@@ -90,6 +90,16 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+kover {
+	reports {
+		verify {
+			rule {
+				minBound(89)
+			}
+		}
+	}
+}
+
 tasks.withType<Test>().configureEach {
 	useJUnitPlatform()
 	maxParallelForks = Runtime.getRuntime().availableProcessors()
@@ -107,3 +117,18 @@ tasks.withType<BootJar>().configureEach {
 	isPreserveFileTimestamps = false
 	isReproducibleFileOrder = true
 }
+// Points git at the versioned hooks in .githooks (replaces husky's "prepare" script)
+val installGitHooks by tasks.registering {
+	val gitDir = layout.projectDirectory.dir(".git").asFile
+	onlyIf { gitDir.exists() && System.getenv("CI") == null }
+	doLast {
+		runCatching {
+			ProcessBuilder("git", "config", "core.hooksPath", ".githooks")
+				.directory(projectDir)
+				.start()
+				.waitFor()
+		}
+	}
+}
+
+tasks.matching { it.name == "compileKotlin" }.configureEach { dependsOn(installGitHooks) }

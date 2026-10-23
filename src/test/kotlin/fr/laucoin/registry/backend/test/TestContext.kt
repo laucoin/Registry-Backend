@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.test
 
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK

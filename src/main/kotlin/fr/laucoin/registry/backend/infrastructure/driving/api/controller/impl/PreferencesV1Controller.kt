@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPreferencesV1Controller
-import java.util.UUID
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
@@ -25,16 +24,5 @@ class PreferencesV1Controller(
 		language: String
 	): Mono<PreferencesModel> {
 		return service.updateLanguage(currentUser, language)
-	}
-
-	override fun updateSelectedProjectProfile(currentUser: CurrentUserModel, profileId: UUID?): Mono<PreferencesModel> {
-		return service.updateUserPreferenceSelectedProjectProfileById(currentUser, profileId)
-	}
-
-	override fun updateSelectedProjectProfileWithProjectId(
-		currentUser: CurrentUserModel,
-		projectId: UUID
-	): Mono<PreferencesModel> {
-		return service.updateUserPreferenceSelectedProjectProfileByProjectId(currentUser, projectId)
 	}
 }

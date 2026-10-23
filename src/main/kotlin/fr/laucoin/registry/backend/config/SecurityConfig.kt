@@ -1,16 +1,16 @@
 package fr.laucoin.registry.backend.config
 
 import com.nimbusds.jose.shaded.gson.Gson
-import fr.laucoin.registry.backend.domain.handler.AuthenticationRateLimitHandler
-import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
-import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
-import fr.laucoin.registry.backend.domain.handler.CsrfTokenHeaderHandler
-import fr.laucoin.registry.backend.domain.handler.LocaleContextHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CookieBearerTokenHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CsrfTokenHeaderHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.LocaleContextHandler
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
-import fr.laucoin.registry.backend.domain.service.impl.PermissionService
-import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.PermissionService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

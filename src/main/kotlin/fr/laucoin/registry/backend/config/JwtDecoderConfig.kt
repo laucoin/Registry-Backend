@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.config
 
-import fr.laucoin.registry.backend.domain.validator.JwtAudienceValidator
-import fr.laucoin.registry.backend.domain.validator.JwtIssuerOriginValidator
+import fr.laucoin.registry.backend.infrastructure.driving.security.validator.JwtAudienceValidator
+import fr.laucoin.registry.backend.infrastructure.driving.security.validator.JwtIssuerOriginValidator
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
