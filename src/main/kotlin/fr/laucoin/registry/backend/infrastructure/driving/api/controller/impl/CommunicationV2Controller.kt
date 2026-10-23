@@ -20,6 +20,11 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the alert communication endpoints.
+ * Scope: Maps communication models and DTOs and delegates to ICommunicationService.
+ * Limits: Holds no business rule.
+ */
 @RestController
 class CommunicationV2Controller(
 	private val service: ICommunicationService,

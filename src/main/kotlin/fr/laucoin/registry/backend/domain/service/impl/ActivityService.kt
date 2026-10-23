@@ -23,6 +23,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Builds the activity feed of a project from its movements, groups and participants.
+ * Scope: Reads and aggregates activity entries through ports.
+ * Limits: Does not write data and does not check permissions (done on the contract).
+ */
 @Service
 class ActivityService(
 	private val projectService: IProjectService,

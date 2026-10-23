@@ -23,6 +23,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages the vehicles of a project.
+ * Scope: Vehicle CRUD, availability and history.
+ * Limits: Does not record movements; those belong to MovementService.
+ */
 @Service
 class VehicleService(
 	private val port: IVehiclePort,

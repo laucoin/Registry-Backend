@@ -35,6 +35,11 @@ import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * Purpose: Manages platform users and their roles.
+ * Scope: User lifecycle, blocking and last-administrator safeguards.
+ * Limits: Does not authenticate users; authentication is delegated to the external IDP.
+ */
 @Service
 class UserService(
 	private val port: IUserPort,
