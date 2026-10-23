@@ -13,7 +13,7 @@ inputs:
     description: Fully-qualified image name WITHOUT the tag (registry/namespace/name)
     required: true
   tag:
-    description: The tag to publish (branch name, "main", x.y.z, or a hotfix tag)
+    description: The tag to publish (branch name, "main" or x.y.z)
     required: true
   username:
     description: Registry username

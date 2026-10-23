@@ -226,8 +226,6 @@ The GitHub Actions workflows are the review gate — a pull request must be gree
   Semantic Release derives the next version from the commit messages, tags it and publishes the release image; a
   retention job prunes old images. Commit messages must therefore follow
   [Conventional Commits](https://www.conventionalcommits.org/).
-- **Hotfix** ([hotfix.yml](.github/workflows/hotfix.yml)) — pushing a tag matching `*-hotfix-*` (branched off an
-  existing release tag) builds & pushes an isolated hotfix image, outside Semantic Release.
 - **PR Cleanup** ([pr-cleanup.yml](.github/workflows/pr-cleanup.yml)) — deletes the branch image from the registry when
   the pull request closes.
 
