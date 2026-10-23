@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ICommunicationV2Controller
@@ -7,7 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertRe
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CommunicationWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
@@ -28,6 +30,7 @@ import reactor.core.publisher.Mono
 @RestController
 class CommunicationV2Controller(
 	private val service: ICommunicationService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: CommunicationReaderDtoMapper,
 	private val readerAlertMapper: AlertReaderDtoMapper,
 	private val readerMovementMapper: MovementReaderDtoMapper,
@@ -65,7 +68,10 @@ class CommunicationV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<CommunicationReaderDto> {
 		val communicationModel = writerMapper.toModel(communication, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.COMMUNICATION,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findCommunicationById(projectId, id, isVisible = null) },
 			action = { service.updateCommunicationById(currentUser, projectId, id, communicationModel) },
 		).map(readerMapper::toDto)

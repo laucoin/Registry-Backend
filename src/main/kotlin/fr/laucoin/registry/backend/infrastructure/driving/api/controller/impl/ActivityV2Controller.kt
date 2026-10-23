@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DURATION_FORMAT_FAILED
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
@@ -14,7 +16,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IActivi
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
@@ -37,6 +39,7 @@ import reactor.core.publisher.Mono
 @RestController
 class ActivityV2Controller(
 	private val service: IActivityService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ActivityReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: ActivityWriterDtoMapper,
@@ -113,7 +116,10 @@ class ActivityV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<ActivityReaderDto> {
 		val activityModel = writerMapper.toModel(activity, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.ACTIVITY,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findActivityById(projectId, id, isVisible = null) },
 			action = { service.updateActivityById(currentUser, projectId, id, activityModel) },
 		).map(readerMapper::toDto)

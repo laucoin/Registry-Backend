@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
@@ -13,7 +15,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IVehicl
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.VehicleWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
@@ -28,6 +30,7 @@ import reactor.core.publisher.Mono
 @RestController
 class VehicleV2Controller(
 	private val service: IVehicleService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: VehicleReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: VehicleWriterDtoMapper,
@@ -104,7 +107,10 @@ class VehicleV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<VehicleReaderDto> {
 		val vehicleModel = writerMapper.toModel(vehicle, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.VEHICLE,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findVehicleById(projectId, id, isVisible = null) },
 			action = { service.updateVehicleById(currentUser, projectId, id, vehicleModel) },
 		).map(readerMapper::toDto)

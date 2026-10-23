@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -19,7 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Movemen
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
@@ -40,6 +42,7 @@ import reactor.core.publisher.Mono
 @RestController
 class ParticipantV2Controller(
 	private val service: IParticipantService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ParticipantReaderDtoMapper,
 	private val groupReaderMapper: GroupWithoutMemberReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
@@ -153,7 +156,10 @@ class ParticipantV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<ParticipantReaderDto> {
 		val participantModel = writerMapper.toModel(participant, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.PARTICIPANT,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findParticipantById(projectId, id, isVisible = null) },
 			action = { service.updateParticipantById(currentUser, projectId, id, participantModel) },
 		).map(readerMapper::toDto)
