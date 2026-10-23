@@ -3,7 +3,7 @@
 ## Supported Versions
 
 This project follows a rolling-release model driven by Semantic Release. Only the
-**five most recent `x.y.z` releases** (and the latest hotfix of each) are kept in
+**five most recent `x.y.z` releases** are kept in
 the container registry and receive security fixes.
 
 | Version                | Supported          |
