@@ -72,6 +72,9 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	)
 	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupEntity>
 
+	@Query("SELECT t.$ID FROM $GROUP_TABLE t WHERE t.$ID IN (:ids) ORDER BY t.$ID FOR UPDATE OF t")
+	fun lockByIds(ids: List<UUID>): Flux<UUID>
+
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS

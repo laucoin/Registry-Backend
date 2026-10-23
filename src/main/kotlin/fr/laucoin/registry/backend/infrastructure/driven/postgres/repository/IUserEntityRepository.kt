@@ -100,6 +100,17 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	)
 	fun findByRoleLevel(roleLevel: Int, isVisible: Boolean?): Flux<UserEntity>
 
+	@Query(
+		"""
+        SELECT t.$ID FROM $USER_TABLE t
+        INNER JOIN $USER_ROLE_TABLE ur ON t.$USER_ROLE = ur.$ENTITY_ROLE_NAME AND ur.$ROLE_LEVEL = 0
+        WHERE $NOT_SERVICE_ACCOUNT
+        ORDER BY t.$ID
+        FOR UPDATE OF t
+        """
+	)
+	fun lockLevel0Users(): Flux<UUID>
+
 	@Query("SELECT t.$ID FROM $USER_TABLE t WHERE t.last_login::DATE < :dateThreshold AND $NOT_SERVICE_ACCOUNT")
 	fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
 }

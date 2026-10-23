@@ -18,6 +18,7 @@ interface IUserPort {
 	fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel>
 	fun findServiceAccount(): Mono<CurrentUserModel>
 	fun findByRoleLevel(roleLevel: Int, isVisible: Boolean?): Flux<UserModel>
+	fun lockLevel0Users(): Flux<UUID>
 	fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: UserModel): Mono<UserModel>
 	fun update(element: UserModel): Mono<UserModel>

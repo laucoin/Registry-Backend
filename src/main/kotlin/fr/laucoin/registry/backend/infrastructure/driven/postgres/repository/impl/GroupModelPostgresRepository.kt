@@ -87,6 +87,10 @@ class GroupModelPostgresRepository(
 			.map(mapper::toModel)
 	}
 
+	override fun lockByIds(ids: List<UUID>): Flux<UUID> {
+		return if (ids.isEmpty()) Flux.empty() else repository.lockByIds(ids)
+	}
+
 	override fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel> {
 		return repository.findWithLimit(
 			projectId,

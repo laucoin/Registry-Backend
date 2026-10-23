@@ -53,6 +53,7 @@ registry:
     database: ${DATASOURCE_DATABASE:registry}
     username: ${DATASOURCE_USERNAME:registry}
     password: ${DATASOURCE_PASSWORD}
+    lock-timeout-ms: ${DATASOURCE_LOCK_TIMEOUT_MS:5000}
   feature:
     documentation:
       enabled: ${REGISTRY_DOCUMENTATION_ENABLED:false}
@@ -156,7 +157,7 @@ spring:
     web-application-type: reactive
     banner-mode: off
   r2dbc:
-    url: r2dbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    url: r2dbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}&options=lock_timeout=${registry.datasource.lock-timeout-ms}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
     pool:
