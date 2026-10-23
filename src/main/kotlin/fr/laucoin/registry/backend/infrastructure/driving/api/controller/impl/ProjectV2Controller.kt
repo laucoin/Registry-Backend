@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
@@ -12,7 +14,7 @@ import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
@@ -27,6 +29,7 @@ import reactor.core.publisher.Mono
 @RestController
 class ProjectV2Controller(
 	private val service: IProjectService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectWithProfileReaderDtoMapper,
 	private val writerMapper: ProjectWriterDtoMapper,
 ): IProjectV2Controller {
@@ -79,7 +82,10 @@ class ProjectV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<ProjectWithProfileReaderDto> {
 		val projectModel = writerMapper.toModel(project)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.PROJECT,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findProjectById(id, isVisible = null) },
 			action = { service.updateProjectById(currentUser, id, projectModel) },
 		).map(readerMapper::toDto)

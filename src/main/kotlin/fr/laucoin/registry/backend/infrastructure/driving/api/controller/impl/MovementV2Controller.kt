@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -27,7 +29,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Planned
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.ifUnchanged
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementActivityReasonReaderDtoMapper
@@ -54,6 +56,7 @@ import reactor.core.publisher.Mono
 @RestController
 class MovementV2Controller(
 	private val service: IMovementService,
+	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: MovementReaderDtoMapper,
 	private val plannedReaderMapper: PlannedMovementReaderDtoMapper,
 	private val readerContentMapper: MovementContentReaderDtoMapper,
@@ -238,7 +241,10 @@ class MovementV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<MovementReaderDto> {
 		val movementModel = writerMapper.toModel(movement, projectId)
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.MOVEMENT,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findMovementById(projectId, id, isVisible = null) },
 			action = { service.updateMovementById(currentUser, projectId, id, movementModel) },
 		).map(readerMapper::toDto)
@@ -267,7 +273,10 @@ class MovementV2Controller(
 		val movementModel = guestMovementWriterMapper.toModel(movement, projectId)
 		val newGuestModels = guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId)
 
-		return exchange.ifUnchanged(
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.MOVEMENT,
+			id,
+			exchange.expectedLastEditions(),
 			current = { service.findMovementById(projectId, id, isVisible = null) },
 			action = { service.updateMovementById(currentUser, projectId, id, movementModel, newGuestModels) },
 		).map(readerMapper::toDto)
