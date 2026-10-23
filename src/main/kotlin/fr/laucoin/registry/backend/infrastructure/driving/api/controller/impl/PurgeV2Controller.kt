@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the purge endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the purge use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class PurgeV2Controller(
 	private val service: IPurgeService,

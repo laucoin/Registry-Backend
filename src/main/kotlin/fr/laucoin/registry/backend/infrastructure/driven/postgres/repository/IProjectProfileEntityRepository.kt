@@ -55,6 +55,11 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Reactive entity repository of the project profile table.
+ * Scope: Holds the parameterized SQL queries (filters, sort, pagination, locks) on project profile.
+ * Limits: Used by the Postgres adapter only; returns entities, never domain models.
+ */
 @Repository
 interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfileEntity, UUID> {
 	@Query(

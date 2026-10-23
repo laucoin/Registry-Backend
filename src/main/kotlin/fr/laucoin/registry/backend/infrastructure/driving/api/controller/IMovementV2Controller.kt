@@ -62,6 +62,11 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the movement endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Movements management", description = "API for Movements-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/movements")
 interface IMovementV2Controller {
@@ -106,7 +111,7 @@ interface IMovementV2Controller {
 	@GetMapping("/contents")
 	fun findMovementsContents(
 		@PathVariable projectId: UUID,
-		@Parameter(description = "IDs of the movements, 100 at most")
+		@Parameter(description = "IDs of the movements, $MOVEMENT_IDS_MAX at most")
 		@RequestParam(required = true) @Valid @Size(max = MOVEMENT_IDS_MAX, message = MOVEMENT_IDS_TOO_MANY) movementIds: List<UUID>,
 		@Parameter(description = "\"isCurrent\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
 		@RequestParam(required = false, defaultValue = "false") isCurrent: Boolean,

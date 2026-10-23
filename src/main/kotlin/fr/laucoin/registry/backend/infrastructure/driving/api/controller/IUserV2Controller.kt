@@ -42,6 +42,11 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the user endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Users management", description = "API for Users-related operations")
 @RequestMapping("/api/v2/users")
 interface IUserV2Controller {

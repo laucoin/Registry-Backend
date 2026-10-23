@@ -15,21 +15,9 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
 /**
- * Computes a CSRF token deterministically as `HMAC-SHA256(secret, accessToken)` instead of a
- * random value stored server-side or in a cookie. The backend stays fully stateless — the expected
- * token is simply recomputed from whichever access token the caller already presents — and the
- * value is handed to the client via a plain response header (see `CsrfTokenHeaderHandler`) rather
- * than a cookie, which sidesteps the double-submit-cookie pattern's requirement that front and
- * back share a cookie-readable domain (not guaranteed across every environment this app runs in).
- *
- * Reuses the IDP client secret as the HMAC key rather than introducing a dedicated one: it's
- * already a managed secret, HMAC is one-way so this use doesn't expose it, and it stays valid
- * across restarts and multiple instances without new required configuration.
- *
- * Doubles as the [ServerCsrfTokenRepository] Spring's `csrf {}` DSL wires in: `generateToken` and
- * `loadToken` recompute the same deterministic value (there's no "new" vs "existing" when the
- * token is a pure function of the caller's access token rather than server-stored state), and
- * `saveToken` is a no-op since there's nothing to persist.
+ * Purpose: Computes the stateless CSRF token and serves it to Spring Security.
+ * Scope: Derives the token as an HMAC of the presented access token with the IDP client secret, so nothing is stored.
+ * Limits: Valid only for the access token it was derived from.
  */
 @Component
 class CsrfTokenService(

@@ -17,6 +17,11 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the user endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the user use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class UserV2Controller(
 	private val service: IUserService,

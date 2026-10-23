@@ -26,6 +26,11 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 
+/**
+ * Purpose: Converts a validated JWT into the current user principal.
+ * Scope: Loads or provisions the user, refuses blocked accounts and builds its authorities.
+ * Limits: Keeps no session; the principal is cached by the principal cache.
+ */
 @Component
 class TokenConverterService(
 	private val userService: IUserService,

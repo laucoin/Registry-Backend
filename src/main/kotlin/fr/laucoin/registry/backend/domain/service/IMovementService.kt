@@ -24,6 +24,11 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 
+/**
+ * Purpose: Use-case contract of the movement.
+ * Scope: Declares what the controllers and other services can ask for movement.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IMovementService {
 	fun findMovementsPage(
 		currentUser: CurrentUserModel,

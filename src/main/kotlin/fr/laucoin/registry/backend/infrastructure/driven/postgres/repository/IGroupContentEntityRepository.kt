@@ -32,6 +32,11 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Reactive entity repository of the group content table.
+ * Scope: Holds the parameterized SQL queries (filters, sort, pagination, locks) on group content.
+ * Limits: Used by the Postgres adapter only; returns entities, never domain models.
+ */
 @Repository
 interface IGroupContentEntityRepository: ReactiveCrudRepository<GroupContentEntity, UUID> {
 	@Query(

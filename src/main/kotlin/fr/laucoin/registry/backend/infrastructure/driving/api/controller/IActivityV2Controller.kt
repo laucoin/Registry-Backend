@@ -50,6 +50,11 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the activity endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Activities management", description = "API for Activities-related operations")
 @RequestMapping("/api/v2/projects/{projectId}/activities")
 interface IActivityV2Controller {

@@ -6,6 +6,11 @@ import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
+/**
+ * Purpose: Bean validation constraint on the content of a guest movement.
+ * Scope: Marks a guest movement body for the guest content validator.
+ * Limits: Declaration only.
+ */
 @Repeatable
 @Target(CLASS)
 @Retention(RUNTIME)

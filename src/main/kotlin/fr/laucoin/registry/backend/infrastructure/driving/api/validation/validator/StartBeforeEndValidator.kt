@@ -10,6 +10,11 @@ import java.time.ZonedDateTime
 import java.util.Objects
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
+/**
+ * Purpose: Validator of the StartBeforeEnd constraint.
+ * Scope: Compares two dates or date-times and passes when the start is strictly before the end.
+ * Limits: A missing side passes; unsupported types are a server error.
+ */
 class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
 	private lateinit var startField: String
 	private lateinit var endField: String

@@ -10,6 +10,11 @@ import org.springframework.http.HttpStatus.FORBIDDEN
 import reactor.core.publisher.Mono
 import java.util.UUID
 
+/**
+ * Purpose: Base class of the services, with the helpers they share.
+ * Scope: Provides visibility updates, the purge concurrency constant and the activity option guard.
+ * Limits: Holds no use case of its own.
+ */
 open class GenericService : LoggerService() {
 	fun <T : GenericModel> Mono<T>.updateVisibility(visibility: Boolean): Mono<T> {
 		return this.map { it.apply { visible = visibility } }

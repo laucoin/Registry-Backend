@@ -27,6 +27,11 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the vehicle endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the vehicle use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class VehicleV2Controller(
 	private val service: IVehicleService,

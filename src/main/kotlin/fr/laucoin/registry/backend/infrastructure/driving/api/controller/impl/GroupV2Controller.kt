@@ -35,6 +35,11 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST adapter of the group endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the group use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
 @RestController
 class GroupV2Controller(
 	private val service: IGroupService,

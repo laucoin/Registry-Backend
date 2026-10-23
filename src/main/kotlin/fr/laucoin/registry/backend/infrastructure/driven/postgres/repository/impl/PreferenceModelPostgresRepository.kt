@@ -8,6 +8,11 @@ import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Postgres adapter of the preference port.
+ * Scope: Delegates to the entity repository and maps entities to domain models.
+ * Limits: Holds no business rule.
+ */
 @Service
 class PreferenceModelPostgresRepository(
 	private val repository: IPreferencesEntityRepository,

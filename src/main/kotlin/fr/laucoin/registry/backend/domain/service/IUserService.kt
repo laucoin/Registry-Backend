@@ -10,6 +10,11 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.UUID
 
+/**
+ * Purpose: Use-case contract of the user.
+ * Scope: Declares what the controllers and other services can ask for user.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IUserService {
 	fun findUsersPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
 	fun findUserById(id: UUID, isVisible: Boolean?): Mono<UserModel>

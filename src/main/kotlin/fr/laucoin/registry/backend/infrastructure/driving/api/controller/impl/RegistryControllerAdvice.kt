@@ -32,6 +32,11 @@ import org.springframework.web.server.ServerWebInputException
 import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Turns exceptions into localized problem responses.
+ * Scope: Maps registry, validation and concurrency errors to status, code and translated message.
+ * Limits: Never exposes internal messages or stack traces.
+ */
 @RestControllerAdvice
 class RegistryControllerAdvice(
 	private val translateService: ITranslateService,

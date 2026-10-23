@@ -19,6 +19,11 @@ import reactor.core.publisher.Mono
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * Purpose: Holds the roles and their permissions in memory.
+ * Scope: Loads the role tables at startup and resolves levels, assignable roles and authorities.
+ * Limits: Roles are data loaded once; a change needs a restart.
+ */
 @Service
 class RoleService(
 	private val port: IRolePort,
