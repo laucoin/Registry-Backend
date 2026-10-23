@@ -31,6 +31,11 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages the profiles (roles) of users within a project.
+ * Scope: Profile status, role changes and last-administrator safeguards.
+ * Limits: Does not handle the profile views of the current user; see UserProjectProfileService.
+ */
 @Service
 class ProjectProfileService(
 	private val profileService: IUserProjectProfileService,

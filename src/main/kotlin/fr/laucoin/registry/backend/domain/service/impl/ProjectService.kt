@@ -34,6 +34,11 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages projects, their options, counters and favorites.
+ * Scope: Project lifecycle and the creation of the initial administrator profile.
+ * Limits: Does not manage project profiles beyond the initial one.
+ */
 @Service
 class ProjectService(
 	private val port: IProjectPort,
