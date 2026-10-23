@@ -431,6 +431,34 @@ class GroupServiceTest {
 	}
 
 	@Test
+	fun `Should findGroupSummaryById read the group without its members`() {
+		// Arrange
+		whenever(port.findSummaryById(any(), any())).thenReturn(Mono.just(defaultGroup()))
+
+		// Act
+		val result = service.findGroupSummaryById(defaultProjectId, defaultGroupId).block()
+
+		// Assert
+		assertEquals(defaultGroupId, result?.id)
+		verify(port).findSummaryById(defaultProjectId, defaultGroupId)
+		verify(port, never()).findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
+	}
+
+	@Test
+	fun `Should findGroupSummaryById throw when the group does not exist`() {
+		// Arrange
+		whenever(port.findSummaryById(any(), any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.findGroupSummaryById(defaultProjectId, defaultGroupId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+	}
+
+	@Test
 	fun `Should disableGroupById call existing group and call port updateGroup`() {
 		// Arrange
 		whenever(

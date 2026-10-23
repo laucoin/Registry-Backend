@@ -508,7 +508,7 @@ class GroupControllerTest : TestContext() {
 		whenever(service.updateGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
 		whenever(lightReaderMapper.toDto(any())).thenReturn(GroupReaderDto())
-		whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+		whenever(service.findGroupSummaryById(any(), any())).thenReturn(
 			Mono.just(GroupModel().apply {
 				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
 			}),
@@ -539,7 +539,7 @@ class GroupControllerTest : TestContext() {
 		val group = GroupWriterDto(name = "name", members = listOf(uuid))
 
 		whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
-		whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+		whenever(service.findGroupSummaryById(any(), any())).thenReturn(
 			Mono.just(GroupModel().apply {
 				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
 			}),
