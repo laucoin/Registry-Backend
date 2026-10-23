@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
@@ -44,6 +45,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -254,6 +256,36 @@ class ProjectServiceTest {
 		// Assert
 		verify(port).findPage(pageable, params)
 		verify(port, never()).findPage(any(), any(), any())
+	}
+
+	@Test
+	fun `Should findProjectsPage refuse to list every project without the global read authority`() {
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.findProjectsPage(currentUser(), PageableModel(0, 10), false, ProjectSearchParamModel()).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(NOT_ENOUGH_PERMISSION, result.code)
+		verifyNoInteractions(port)
+	}
+
+	@Test
+	fun `Should findProjectsPage restrict to the user profiles by default without the global read authority`() {
+		// Arrange
+		val params = ProjectSearchParamModel()
+		whenever(roleService.getProjectIdsFromCurrentUserProfiles(any())).thenReturn(listOf(defaultProjectId))
+		whenever(port.findPage(any<List<UUID>>(), any(), any()))
+			.thenReturn(Mono.just(PageModel(PageableModel(0, 10), totalElements = 0, emptyList())))
+		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any())).thenReturn(Flux.empty())
+		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.empty())
+
+		// Act
+		service.findProjectsPage(currentUser(), PageableModel(0, 10), null, params).block()
+
+		// Assert
+		verify(port).findPage(eq(listOf(defaultProjectId)), any(), eq(params))
 	}
 
 	@Test

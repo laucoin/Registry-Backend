@@ -2,8 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.IConcurrencyService
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
@@ -13,7 +11,6 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IParticipantV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
@@ -32,7 +29,6 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.TimeZone
 import java.util.UUID
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
@@ -117,10 +113,6 @@ class ParticipantV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
-		if (!currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY) && hasActivity == true) {
-			throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
-		}
-
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
 			isVisible,
@@ -131,7 +123,7 @@ class ParticipantV2Controller(
 			sort = sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
 		)
 
-		return service.findParticipantMovementsPage(projectId, id, pageable, searchParams)
+		return service.findParticipantMovementsPage(currentUser, projectId, id, pageable, searchParams)
 			.map(movementReaderMapper::toDtoPage)
 	}
 

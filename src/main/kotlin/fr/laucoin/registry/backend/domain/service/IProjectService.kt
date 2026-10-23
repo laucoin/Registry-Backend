@@ -16,7 +16,7 @@ interface IProjectService {
 	fun findProjectsPage(
 		currentUser: CurrentUserModel,
 		pageable: PageableModel,
-		withProfile: Boolean,
+		withProfile: Boolean?,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>>
 
