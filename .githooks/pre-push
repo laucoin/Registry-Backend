@@ -1,5 +1,5 @@
 #!/bin/sh
-# Asks for confirmation before pushing to a protected branch or force-pushing.
+# Asks for confirmation before pushing to a protected branch, force-pushing or deleting a remote branch.
 # Git feeds "<local ref> <local sha> <remote ref> <remote sha>" lines on stdin.
 
 PROTECTED='refs/heads/main refs/heads/master refs/heads/develop'
@@ -13,7 +13,10 @@ confirm() {
 }
 
 while read -r _ LOCAL_SHA REMOTE_REF REMOTE_SHA; do
-    [ "$LOCAL_SHA" = "$ZERO" ] && continue # branch deletion
+    if [ "$LOCAL_SHA" = "$ZERO" ]; then
+        confirm "Deleting the remote branch \"${REMOTE_REF#refs/heads/}\". Are you sure?"
+        continue
+    fi
     for BRANCH in $PROTECTED; do
         [ "$REMOTE_REF" = "$BRANCH" ] && confirm "Pushing on \"${BRANCH#refs/heads/}\". Are you sure?"
     done
