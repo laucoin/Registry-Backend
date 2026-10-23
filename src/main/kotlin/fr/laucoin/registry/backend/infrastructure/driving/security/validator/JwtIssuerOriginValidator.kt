@@ -8,8 +8,8 @@ import org.springframework.security.oauth2.jwt.Jwt
 
 class JwtIssuerOriginValidator(private val trustedOrigin: String) : OAuth2TokenValidator<Jwt> {
 	override fun validate(token: Jwt): OAuth2TokenValidatorResult {
-		val issuer = token.issuer?.toString()
-		if (issuer != null && issuer.startsWith(trustedOrigin)) {
+		val issuer = token.issuer
+		if (issuer != null && "${issuer.protocol}://${issuer.authority}".equals(trustedOrigin, ignoreCase = true)) {
 			return OAuth2TokenValidatorResult.success()
 		}
 
