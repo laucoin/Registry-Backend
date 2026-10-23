@@ -434,6 +434,25 @@ class UserServiceTest {
 	}
 
 	@Test
+	fun `Should blockUserById throw when the loaded user has the id of the current user but is another UUID instance`() {
+		// Arrange
+		val uuid = currentUser().id!!
+		val foundUser = UserModel().apply { id = UUID.fromString(uuid.toString()); role = USER_ROLE }
+
+		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
+		whenever(port.findById(any(), any())).thenReturn(Mono.just(foundUser))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.blockUserById(currentUser(), uuid).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(USER_BLOCK_CURRENT_USER, result.message)
+		verify(port, never()).update(any())
+	}
+
+	@Test
 	fun `Should blockUserById throw when user is current user`() {
 		// Arrange
 		val uuid = currentUser().id!!
