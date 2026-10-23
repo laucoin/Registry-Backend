@@ -14,7 +14,7 @@ class UserInvitationReaderDtoMapper(
 		val profile = profileMapper.toDto(model)
 		return UserInvitationReaderDto(
 			project = Optional.ofNullable(model.project).map {
-				InvitationProjectReaderDto(it.id, it.name, it.begin, it.end)
+				InvitationProjectReaderDto(it.id, it.name, it.begin, it.end, it.favorite)
 			}.orElse(null),
 			role = profile.role,
 			availabilityStatus = profile.availabilityStatus,
@@ -23,7 +23,6 @@ class UserInvitationReaderDtoMapper(
 			endAccess = profile.endAccess,
 		).apply {
 			id = profile.id
-			projectId = profile.projectId
 			visible = profile.visible
 			creation = profile.creation
 			lastEdition = profile.lastEdition

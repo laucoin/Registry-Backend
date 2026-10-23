@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader
 
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import java.util.UUID
 
 /** A user's profile seen from the user side: the project summary matters, the user is implicit. */
 data class UserInvitationReaderDto(
@@ -11,11 +12,12 @@ data class UserInvitationReaderDto(
 	var status: LabelDto? = null,
 	var startAccess: CustomDateTimeModel? = null,
 	var endAccess: CustomDateTimeModel? = null,
-): GenericProjectReaderDto() {
+): GenericReaderDto() {
 	data class InvitationProjectReaderDto(
-		var id: java.util.UUID? = null,
+		var id: UUID? = null,
 		var name: String? = null,
 		var begin: CustomDateTimeModel? = null,
 		var end: CustomDateTimeModel? = null,
+		var favorite: Boolean = false,
 	)
 }

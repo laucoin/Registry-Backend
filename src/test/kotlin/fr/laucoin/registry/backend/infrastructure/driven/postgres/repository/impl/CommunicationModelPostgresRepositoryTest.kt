@@ -5,15 +5,11 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ICommunicationEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.communicationId
-import fr.laucoin.registry.backend.test.ModelExt.movementId
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultCommunicationId
+import fr.laucoin.registry.backend.test.ModelExt.defaultMovementId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -31,8 +27,12 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertNotNull
 
-class CommunicationModelPostgresRepositoryTest: TestContext() {
+class CommunicationModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: ICommunicationEntityRepository
 
@@ -65,12 +65,12 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
+		val result = repository.findAllByIds(defaultProjectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
-			projectId,
+			defaultProjectId,
 			ids,
 			isVisible = null,
 		)
@@ -80,13 +80,13 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, communicationId, isVisible = null).block()
+		val result = repository.findById(defaultProjectId, defaultCommunicationId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
-			projectId,
-			communicationId,
+			defaultProjectId,
+			defaultCommunicationId,
 			isVisible = null,
 		)
 		verify(mapper).toModel(any())
@@ -98,12 +98,12 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, isVisible = null).block()
+		val result = repository.findById(defaultProjectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
-			projectId,
+			defaultProjectId,
 			uuid,
 			isVisible = null,
 		)
@@ -123,8 +123,8 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 			val communication = CommunicationModel().apply {
 				dateTime = ZonedDateTime.now()
 				message = "message"
-				movement = MovementModel().apply { id = movementId }
-				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+				movement = MovementModel().apply { id = defaultMovementId }
+				this.projectId = defaultProjectId
 				create(currentUser())
 			}
 
@@ -147,8 +147,8 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				dateTime = ZonedDateTime.now()
 				message = "message updated"
-				movement = MovementModel().apply { id = movementId }
-				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+				movement = MovementModel().apply { id = defaultMovementId }
+				this.projectId = defaultProjectId
 				create(currentUser())
 			}
 

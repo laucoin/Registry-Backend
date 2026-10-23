@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.PROFILE
 import java.util.Objects
 import java.util.Optional
 import org.springframework.stereotype.Component
@@ -27,7 +28,7 @@ class ProjectProfileReaderDtoMapper(
 				)
 			}.orElse(null),
 			availabilityStatus = Optional.ofNullable(model.availabilityStatus)
-				.map { availabilityStatusMapper.toDto(it, model.startAccess, model.endAccess) }
+				.map { availabilityStatusMapper.toDto(it, PROFILE, model.startAccess, model.endAccess) }
 				.orElse(null),
 			status = buildStatus(model),
 			startAccess = model.startAccess,

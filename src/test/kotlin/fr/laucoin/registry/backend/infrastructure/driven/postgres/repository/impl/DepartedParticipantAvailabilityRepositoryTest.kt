@@ -16,14 +16,10 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -32,10 +28,15 @@ import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.r2dbc.core.DatabaseClient
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @TestInstance(PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class DepartedParticipantAvailabilityRepositoryTest: TestContext() {
+class DepartedParticipantAvailabilityRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var participantPort: IParticipantPort
 
@@ -60,7 +61,7 @@ class DepartedParticipantAvailabilityRepositoryTest: TestContext() {
 		// Arrange
 		val group = GroupModel().apply {
 			name = "departed group"
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 
@@ -80,9 +81,9 @@ class DepartedParticipantAvailabilityRepositoryTest: TestContext() {
 	fun `Should keep the participants inside their window available before their departure`() {
 		// Act
 		val available = findAvailableIds()
-		val group = groupPort.findByIdWithContent(projectId, groupId, null, null, null).block()!!
-		val content = groupPort.findContent(projectId, listOf(groupId), true, true).collectList().block()!!
-		val current = movementPort.findCurrentContent(projectId, listOf(outMovementId)).collectList().block()!!
+		val group = groupPort.findByIdWithContent(defaultProjectId, groupId, null, null, null).block()!!
+		val content = groupPort.findContent(defaultProjectId, listOf(groupId), true, true).collectList().block()!!
+		val current = movementPort.findCurrentContent(defaultProjectId, listOf(outMovementId)).collectList().block()!!
 
 		// Assert
 		assertTrue(available.containsAll(listOf(insideId, outsideId)))
@@ -99,9 +100,9 @@ class DepartedParticipantAvailabilityRepositoryTest: TestContext() {
 
 		// Act
 		val available = findAvailableIds()
-		val group = groupPort.findByIdWithContent(projectId, groupId, null, null, null).block()!!
-		val content = groupPort.findContent(projectId, listOf(groupId), true, true).collectList().block()!!
-		val current = movementPort.findCurrentContent(projectId, listOf(outMovementId)).collectList().block()!!
+		val group = groupPort.findByIdWithContent(defaultProjectId, groupId, null, null, null).block()!!
+		val content = groupPort.findContent(defaultProjectId, listOf(groupId), true, true).collectList().block()!!
+		val current = movementPort.findCurrentContent(defaultProjectId, listOf(outMovementId)).collectList().block()!!
 
 		// Assert
 		assertTrue(available.none { it == insideId || it == outsideId })
@@ -126,13 +127,25 @@ class DepartedParticipantAvailabilityRepositoryTest: TestContext() {
 		assertTrue(after.none { it == insideId || it == outsideId })
 	}
 
+	@AfterAll
+	fun cleanup() {
+		val ids = listOf(insideId, outsideId)
+		execute("DELETE FROM tb_movement WHERE id IN (SELECT movement_id FROM tb_movement_content WHERE participant_id IN (:ids))", ids)
+		execute("DELETE FROM tb_participant WHERE id IN (:ids)", ids)
+		databaseClient.sql("DELETE FROM tb_group WHERE id = :id").bind("id", groupId).then().block()
+	}
+
+	private fun execute(sql: String, ids: List<UUID>) {
+		databaseClient.sql(sql).bind("ids", ids).then().block()
+	}
+
 	private fun findAvailableIds(): List<UUID> {
-		return participantPort.findPage(projectId, pageable, ParticipantSearchParamModel(isAvailable = true))
+		return participantPort.findPage(defaultProjectId, pageable, ParticipantSearchParamModel(isAvailable = true))
 			.block()!!.content.mapNotNull { it.id }
 	}
 
 	private fun findIdsAt(at: ZonedDateTime): List<UUID> {
-		return participantPort.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = at))
+		return participantPort.findPage(defaultProjectId, pageable, ParticipantSearchParamModel(query = null, at = at))
 			.block()!!.content.mapNotNull { it.id }
 	}
 
@@ -153,7 +166,7 @@ class DepartedParticipantAvailabilityRepositoryTest: TestContext() {
 			startAvailability = CustomDateTimeModel(LocalDate.now().minusDays(1))
 			endAvailability = CustomDateTimeModel(LocalDate.now().plusDays(1))
 			groups = listOf(GroupModel().apply { id = groupId })
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		return participantPort.create(participant).block()!!.id!!
@@ -168,8 +181,9 @@ class DepartedParticipantAvailabilityRepositoryTest: TestContext() {
 			dateTime = ZonedDateTime.now().minusHours(2)
 			type = movementType
 			this.reason = reason
-			content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			content =
+				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		return movementPort.create(movement).block()!!.id!!

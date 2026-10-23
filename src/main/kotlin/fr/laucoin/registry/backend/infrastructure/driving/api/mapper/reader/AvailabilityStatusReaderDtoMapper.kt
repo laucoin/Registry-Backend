@@ -1,8 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.AVAILABILITY_STATUS_DURATION_PREFIX
+import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.AVAILABILITY_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -26,17 +27,19 @@ class AvailabilityStatusReaderDtoMapper(
 
 	fun toDto(
 		model: AvailabilityStatusEnum,
+		subject: AvailabilitySubjectEnum,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): LabelDto {
 		return LabelDto(
 			model.name,
-			extractLabelDuration(model, startAvailability, endAvailability),
+			extractLabelDuration(model, subject, startAvailability, endAvailability),
 		)
 	}
 
 	private fun extractLabelDuration(
 		model: AvailabilityStatusEnum,
+		subject: AvailabilitySubjectEnum,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): String {
@@ -50,7 +53,7 @@ class AvailabilityStatusReaderDtoMapper(
 				)
 
 				translateService.getMessage(
-					code = "$AVAILABILITY_STATUS_DURATION_PREFIX$model",
+					code = "${subject.keyPrefix}$DURATION_PREFIX$model",
 					args = arrayOf(formatDuration(interval)),
 				)
 			}
@@ -64,7 +67,7 @@ class AvailabilityStatusReaderDtoMapper(
 				)
 
 				translateService.getMessage(
-					code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NOT_YET",
+					code = "${subject.keyPrefix}${DURATION_PREFIX}NOT_YET",
 					args = arrayOf(formatDuration(interval)),
 				)
 			}
@@ -77,12 +80,12 @@ class AvailabilityStatusReaderDtoMapper(
 				)
 
 				translateService.getMessage(
-					code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NO_MORE",
+					code = "${subject.keyPrefix}${DURATION_PREFIX}NO_MORE",
 					args = arrayOf(formatDuration(interval)),
 				)
 			}
 
-			else -> translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model")
+			else -> translateService.getMessage(code = "${subject.keyPrefix}$model")
 		}
 	}
 }

@@ -1,12 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertCriticalityMetadataReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 @Tag(name = "Metadata", description = "API for global metadata")
 @RequestMapping("/api/v2/metadata")
@@ -53,6 +55,13 @@ interface IMetadataV2Controller {
 	)
 	@GetMapping("/alerts/status")
 	fun getAlertStatus(): Flux<LabelDto>
+
+	@Operation(
+		summary = "Get Alert Criticality",
+		description = "Get all alert criticality levels with the sentence describing how they are computed from the alert age",
+	)
+	@GetMapping("/alerts/criticality")
+	fun getAlertCriticality(): Mono<AlertCriticalityMetadataReaderDto>
 
 	@Operation(
 		summary = "Get available Project's Options",

@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.GROUP
 import java.util.Optional
 import org.springframework.stereotype.Component
 
@@ -13,13 +14,17 @@ class GroupWithoutMemberReaderDtoMapper(
 		return GroupWithoutMemberReaderDto(
 			name = model.name,
 			status = Optional.ofNullable(model.status)
-				.map { availabilityStatusMapper.toDto(it, model.startAvailability, model.endAvailability) }
+				.map { availabilityStatusMapper.toDto(it, GROUP, model.startAvailability, model.endAvailability) }
 				.orElse(null),
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
 			membersCount = model.membersCount,
 			insideMembersCount = model.insideMembersCount,
 			outsideMembersCount = model.outsideMembersCount,
+			onSiteMembersCount = model.onSiteMembersCount,
+			inMembersCount = model.inMembersCount,
+			outMembersCount = model.outMembersCount,
+			overdueMembersCount = model.overdueMembersCount,
 		).apply {
 			id = model.id
 			visible = model.visible

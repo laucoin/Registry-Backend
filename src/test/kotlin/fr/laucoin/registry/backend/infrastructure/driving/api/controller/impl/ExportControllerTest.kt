@@ -6,12 +6,10 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserExportModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IExportService
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -22,8 +20,10 @@ import org.springframework.http.HttpHeaders.CONTENT_DISPOSITION
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
+import java.time.ZonedDateTime
+import java.util.UUID
 
-class ExportControllerTest: TestContext() {
+class ExportControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IExportService
 
@@ -81,11 +81,23 @@ class ExportControllerTest: TestContext() {
 	fun `Should exportParticipantById return 200`() {
 		// Arrange
 		val id = UUID.randomUUID()
-		whenever(service.exportParticipant(any(), eq(projectId), eq(id))).thenReturn(Mono.just(participantExport))
+		whenever(
+			service.exportParticipant(
+				any(),
+				eq(defaultProjectId),
+				eq(id)
+			)
+		).thenReturn(Mono.just(participantExport))
 
 		// Act
 		val result = webClient.authenticate().get()
-			.uri(uriBuilder("/api/v2/projects/{projectId}/participants/{id}/export", listOf(projectId, id), emptyList()))
+			.uri(
+				uriBuilder(
+					"/api/v2/projects/{projectId}/participants/{id}/export",
+					listOf(defaultProjectId, id),
+					emptyList()
+				)
+			)
 			.exchange()
 
 		// Assert

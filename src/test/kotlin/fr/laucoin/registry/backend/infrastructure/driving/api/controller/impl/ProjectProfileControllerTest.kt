@@ -41,20 +41,13 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Proj
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfilesWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -68,7 +61,6 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
-import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
@@ -78,8 +70,15 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
-class ProjectProfileControllerTest: TestContext() {
+class ProjectProfileControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IProjectProfileService
 
@@ -223,7 +222,7 @@ class ProjectProfileControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -240,7 +239,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findProjectProfilesPage(projectId, pageable, searchParams)
+		verify(service).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -263,7 +262,7 @@ class ProjectProfileControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -296,13 +295,13 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
 
-		verify(service).findProjectProfileById(projectId, uuid, isVisible = null)
+		verify(service).findProjectProfileById(defaultProjectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -325,7 +324,7 @@ class ProjectProfileControllerTest: TestContext() {
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_METADATA_R))
 			.get()
 			.uri(
-				uriBuilder("${BASE_URL}/search/users", listOf(projectId), listOf(Pair("q", searched)))
+				uriBuilder("${BASE_URL}/search/users", listOf(defaultProjectId), listOf(Pair("q", searched)))
 			)
 			.exchange()
 
@@ -351,7 +350,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_METADATA_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/roles", listOf(projectId), emptyList()))
+			.uri(uriBuilder("$BASE_URL/roles", listOf(defaultProjectId), emptyList()))
 			.exchange()
 
 		// Assert
@@ -363,7 +362,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).getAssignableProjectRoles(any(), eq(projectId))
+		verify(service).getAssignableProjectRoles(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -386,7 +385,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profiles)
 			.exchange()
 
@@ -397,11 +396,11 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(profilesWriterMapper).toModels(profiles, projectId)
+		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
 		verify(createdProjectProfilesReaderMapper).toDto(any())
 		verify(service).createProjectProfiles(
 			any(),
-			eq(projectId),
+			eq(defaultProjectId),
 			eq(profiles.userIds!!),
 			any()
 		)
@@ -436,7 +435,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profiles)
 			.exchange()
 
@@ -450,10 +449,10 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(profilesWriterMapper).toModels(profiles, projectId)
+		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
 		verify(service).createProjectProfiles(
 			any(),
-			eq(projectId),
+			eq(defaultProjectId),
 			eq(profiles.userIds!!),
 			any()
 		)
@@ -469,7 +468,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -506,7 +505,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -516,9 +515,9 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
-		verify(writerMapper).toModel(profile, projectId)
+		verify(writerMapper).toModel(profile, defaultProjectId)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).updateProjectProfileById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@Test
@@ -538,14 +537,16 @@ class ProjectProfileControllerTest: TestContext() {
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(ProjectProfileModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(ProjectProfileModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1791885731000\"")
 			.bodyValue(profile)
 			.exchange()
@@ -556,9 +557,9 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
-		verify(writerMapper).toModel(profile, projectId)
+		verify(writerMapper).toModel(profile, defaultProjectId)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).updateProjectProfileById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@Test
@@ -577,14 +578,16 @@ class ProjectProfileControllerTest: TestContext() {
 		).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
 		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(ProjectProfileModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(ProjectProfileModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1\"")
 			.bodyValue(profile)
 			.exchange()
@@ -592,7 +595,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Assert
 		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
 
-		verify(service, never()).updateProjectProfileById(any(), eq(projectId), eq(uuid), any())
+		verify(service, never()).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -608,7 +611,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -628,7 +631,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.blockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(
+		whenever(service.blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				ProjectProfileModel()
 			)
@@ -639,7 +642,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/block", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/block", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -650,7 +653,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).blockProjectProfileById(any(), eq(projectId), eq(uuid))
+		verify(service).blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -658,7 +661,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.unblockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(
+		whenever(service.unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				ProjectProfileModel()
 			)
@@ -669,7 +672,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -680,7 +683,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).unblockProjectProfileById(any(), eq(projectId), eq(uuid))
+		verify(service).unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -688,13 +691,13 @@ class ProjectProfileControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.deleteProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.empty())
+		whenever(service.deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_D))
 			.delete()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -705,7 +708,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).deleteProjectProfileById(any(), eq(projectId), eq(uuid))
+		verify(service).deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -722,14 +725,14 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
 			.get()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("role", "PROJECT_ADMINISTRATOR"))))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("role", "PROJECT_ADMINISTRATOR"))))
 			.exchange()
 
 		// Assert
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findProjectProfilesPage(
-			projectId,
+			defaultProjectId,
 			pageable,
 			ProjectProfileSearchParamModel(query = null, role = "PROJECT_ADMINISTRATOR"),
 		)
@@ -744,7 +747,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profiles)
 			.exchange()
 
@@ -762,7 +765,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profiles)
 			.exchange()
 
@@ -780,7 +783,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -795,7 +798,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
 			.get()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("role", "R".repeat(51)))))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("role", "R".repeat(51)))))
 			.exchange()
 
 		// Assert
@@ -812,7 +815,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profiles)
 			.exchange()
 
@@ -830,7 +833,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -845,7 +848,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
 			.get()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("role", "ROLE';--"))))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("role", "ROLE';--"))))
 			.exchange()
 
 		// Assert

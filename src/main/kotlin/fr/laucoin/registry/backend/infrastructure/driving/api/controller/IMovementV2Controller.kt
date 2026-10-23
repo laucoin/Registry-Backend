@@ -192,7 +192,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Find planned arrivals",
-		description = "Find movement drafts (without date-time) of the participants planned to arrive on a day. Participants with their own planned dates come one per draft; the others are grouped by group, with the group name as pool name",
+		description = "Find movement drafts (without date-time) of the participants planned to arrive on a day, with their planned date-time. Participants with their own planned dates come one per draft; the others are grouped by group, with the group name as pool name",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
 	@GetMapping("/planned/arrivals")
@@ -205,7 +205,7 @@ interface IMovementV2Controller {
 
 	@Operation(
 		summary = "Find planned departures",
-		description = "Find definitive-departure movement drafts (without date-time) of the participants planned to leave on a day. Participants with their own planned dates come one per draft; the others are grouped by group, with the group name as pool name",
+		description = "Find definitive-departure movement drafts (without date-time) of the participants planned to leave on a day, with their planned date-time. Participants with their own planned dates come one per draft; the others are grouped by group, with the group name as pool name",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
 	@GetMapping("/planned/departures")

@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectCountsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
 import java.util.UUID
@@ -25,6 +26,7 @@ class ProjectWithProfileReaderDtoMapperTest {
 		status = LabelDto("AVAILABLE", "Available"),
 		begin = CustomDateTimeModel.MIN,
 		end = CustomDateTimeModel.MAX,
+		counts = ProjectCountsReaderDto(participants = 3, vehicles = 2),
 	).apply { id = UUID.randomUUID() }
 
 	@Test
@@ -44,6 +46,7 @@ class ProjectWithProfileReaderDtoMapperTest {
 		assertEquals(projectDto.id, result.id)
 		assertEquals("Project", result.name)
 		assertEquals(projectDto.status, result.status)
+		assertEquals(projectDto.counts, result.counts)
 		assertEquals(profile.id, result.profile?.id)
 		assertEquals(role, result.profile?.role)
 		assertEquals(CustomDateTimeModel.MAX, result.profile?.endAccess)
@@ -60,5 +63,29 @@ class ProjectWithProfileReaderDtoMapperTest {
 		// Assert
 		assertNull(result.profile)
 		verifyNoInteractions(profileMapper)
+	}
+
+	@Test
+	fun `Should toDto leave the counts empty when the project dto has none`() {
+		// Arrange
+		whenever(projectMapper.toDto(any())).thenReturn(ProjectReaderDto(name = "Project"))
+
+		// Act
+		val result = mapper.toDto(ProjectModel())
+
+		// Assert
+		assertNull(result.counts)
+	}
+
+	@Test
+	fun `Should toDto carry the favorite flag of the project`() {
+		// Arrange
+		whenever(projectMapper.toDto(any())).thenReturn(projectDto)
+
+		// Act
+		val result = mapper.toDto(ProjectModel().apply { favorite = true })
+
+		// Assert
+		assertEquals(true, result.favorite)
 	}
 }

@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_TOO_MANY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
@@ -35,19 +38,13 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Grou
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GroupWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -72,8 +69,14 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
 
-class GroupControllerTest: TestContext() {
+class GroupControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IGroupService
 
@@ -211,7 +214,7 @@ class GroupControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -228,7 +231,7 @@ class GroupControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findGroupsPage(projectId, pageable, searchParams)
+		verify(service).findGroupsPage(defaultProjectId, pageable, searchParams)
 		verify(lightReaderMapper).toDtoPage(any())
 		verifyNoInteractions(participantReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -248,7 +251,7 @@ class GroupControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -301,7 +304,7 @@ class GroupControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/{id}/members",
-					listOf(projectId, uuid),
+					listOf(defaultProjectId, uuid),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -318,7 +321,7 @@ class GroupControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findGroupMembersPageByGroupId(projectId, uuid, pageable, searchParams)
+		verify(service).findGroupMembersPageByGroupId(defaultProjectId, uuid, pageable, searchParams)
 		verifyNoInteractions(readerMapper)
 		verify(participantReaderMapper).toDtoPage(any())
 		verifyNoInteractions(writerMapper)
@@ -341,7 +344,7 @@ class GroupControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/{id}/members",
-					listOf(projectId, uuid),
+					listOf(defaultProjectId, uuid),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -374,14 +377,14 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<GroupReaderDto>(OK)
 
 		verify(service).findGroupById(
-			projectId,
+			defaultProjectId,
 			uuid,
 			isVisible = null,
 			memberIsVisible = null,
@@ -404,14 +407,14 @@ class GroupControllerTest: TestContext() {
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_METADATA_R))
 			.get()
 			.uri(
-				uriBuilder("${BASE_URL}/search/participants", listOf(projectId), listOf(Pair("q", searched)))
+				uriBuilder("${BASE_URL}/search/participants", listOf(defaultProjectId), listOf(Pair("q", searched)))
 			)
 			.exchange()
 
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(service).searchParticipantsByText(projectId, searched)
+		verify(service).searchParticipantsByText(defaultProjectId, searched)
 		verifyNoInteractions(readerMapper)
 		verify(participantReaderMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
@@ -431,18 +434,19 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(group)
 			.exchange()
 
 		// Assert
-		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.expectHeader()
+			.valueEquals("Location", "${BASE_URL.replace("{projectId}", defaultProjectId.toString())}/$createdId")
 		result.body<GroupReaderDto>(CREATED)
 
 		verify(service).createGroup(any(), any())
 		verify(lightReaderMapper).toDto(any())
 		verifyNoInteractions(participantReaderMapper)
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 	}
 
 	@ParameterizedTest
@@ -455,7 +459,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(group)
 			.exchange()
 
@@ -482,7 +486,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(group)
 			.exchange()
 
@@ -490,9 +494,9 @@ class GroupControllerTest: TestContext() {
 		result.body<GroupReaderDto>(OK)
 
 		verify(lightReaderMapper).toDto(any())
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 		verifyNoInteractions(participantReaderMapper)
-		verify(service).updateGroupById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateGroupById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@Test
@@ -505,14 +509,16 @@ class GroupControllerTest: TestContext() {
 		whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
 		whenever(lightReaderMapper.toDto(any())).thenReturn(GroupReaderDto())
 		whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
-			Mono.just(GroupModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(GroupModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1791885731000\"")
 			.bodyValue(group)
 			.exchange()
@@ -521,9 +527,9 @@ class GroupControllerTest: TestContext() {
 		result.body<GroupReaderDto>(OK)
 
 		verify(lightReaderMapper).toDto(any())
-		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(writerMapper).toModel(any(), eq(defaultProjectId))
 		verifyNoInteractions(participantReaderMapper)
-		verify(service).updateGroupById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateGroupById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@Test
@@ -534,14 +540,16 @@ class GroupControllerTest: TestContext() {
 
 		whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
 		whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
-			Mono.just(GroupModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(GroupModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1\"")
 			.bodyValue(group)
 			.exchange()
@@ -549,7 +557,7 @@ class GroupControllerTest: TestContext() {
 		// Assert
 		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
 
-		verify(service, never()).updateGroupById(any(), eq(projectId), eq(uuid), any())
+		verify(service, never()).updateGroupById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -565,7 +573,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(group)
 			.exchange()
 
@@ -604,7 +612,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(memberIds)
 			.exchange()
 
@@ -612,7 +620,7 @@ class GroupControllerTest: TestContext() {
 		result.body<AddedGroupMembersReaderDto>(OK)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).addMembersToGroupById(any(), eq(projectId), eq(uuid), eq(memberIds))
+		verify(service).addMembersToGroupById(any(), eq(defaultProjectId), eq(uuid), eq(memberIds))
 	}
 
 	@Test
@@ -642,7 +650,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(memberIds)
 			.exchange()
 
@@ -650,7 +658,7 @@ class GroupControllerTest: TestContext() {
 		result.body<AddedGroupMembersReaderDto>(MULTI_STATUS)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).addMembersToGroupById(any(), eq(projectId), eq(uuid), eq(memberIds))
+		verify(service).addMembersToGroupById(any(), eq(defaultProjectId), eq(uuid), eq(memberIds))
 	}
 
 	@Test
@@ -665,14 +673,14 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.delete()
-			.uri(uriBuilder("$BASE_URL/{id}/members/{memberId}", listOf(projectId, uuid, uuid1), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/members/{memberId}", listOf(defaultProjectId, uuid, uuid1), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<Void>(NO_CONTENT)
 		verifyNoInteractions(lightReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).removeMemberFromGroupById(any(), eq(projectId), eq(uuid), eq(uuid1))
+		verify(service).removeMemberFromGroupById(any(), eq(defaultProjectId), eq(uuid), eq(uuid1))
 	}
 
 	@Test
@@ -680,14 +688,14 @@ class GroupControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.disableGroupById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+		whenever(service.disableGroupById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
 		whenever(lightReaderMapper.toDto(any())).thenReturn(GroupReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -695,7 +703,7 @@ class GroupControllerTest: TestContext() {
 
 		verify(lightReaderMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
-		verify(service).disableGroupById(any(), eq(projectId), eq(uuid))
+		verify(service).disableGroupById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -703,14 +711,14 @@ class GroupControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.enableGroupById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
+		whenever(service.enableGroupById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.just(GroupModel()))
 		whenever(lightReaderMapper.toDto(any())).thenReturn(GroupReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -718,7 +726,7 @@ class GroupControllerTest: TestContext() {
 
 		verify(lightReaderMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
-		verify(service).enableGroupById(any(), eq(projectId), eq(uuid))
+		verify(service).enableGroupById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -732,7 +740,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_D))
 			.delete()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -741,7 +749,7 @@ class GroupControllerTest: TestContext() {
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(participantReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).deleteGroupById(eq(projectId), eq(uuid))
+		verify(service).deleteGroupById(eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -753,7 +761,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
 			.bodyValue(memberIds)
 			.exchange()
 
@@ -767,14 +775,26 @@ class GroupControllerTest: TestContext() {
 	fun `Should addMembersToGroupById accept exactly 200 members at once`() {
 		// Arrange
 		val memberIds = List(200) { UUID.randomUUID() }
-		whenever(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(Mono.just(Pair(memberIds, emptyList())))
-		whenever(addedGroupMembersReaderMapper.toDto(any())).thenReturn(AddedGroupMembersReaderDto(emptyList(), emptyList()))
+		whenever(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(
+			Mono.just(
+				Pair(
+					memberIds,
+					emptyList()
+				)
+			)
+		)
+		whenever(addedGroupMembersReaderMapper.toDto(any())).thenReturn(
+			AddedGroupMembersReaderDto(
+				emptyList(),
+				emptyList()
+			)
+		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
 			.bodyValue(memberIds)
 			.exchange()
 
@@ -791,7 +811,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(group)
 			.exchange()
 
@@ -809,7 +829,7 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(group)
 			.exchange()
 
@@ -827,12 +847,126 @@ class GroupControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(group)
 			.exchange()
 
 		// Assert
 		result.assertError(BAD_REQUEST, GROUP_NAME_TOO_LONG)
 		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findGroupMembersByGroupId forward the on-site filter and the status sort to the service`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val pageable = PageableModel(0, 20)
+		val searchParams = ParticipantSearchParamModel(
+			query = null,
+			at = null,
+			isOnSite = true,
+			sort = SortModel("status", true),
+		)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
+		whenever(service.findGroupMembersPageByGroupId(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(participantReaderMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(ParticipantReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(
+				uriBuilder(
+					"$BASE_URL/{id}/members",
+					listOf(defaultProjectId, uuid),
+					listOf(Pair("onSite", true), Pair("sort", "-status")),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findGroupMembersPageByGroupId(defaultProjectId, uuid, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should findGroups restrict the search to the groups of the signed-in user when asked for mine`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val searchParams = GroupSearchParamModel(memberUserId = defaultUserId, hasOnSiteMembers = true)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(GroupModel()))
+		whenever(service.findGroupsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(lightReaderMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(GroupWithoutMemberReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("mine", true), Pair("hasOnSiteMembers", true))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findGroupsPage(defaultProjectId, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should findGroups ignore the signed-in user when not asked for mine`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val searchParams = GroupSearchParamModel(hasOnSiteMembers = false)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(GroupModel()))
+		whenever(service.findGroupsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(lightReaderMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(GroupWithoutMemberReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("mine", false), Pair("hasOnSiteMembers", false))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findGroupsPage(defaultProjectId, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should findGroups expose the on-site members counters of every group`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(GroupModel()))
+		val dto = GroupWithoutMemberReaderDto(
+			onSiteMembersCount = 6,
+			inMembersCount = 3,
+			outMembersCount = 2,
+			overdueMembersCount = 1,
+		)
+		whenever(service.findGroupsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(lightReaderMapper.toDtoPage(any())).thenReturn(PageModel(pageable, totalElements = 1, listOf(dto)))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isOk
+			.expectBody()
+			.jsonPath("$.content[0].onSiteMembersCount").isEqualTo(6)
+			.jsonPath("$.content[0].inMembersCount").isEqualTo(3)
+			.jsonPath("$.content[0].outMembersCount").isEqualTo(2)
+			.jsonPath("$.content[0].overdueMembersCount").isEqualTo(1)
 	}
 }

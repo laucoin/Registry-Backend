@@ -200,6 +200,12 @@ $$
     END
 $$;
 
+-- Insert favorite projects
+INSERT INTO tb_project_favorite (user_id, project_id)
+SELECT profile.user_id, profile.project_id
+FROM tb_project_profile profile
+WHERE ABS(HASHTEXT(profile.user_id::TEXT || profile.project_id::TEXT)) % 3 = 0;
+
 -- Insert participants
 DO
 $$

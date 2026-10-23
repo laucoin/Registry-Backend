@@ -76,6 +76,10 @@ registry:
         max-activity-result: 10
       planned:
         max-result: 200
+    alert:
+      criticality:
+        reinforced-after-hours: 6
+        high-after-hours: 18
     communication:
       searched:
         max-activity-result: 10

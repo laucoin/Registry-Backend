@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.UNAVAILABLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.PROFILE
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
@@ -21,10 +23,10 @@ class AvailabilityStatusReaderDtoMapperTest {
 	private val mapper = AvailabilityStatusReaderDtoMapper(translateService)
 
 	private companion object {
-		private const val NOT_YET = "availability.status.duration.NOT_YET"
-		private const val NO_MORE = "availability.status.duration.NO_MORE"
-		private const val AVAILABLE_SINCE = "availability.status.duration.AVAILABLE"
-		private const val UNAVAILABLE_PLAIN = "availability.status.UNAVAILABLE"
+		private const val NOT_YET = "availability.status.profile.duration.NOT_YET"
+		private const val NO_MORE = "availability.status.profile.duration.NO_MORE"
+		private const val AVAILABLE_SINCE = "availability.status.profile.duration.AVAILABLE"
+		private const val UNAVAILABLE_PLAIN = "availability.status.profile.UNAVAILABLE"
 	}
 
 	init {
@@ -35,7 +37,7 @@ class AvailabilityStatusReaderDtoMapperTest {
 	private fun day(offset: Long) = CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(offset))
 
 	private fun label(status: AvailabilityStatusEnum, start: CustomDateTimeModel?, end: CustomDateTimeModel?): String =
-		mapper.toDto(status, start, end).label
+		mapper.toDto(status, PROFILE, start, end).label
 
 	@Test
 	fun `should announce the time before the start when the start is in the future`() {
@@ -115,5 +117,32 @@ class AvailabilityStatusReaderDtoMapperTest {
 
 		// Assert
 		assertEquals("$UNAVAILABLE_PLAIN|null", label)
+	}
+
+	@Test
+	fun `should word the label with the translations of the subject`() {
+		// Arrange
+		val start = day(5)
+
+		// Act
+		val labels = AvailabilitySubjectEnum.entries
+			.associateWith { mapper.toDto(UNAVAILABLE, it, start, null).label }
+
+		// Assert
+		AvailabilitySubjectEnum.entries.forEach {
+			assertTrue(labels.getValue(it).startsWith("availability.status.${it.name.lowercase()}.duration.NOT_YET|"))
+		}
+	}
+
+	@Test
+	fun `should keep the generic translations for the metadata labels`() {
+		// Arrange
+		val status = AVAILABLE
+
+		// Act
+		val label = mapper.toDto(status).label
+
+		// Assert
+		assertEquals("availability.status.AVAILABLE|null", label)
 	}
 }

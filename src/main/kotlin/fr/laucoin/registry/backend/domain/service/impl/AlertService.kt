@@ -81,6 +81,7 @@ class AlertService(
 				communicationPort.create(initialCommunication)
 					.map { createdCommunication ->
 						newAlert.communications = listOf(createdCommunication)
+						newAlert.lastCommunication = createdCommunication
 						newAlert
 					}
 			}

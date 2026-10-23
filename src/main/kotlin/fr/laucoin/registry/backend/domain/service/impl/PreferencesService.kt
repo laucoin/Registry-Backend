@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
@@ -49,6 +50,18 @@ class PreferencesService(
 		return findByUser(currentUser).flatMap {
 			if (it.language !== language) {
 				it.language = language
+				save(currentUser, it)
+			} else Mono.just(it)
+		}
+	}
+
+	override fun updateRefreshMode(
+		currentUser: CurrentUserModel,
+		refreshMode: RefreshModeEnum
+	): Mono<PreferencesModel> {
+		return findByUser(currentUser).flatMap {
+			if (it.refreshMode !== refreshMode) {
+				it.refreshMode = refreshMode
 				save(currentUser, it)
 			} else Mono.just(it)
 		}

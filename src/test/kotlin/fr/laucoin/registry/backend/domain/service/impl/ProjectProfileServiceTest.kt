@@ -22,12 +22,9 @@ import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.projectProfileId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectProfileId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -47,6 +44,9 @@ import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
+import java.util.stream.Stream
 
 class ProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
@@ -97,27 +97,27 @@ class ProjectProfileServiceTest {
 		)
 
 		// Act
-		service.findProjectProfilesPage(projectId, pageable, params).block()
+		service.findProjectProfilesPage(defaultProjectId, pageable, params).block()
 
 		// Assert
-		verify(port).findProjectProfilesPageByProjectId(projectId, pageable, params)
+		verify(port).findProjectProfilesPageByProjectId(defaultProjectId, pageable, params)
 	}
 
 	@Test
 	fun `Should findProjectProfileById call port findById`() {
 		// Arrange
 		val profile = ProjectProfileModel().apply {
-			role = "PROJECT_ROLE"; this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			role = "PROJECT_ROLE"; this.projectId = defaultProjectId
 		}
 		val uuid = UUID.randomUUID()
 		val onlyVisible = true
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.findProjectProfileById(projectId, uuid, onlyVisible).block()
+		service.findProjectProfileById(defaultProjectId, uuid, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, onlyVisible)
+		verify(port).findById(defaultProjectId, uuid, onlyVisible)
 	}
 
 	@Test
@@ -128,16 +128,16 @@ class ProjectProfileServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findProjectProfileById(projectId, projectProfileId, onlyVisible).block()
+			service.findProjectProfileById(defaultProjectId, defaultProjectProfileId, onlyVisible).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
-		assertEquals(projectProfileId.toString(), result.args?.first())
+		assertEquals(defaultProjectProfileId.toString(), result.args?.first())
 
-		verify(port).findById(projectId, projectProfileId, onlyVisible)
+		verify(port).findById(defaultProjectId, defaultProjectProfileId, onlyVisible)
 	}
 
 	@Test
@@ -157,7 +157,7 @@ class ProjectProfileServiceTest {
 	fun `Should getAssignableProjectRoles call port findProjectProfileByProjectAndUserId and role service getAssignableProjectRoles`() {
 		// Arrange
 		val profile = ProjectProfileModel().apply {
-			role = "PROJECT_ROLE"; this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			role = "PROJECT_ROLE"; this.projectId = defaultProjectId
 		}
 		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), anyOrNull())).thenReturn(
 			Mono.just(
@@ -167,11 +167,11 @@ class ProjectProfileServiceTest {
 		whenever(roleService.getAssignableProjectRoles(any())).thenReturn(emptyList())
 
 		// Act
-		service.getAssignableProjectRoles(currentUser(), projectId).blockFirst()
+		service.getAssignableProjectRoles(currentUser(), defaultProjectId).blockFirst()
 
 		// Assert
 		verify(port).findProjectProfileByProjectAndUserId(
-			projectId,
+			defaultProjectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
 				isVisible = true,
@@ -190,7 +190,7 @@ class ProjectProfileServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.getAssignableProjectRoles(currentUser(), projectId).blockFirst()
+			service.getAssignableProjectRoles(currentUser(), defaultProjectId).blockFirst()
 		}) as RegistryException
 
 		// Assert
@@ -198,7 +198,7 @@ class ProjectProfileServiceTest {
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
 		verify(port).findProjectProfileByProjectAndUserId(
-			projectId,
+			defaultProjectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
 				isVisible = true,
@@ -233,13 +233,14 @@ class ProjectProfileServiceTest {
 		whenever(port.saveAll(any())).thenReturn(Flux.just(*expectedProfiles.toTypedArray()))
 
 		// Act
-		val result = service.createProjectProfiles(currentUser(), projectId, wantedProfileForUserIds, profiles).block()
+		val result =
+			service.createProjectProfiles(currentUser(), defaultProjectId, wantedProfileForUserIds, profiles).block()
 
 		// Assert
 		assertEquals(expectedCreatedUserIds, result?.first)
 		assertEquals(userIdWithExistingProfile, result?.second)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId,
+			defaultProjectId,
 			wantedProfileForUserIds,
 			profileIdToExclude = null,
 			status = listOf(ACCEPTED, INVITED),
@@ -273,14 +274,14 @@ class ProjectProfileServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createProjectProfiles(currentUser(), projectId, users, profiles).block()
+			service.createProjectProfiles(currentUser(), defaultProjectId, users, profiles).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId = eq(projectId),
+			projectId = eq(defaultProjectId),
 			userIds = eq(users),
 			profileIdToExclude = eq(null),
 			status = eq(listOf(ACCEPTED, INVITED)),
@@ -298,12 +299,12 @@ class ProjectProfileServiceTest {
 		val currentUserProfile = ProjectProfileModel().apply {
 			role = profileRole
 			user = UserModel().apply { id = currentUser().id }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 		}
 		val profile = ProjectProfileModel().apply {
 			role = profileRole
 			user = UserModel().apply { id = uuid }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			startAccess = CustomDateTimeModel.MIN
 			endAccess = CustomDateTimeModel.MAX
 		}
@@ -332,13 +333,13 @@ class ProjectProfileServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
-		val result = service.updateProjectProfileById(currentUser(), projectId, uuid, profile).block()
+		val result = service.updateProjectProfileById(currentUser(), defaultProjectId, uuid, profile).block()
 
 		// Assert
 		assertEquals(profile, result)
-		verify(port).findById(projectId, uuid, isVisible = null)
+		verify(port).findById(defaultProjectId, uuid, isVisible = null)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId = eq(projectId),
+			projectId = eq(defaultProjectId),
 			userIds = eq(listOf(uuid)),
 			profileIdToExclude = eq(null),
 			status = eq(listOf(ACCEPTED, INVITED)),
@@ -347,12 +348,12 @@ class ProjectProfileServiceTest {
 		)
 		verify(profileService).validateNotLastProjectRoleLevel0(
 			uuid,
-			projectId,
+			defaultProjectId,
 			profile,
 			PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR
 		)
 		verify(port).findProjectProfileByProjectAndUserId(
-			projectId,
+			defaultProjectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
 				isVisible = true,
@@ -372,7 +373,7 @@ class ProjectProfileServiceTest {
 		val profile = ProjectProfileModel().apply {
 			role = profileRole
 			user = UserModel().apply { id = uuid }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(
@@ -388,15 +389,15 @@ class ProjectProfileServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateProjectProfileById(currentUser(), projectId, uuid, profile).block()
+			service.updateProjectProfileById(currentUser(), defaultProjectId, uuid, profile).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
-		verify(port).findById(projectId, uuid, isVisible = null)
+		verify(port).findById(defaultProjectId, uuid, isVisible = null)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId,
+			defaultProjectId,
 			listOf(uuid),
 			profileIdToExclude = null,
 			status = listOf(ACCEPTED, INVITED),
@@ -422,17 +423,17 @@ class ProjectProfileServiceTest {
 		val currentUserProfile = ProjectProfileModel().apply {
 			role = "ROLE_PROJECT"
 			user = UserModel().apply { id = currentUser().id }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 		}
 		val profileToUpdate = ProjectProfileModel().apply {
 			role = profileToUpdateRole
 			user = UserModel().apply { id = uuid }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 		}
 		val profileUpdated = ProjectProfileModel().apply {
 			role = profileUpdatedRole
 			user = UserModel().apply { id = uuid }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profileToUpdate))
 		whenever(
@@ -455,15 +456,15 @@ class ProjectProfileServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateProjectProfileById(currentUser(), projectId, uuid, profileUpdated).block()
+			service.updateProjectProfileById(currentUser(), defaultProjectId, uuid, profileUpdated).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(FORBIDDEN, result.status)
 		assertEquals(expectedErrorMessage, result.message)
-		verify(port).findById(projectId, uuid, isVisible = null)
+		verify(port).findById(defaultProjectId, uuid, isVisible = null)
 		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId,
+			defaultProjectId,
 			listOf(uuid),
 			profileIdToExclude = null,
 			status = listOf(ACCEPTED, INVITED),
@@ -472,7 +473,7 @@ class ProjectProfileServiceTest {
 		)
 		verify(profileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
 		verify(port).findProjectProfileByProjectAndUserId(
-			projectId,
+			defaultProjectId,
 			currentUser().id!!,
 			ProjectProfileSearchParamModel(
 				isVisible = true,
@@ -490,7 +491,7 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			visible = true
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
@@ -502,13 +503,13 @@ class ProjectProfileServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.blockProjectProfileById(currentUser(), projectId, uuid).block()
+		service.blockProjectProfileById(currentUser(), defaultProjectId, uuid).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, isVisible = true)
+		verify(port).findById(defaultProjectId, uuid, isVisible = true)
 		verify(profileService).validateNotLastProjectRoleLevel0(
 			uuid,
-			projectId,
+			defaultProjectId,
 			profile,
 			PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR,
 		)
@@ -521,17 +522,17 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			visible = false
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.unblockProjectProfileById(currentUser(), projectId, uuid).block()
+		service.unblockProjectProfileById(currentUser(), defaultProjectId, uuid).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, isVisible = false)
+		verify(port).findById(defaultProjectId, uuid, isVisible = false)
 		verify(port).update(profile.apply { visible = true })
 	}
 
@@ -541,7 +542,7 @@ class ProjectProfileServiceTest {
 		val uuid = UUID.randomUUID()
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			visible = true
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
@@ -553,13 +554,13 @@ class ProjectProfileServiceTest {
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteProjectProfileById(currentUser(), projectId, uuid).block()
+		service.deleteProjectProfileById(currentUser(), defaultProjectId, uuid).block()
 
 		// Assert
-		verify(port).findById(projectId, uuid, isVisible = null)
+		verify(port).findById(defaultProjectId, uuid, isVisible = null)
 		verify(profileService).validateNotLastProjectRoleLevel0(
 			uuid,
-			projectId,
+			defaultProjectId,
 			profile,
 			PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR,
 		)

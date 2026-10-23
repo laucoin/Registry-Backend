@@ -9,10 +9,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.communicationId
-import java.time.ZonedDateTime
-import java.util.stream.Stream
-import kotlin.test.assertEquals
+import fr.laucoin.registry.backend.test.ModelExt.defaultCommunicationId
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -22,6 +19,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.ZonedDateTime
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class CommunicationReaderDtoMapperTest {
 	private val movementMapper: MovementReaderDtoMapper = mock()
@@ -38,7 +38,7 @@ class CommunicationReaderDtoMapperTest {
 			message = "Communication message"
 			movement = MovementModel(dateTime = now)
 			alert = AlertModel(dateTime = now)
-			id = communicationId
+			id = defaultCommunicationId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -49,7 +49,7 @@ class CommunicationReaderDtoMapperTest {
 			message = "Communication message"
 			movement = dtoMovement
 			alert = dtoAlert
-			id = communicationId
+			id = defaultCommunicationId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()

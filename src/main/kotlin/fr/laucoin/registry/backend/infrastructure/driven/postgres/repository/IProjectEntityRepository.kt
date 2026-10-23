@@ -35,8 +35,10 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectFields.PROJECT_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectFields.PROJECT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectQueries.DATE_IN_PROJECT_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectQueries.PROJECT_FAVORITE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectQueries.PROJECT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectQueries.PROJECT_TEXT_SEARCH_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectQueries.SELECT_COUNTS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectRelationEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_END_AVAILABILITY_TIME
@@ -61,8 +63,8 @@ import reactor.core.publisher.Mono
 interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE
+        SELECT t.*, $SELECT_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
         ORDER BY $PROJECT_SORT t.$PROJECT_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -71,6 +73,8 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 		query: String?,
 		isVisible: Boolean?,
 		at: ZonedDateTime?,
+		isFavorite: Boolean?,
+		userId: UUID?,
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
@@ -79,8 +83,8 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE t.$ID IN (:projectIds) AND $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE
+        SELECT t.*, $SELECT_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE t.$ID IN (:projectIds) AND $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
         ORDER BY $PROJECT_SORT t.$PROJECT_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -90,6 +94,8 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 		query: String?,
 		isVisible: Boolean?,
 		at: ZonedDateTime?,
+		isFavorite: Boolean?,
+		userId: UUID?,
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
@@ -98,7 +104,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)

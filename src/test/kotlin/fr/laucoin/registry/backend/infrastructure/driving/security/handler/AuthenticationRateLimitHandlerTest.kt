@@ -13,6 +13,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpHeaders.RETRY_AFTER
 import org.springframework.http.HttpMethod.GET
 import org.springframework.http.HttpMethod.POST
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.TOO_MANY_REQUESTS
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
@@ -46,7 +47,7 @@ class AuthenticationRateLimitHandlerTest {
 
 	private fun exchange(
 		path: String,
-		method: org.springframework.http.HttpMethod,
+		method: HttpMethod,
 		remoteHost: String = "10.0.0.1",
 	): ServerWebExchange {
 		val request = MockServerHttpRequest.method(method, path)

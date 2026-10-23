@@ -7,14 +7,12 @@ import fr.laucoin.registry.backend.domain.model.ProjectContentPurgeModel
 import fr.laucoin.registry.backend.domain.service.IPurgeService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectContentPurgeReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
-import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
+import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -29,8 +27,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
-class PurgeControllerTest: TestContext() {
+class PurgeControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var purgeService: IPurgeService
 
@@ -53,7 +53,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/users",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -80,7 +80,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/projects",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -108,7 +108,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/projects/contents",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -136,7 +136,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/projects/configurations",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -164,7 +164,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL$endpoint",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", tomorrow.toString()),
 						Pair("dryRun", false),
@@ -200,7 +200,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/users",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", threshold.toString()),
 						Pair("dryRun", true),

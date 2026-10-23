@@ -45,6 +45,7 @@ class ParticipantModelPostgresRepository(
 			searchParams.presence,
 			searchParams.at,
 			searchParams.hasUser,
+			searchParams.isOnSite,
 			searchParams.birthdayFrom,
 			searchParams.birthdayTo,
 			searchParams.sort?.field,
@@ -74,6 +75,7 @@ class ParticipantModelPostgresRepository(
 			searchParams.presence,
 			searchParams.at,
 			searchParams.hasUser,
+			searchParams.isOnSite,
 			searchParams.birthdayFrom,
 			searchParams.birthdayTo,
 		)
@@ -97,6 +99,7 @@ class ParticipantModelPostgresRepository(
 			searchParams.presence,
 			searchParams.at,
 			searchParams.hasUser,
+			searchParams.isOnSite,
 			searchParams.birthdayFrom,
 			searchParams.birthdayTo,
 			searchParams.sort?.field,

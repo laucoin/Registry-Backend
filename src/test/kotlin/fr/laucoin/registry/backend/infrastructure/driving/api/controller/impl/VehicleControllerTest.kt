@@ -36,19 +36,13 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.Vehicle
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.VehicleWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -70,8 +64,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
 
-class VehicleControllerTest: TestContext() {
+class VehicleControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IVehicleService
 
@@ -275,7 +275,7 @@ class VehicleControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -292,7 +292,7 @@ class VehicleControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findVehiclesPage(projectId, pageable, searchParams)
+		verify(service).findVehiclesPage(defaultProjectId, pageable, searchParams)
 		verify(readerMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -312,7 +312,7 @@ class VehicleControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -341,13 +341,13 @@ class VehicleControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<VehicleReaderDto>(OK)
 
-		verify(service).findVehicleById(projectId, uuid, isVisible = null)
+		verify(service).findVehicleById(defaultProjectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(movementReaderMapper)
@@ -395,7 +395,7 @@ class VehicleControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/{id}/movements",
-					listOf(projectId, uuid),
+					listOf(defaultProjectId, uuid),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -411,7 +411,7 @@ class VehicleControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findVehicleMovementsPage(projectId, uuid, pageable, searchParams)
+		verify(service).findVehicleMovementsPage(defaultProjectId, uuid, pageable, searchParams)
 		verify(movementReaderMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
@@ -437,7 +437,7 @@ class VehicleControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/{id}/movements",
-					listOf(projectId, uuid),
+					listOf(defaultProjectId, uuid),
 					listOf(
 						Pair("page", page),
 						Pair("size", size),
@@ -469,17 +469,18 @@ class VehicleControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_C), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(vehicle)
 			.exchange()
 
 		// Assert
-		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.expectHeader()
+			.valueEquals("Location", "${BASE_URL.replace("{projectId}", defaultProjectId.toString())}/$createdId")
 		result.body<VehicleReaderDto>(CREATED)
 
 		verify(service).createVehicle(any(), any())
 		verify(readerMapper).toDto(any())
-		verify(writerMapper).toModel(vehicle, projectId)
+		verify(writerMapper).toModel(vehicle, defaultProjectId)
 		verifyNoInteractions(movementReaderMapper)
 	}
 
@@ -493,7 +494,7 @@ class VehicleControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(vehicle)
 			.exchange()
 
@@ -521,17 +522,17 @@ class VehicleControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_U), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(vehicle)
 			.exchange()
 
 		// Assert
 		result.body<VehicleReaderDto>(OK)
 
-		verify(service).updateVehicleById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateVehicleById(any(), eq(defaultProjectId), eq(uuid), any())
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
-		verify(writerMapper).toModel(vehicle, projectId)
+		verify(writerMapper).toModel(vehicle, defaultProjectId)
 	}
 
 	@Test
@@ -544,14 +545,16 @@ class VehicleControllerTest: TestContext() {
 		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 		whenever(writerMapper.toModel(any(), any())).thenReturn(VehicleModel())
 		whenever(service.findVehicleById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(VehicleModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(VehicleModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_U), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1791885731000\"")
 			.bodyValue(vehicle)
 			.exchange()
@@ -559,10 +562,10 @@ class VehicleControllerTest: TestContext() {
 		// Assert
 		result.body<VehicleReaderDto>(OK)
 
-		verify(service).updateVehicleById(any(), eq(projectId), eq(uuid), any())
+		verify(service).updateVehicleById(any(), eq(defaultProjectId), eq(uuid), any())
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
-		verify(writerMapper).toModel(vehicle, projectId)
+		verify(writerMapper).toModel(vehicle, defaultProjectId)
 	}
 
 	@Test
@@ -573,14 +576,16 @@ class VehicleControllerTest: TestContext() {
 
 		whenever(writerMapper.toModel(any(), any())).thenReturn(VehicleModel())
 		whenever(service.findVehicleById(any(), any(), anyOrNull())).thenReturn(
-			Mono.just(VehicleModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+			Mono.just(VehicleModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
 		)
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_U), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.header("If-Match", "\"1\"")
 			.bodyValue(vehicle)
 			.exchange()
@@ -588,7 +593,7 @@ class VehicleControllerTest: TestContext() {
 		// Assert
 		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
 
-		verify(service, never()).updateVehicleById(any(), eq(projectId), eq(uuid), any())
+		verify(service, never()).updateVehicleById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -604,7 +609,7 @@ class VehicleControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(vehicle)
 			.exchange()
 
@@ -622,20 +627,26 @@ class VehicleControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.disableVehicleById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
+		whenever(
+			service.disableVehicleById(
+				any(),
+				eq(defaultProjectId),
+				eq(uuid)
+			)
+		).thenReturn(Mono.just(VehicleModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_U), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<VehicleReaderDto>(OK)
 
-		verify(service).disableVehicleById(any(), eq(projectId), eq(uuid))
+		verify(service).disableVehicleById(any(), eq(defaultProjectId), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -646,20 +657,20 @@ class VehicleControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.enableVehicleById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
+		whenever(service.enableVehicleById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.just(VehicleModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_U), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.post()
-			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<VehicleReaderDto>(OK)
 
-		verify(service).enableVehicleById(any(), eq(projectId), eq(uuid))
+		verify(service).enableVehicleById(any(), eq(defaultProjectId), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -676,7 +687,7 @@ class VehicleControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_D), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.delete()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -685,14 +696,21 @@ class VehicleControllerTest: TestContext() {
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).deleteVehicleById(any(), eq(projectId), eq(uuid))
+		verify(service).deleteVehicleById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
 	fun `Should findVehicles forward brand and model to the service`() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
-		val searchParams = VehicleSearchParamModel(query = null, isVisible = null, status = null, at = null, brand = "Renault", model = "Trafic")
+		val searchParams = VehicleSearchParamModel(
+			query = null,
+			isVisible = null,
+			status = null,
+			at = null,
+			brand = "Renault",
+			model = "Trafic"
+		)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(VehicleModel()))
 		whenever(service.findVehiclesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
@@ -703,12 +721,18 @@ class VehicleControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.get()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("brand", "Renault"), Pair("model", "Trafic"))))
+			.uri(
+				uriBuilder(
+					BASE_URL,
+					listOf(defaultProjectId),
+					listOf(Pair("brand", "Renault"), Pair("model", "Trafic"))
+				)
+			)
 			.exchange()
 
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findVehiclesPage(projectId, pageable, searchParams)
+		verify(service).findVehiclesPage(defaultProjectId, pageable, searchParams)
 	}
 }

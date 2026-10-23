@@ -55,10 +55,10 @@ object ProjectProfileQueries {
         (
             :isAvailable IS NULL OR :isAvailable = (
                 (
-                    (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIMETZ)) <= CURRENT_TIMESTAMP
+                    (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    (COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_PROFILE_END_ACCESS_TIME, '23:59:59.999999'::TIMETZ)) >= CURRENT_TIMESTAMP
+                    (COALESCE(t.$PROJECT_PROFILE_END_ACCESS_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_PROFILE_END_ACCESS_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                 )
             )
         )

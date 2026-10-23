@@ -61,10 +61,14 @@ interface IProjectV2Controller {
 		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
+		@Parameter(description = "Favorite filter: true keeps the favorites of the current User only, false keeps the others, omitted keeps both")
+		@RequestParam(required = false) isFavorite: Boolean?,
+		@Parameter(description = "Profile filter: true keeps the Projects the current User has a valid Profile on, false keeps all the Projects (requires REGISTRY_PROJECT_R authority), omitted defaults to false with the authority and true without")
+		@RequestParam(required = false) withProfile: Boolean?,
 		@Parameter(description = "Instant that must fall inside the validity window")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: name, begin, end")
+		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: name, begin, end, participants, groups, acceptedProfiles, vehicles, activities, activeAlerts, favorite")
 		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<ProjectWithProfileReaderDto>>
 
@@ -122,6 +126,24 @@ interface IProjectV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable id: UUID,
 	): Mono<ProjectWithProfileReaderDto>
+
+	@Operation(
+		summary = "Favorite Project",
+		description = "Mark the Project as a favorite of the current User. Idempotent.",
+	)
+	@PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
+	@PostMapping("/{id}/favorite")
+	@ResponseStatus(NO_CONTENT)
+	fun addFavoriteProject(@AuthenticationPrincipal currentUser: CurrentUserModel, @PathVariable id: UUID): Mono<Unit>
+
+	@Operation(
+		summary = "Unfavorite Project",
+		description = "Remove the Project from the favorites of the current User. Idempotent.",
+	)
+	@PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
+	@DeleteMapping("/{id}/favorite")
+	@ResponseStatus(NO_CONTENT)
+	fun removeFavoriteProject(@AuthenticationPrincipal currentUser: CurrentUserModel, @PathVariable id: UUID): Mono<Unit>
 
 	@Operation(
 		summary = "Delete Project",

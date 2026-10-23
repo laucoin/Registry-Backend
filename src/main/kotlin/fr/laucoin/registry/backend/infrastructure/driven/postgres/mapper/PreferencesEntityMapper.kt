@@ -14,6 +14,7 @@ class PreferencesEntityMapper: IEntityMapper<PreferencesModel, PreferencesEntity
 			userId = entity.userId
 			theme = entity.theme
 			language = entity.language
+			refreshMode = entity.refreshMode
 		}.fillWithEntity(entity)
 	}
 
@@ -22,6 +23,7 @@ class PreferencesEntityMapper: IEntityMapper<PreferencesModel, PreferencesEntity
 			userId = model.userId
 			theme = model.theme
 			language = model.language
+			refreshMode = model.refreshMode
 		}.fillWithModel(model)
 	}
 }

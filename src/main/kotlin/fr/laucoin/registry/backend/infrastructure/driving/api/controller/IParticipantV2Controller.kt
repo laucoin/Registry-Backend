@@ -82,13 +82,15 @@ interface IParticipantV2Controller {
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Account filter: true keeps participants linked to a user only, false keeps the others only, omitted keeps both")
 		@RequestParam(required = false) hasUser: Boolean?,
+		@Parameter(description = "On-site filter: true keeps participants that arrived and have not left yet, false keeps the others, omitted keeps both")
+		@RequestParam(required = false) onSite: Boolean?,
 		@Parameter(description = "Earliest birthday (inclusive), ISO date. Participants without birthday are excluded")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE) birthdayFrom: LocalDate?,
 		@Parameter(description = "Latest birthday (inclusive), ISO date. Participants without birthday are excluded")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE) birthdayTo: LocalDate?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: firstName, lastName, birthday, type, startAvailability, endAvailability")
+		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: firstName, lastName, birthday, type, startAvailability, endAvailability, status (OVERDUE, OUT, IN, UNAVAILABLE)")
 		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<ParticipantReaderDto>>
 

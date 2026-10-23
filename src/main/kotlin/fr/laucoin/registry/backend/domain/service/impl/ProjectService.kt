@@ -16,6 +16,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -37,6 +38,7 @@ import reactor.core.publisher.Mono
 class ProjectService(
 	private val port: IProjectPort,
 	private val profilePort: IProjectProfilePort,
+	private val favoritePort: IProjectFavoritePort,
 	private val userProjectProfileService: IUserProjectProfileService,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
@@ -48,17 +50,20 @@ class ProjectService(
 		withProfile: Boolean,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
+		searchParams.userId = currentUser.id
 		return (if (!withProfile) {
 			port.findPage(pageable, searchParams)
 		} else port.findPage(
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),
 			pageable,
 			searchParams
-		)).withCurrentUserProfiles(currentUser)
+		)).withCurrentUserProfiles(currentUser).withFavorites(currentUser)
 	}
 
 	override fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
-		return findProjectById(id, isVisible = null).withCurrentUserProfile(currentUser)
+		return findProjectById(id, isVisible = null)
+			.withCurrentUserProfile(currentUser)
+			.withFavorite(currentUser)
 	}
 
 	private fun Mono<ProjectModel>.withCurrentUserProfile(currentUser: CurrentUserModel): Mono<ProjectModel> =
@@ -88,6 +93,33 @@ class ProjectService(
 					page
 				}
 		}
+
+	private fun Mono<ProjectModel>.withFavorite(currentUser: CurrentUserModel): Mono<ProjectModel> =
+		flatMap { project ->
+			favoritePort.findFavoriteProjectIds(currentUser.id!!, listOf(project.id!!))
+				.hasElements()
+				.map { project.apply { favorite = it } }
+		}
+
+	private fun Mono<PageModel<ProjectModel>>.withFavorites(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> =
+		flatMap { page ->
+			favoritePort.findFavoriteProjectIds(currentUser.id!!, page.content.mapNotNull { it.id })
+				.collectList()
+				.map { it.toSet() }
+				.map { favoriteIds ->
+					page.content.forEach { it.favorite = it.id in favoriteIds }
+					page
+				}
+		}
+
+	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return findProjectById(id, isVisible = null)
+			.flatMap { favoritePort.add(currentUser.id!!, id) }
+	}
+
+	override fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return favoritePort.remove(currentUser.id!!, id)
+	}
 
 	override fun findProjectById(id: UUID, isVisible: Boolean?): Mono<ProjectModel> {
 		return port.findById(id, isVisible)
@@ -154,6 +186,7 @@ class ProjectService(
 			}
 			.withCurrentUserProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	override fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel> {
@@ -179,6 +212,8 @@ class ProjectService(
 					.thenReturn(updated)
 			}
 			.withCurrentUserProfile(currentUser)
+			.withFavorite(currentUser)
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun Mono<ProjectModel>.validateDates(project: ProjectModel): Mono<ProjectModel> = flatMap {
