@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
+import org.springframework.security.access.prepost.PreAuthorize
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.AUTHENTICATION_REDIRECT_URI_MAX
@@ -63,8 +64,9 @@ interface ISecurityV2Controller {
 		summary = "Get Current User",
 		description = "Get the logged in User",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@GetMapping("/user/current")
 	fun findCurrentUser(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
-	): CurrentUserReaderDto
+	): Mono<CurrentUserReaderDto>
 }

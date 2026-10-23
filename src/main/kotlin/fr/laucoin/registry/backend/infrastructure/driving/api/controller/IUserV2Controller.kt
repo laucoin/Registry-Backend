@@ -135,6 +135,7 @@ interface IUserV2Controller {
 		summary = "Delete Current User",
 		description = "Delete all Current User data",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@DeleteMapping("/current")
 	@ResponseStatus(NO_CONTENT)
 	fun deleteCurrentUser(@AuthenticationPrincipal currentUser: CurrentUserModel): Mono<Unit>
