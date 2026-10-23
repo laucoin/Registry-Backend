@@ -73,6 +73,7 @@ import reactor.kotlin.core.util.function.component4
 import reactor.kotlin.core.util.function.component5
 import reactor.util.function.Tuple2
 import java.time.Clock
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.Objects
@@ -104,6 +105,8 @@ class MovementService(
 	private val maxActivityResult: Int,
 	@param:Value($$"${registry.feature.movement.planned.max-result}")
 	private val maxPlannedResult: Int,
+	@param:Value($$"${registry.feature.movement.future-tolerance}")
+	private val futureTolerance: Duration,
 ) : IMovementService, GenericService() {
 	override fun findMovementsPage(
 		projectId: UUID,
@@ -373,7 +376,7 @@ class MovementService(
 	}
 
 	private fun validateMovementIsNotInFuture(movement: MovementModel): Mono<MovementModel> {
-		return if (movement.dateTime.isAfter(ZonedDateTime.now(clock)))
+		return if (movement.dateTime.isAfter(ZonedDateTime.now(clock).plus(futureTolerance)))
 			Mono.error(RegistryException(BAD_REQUEST, MOVEMENT_DATETIME_IN_FUTURE))
 		else Mono.just(movement)
 	}

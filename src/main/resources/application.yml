@@ -77,6 +77,7 @@ registry:
         max-activity-result: 10
       planned:
         max-result: 200
+      future-tolerance: ${REGISTRY_MOVEMENT_FUTURE_TOLERANCE:2m}
     alert:
       criticality:
         reinforced-after-hours: 6

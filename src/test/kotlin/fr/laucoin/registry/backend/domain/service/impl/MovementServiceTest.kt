@@ -97,6 +97,7 @@ import reactor.test.StepVerifier
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.Duration
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -127,6 +128,7 @@ class MovementServiceTest {
 		MAX_VEHICLES,
 		MAX_ACTIVITIES,
 		MAX_PLANNED,
+		FUTURE_TOLERANCE,
 	)
 
 	private val service = buildService(Clock.systemUTC())
@@ -137,6 +139,7 @@ class MovementServiceTest {
 		private const val MAX_VEHICLES = 3
 		private const val MAX_ACTIVITIES = 4
 		private const val MAX_PLANNED = 5
+		private val FUTURE_TOLERANCE: Duration = Duration.ofMinutes(2)
 		private val PLANNED_DAY = LocalDate.of(2026, 7, 14)
 
 		@JvmStatic
@@ -630,6 +633,25 @@ class MovementServiceTest {
 		assertEquals(BAD_REQUEST, result.status)
 		assertEquals(MOVEMENT_DATETIME_IN_FUTURE, result.code)
 		verifyNoInteractions(port)
+	}
+
+	@Test
+	fun `Should createMovement accept a movement dated within the future tolerance`() {
+		// Arrange
+		val participantContent = MovementContentModel().apply { participant = defaultParticipant() }
+		val movement = defaultMovement().apply {
+			contentType = REGISTERED
+			content = listOf(participantContent)
+			dateTime = ZonedDateTime.now().plusMinutes(1)
+		}
+		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(port.create(any())).thenReturn(Mono.just(movement))
+
+		// Act
+		service.createMovement(currentUser(), movement).block()
+
+		// Assert
+		verify(port).create(any())
 	}
 
 	@Test
