@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -9,6 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_LAST_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_START_LATER_THAN_END
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
@@ -20,6 +22,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -59,12 +62,16 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CREATED
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpStatus.PRECONDITION_FAILED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
@@ -94,7 +101,7 @@ class ParticipantControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/participants"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/participants"
 
 		@JvmStatic
 		fun `Should findParticipants return 200`(): Stream<Arguments> = Stream.of(
@@ -195,25 +202,25 @@ class ParticipantControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findParticipants return 200`(
 		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		statusSearched: PresenceStatusEnum?,
-		dateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: Boolean?,
+		status: PresenceStatusEnum?,
+		at: String?,
 	) {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = ParticipantSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = visibilitySearched,
-			statusSearched = statusSearched,
-			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			query = query,
+			isVisible = isVisible,
+			status = status,
+			at = at?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
-		whenever(service.findParticipantsPage(any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
+		whenever(service.findParticipantsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ParticipantReaderDto())),
 		)
@@ -227,12 +234,12 @@ class ParticipantControllerTest: TestContext() {
 					BASE_URL,
 					listOf(projectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("statusSearched", statusSearched),
-						Pair("dateTimeSearched", dateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
+						Pair("status", status),
+						Pair("at", at),
 					),
 				)
 			)
@@ -243,7 +250,7 @@ class ParticipantControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findParticipantsPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page)
+		verify(readerMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
@@ -252,8 +259,8 @@ class ParticipantControllerTest: TestContext() {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findParticipants throw due to wrong params`(
-		pageNumber: Int?,
-		pageSize: Int?,
+		page: Int?,
+		size: Int?,
 		expectedMessage: String,
 	) {
 		// Act
@@ -265,8 +272,8 @@ class ParticipantControllerTest: TestContext() {
 					BASE_URL,
 					listOf(projectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
+						Pair("page", page),
+						Pair("size", size),
 					),
 				)
 			)
@@ -303,37 +310,37 @@ class ParticipantControllerTest: TestContext() {
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(service).findParticipantById(projectId, uuid, visibilitySearched = null)
+		verify(service).findParticipantById(projectId, uuid, isVisible = null)
 	}
 
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findParticipantMovements return 200`(
-		pageNumber: Int?,
-		pageSize: Int?,
-		visibilitySearched: Boolean?,
-		typeSearched: MovementTypeEnum?,
-		startDateTimeSearched: String?,
-		endDateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		isVisible: Boolean?,
+		type: MovementTypeEnum?,
+		from: String?,
+		to: String?,
 	) {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = MovementSearchParamModel(
-			visibilitySearched = visibilitySearched,
-			typeSearched = typeSearched,
-			startDateTimeSearched = startDateTimeSearched?.let {
+			isVisible = isVisible,
+			type = type,
+			from = from?.let {
 				ZonedDateTime.parse(
 					it,
 					DateTimeFormatter.ISO_DATE_TIME
 				)
 			},
-			endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
-		whenever(service.findParticipantMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
+		whenever(service.findParticipantMovementsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(movementReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
@@ -347,12 +354,12 @@ class ParticipantControllerTest: TestContext() {
 					"$BASE_URL/{id}/movements",
 					listOf(projectId, uuid),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("typeSearched", typeSearched),
-						Pair("startDateTimeSearched", startDateTimeSearched),
-						Pair("endDateTimeSearched", endDateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("isVisible", isVisible),
+						Pair("type", type),
+						Pair("from", from),
+						Pair("to", to),
 					),
 				)
 			)
@@ -362,7 +369,7 @@ class ParticipantControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findParticipantMovementsPage(projectId, uuid, pageable, searchParams)
-		verify(movementReaderMapper).toDtoPage(page)
+		verify(movementReaderMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
@@ -372,8 +379,8 @@ class ParticipantControllerTest: TestContext() {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findParticipantMovements throw due to wrong params`(
-		pageNumber: Int?,
-		pageSize: Int?,
+		page: Int?,
+		size: Int?,
 		expectedMessage: String,
 	) {
 		// Arrange
@@ -388,8 +395,8 @@ class ParticipantControllerTest: TestContext() {
 					"$BASE_URL/{id}/movements",
 					listOf(projectId, uuid),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
+						Pair("page", page),
+						Pair("size", size),
 					),
 				)
 			)
@@ -419,7 +426,7 @@ class ParticipantControllerTest: TestContext() {
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_METADATA_R))
 			.get()
 			.uri(
-				uriBuilder("$BASE_URL/search/users", listOf(projectId), listOf(Pair("textSearched", searched)))
+				uriBuilder("$BASE_URL/search/users", listOf(projectId), listOf(Pair("q", searched)))
 			)
 			.exchange()
 
@@ -446,7 +453,7 @@ class ParticipantControllerTest: TestContext() {
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_METADATA_R))
 			.get()
 			.uri(
-				uriBuilder("$BASE_URL/search/groups", listOf(projectId), listOf(Pair("textSearched", searched)))
+				uriBuilder("$BASE_URL/search/groups", listOf(projectId), listOf(Pair("q", searched)))
 			)
 			.exchange()
 
@@ -461,12 +468,13 @@ class ParticipantControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should createParticipant return 200`() {
+	fun `Should createParticipant return 201`() {
 		// Arrange
+		val createdId = UUID.randomUUID()
 		val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
 		whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
-		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto().apply { id = createdId })
 
 		// Act
 		val result = webClient
@@ -477,7 +485,8 @@ class ParticipantControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ParticipantReaderDto>(OK)
+		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.body<ParticipantReaderDto>(CREATED)
 
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
@@ -486,8 +495,9 @@ class ParticipantControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should createParticipant return 200 with User and Groups`() {
+	fun `Should createParticipant return 201 with User and Groups`() {
 		// Arrange
+		val createdId = UUID.randomUUID()
 		val participant = ParticipantWriterDto(
 			firstName = "John",
 			lastName = "DOE",
@@ -497,7 +507,7 @@ class ParticipantControllerTest: TestContext() {
 		)
 		whenever(service.createParticipant(any(), any())).thenReturn(Mono.just(ParticipantModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
-		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto().apply { id = createdId })
 
 		// Act
 		val result = webClient
@@ -508,7 +518,8 @@ class ParticipantControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ParticipantReaderDto>(OK)
+		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.body<ParticipantReaderDto>(CREATED)
 
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
@@ -568,6 +579,63 @@ class ParticipantControllerTest: TestContext() {
 		verify(service).updateParticipantById(any(), eq(projectId), eq(uuid), any())
 	}
 
+	@Test
+	fun `Should updateParticipant accept the matching If-Match`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
+
+		whenever(service.updateParticipantById(any(), any(), any(), any())).thenReturn(Mono.just(ParticipantModel()))
+		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
+		whenever(readerMapper.toDto(any())).thenReturn(ParticipantReaderDto())
+		whenever(service.findParticipantById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(ParticipantModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1791885731000\"")
+			.bodyValue(participant)
+			.exchange()
+
+		// Assert
+		result.body<ParticipantReaderDto>(OK)
+
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(partialUserReaderMapper)
+		verify(writerMapper).toModel(participant, projectId)
+		verify(service).updateParticipantById(any(), eq(projectId), eq(uuid), any())
+	}
+
+	@Test
+	fun `Should updateParticipantById throw when the element changed since it was read`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH)
+
+		whenever(writerMapper.toModel(any(), any())).thenReturn(ParticipantModel())
+		whenever(service.findParticipantById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(ParticipantModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1\"")
+			.bodyValue(participant)
+			.exchange()
+
+		// Assert
+		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
+
+		verify(service, never()).updateParticipantById(any(), eq(projectId), eq(uuid), any())
+	}
+
 	@ParameterizedTest
 	@MethodSource("Wrong ParticipantDto")
 	fun `Should updateParticipantById return 400`(
@@ -612,7 +680,7 @@ class ParticipantControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -642,7 +710,7 @@ class ParticipantControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -656,7 +724,7 @@ class ParticipantControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should deleteParticipantById return 200`() {
+	fun `Should deleteParticipantById return 204`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
@@ -670,12 +738,69 @@ class ParticipantControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(groupReaderMapper)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verify(service).deleteParticipantById(any(), eq(projectId), eq(uuid))
+	}
+
+	@Test
+	fun `Should findParticipants forward the account and birthday filters to the service`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val searchParams = ParticipantSearchParamModel(
+			query = null,
+			at = null,
+			hasUser = true,
+			birthdayFrom = LocalDate.of(2000, 1, 1),
+			birthdayTo = LocalDate.of(2010, 12, 31),
+		)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ParticipantModel()))
+		whenever(service.findParticipantsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(ParticipantReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.get()
+			.uri(
+				uriBuilder(
+					BASE_URL,
+					listOf(projectId),
+					listOf(Pair("hasUser", true), Pair("birthdayFrom", "2000-01-01"), Pair("birthdayTo", "2010-12-31")),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findParticipantsPage(projectId, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should findParticipants throw when the birthday period is inverted`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.get()
+			.uri(
+				uriBuilder(
+					BASE_URL,
+					listOf(projectId),
+					listOf(Pair("birthdayFrom", "2010-12-31"), Pair("birthdayTo", "2000-01-01")),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, DATE_RANGE_FROM_LATER_THAN_TO)
+
+		verifyNoInteractions(service)
 	}
 }

@@ -24,7 +24,6 @@ class CurrentUserEntityMapper(
 			role = entity.role
 			birthday = entity.birthday
 			lastLogin = entity.lastLogin
-			purged = entity.purged ?: purged
 			preferences = mapPreferencesEntity(entity)
 		}.fillWithEntity(entity)
 	}

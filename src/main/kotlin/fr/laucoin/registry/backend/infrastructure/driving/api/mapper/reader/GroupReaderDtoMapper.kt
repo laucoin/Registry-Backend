@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class GroupReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val participantMapper: ParticipantReaderDtoMapper,
 ): IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
@@ -19,7 +18,6 @@ class GroupReaderDtoMapper(
 			status = Optional.ofNullable(model.status)
 				.map { availabilityStatusMapper.toDto(it, model.startAvailability, model.endAvailability) }
 				.orElse(null)
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			name = model.name
 			startAvailability = model.startAvailability
 			endAvailability = model.endAvailability

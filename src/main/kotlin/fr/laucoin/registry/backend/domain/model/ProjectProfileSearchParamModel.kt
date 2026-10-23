@@ -6,24 +6,40 @@ import java.time.ZonedDateTime
 import java.util.Objects
 
 data class ProjectProfileSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	var availabilitySearched: Boolean? = null,
-	val statusSearched: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
-	var dateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	var isAvailable: Boolean? = null,
+	val status: List<ProfileStatusEnum> = ProfileStatusEnum.entries.toList(),
+	var at: ZonedDateTime? = null,
+	var role: String? = null,
+	var sort: SortModel? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		availabilitySearched: Boolean? = null,
-		statusSearched: ProfileStatusEnum? = null,
-		dateTimeSearched: ZonedDateTime? = null,
+		query: String? = null,
+		isAvailable: Boolean? = null,
+		status: ProfileStatusEnum? = null,
+		at: ZonedDateTime? = null,
+		role: String? = null,
+		sort: SortModel? = null,
 	): this(
-		if (statusSearched === BLOCKED) false else null,
-		availabilitySearched,
-		if (Objects.nonNull(statusSearched) && statusSearched!! != BLOCKED) listOf(statusSearched) else ProfileStatusEnum.entries.toList(),
-		dateTimeSearched,
+		if (status === BLOCKED) false else null,
+		isAvailable,
+		if (Objects.nonNull(status) && status!! != BLOCKED) listOf(status) else ProfileStatusEnum.entries.toList(),
+		at,
+		role?.takeUnless { it.isBlank() },
+		sort = sort,
 	) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		this.query = if (query.isNullOrBlank()) null else query
+	}
+
+	companion object {
+		val SORT_FIELDS = setOf(
+			"firstName", "lastName", "email", "role", "status", "startAccess", "endAccess",
+		)
+
+		val PROJECT_SORT_FIELDS = setOf(
+			"projectName", "role", "status", "startAccess", "endAccess",
+		)
 	}
 }

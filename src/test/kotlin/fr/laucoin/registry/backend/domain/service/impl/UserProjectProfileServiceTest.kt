@@ -6,9 +6,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -33,11 +31,11 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
@@ -84,7 +82,7 @@ class UserProjectProfileServiceTest {
 	fun `Should findProjectProfilesPage call port findProjectProfilesPageByUserId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = ProjectProfileSearchParamModel(statusSearched = ACCEPTED)
+		val params = ProjectProfileSearchParamModel(status = ACCEPTED)
 
 		whenever(port.findProjectProfilesPageByUserId(any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
@@ -116,7 +114,7 @@ class UserProjectProfileServiceTest {
 		// Assert
 		assertEquals(user, result)
 
-		verify(port).findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
+		verify(port).findLevel0ProjectProfileRoleByUserId(userId, isVisible = true)
 	}
 
 	@ParameterizedTest
@@ -140,7 +138,7 @@ class UserProjectProfileServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(errorMessage, result.message)
 
-		verify(port).findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
+		verify(port).findLevel0ProjectProfileRoleByUserId(userId, isVisible = true)
 	}
 
 	@Test
@@ -230,10 +228,10 @@ class UserProjectProfileServiceTest {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
-		service.createUserProjectProfileFromProject(currentUser(), ProjectModel()).block()
+		service.createUserProjectProfileFromProject(currentUser(), ProjectModel().apply { id = projectId }).block()
 
 		// Assert
-		verify(port).create(any())
+		verify(port).create(argThat { this.projectId == projectId })
 		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
@@ -250,7 +248,7 @@ class UserProjectProfileServiceTest {
 
 		// Assert
 		verify(port).update(any())
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, isVisible = true)
 	}
 
 	@Test
@@ -272,7 +270,7 @@ class UserProjectProfileServiceTest {
 		assertEquals(projectProfileId.toString(), result.args?.first())
 
 		verify(port, never()).update(any())
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = true)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, isVisible = true)
 	}
 
 	@Test
@@ -288,7 +286,7 @@ class UserProjectProfileServiceTest {
 		service.deleteUserProjectProfileById(currentUser(), projectProfileId).block()
 
 		// Assert
-		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, visibilitySearched = null)
+		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, projectProfileId, isVisible = null)
 		verify(port).deleteById(projectProfileId)
 	}
 }

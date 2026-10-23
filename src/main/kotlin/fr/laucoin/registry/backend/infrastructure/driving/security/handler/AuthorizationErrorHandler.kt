@@ -17,7 +17,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.UNAUTHORIZED
-import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException
@@ -93,15 +93,15 @@ class AuthorizationErrorHandler(
 		args: Array<Any>? = null,
 	): Mono<DataBuffer> {
 		response.statusCode = status
-		response.headers.contentType = APPLICATION_JSON
+		response.headers.contentType = APPLICATION_PROBLEM_JSON
 
 		val locale = localeContextResolver.resolveLocaleContext(exchange).locale ?: Locale.getDefault()
 		val error = ErrorDto(
-			statusCode = status.value(),
-			statusName = status.name,
-			code = errorCode,
 			title = translateService.getError(code = "$ERROR_TITLE_PREFIX${status.value()}", locale = locale),
-			message = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode", args = args, locale = locale),
+			status = status.value(),
+			detail = translateService.getError(code = "$ERROR_MESSAGE_PREFIX$errorCode", args = args, locale = locale),
+			instance = exchange.request.path.value(),
+			code = errorCode,
 		)
 
 		return Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray()))

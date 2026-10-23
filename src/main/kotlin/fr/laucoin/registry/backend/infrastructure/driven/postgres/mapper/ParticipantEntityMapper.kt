@@ -37,7 +37,6 @@ class ParticipantEntityMapper(
 			status = buildStatus(entity.lastMovementType)
 			lastMovement = entity.lastMovementDateTime
 			user = mapUser(entity)
-			purged = entity.purged
 		}.fillWithProjectAndEntity(entity)
 	}
 
@@ -77,7 +76,6 @@ class ParticipantEntityMapper(
 			endAvailabilityDate = model.endAvailability?.date
 			endAvailabilityTime = model.endAvailability?.time
 			userId = model.user?.id
-			purged = model.purged
 		}.fillWithProjectAndModel(model)
 	}
 }

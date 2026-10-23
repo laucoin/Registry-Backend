@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IRegist
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
 import java.util.Locale
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
@@ -122,7 +123,13 @@ class RegistryControllerAdvice(
 			locale = locale,
 		)
 
-		val body = ErrorDto(status.value(), status.name, code, title, message)
-		return Mono.just(ResponseEntity.status(status).body(body))
+		val body = ErrorDto(
+			title = title,
+			status = status.value(),
+			detail = message,
+			instance = exchange.request.path.value(),
+			code = code,
+		)
+		return Mono.just(ResponseEntity.status(status).contentType(APPLICATION_PROBLEM_JSON).body(body))
 	}
 }

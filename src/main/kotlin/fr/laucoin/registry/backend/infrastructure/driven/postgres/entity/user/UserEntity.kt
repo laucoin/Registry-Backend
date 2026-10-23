@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_OIDC_ID
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TYPE
@@ -36,7 +35,5 @@ open class UserEntity(
 	var birthday: LocalDate? = null,
 	@Column(USER_LAST_LOGIN)
 	var lastLogin: ZonedDateTime? = null,
-	@Column(USER_PURGED)
-	var purged: Boolean? = null,
 ): GenericEntity()
 

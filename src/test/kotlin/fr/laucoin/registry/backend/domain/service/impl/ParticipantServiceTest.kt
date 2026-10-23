@@ -263,13 +263,13 @@ class ParticipantServiceTest {
 	@Test
 	fun `Should searchUsers call userPort findWithLimit`() {
 		// Arrange
-		val textSearched = "text"
-		val expectedSearch = UserSearchParamModel(textSearched, visibilitySearched = true)
+		val query = "text"
+		val expectedSearch = UserSearchParamModel(query, isVisible = true)
 
 		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.empty())
 
 		// Act
-		service.searchUsersByText(projectId, textSearched).blockFirst()
+		service.searchUsersByText(projectId, query).blockFirst()
 
 		// Assert
 		verify(userPort).findWithLimit(MAX_USERS, expectedSearch)
@@ -278,13 +278,13 @@ class ParticipantServiceTest {
 	@Test
 	fun `Should searchGroups call groupPort findWithLimit`() {
 		// Arrange
-		val textSearched = "text"
-		val expectedSearch = GroupSearchParamModel(textSearched, visibilitySearched = true)
+		val query = "text"
+		val expectedSearch = GroupSearchParamModel(query, isVisible = true)
 
 		whenever(groupPort.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
 		// Act
-		service.searchGroupsByText(projectId, textSearched).blockFirst()
+		service.searchGroupsByText(projectId, query).blockFirst()
 
 		// Assert
 		verify(groupPort).findWithLimit(MAX_GROUPS, projectId, expectedSearch)
@@ -294,7 +294,7 @@ class ParticipantServiceTest {
 	fun `Should findParticipantMovementsPage call movementPort findPageByParticipantId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = IN)
+		val params = MovementSearchParamModel(type = IN)
 
 		whenever(movementPort.findPageByParticipantId(any(), any(), any(), any())).thenReturn(Mono.empty())
 
@@ -442,11 +442,11 @@ class ParticipantServiceTest {
 		verify(projectService).validateDateTimes(
 			eq(projectId), anyOrNull(), anyOrNull(), eq(PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE)
 		)
-		verify(port).findById(projectId, participantId, visibilitySearched = null)
+		verify(port).findById(projectId, participantId, isVisible = null)
 		verify(port, times(expectedUserVerification))
 			.findByUserId(eq(projectId), any())
 		verify(groupPort, times(expectedGroupVerification))
-			.findAllByIds(projectId, newGroups.mapNotNull { it.id }, visibilitySearched = null)
+			.findAllByIds(projectId, newGroups.mapNotNull { it.id }, isVisible = null)
 		verify(movementPort, times(expectedMovementVerification))
 			.countAllByParticipantId(eq(projectId), eq(participantId), any())
 		verify(port).update(any())
@@ -480,7 +480,7 @@ class ParticipantServiceTest {
 		verify(projectService).validateDateTimes(
 			eq(projectId), anyOrNull(), anyOrNull(), eq(PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE),
 		)
-		verify(port).findById(projectId, participantId, visibilitySearched = null)
+		verify(port).findById(projectId, participantId, isVisible = null)
 		verify(movementPort).countAllByParticipantId(eq(projectId), eq(participantId), any())
 		verify(port, never()).update(any())
 	}
@@ -506,9 +506,9 @@ class ParticipantServiceTest {
 		service.disableParticipantById(currentUser(), projectId, participantId).block()
 
 		// Assert
-		verify(port).findById(projectId, participantId, visibilitySearched = true)
+		verify(port).findById(projectId, participantId, isVisible = true)
 		verify(groupPort, times(expectedCallGroupVerification)).findAllByIds(
-			projectId, participantGroups.mapNotNull { it.id }, visibilitySearched = null,
+			projectId, participantGroups.mapNotNull { it.id }, isVisible = null,
 		)
 		verify(port).update(participant.apply { visible = false })
 	}
@@ -532,8 +532,8 @@ class ParticipantServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER, result.message)
 
-		verify(port).findById(projectId, participantId, visibilitySearched = true)
-		verify(groupPort).findAllByIds(projectId, listOf(groupId), visibilitySearched = null)
+		verify(port).findById(projectId, participantId, isVisible = true)
+		verify(groupPort).findAllByIds(projectId, listOf(groupId), isVisible = null)
 		verify(port, never()).update(any())
 	}
 
@@ -548,7 +548,7 @@ class ParticipantServiceTest {
 		service.enableParticipantById(currentUser(), projectId, participantId).block()
 
 		// Assert
-		verify(port).findById(projectId, participantId, visibilitySearched = false)
+		verify(port).findById(projectId, participantId, isVisible = false)
 		verify(port).update(commonParticipant())
 	}
 
@@ -563,7 +563,7 @@ class ParticipantServiceTest {
 		service.deleteParticipantById(currentUser(), projectId, participantId).block()
 
 		// Assert
-		verify(port).findById(projectId, participantId, visibilitySearched = null)
+		verify(port).findById(projectId, participantId, isVisible = null)
 		verify(movementPort).countAllByParticipantId(projectId, participantId, MovementSearchParamModel())
 		verify(port).deleteById(participantId)
 	}
@@ -583,7 +583,7 @@ class ParticipantServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PARTICIPANT_DELETE_HAS_MOVEMENT, result.message)
 
-		verify(port).findById(projectId, participantId, visibilitySearched = null)
+		verify(port).findById(projectId, participantId, isVisible = null)
 		verify(movementPort).countAllByParticipantId(projectId, participantId, MovementSearchParamModel())
 		verify(port, never()).deleteById(any())
 	}

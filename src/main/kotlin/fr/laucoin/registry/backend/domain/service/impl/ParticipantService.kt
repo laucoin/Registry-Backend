@@ -62,34 +62,34 @@ class ParticipantService(
 	}
 
 	override fun findBirthdays(projectId: UUID): Flux<ParticipantModel> {
-		return port.findBirthdays(projectId, visibilitySearched = true)
+		return port.findBirthdays(projectId, isVisible = true)
 	}
 
 	override fun findParticipantsByIds(
 		projectId: UUID,
 		ids: List<UUID>,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ParticipantModel> {
-		return port.findAllByIds(projectId, ids, visibilitySearched)
+		return port.findAllByIds(projectId, ids, isVisible)
 	}
 
-	override fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
-		return port.findById(projectId, id, visibilitySearched)
+	override fun findParticipantById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel> {
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
-	override fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel> {
+	override fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel> {
 		return userPort.findWithLimit(
 			maxUserResult,
-			UserSearchParamModel(textSearched, visibilitySearched = true),
+			UserSearchParamModel(query, isVisible = true),
 		)
 	}
 
-	override fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel> {
+	override fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel> {
 		return groupPort.findWithLimit(
 			maxGroupResult,
 			projectId,
-			GroupSearchParamModel(textSearched, visibilitySearched = true),
+			GroupSearchParamModel(query, isVisible = true),
 		)
 	}
 
@@ -112,19 +112,19 @@ class ParticipantService(
 		participant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return projectService.validateDateTimes(
-			participant.project!!.id!!,
+			participant.projectId!!,
 			participant.startAvailability,
 			participant.endAvailability,
 			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
 			.flatMap {
 				if (Objects.nonNull(participant.user)) {
-					validateNoParticipantForUser(participant.project!!.id!!, participant.user!!.id!!)
+					validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
 				} else Mono.just(emptyList())
 			}
 			.flatMap {
 				if (participant.groups.isNotEmpty()) {
-					validateGroups(participant.project!!.id!!, participant, participant.groups.mapNotNull { g -> g.id })
+					validateGroups(participant.projectId!!, participant, participant.groups.mapNotNull { g -> g.id })
 				} else Mono.just(participant)
 			}
 			.flatMap { port.create(participant.apply { create(currentUser) }) }
@@ -151,7 +151,7 @@ class ParticipantService(
 		participant: ParticipantModel,
 		newGroupIds: List<UUID>
 	): Mono<ParticipantModel> {
-		return groupPort.findAllByIds(projectId, newGroupIds, visibilitySearched = null)
+		return groupPort.findAllByIds(projectId, newGroupIds, isVisible = null)
 			.collectList()
 			.handle { it, handle ->
 				when {
@@ -181,16 +181,16 @@ class ParticipantService(
 		participant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return projectService.validateDateTimes(
-			participant.project!!.id!!,
+			participant.projectId!!,
 			participant.startAvailability,
 			participant.endAvailability,
 			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findParticipantById(projectId, id, visibilitySearched = null) }
+			.flatMap { findParticipantById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(participant, it) }
 			.flatMap { toUpdate ->
 				if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
-					validateNoParticipantForUser(participant.project!!.id!!, participant.user!!.id!!)
+					validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
 						.map { toUpdate }
 				} else {
 					Mono.just(toUpdate)
@@ -201,7 +201,7 @@ class ParticipantService(
 				if (newGroup.isEmpty()) {
 					Mono.just(it)
 				} else {
-					validateGroups(participant.project!!.id!!, it, newGroup)
+					validateGroups(participant.projectId!!, it, newGroup)
 				}
 			}
 			.map {
@@ -227,7 +227,7 @@ class ParticipantService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ParticipantModel> {
-		return findParticipantById(projectId, id, visibilitySearched = true)
+		return findParticipantById(projectId, id, isVisible = true)
 			.validateNotLastGroupMember(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER)
 			.updateVisibility(visibility = false)
 			.updateParticipant(currentUser)
@@ -238,13 +238,13 @@ class ParticipantService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ParticipantModel> {
-		return findParticipantById(projectId, id, visibilitySearched = false)
+		return findParticipantById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateParticipant(currentUser)
 	}
 
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findParticipantById(projectId, id, visibilitySearched = null)
+		return findParticipantById(projectId, id, isVisible = null)
 			.validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
 			.validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
 			.flatMap { port.deleteById(it.id!!) }
@@ -284,12 +284,12 @@ class ParticipantService(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return movementPort.countAllByParticipantId(
-			oldParticipant.project!!.id!!,
+			oldParticipant.projectId!!,
 			oldParticipant.id!!,
 			MovementSearchParamModel(
-				visibilitySearched = null,
-				typeSearched = null,
-				endDateTimeSearched = participant.startAvailability!!.toZonedDateTime(),
+				isVisible = null,
+				type = null,
+				to = participant.startAvailability!!.toZonedDateTime(),
 			)
 		).handle { it, handle ->
 			if (it > 0) {
@@ -313,12 +313,12 @@ class ParticipantService(
 		participant: ParticipantModel, oldParticipant: ParticipantModel
 	): Mono<ParticipantModel> {
 		return movementPort.countAllByParticipantId(
-			oldParticipant.project!!.id!!,
+			oldParticipant.projectId!!,
 			oldParticipant.id!!,
 			MovementSearchParamModel(
-				visibilitySearched = null,
-				typeSearched = null,
-				startDateTimeSearched = participant.endAvailability!!.toZonedDateTime(),
+				isVisible = null,
+				type = null,
+				from = participant.endAvailability!!.toZonedDateTime(),
 			)
 		).handle { it, handle ->
 			if (it > 0) {
@@ -340,7 +340,7 @@ class ParticipantService(
 
 	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
 		movementPort.countAllByParticipantId(
-			participantToUpdate.project!!.id!!,
+			participantToUpdate.projectId!!,
 			participantToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->
@@ -357,9 +357,9 @@ class ParticipantService(
 		}
 
 		groupPort.findAllByIds(
-			participantToUpdate.project!!.id!!,
+			participantToUpdate.projectId!!,
 			participantToUpdate.groups.mapNotNull { it.id },
-			visibilitySearched = null
+			isVisible = null
 		)
 			.any { it.members.size == 1 }
 			.flatMap { isLastMemberOfAGroup ->

@@ -38,7 +38,7 @@ class PurgeControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/purge"
+		private const val BASE_URL = "/api/v2/purge"
 	}
 
 	@Test

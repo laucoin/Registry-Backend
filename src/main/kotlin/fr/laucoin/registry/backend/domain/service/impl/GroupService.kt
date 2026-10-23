@@ -62,38 +62,38 @@ class GroupService(
 	override fun findGroupById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		memberVisibilitySearched: Boolean?,
-		memberAvailabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		memberIsVisible: Boolean?,
+		memberIsAvailable: Boolean?,
 	): Mono<GroupModel> {
 		return port.findByIdWithContent(
 			projectId,
 			id,
-			visibilitySearched,
-			memberVisibilitySearched,
-			memberAvailabilitySearched
+			isVisible,
+			memberIsVisible,
+			memberIsAvailable
 		)
 			.notFoundIfEmpty(id)
 	}
 
-	override fun searchParticipantsByText(projectId: UUID, textSearched: String?): Flux<ParticipantModel> {
+	override fun searchParticipantsByText(projectId: UUID, query: String?): Flux<ParticipantModel> {
 		return participantPort.findWithLimit(
 			maxParticipantResult,
 			projectId,
-			ParticipantSearchParamModel(typeSearched = REGISTERED, visibilitySearched = true).apply {
-				this.textSearched = textSearched
+			ParticipantSearchParamModel(type = REGISTERED, isVisible = true).apply {
+				this.query = query
 			},
 		)
 	}
 
 	override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateMembers(group.project!!.id!!, group, group.members.mapNotNull { p -> p.id }) }
+			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
 			.flatMap { port.create(group.apply { create(currentUser) }) }
 	}
 
@@ -104,7 +104,7 @@ class GroupService(
 		group: GroupModel
 	): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -113,9 +113,9 @@ class GroupService(
 				findGroupById(
 					projectId,
 					id,
-					visibilitySearched = null,
-					memberVisibilitySearched = null,
-					memberAvailabilitySearched = null
+					isVisible = null,
+					memberIsVisible = null,
+					memberIsAvailable = null
 				)
 			}
 			.flatMap {
@@ -143,9 +143,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.map { Pair(it, it.getNewMemberIds(memberIds)) }
 			.handle { it, handle ->
@@ -178,9 +178,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.map { it.apply { members = members.filter { m -> m.id != memberId } } }
 			.handle { it, handle ->
@@ -203,7 +203,7 @@ class GroupService(
 	}
 
 	private fun validateMembers(projectId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
-		return participantPort.findAllByIds(projectId, newMemberIds, visibilitySearched = null)
+		return participantPort.findAllByIds(projectId, newMemberIds, isVisible = null)
 			.filter { it.type == REGISTERED }
 			.collectList()
 			.handle { it, handle ->
@@ -231,9 +231,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = true,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = true,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.updateVisibility(visibility = false)
 			.updateGroup(currentUser)
@@ -243,9 +243,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = false,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = false,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.updateVisibility(visibility = true)
 			.updateGroup(currentUser)
@@ -255,9 +255,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.flatMap { port.deleteById(id) }
 	}

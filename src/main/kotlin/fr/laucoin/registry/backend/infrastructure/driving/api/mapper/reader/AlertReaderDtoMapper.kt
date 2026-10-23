@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class AlertReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val statusMapper: AlertStatusReaderDtoMapper,
 ): IGenericReaderDtoMapper<AlertModel, AlertReaderDto> {
 	override fun toDto(model: AlertModel): AlertReaderDto {
@@ -17,7 +16,6 @@ class AlertReaderDtoMapper(
 			status = Optional.ofNullable(model.status).map(statusMapper::toDto).orElse(null),
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

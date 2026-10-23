@@ -46,7 +46,6 @@ class CurrentUserReaderDtoMapperTest {
 			birthday = LocalDate.of(1980, 1, 1)
 			lastLogin = now
 			role = "ROLE"
-			purged = false
 			id = userId
 			visible = true
 			creation = HistoryModel()
@@ -62,7 +61,6 @@ class CurrentUserReaderDtoMapperTest {
 			birthday = LocalDate.of(1980, 1, 1),
 			lastLogin = now,
 			role = LabelDto(value = "ROLE", label = TRANSLATED),
-			purged = false,
 		).apply {
 			id = userId
 			visible = true
@@ -76,7 +74,7 @@ class CurrentUserReaderDtoMapperTest {
 				Arguments.of(model, dto, 1, 1),
 				Arguments.of(
 					CurrentUserModel().apply { lastLogin = now },
-					CurrentUserReaderDto(authorities = emptyList(), lastLogin = now, purged = false),
+					CurrentUserReaderDto(authorities = emptyList(), lastLogin = now),
 					0,
 					0,
 				),
@@ -146,15 +144,15 @@ class CurrentUserReaderDtoMapperTest {
 	) {
 		// Arrange
 		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(model),
 		)
 		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(dto),

@@ -211,7 +211,7 @@ Each reviewing agent must evaluate the proposed changes, provide feedback if nee
 | `technical/architecture.md`                                 | Hexagonal + reactive shape, request flow, deployment topology                                                                                                                                                    |
 | `technical/security.md`                                     | Enforcement view — auth flow, JWT→user conversion, RBAC enforcement, visibility gating, data protection                                                                                                          |
 | `technical/data-model.md`                                   | PostgreSQL schema, column conventions, tables, trigram search, migration history                                                                                                                                 |
-| `technical/api-reference.md`                                | Every `/api/v1` endpoint grouped by domain, with its required permission                                                                                                                                         |
+| `technical/api-reference.md`                                | Every `/api/v2` endpoint grouped by domain, with its required permission                                                                                                                                         |
 | `technical/getting-started.md`                              | Running the full stack locally                                                                                                                                                                                   |
 | `technical/adr/`                                            | ADRs **001–006, 009, 011** govern the backend (007, 008, 012 are frontend-scoped — ignore them here)                                                                                                             |
 
@@ -279,7 +279,7 @@ Constraints from the ADRs and the "accepted risks" tables — a change must not 
 - **Flyway owns the schema; migrations are forward-only** (`V1_0_0` …). R2DBC runtime never issues DDL. Never edit an
   applied migration — add a new `V…` file. (ADR 002, ADR 006)
 - **SQL is always parameterized.** Never build a query by concatenating user input.
-- **No unbounded collection is ever returned.** List endpoints paginate (`pageNumber` ≥ 0 default 0; `pageSize` 1–200
+- **No unbounded collection is ever returned.** List endpoints paginate (`page` ≥ 0 default 0; `size` 1–200
   default 20 → `PageModel`); `/search/**` pickers return a configured cap (default 10). (ADR 006)
 - **Errors are i18n message keys** resolved through `ErrorConst` + `resources/i18n` bundles via
   `RegistryControllerAdvice`; never hardcoded English. Internal messages and stack traces never reach the client.
@@ -292,15 +292,15 @@ Constraints from the ADRs and the "accepted risks" tables — a change must not 
   mid-session revocation. (ADR 005)
 - **Authentication stays delegated — no local password store.** Only four public endpoints (`/authentication/login/uri`,
   `/logout/uri`, `/token`, `/token/refresh`); `GET /`, Swagger/`api-docs`, `/actuator/**` are permitted unauthenticated
-  but serve content only when their feature flag is on. The JWT converter refuses blocked (`423`) and anonymized (`409`)
-  accounts and JIT-provisions first-time users with the default `USER` role. (ADR 004)
+  but serve content only when their feature flag is on. The JWT converter refuses blocked (`423`) accounts, rejects
+  email conflicts (`409`), and JIT-provisions first-time users with the default `USER` role. (ADR 004)
 - **No secret or personal data in logs or responses.** Tokens, client secrets, passwords, and personal data are never
   logged nor returned beyond what the endpoint's contract requires.
 - **CORS is an explicit allow-list**, never `*`.
-- **One API version: `/api/v1`.** There is no `/api/v2`. The irregular endpoints listed in `api-reference.md`
+- **One API version: `/api/v2`.** `/api/v1` was removed (breaking change, single controlled consumer). The irregular endpoints listed in `api-reference.md`
   (`.../profiles/{id}/accept/{accepted}`, `.../alerts/{id}/status/{status}`, the `impersonate` naming) are **frozen** —
   do not "fix" them with a breaking change.
-- **Retention purges are irreversible and gated.** `/api/v1/purge/**` requires `REGISTRY_JOB_C` (held only by
+- **Retention purges are irreversible and gated.** `/api/v2/purge/**` requires `REGISTRY_JOB_C` (held only by
   `USER_ADMINISTRATOR` / the single `SERVICE_ACCOUNT`); `dryRun` **defaults to `true`**; thresholds are configuration,
   not code; the four sweeps are staggered content-before-configuration to respect delete dependencies. There is no
   export before deletion. (ADR 011)

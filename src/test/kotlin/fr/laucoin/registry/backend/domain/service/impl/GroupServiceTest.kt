@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
@@ -60,9 +59,7 @@ class GroupServiceTest {
 		@JvmStatic
 		fun `Should createGroup check date, members and throw because a member is not visible or purged`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(commonParticipant().apply { visible = false; purged = false; type = REGISTERED }),
-				Arguments.of(commonParticipant().apply { purged = true; type = REGISTERED }),
-				Arguments.of(commonParticipant().apply { visible = false; purged = true; type = REGISTERED }),
+				Arguments.of(commonParticipant().apply { visible = false; type = REGISTERED }),
 			)
 		}
 
@@ -116,19 +113,19 @@ class GroupServiceTest {
 	fun `Should findGroupById call port findById`() {
 		// Arrange
 		val onlyVisible = true
-		val memberAvailabilitySearched = null
-		val memberVisibilitySearched = null
+		val memberIsAvailable = null
+		val memberIsVisible = null
 
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(commonGroup()))
 
 		// Act
-		service.findGroupById(projectId, groupId, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched)
+		service.findGroupById(projectId, groupId, onlyVisible, memberIsVisible, memberIsAvailable)
 			.block()
 
 		// Assert
 		verify(port).findByIdWithContent(
-			projectId, groupId, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched
+			projectId, groupId, onlyVisible, memberIsVisible, memberIsAvailable
 		)
 	}
 
@@ -136,15 +133,15 @@ class GroupServiceTest {
 	fun `Should findGroupById call port findById throw on empty result`() {
 		// Arrange
 		val onlyVisible = true
-		val memberAvailabilitySearched = true
-		val memberVisibilitySearched = true
+		val memberIsAvailable = true
+		val memberIsVisible = true
 
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.empty())
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findGroupById(projectId, groupId, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched)
+			service.findGroupById(projectId, groupId, onlyVisible, memberIsVisible, memberIsAvailable)
 				.block()
 		}) as RegistryException
 
@@ -155,22 +152,22 @@ class GroupServiceTest {
 		assertEquals(groupId.toString(), result.args?.first())
 
 		verify(port).findByIdWithContent(
-			projectId, groupId, onlyVisible, memberVisibilitySearched, memberAvailabilitySearched
+			projectId, groupId, onlyVisible, memberIsVisible, memberIsAvailable
 		)
 	}
 
 	@Test
 	fun `Should searchParticipants call port findWithLimit`() {
 		// Arrange
-		val textSearched = "text"
-		val expectedSearch = ParticipantSearchParamModel(null, REGISTERED, visibilitySearched = true).apply {
-			this.textSearched = textSearched
+		val query = "text"
+		val expectedSearch = ParticipantSearchParamModel(null, REGISTERED, isVisible = true).apply {
+			this.query = query
 		}
 
 		whenever(participantPort.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
 
 		// Act
-		service.searchParticipantsByText(projectId, textSearched).blockFirst()
+		service.searchParticipantsByText(projectId, query).blockFirst()
 
 		// Assert
 		verify(participantPort).findWithLimit(MAX_PARTICIPANTS, projectId, expectedSearch)
@@ -179,7 +176,7 @@ class GroupServiceTest {
 	@Test
 	fun `Should createGroup check date, members and call port create`() {
 		// Arrange
-		val participant = commonParticipant().apply { purged = false; type = REGISTERED }
+		val participant = commonParticipant().apply { type = REGISTERED }
 		val group = commonGroup().apply { members = listOf(participant) }
 
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
@@ -194,7 +191,7 @@ class GroupServiceTest {
 		verify(projectService).validateDateTimes(
 			projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(port).create(group)
 	}
 
@@ -217,7 +214,7 @@ class GroupServiceTest {
 		verify(projectService).validateDateTimes(
 			projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(port, never()).create(any())
 	}
 
@@ -241,7 +238,7 @@ class GroupServiceTest {
 		verify(projectService).validateDateTimes(
 			projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(port, never()).create(any())
 	}
 
@@ -261,7 +258,7 @@ class GroupServiceTest {
 			members = updatedParticipantIds.map { commonParticipant().apply { id = it } }
 		}
 		val newParticipants = newParticipantIds.map {
-			commonParticipant().apply { id = it; purged = false; type = REGISTERED }
+			commonParticipant().apply { id = it; type = REGISTERED }
 		}
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(projectId))
@@ -279,7 +276,7 @@ class GroupServiceTest {
 			projectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(participantPort, times(exceptedCallOnParticipantIds))
-			.findAllByIds(projectId, newParticipantIds, visibilitySearched = null)
+			.findAllByIds(projectId, newParticipantIds, isVisible = null)
 		verify(port).update(any())
 	}
 
@@ -296,7 +293,7 @@ class GroupServiceTest {
 			members = previousParticipantIds.map { commonParticipant().apply { id = it } }
 		}
 		val newParticipants = newParticipantIds.map {
-			commonParticipant().apply { id = it; purged = false; type = REGISTERED }
+			commonParticipant().apply { id = it; type = REGISTERED }
 		}
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(group))
@@ -311,11 +308,11 @@ class GroupServiceTest {
 		verify(port).findByIdWithContent(
 			projectId,
 			groupId,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null,
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null,
 		)
-		verify(participantPort).findAllByIds(projectId, newParticipantIds, visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, newParticipantIds, isVisible = null)
 		verify(port).update(any())
 	}
 
@@ -325,7 +322,7 @@ class GroupServiceTest {
 		val uuid = UUID.randomUUID()
 		val participantIds = listOf(UUID.randomUUID())
 		val group = GroupModel().apply {
-			project = ProjectModel().apply { id = projectId }
+			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 			members = participantIds.map { ParticipantModel().apply { id = it } }
 		}
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
@@ -343,9 +340,9 @@ class GroupServiceTest {
 		verify(port).findByIdWithContent(
 			projectId,
 			uuid,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null,
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null,
 		)
 		verify(port, never()).update(any())
 	}
@@ -378,9 +375,9 @@ class GroupServiceTest {
 		verify(port).findByIdWithContent(
 			projectId,
 			groupId,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 		verify(port).update(any())
 	}
@@ -415,9 +412,9 @@ class GroupServiceTest {
 		verify(port).findByIdWithContent(
 			projectId,
 			groupId,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 		verify(port, never()).update(any())
 	}
@@ -443,9 +440,9 @@ class GroupServiceTest {
 		verify(port).findByIdWithContent(
 			projectId,
 			groupId,
-			visibilitySearched = true,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = true,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 		verify(port).update(commonGroup().apply { visible = false })
 	}
@@ -471,9 +468,9 @@ class GroupServiceTest {
 		verify(port).findByIdWithContent(
 			projectId,
 			groupId,
-			visibilitySearched = false,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = false,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 		verify(port).update(commonGroup().apply { visible = true })
 	}
@@ -499,9 +496,9 @@ class GroupServiceTest {
 		verify(port).findByIdWithContent(
 			projectId,
 			groupId,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 		verify(port).deleteById(groupId)
 	}

@@ -17,7 +17,7 @@ class CookieBearerTokenHandlerTest {
 	fun `Should convert resolve the token from the Authorization header when present`() {
 		// Arrange
 		val exchange = MockServerWebExchange.from(
-			MockServerHttpRequest.get("/api/v1/whatever").header(AUTHORIZATION, "Bearer headerToken")
+			MockServerHttpRequest.get("/api/v2/whatever").header(AUTHORIZATION, "Bearer headerToken")
 		)
 
 		// Act
@@ -31,7 +31,7 @@ class CookieBearerTokenHandlerTest {
 	fun `Should convert fall back to the access token cookie when no header is present`() {
 		// Arrange
 		val exchange = MockServerWebExchange.from(
-			MockServerHttpRequest.get("/api/v1/whatever").cookie(HttpCookie(ACCESS_TOKEN_COOKIE, "cookieToken"))
+			MockServerHttpRequest.get("/api/v2/whatever").cookie(HttpCookie(ACCESS_TOKEN_COOKIE, "cookieToken"))
 		)
 
 		// Act
@@ -45,7 +45,7 @@ class CookieBearerTokenHandlerTest {
 	fun `Should convert prefer the Authorization header over the cookie when both are present`() {
 		// Arrange
 		val exchange = MockServerWebExchange.from(
-			MockServerHttpRequest.get("/api/v1/whatever")
+			MockServerHttpRequest.get("/api/v2/whatever")
 				.header(AUTHORIZATION, "Bearer headerToken")
 				.cookie(HttpCookie(ACCESS_TOKEN_COOKIE, "cookieToken"))
 		)
@@ -60,7 +60,7 @@ class CookieBearerTokenHandlerTest {
 	@Test
 	fun `Should convert return empty when neither header nor cookie is present`() {
 		// Arrange
-		val exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/whatever"))
+		val exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v2/whatever"))
 
 		// Act
 		val result = converter.convert(exchange).block()

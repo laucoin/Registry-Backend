@@ -35,7 +35,6 @@ class UserReaderDtoMapperTest {
 						role = "ADMIN"
 						birthday = LocalDate.now()
 						lastLogin = ZonedDateTime.now()
-						purged = false
 					},
 					1,
 				),
@@ -47,7 +46,6 @@ class UserReaderDtoMapperTest {
 						email = "john.doe@test.com"
 						birthday = LocalDate.now()
 						lastLogin = ZonedDateTime.now()
-						purged = false
 					},
 					0,
 				),
@@ -79,6 +77,5 @@ class UserReaderDtoMapperTest {
 		assertEquals(user.role, result.role?.value)
 		assertEquals(user.birthday, result.birthday)
 		assertEquals(user.lastLogin, result.lastLogin)
-		assertEquals(user.purged, result.purged)
 	}
 }

@@ -3,11 +3,12 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_OR_ALERT_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_METADATA_R
@@ -15,8 +16,10 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationTargetEnum
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
@@ -44,13 +47,17 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpStatus.PRECONDITION_FAILED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
@@ -71,7 +78,7 @@ class CommunicationControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/communications"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/communications"
 
 		@JvmStatic
 		fun `Should findCommunications prepare param, call service and finally cast the result`(): Stream<Arguments> {
@@ -86,6 +93,10 @@ class CommunicationControllerTest: TestContext() {
 				Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
 			)
 		}
+
+		@JvmStatic
+		fun `Should findCommunications forward the target filter to the service`(): Stream<Arguments> =
+			CommunicationTargetEnum.entries.stream().map { Arguments.of(it) }
 
 		@JvmStatic
 		fun `Should findCommunications throw due to wrong params`(): Stream<Arguments> {
@@ -170,30 +181,30 @@ class CommunicationControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findCommunications prepare param, call service and finally cast the result`(
 		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: String?,
-		endDateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: Boolean?,
+		from: String?,
+		to: String?,
 	) {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = CommunicationSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = visibilitySearched,
-			startDateTimeSearched = startDateTimeSearched?.let {
+			query = query,
+			isVisible = isVisible,
+			from = from?.let {
 				ZonedDateTime.parse(
 					it,
 					DateTimeFormatter.ISO_DATE_TIME
 				)
 			},
-			endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
-		whenever(service.findCommunicationPage(any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
+		whenever(service.findCommunicationPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(CommunicationReaderDto())),
 		)
@@ -210,12 +221,12 @@ class CommunicationControllerTest: TestContext() {
 					BASE_URL,
 					listOf(projectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("startDateTimeSearched", startDateTimeSearched),
-						Pair("endDateTimeSearched", endDateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
+						Pair("from", from),
+						Pair("to", to),
 					),
 				)
 			)
@@ -226,7 +237,7 @@ class CommunicationControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findCommunicationPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page)
+		verify(readerMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(writerMapper)
 	}
 
@@ -234,12 +245,12 @@ class CommunicationControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findCommunications throw due to wrong params`(
 		communicationProjectId: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		visibilitySearched: String?,
-		startDateTimeSearched: String?,
-		endDateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: String?,
+		from: String?,
+		to: String?,
 		expectedMessage: String,
 	) {
 		// Act
@@ -254,12 +265,12 @@ class CommunicationControllerTest: TestContext() {
 					BASE_URL,
 					if (Objects.nonNull(communicationProjectId)) listOf(communicationProjectId!!) else emptyList(),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("startDateTimeSearched", startDateTimeSearched),
-						Pair("endDateTimeSearched", endDateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
+						Pair("from", from),
+						Pair("to", to),
 					),
 				)
 			)
@@ -293,19 +304,20 @@ class CommunicationControllerTest: TestContext() {
 		// Assert
 		result.body<CommunicationReaderDto>(OK)
 
-		verify(service).findCommunicationById(projectId, uuid, visibilitySearched = null)
+		verify(service).findCommunicationById(projectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
 
 	@Test
-	fun `Should createCommunication return 200`() {
+	fun `Should createCommunication return 201`() {
 		// Arrange
+		val createdId = UUID.randomUUID()
 		val communication =
 			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
 
 		whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto().apply { id = createdId })
 		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
 
 		// Act
@@ -320,7 +332,8 @@ class CommunicationControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<CommunicationReaderDto>(OK)
+		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.body<CommunicationReaderDto>(CREATED)
 
 		verify(service).createCommunication(any(), any())
 		verify(readerMapper).toDto(any())
@@ -387,6 +400,85 @@ class CommunicationControllerTest: TestContext() {
 		verify(writerMapper).toModel(any(), eq(projectId))
 	}
 
+	@Test
+	fun `Should updateCommunication accept the matching If-Match`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val communication =
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
+
+		whenever(
+			service.updateCommunicationById(
+				any(),
+				any(),
+				any(),
+				any()
+			)
+		).thenReturn(Mono.just(CommunicationModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
+		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
+		whenever(service.findCommunicationById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(CommunicationModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1791885731000\"")
+			.bodyValue(communication)
+			.exchange()
+
+		// Assert
+		result.body<CommunicationReaderDto>(OK)
+
+		verify(service).updateCommunicationById(any(), eq(projectId), eq(uuid), any())
+		verify(readerMapper).toDto(any())
+		verify(writerMapper).toModel(any(), eq(projectId))
+	}
+
+	@Test
+	fun `Should updateCommunicationById throw when the element changed since it was read`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val communication =
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = movementId)
+
+		whenever(
+			service.updateCommunicationById(
+				any(),
+				any(),
+				any(),
+				any()
+			)
+		).thenReturn(Mono.just(CommunicationModel()))
+		whenever(writerMapper.toModel(any(), any())).thenReturn(CommunicationModel())
+		whenever(service.findCommunicationById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(CommunicationModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1\"")
+			.bodyValue(communication)
+			.exchange()
+
+		// Assert
+		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
+
+		verify(service, never()).updateCommunicationById(any(), eq(projectId), eq(uuid), any())
+	}
+
 	@ParameterizedTest
 	@MethodSource("Wrong CommunicationDto")
 	fun `Should updateCommunicationById return 400`(
@@ -430,7 +522,7 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U),
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -460,7 +552,7 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U),
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -473,7 +565,7 @@ class CommunicationControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should deleteCommunicationById return 200`() {
+	fun `Should deleteCommunicationById return 204`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
@@ -490,7 +582,7 @@ class CommunicationControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
@@ -498,7 +590,7 @@ class CommunicationControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should searchActivities return 200`() {
+	fun `Should searchMovements return 200`() {
 		// Arrange
 		whenever(service.searchOutMovementWithActivityByText(any(), anyOrNull())).thenReturn(Flux.empty())
 
@@ -509,7 +601,7 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert
@@ -519,12 +611,12 @@ class CommunicationControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should searchActivities throw due to missing communication option`() {
+	fun `Should searchMovements throw due to missing communication option`() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/movements", listOf(projectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert
@@ -545,7 +637,7 @@ class CommunicationControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT)
 			)
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert
@@ -560,11 +652,57 @@ class CommunicationControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_COMMUNICATION_METADATA_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("textSearched", "a"))))
+			.uri(uriBuilder("$BASE_URL/search/alerts", listOf(projectId), listOf(Pair("q", "a"))))
 			.exchange()
 
 		// Assert
 		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+		verifyNoInteractions(service)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findCommunications forward the target filter to the service`(target: CommunicationTargetEnum) {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val searchParams = CommunicationSearchParamModel(query = null, target = target)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
+		whenever(service.findCommunicationPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(CommunicationReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION),
+			)
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("target", target))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findCommunicationPage(projectId, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should findCommunications throw due to unknown target`() {
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION),
+			)
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("target", "SOMEWHERE"))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TYPE_MISMATCH)
 
 		verifyNoInteractions(service)
 	}

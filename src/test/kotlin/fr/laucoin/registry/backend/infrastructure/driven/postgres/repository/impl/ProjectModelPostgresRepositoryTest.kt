@@ -11,9 +11,11 @@ import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
+import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
@@ -66,14 +68,16 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			at = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -92,15 +96,17 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAllInProjectIds(
 			ids,
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			at = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -125,13 +131,13 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = port.findById(projectId, visibilitySearched = null).block()
+		val result = port.findById(projectId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -142,15 +148,24 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = port.findById(uuid, visibilitySearched = null).block()
+		val result = port.findById(uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findProjectsEligibleForPurge only select projects created before the threshold`() {
+		// Act & Assert
+		assertTrue(postgresRepository.findProjectsEligibleForPurge(LocalDate.EPOCH).collectList().block()!!.isEmpty())
+		assertTrue(
+			postgresRepository.findProjectsEligibleForPurge(LocalDate.now().plusYears(1)).collectList().block()!!.isNotEmpty()
+		)
 	}
 
 	@Nested

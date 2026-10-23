@@ -1,10 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.CommunicationTargetEnum
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ICommunicationEntityRepository
@@ -74,20 +74,38 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(550, result.totalElements)
 		assertEquals(55, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			from = null,
+			to = null,
+			target = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage split the communications by target`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+
+		// Act
+		val counts = CommunicationTargetEnum.entries.map {
+			repository.findPage(projectId, pageable, CommunicationSearchParamModel(query = null, target = it))
+				.block()!!.totalElements
+		}
+
+		// Assert
+		assertEquals(550L, counts.sum())
 	}
 
 	@ParameterizedTest
@@ -97,14 +115,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -112,14 +130,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, communicationId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, communicationId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			communicationId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -130,14 +148,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -156,7 +174,7 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				dateTime = ZonedDateTime.now()
 				message = "message"
 				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -180,7 +198,7 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				dateTime = ZonedDateTime.now()
 				message = "message updated"
 				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 

@@ -17,8 +17,8 @@ interface IProjectProfileService {
 		searchParams: ProjectProfileSearchParamModel,
 	): Mono<PageModel<ProjectProfileModel>>
 
-	fun findProjectProfileById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
-	fun searchUsers(textSearched: String?): Flux<UserModel>
+	fun findProjectProfileById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileModel>
+	fun searchUsers(query: String?): Flux<UserModel>
 	fun getAssignableProjectRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<String>
 	fun createProjectProfiles(
 		currentUser: CurrentUserModel,
