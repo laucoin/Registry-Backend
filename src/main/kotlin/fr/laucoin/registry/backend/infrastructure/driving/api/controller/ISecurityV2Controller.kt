@@ -1,15 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_BLANK
-import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.AUTHENTICATION_REDIRECT_URI_MAX
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AuthenticationInfoWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -27,7 +30,7 @@ interface ISecurityV2Controller {
 		description = "Build and return the OAuth2 provider authentication URI",
 	)
 	@GetMapping("/login/uri")
-	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?): AuthenticationUriModel
+	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) @Size(max = AUTHENTICATION_REDIRECT_URI_MAX, message = PARAMETER_TOO_LONG) redirectUri: String?): AuthenticationUriModel
 
 	@Operation(
 		summary = "OAuth2 logout URI",
@@ -35,7 +38,7 @@ interface ISecurityV2Controller {
 	)
 	@GetMapping("/logout/uri")
 	fun getLogoutUri(
-		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) redirectUri: String?,
+		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) @Size(max = AUTHENTICATION_REDIRECT_URI_MAX, message = PARAMETER_TOO_LONG) redirectUri: String?,
 		@Parameter(hidden = true) exchange: ServerWebExchange,
 	): Mono<AuthenticationUriModel>
 
@@ -45,7 +48,7 @@ interface ISecurityV2Controller {
 	)
 	@PostMapping("/token")
 	fun fetchToken(
-		@RequestBody @Valid authenticationInfo: AuthenticationInfoModel,
+		@RequestBody @Valid authenticationInfo: AuthenticationInfoWriterDto,
 		@Parameter(hidden = true) exchange: ServerWebExchange,
 	): Mono<Void>
 

@@ -9,6 +9,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
@@ -56,14 +58,14 @@ interface IProjectV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the project name (accent-insensitive substring)")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@Parameter(description = "Instant that must fall inside the validity window")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: name, begin, end")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<ProjectWithProfileReaderDto>>
 
 	@Operation(

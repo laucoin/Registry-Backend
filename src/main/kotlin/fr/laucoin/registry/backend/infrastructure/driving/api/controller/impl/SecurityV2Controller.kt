@@ -2,18 +2,18 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
-import fr.laucoin.registry.backend.domain.model.AuthenticationInfoModel
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
-import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
+import fr.laucoin.registry.backend.domain.service.IAuthenticationService
 import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService
 import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ISecurityV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AuthenticationInfoWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CurrentUserReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
@@ -23,7 +23,7 @@ import reactor.core.publisher.Mono
 
 @RestController
 class SecurityV2Controller(
-	private val authenticationPort: IAuthenticationPort,
+	private val authenticationService: IAuthenticationService,
 	private val cookieService: AuthenticationCookieService,
 	private val mapper: CurrentUserReaderDtoMapper,
 	private val userService: IUserService,
@@ -32,18 +32,18 @@ class SecurityV2Controller(
 	private val userIdKey: String,
 ) : ISecurityV2Controller, LoggerService() {
 	override fun getLoginUri(redirectUri: String?): AuthenticationUriModel {
-		return authenticationPort.getLoginUri(redirectUri!!)
+		return authenticationService.getLoginUri(redirectUri!!)
 	}
 
 	override fun getLogoutUri(redirectUri: String?, exchange: ServerWebExchange): Mono<AuthenticationUriModel> {
 		val accessToken = cookieService.extractAccessToken(exchange.request)
 		val refreshToken = cookieService.extractRefreshToken(exchange.request)
-		cookieService.clearAuthCookies(exchange.response)
-		return authenticationPort.getLogoutUri(redirectUri!!, accessToken, refreshToken)
+		return authenticationService.getLogoutUri(redirectUri!!, accessToken, refreshToken)
+			.doOnNext { cookieService.clearAuthCookies(exchange.response) }
 	}
 
-	override fun fetchToken(authenticationInfo: AuthenticationInfoModel, exchange: ServerWebExchange): Mono<Void> {
-		return authenticationPort.getAuthenticationToken(
+	override fun fetchToken(authenticationInfo: AuthenticationInfoWriterDto, exchange: ServerWebExchange): Mono<Void> {
+		return authenticationService.getAuthenticationToken(
 			authenticationInfo.authorizationCode!!,
 			authenticationInfo.redirectUri!!
 		)
@@ -55,7 +55,7 @@ class SecurityV2Controller(
 		val refreshToken = cookieService.extractRefreshToken(exchange.request)
 			?: return Mono.error(RegistryException(UNAUTHORIZED, REFRESH_TOKEN_OUTDATED))
 
-		return authenticationPort.refreshAuthenticationToken(refreshToken)
+		return authenticationService.refreshAuthenticationToken(refreshToken)
 			.doOnNext { cookieService.setAuthCookies(exchange.response, it) }
 			.flatMap { recordLogin(it) }
 	}

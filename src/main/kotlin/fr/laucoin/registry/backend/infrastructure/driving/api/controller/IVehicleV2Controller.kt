@@ -10,6 +10,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_HISTORY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_U
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -61,7 +63,7 @@ interface IVehicleV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the vehicle license plate, brand and model")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@RequestParam(required = false) status: PresenceStatusEnum?,
@@ -69,11 +71,11 @@ interface IVehicleV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Exact vehicle brand, ignoring case and accents")
-		@RequestParam(required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) brand: String?,
+		@RequestParam(required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) brand: String?,
 		@Parameter(description = "Exact vehicle model, ignoring case and accents")
-		@RequestParam(required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) model: String?,
+		@RequestParam(required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) model: String?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: licensePlate, brand, model, startAvailability, endAvailability")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<VehicleReaderDto>>
 
 	@Operation(
@@ -114,7 +116,7 @@ interface IVehicleV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, type")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<MovementReaderDto>>
 
 	@Operation(

@@ -19,25 +19,6 @@ class CommunicationPostgresRepository(
 	private val repository: ICommunicationEntityRepository,
 	private val mapper: CommunicationEntityMapper,
 ): ICommunicationPort {
-	override fun findPage(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel,
-	): Mono<PageModel<CommunicationModel>> {
-		return repository.findAll(
-			projectId,
-			searchParams.query,
-			searchParams.isVisible,
-			searchParams.from,
-			searchParams.to,
-			searchParams.target?.name,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
-		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
-	}
-
 	override fun findByMovementIdsWithLimit(
 		limit: Int,
 		projectId: UUID,

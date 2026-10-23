@@ -12,6 +12,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LA
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.SORT_FIELD_NOT_SUPPORTED
@@ -62,6 +64,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
@@ -120,6 +123,13 @@ class ActivityControllerTest: TestContext() {
 			Arguments.of("PT99999999H", null, null, ACTIVITY_DURATION_FORMAT_FAILED),
 			Arguments.of("-PT1H", null, null, ACTIVITY_DURATION_FORMAT_FAILED),
 			Arguments.of(null, "Infinity", null, ACTIVITY_DURATION_FORMAT_FAILED),
+			Arguments.of("PT8808H", null, null, ACTIVITY_DURATION_FORMAT_FAILED),
+			Arguments.of("P367D", null, null, ACTIVITY_DURATION_FORMAT_FAILED),
+			Arguments.of("P".padEnd(33, '1'), null, null, PARAMETER_TOO_LONG),
+			Arguments.of(null, "P".padEnd(33, '1'), null, PARAMETER_TOO_LONG),
+			Arguments.of("PT1H;DROP", null, null, PARAMETER_FORMAT_INVALID),
+			Arguments.of(null, "PT1H<x>", null, PARAMETER_FORMAT_INVALID),
+			Arguments.of(null, "P367D", null, ACTIVITY_DURATION_FORMAT_FAILED),
 			Arguments.of("PT2H", "PT1H", null, ACTIVITY_DURATION_MIN_HIGHER_THAN_MAX),
 			Arguments.of(null, null, 0, ACTIVITY_ALLOWED_PARTICIPANTS_TOO_LOW),
 		)
@@ -903,5 +913,61 @@ class ActivityControllerTest: TestContext() {
 
 		// Assert
 		result.expectBody().jsonPath("$.hasNext").isEqualTo(expectedHasNext)
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["PT0S", "P366D", "PT8784H"])
+	fun `Should findActivities accept the duration bounds`(duration: String) {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ActivityModel()))
+		whenever(service.findActivitiesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(PageModel(pageable, totalElements = 1, listOf(ActivityReaderDto())))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("minDuration", duration), Pair("maxDuration", "P366D"))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+	}
+
+	@Test
+	fun `Should createActivity refuse a duration over 32 characters`() {
+		// Arrange
+		val activity = ActivityWriterDto(name = "Activity 1", duration = "P".padEnd(33, '1'))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_C), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(activity)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createActivity refuse a duration with forbidden characters`() {
+		// Arrange
+		val activity = ActivityWriterDto(name = "Activity 1", duration = "PT1H;DROP")
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_C), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(activity)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
 	}
 }

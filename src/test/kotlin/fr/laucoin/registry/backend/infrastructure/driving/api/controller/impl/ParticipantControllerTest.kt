@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -801,6 +802,24 @@ class ParticipantControllerTest: TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, DATE_RANGE_FROM_LATER_THAN_TO)
 
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createParticipant refuse more than 200 groups`() {
+		// Arrange
+		val participant = ParticipantWriterDto(firstName = "John", lastName = "DOE", birthday = LocalDate.EPOCH, groupIds = List(201) { UUID.randomUUID() })
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(participant)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
 		verifyNoInteractions(service)
 	}
 }

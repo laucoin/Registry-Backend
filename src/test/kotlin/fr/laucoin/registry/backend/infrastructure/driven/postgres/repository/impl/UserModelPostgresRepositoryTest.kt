@@ -79,6 +79,8 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		val result = repository.findPage(pageable, UserSearchParamModel(query = null, role = role)).block()!!
 
 		// Assert
+		assertTrue(result.content.isNotEmpty())
+		assertTrue(result.content.size < all.size)
 		assertEquals(all.count { it.role == role }, result.content.size)
 		assertTrue(result.content.all { it.role == role })
 	}

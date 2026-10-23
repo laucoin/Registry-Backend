@@ -1,8 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ROLE_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_USERS_EMPTY
@@ -730,5 +733,123 @@ class ProjectProfileControllerTest: TestContext() {
 			pageable,
 			ProjectProfileSearchParamModel(query = null, role = "PROJECT_ADMINISTRATOR"),
 		)
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse more than 200 users`() {
+		// Arrange
+		val profiles = ProjectProfilesWriterDto(userIds = List(201) { UUID.randomUUID() }, role = "ROLE")
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(profiles)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse a role over 50 characters`() {
+		// Arrange
+		val profiles = ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = "R".repeat(51))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(profiles)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateProjectProfile refuse a role over 50 characters`() {
+		// Arrange
+		val profile = ProjectProfileWriterDto(role = "R".repeat(51))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.bodyValue(profile)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findProjectProfiles refuse a role filter over 50 characters`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("role", "R".repeat(51)))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse a role with forbidden characters`() {
+		// Arrange
+		val profiles = ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = "ROLE';--")
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(profiles)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateProjectProfile refuse a role with forbidden characters`() {
+		// Arrange
+		val profile = ProjectProfileWriterDto(role = "ROLE';--")
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.bodyValue(profile)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findProjectProfiles refuse a role filter with forbidden characters`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("role", "ROLE';--"))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
 	}
 }

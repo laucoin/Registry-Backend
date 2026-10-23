@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communi
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.ALERT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.COMMUNICATION_SORT
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.COMMUNICATION_TARGET_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.COMMUNICATION_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.SELECT_COMMUNICATION_SEARCH
@@ -33,28 +32,6 @@ import reactor.core.publisher.Mono
 
 @Repository
 interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEntity, UUID> {
-	@Query(
-		"""
-        SELECT t.*, $SELECT_COMMUNICATION_SEARCH, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
-        FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $COMMUNICATION_TEXT_SEARCH_CLAUSE AND $COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE AND $COMMUNICATION_TARGET_CLAUSE
-        ORDER BY $COMMUNICATION_SORT similarity_score DESC, t.$COMMUNICATION_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
-        """
-	)
-	fun findAll(
-		projectId: UUID,
-		query: String?,
-		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		target: String?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Int,
-	): Flux<CommunicationEntity>
-
 	@Query(
 		"""
         SELECT t.*, $SELECT_LINKED_MOVEMENT, $SELECT_LINKED_ALERT, $SELECT_CREATOR, $SELECT_LAST_EDITOR

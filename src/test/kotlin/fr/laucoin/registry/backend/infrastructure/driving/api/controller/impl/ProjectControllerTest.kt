@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -253,6 +254,29 @@ class ProjectControllerTest: TestContext() {
 		verify(service).findProjectWithProfileById(currentUser(REGISTRY_PROJECT_R), uuid)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should createProject refuse more than 20 options`() {
+		// Arrange
+		val project = ProjectWriterDto(
+			name = "project",
+			begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+			end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+			options = List(21) { ACTIVITY },
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_PROJECT_C)
+			.post()
+			.uri(BASE_URL)
+			.bodyValue(project)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(service)
 	}
 
 	@Test

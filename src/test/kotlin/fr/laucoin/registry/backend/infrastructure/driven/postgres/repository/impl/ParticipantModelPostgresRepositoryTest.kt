@@ -33,6 +33,7 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
@@ -68,33 +69,23 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				),
 			)
 		}
-
-		// The dataset gives every tenth participant a birthday between 1990 and
-		// today minus 18 years (adults), and all the others a birthday inside the
-		// last 18 years (minors) — so 5 adults and 45 minors out of the 50.
-		@JvmStatic
-		fun `Should findPage filter on adulthood`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(true, 5L),
-				Arguments.of(false, 45L),
-			)
-		}
 	}
 
 	@ParameterizedTest
-	@MethodSource
-	fun `Should findPage filter on adulthood`(isMajor: Boolean, expectedTotalElements: Long) {
+	@ValueSource(booleans = [true, false])
+	fun `Should findPage filter on adulthood`(isMajor: Boolean) {
 		// Arrange
-		val pageable = PageableModel(0, 50)
-		val params = ParticipantSearchParamModel(isMajor = isMajor)
+		val pageable = PageableModel(0, 200)
 		val eighteenYearsAgo = LocalDate.now().minusYears(18)
+		val everyone = repository.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null)).block()!!.content
+		val expectedCount = everyone.count { isMajor == !it.birthday!!.isAfter(eighteenYearsAgo) }
 
 		// Act
-		val result = repository.findPage(projectId, pageable, params).block()
+		val result = repository.findPage(projectId, pageable, ParticipantSearchParamModel(isMajor = isMajor)).block()
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(expectedTotalElements, result.totalElements)
+		assertEquals(expectedCount.toLong(), result.totalElements)
 		result.content.forEach {
 			val birthday = assertNotNull(it.birthday)
 			assertEquals(isMajor, !birthday.isAfter(eighteenYearsAgo))
