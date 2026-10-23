@@ -38,7 +38,7 @@ class CsrfTokenServiceTest {
 	fun `Should computeToken derive from the Authorization bearer header when present`() {
 		// Arrange
 		val exchange = MockServerWebExchange.from(
-			MockServerHttpRequest.method(GET, "/api/v1/whatever").header(AUTHORIZATION, "Bearer accessToken")
+			MockServerHttpRequest.method(GET, "/api/v2/whatever").header(AUTHORIZATION, "Bearer accessToken")
 		)
 		val cookieExchange = exchangeWithAccessTokenCookie("accessToken")
 
@@ -50,12 +50,12 @@ class CsrfTokenServiceTest {
 	fun `Should computeToken prefer the Authorization header over the cookie when both are present`() {
 		// Arrange
 		val exchange = MockServerWebExchange.from(
-			MockServerHttpRequest.method(GET, "/api/v1/whatever")
+			MockServerHttpRequest.method(GET, "/api/v2/whatever")
 				.header(AUTHORIZATION, "Bearer headerToken")
 				.cookie(HttpCookie(ACCESS_TOKEN_COOKIE, "cookieToken"))
 		)
 		val headerOnlyExchange = MockServerWebExchange.from(
-			MockServerHttpRequest.method(GET, "/api/v1/whatever").header(AUTHORIZATION, "Bearer headerToken")
+			MockServerHttpRequest.method(GET, "/api/v2/whatever").header(AUTHORIZATION, "Bearer headerToken")
 		)
 
 		// Act & Assert
@@ -65,7 +65,7 @@ class CsrfTokenServiceTest {
 	@Test
 	fun `Should computeToken still return a value when no token is present`() {
 		// Arrange
-		val exchange = MockServerWebExchange.from(MockServerHttpRequest.method(GET, "/api/v1/whatever"))
+		val exchange = MockServerWebExchange.from(MockServerHttpRequest.method(GET, "/api/v2/whatever"))
 
 		// Act & Assert
 		assertEquals(service.computeToken(exchange), service.computeToken(exchange))
@@ -100,6 +100,6 @@ class CsrfTokenServiceTest {
 	}
 
 	private fun exchangeWithAccessTokenCookie(value: String) = MockServerWebExchange.from(
-		MockServerHttpRequest.method(GET, "/api/v1/whatever").cookie(HttpCookie(ACCESS_TOKEN_COOKIE, value))
+		MockServerHttpRequest.method(GET, "/api/v2/whatever").cookie(HttpCookie(ACCESS_TOKEN_COOKIE, value))
 	)
 }

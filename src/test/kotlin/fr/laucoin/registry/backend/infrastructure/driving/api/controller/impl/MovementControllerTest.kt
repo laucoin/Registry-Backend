@@ -4,25 +4,31 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_PARTICIPANT_ID_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_IDS_TOO_MANY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_AND_REASON_ARE_INCOMPATIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.OTHER
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -35,6 +41,8 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Movemen
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.MovementContentWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto.ParticipantMovementContentWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementActivityReasonReaderDtoMapper
@@ -52,6 +60,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.ZonedDateTime.now
 import java.time.format.DateTimeFormatter
@@ -65,12 +74,17 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CREATED
+import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpStatus.PRECONDITION_FAILED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
@@ -110,7 +124,7 @@ class MovementControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/movements"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/movements"
 
 		@JvmStatic
 		fun `Should findMovements return 200`(): Stream<Arguments> = Stream.of(
@@ -212,30 +226,30 @@ class MovementControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findMovements return 200`(
 		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		visibilitySearched: Boolean?,
-		typeSearched: MovementTypeEnum?,
-		startDateTimeSearched: String?,
-		endDateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		isVisible: Boolean?,
+		type: MovementTypeEnum?,
+		from: String?,
+		to: String?,
 	) {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = MovementSearchParamModel(
-			visibilitySearched = visibilitySearched,
-			typeSearched = typeSearched,
-			startDateTimeSearched = startDateTimeSearched?.let {
+			isVisible = isVisible,
+			type = type,
+			from = from?.let {
 				ZonedDateTime.parse(
 					it,
 					DateTimeFormatter.ISO_DATE_TIME
 				)
 			},
-			endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
-		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(MovementModel(contentType = REGISTERED)))
+		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
 		)
@@ -249,12 +263,12 @@ class MovementControllerTest: TestContext() {
 					BASE_URL,
 					listOf(projectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("typeSearched", typeSearched),
-						Pair("startDateTimeSearched", startDateTimeSearched),
-						Pair("endDateTimeSearched", endDateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("isVisible", isVisible),
+						Pair("type", type),
+						Pair("from", from),
+						Pair("to", to),
 					),
 				)
 			)
@@ -274,8 +288,8 @@ class MovementControllerTest: TestContext() {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findMovements throw due to wrong params`(
-		pageNumber: Int?,
-		pageSize: Int?,
+		page: Int?,
+		size: Int?,
 		expectedMessage: String,
 	) {
 		// Act
@@ -287,8 +301,8 @@ class MovementControllerTest: TestContext() {
 					BASE_URL,
 					listOf(projectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
+						Pair("page", page),
+						Pair("size", size),
 					),
 				)
 			)
@@ -335,6 +349,24 @@ class MovementControllerTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findMovementsContents throw due to too many movement ids`() {
+		// Arrange
+		val movementIds = List(101) { Pair("movementIds", UUID.randomUUID()) }
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/contents", listOf(projectId), movementIds))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, MOVEMENT_IDS_TOO_MANY)
+
+		verifyNoInteractions(service)
+	}
+
+	@Test
 	fun `Should findMovementById return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
@@ -357,7 +389,7 @@ class MovementControllerTest: TestContext() {
 		// Assert
 		result.body<MovementReaderDto>(OK)
 
-		verify(service).findMovementById(projectId, uuid, visibilitySearched = null)
+		verify(service).findMovementById(projectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -368,8 +400,8 @@ class MovementControllerTest: TestContext() {
 	fun `Should searchReasonsAndActivities return 200`() {
 		// Arrange
 		val searched = "text"
-		val typeSearched = IN
-		val contentTypeSearched = REGISTERED
+		val type = IN
+		val contentType = REGISTERED
 		whenever(service.searchActivitiesByText(any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
 		whenever(service.searchReasonsByText(any(), any())).thenReturn(Flux.just(OTHER))
 		whenever(activityReasonReaderMapper.toDto(any())).thenReturn(
@@ -398,9 +430,9 @@ class MovementControllerTest: TestContext() {
 					"$BASE_URL/search/reasons",
 					listOf(projectId),
 					listOf(
-						Pair("typeSearched", typeSearched),
-						Pair("contentTypeSearched", contentTypeSearched),
-						Pair("textSearched", searched)
+						Pair("type", type),
+						Pair("contentType", contentType),
+						Pair("q", searched)
 					)
 				)
 			)
@@ -409,8 +441,8 @@ class MovementControllerTest: TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(service).searchActivitiesByText(projectId, contentTypeSearched, searched)
-		verify(service).searchReasonsByText(contentTypeSearched, typeSearched)
+		verify(service).searchActivitiesByText(projectId, contentType, searched)
+		verify(service).searchReasonsByText(contentType, type)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
@@ -424,7 +456,7 @@ class MovementControllerTest: TestContext() {
 	fun `Should searchParticipantsAndGroups return 200`() {
 		// Arrange
 		val searched = "text"
-		val typeSearched = REGISTERED
+		val type = REGISTERED
 		whenever(service.searchParticipantsAndGroupsByText(any(), any(), anyOrNull())).thenReturn(
 			Mono.just(
 				Tuples.of(
@@ -448,7 +480,7 @@ class MovementControllerTest: TestContext() {
 				uriBuilder(
 					"$BASE_URL/search/participants-and-groups",
 					listOf(projectId),
-					listOf(Pair("contentTypeSearched", typeSearched), Pair("textSearched", searched))
+					listOf(Pair("contentType", type), Pair("q", searched))
 				)
 			)
 			.exchange()
@@ -456,7 +488,7 @@ class MovementControllerTest: TestContext() {
 		// Assert
 		result.body<MovementParticipantsAndGroupsReaderDto>(OK)
 
-		verify(service).searchParticipantsAndGroupsByText(projectId, typeSearched, searched)
+		verify(service).searchParticipantsAndGroupsByText(projectId, type, searched)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementTypeReaderMapper)
 		verify(movementParticipantsAndGroupsReaderMapper).toDto(any())
@@ -480,7 +512,7 @@ class MovementControllerTest: TestContext() {
 				buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE)
 			)
 			.get()
-			.uri(uriBuilder("$BASE_URL/search/vehicles", listOf(projectId), listOf(Pair("textSearched", searched))))
+			.uri(uriBuilder("$BASE_URL/search/vehicles", listOf(projectId), listOf(Pair("q", searched))))
 			.exchange()
 
 		// Assert
@@ -497,8 +529,9 @@ class MovementControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should createMovement return 200`() {
+	fun `Should createMovement return 201`() {
 		// Arrange
+		val createdId = UUID.randomUUID()
 		val uuid = UUID.randomUUID()
 		val movement = ParticipantMovementWriterDto(
 			dateTime = now(),
@@ -515,7 +548,7 @@ class MovementControllerTest: TestContext() {
 			)
 		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
-		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED).apply { id = createdId })
 
 		// Act
 		val result = webClient
@@ -526,7 +559,8 @@ class MovementControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<MovementReaderDto>(OK)
+		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.body<MovementReaderDto>(CREATED)
 
 		verify(service).createMovement(any(), any(), any())
 		verify(readerMapper).toDto(any())
@@ -602,6 +636,87 @@ class MovementControllerTest: TestContext() {
 		verify(service).updateMovementById(any(), eq(projectId), eq(uuid), any(), any())
 	}
 
+	@Test
+	fun `Should updateMovementById accept the matching If-Match`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val movement = ParticipantMovementWriterDto(
+			dateTime = now(),
+			type = IN,
+			reason = null,
+			activityId = null,
+			content = listOf(ParticipantMovementContentWriterDto(participantId = uuid))
+		)
+
+		whenever(
+			service.updateMovementById(
+				any(),
+				any(),
+				any(),
+				any(),
+				any()
+			)
+		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
+		whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+		whenever(service.findMovementById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(MovementModel(contentType = REGISTERED).apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1791885731000\"")
+			.bodyValue(movement)
+			.exchange()
+
+		// Assert
+		result.body<MovementReaderDto>(OK)
+
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(movementTypeReaderMapper)
+		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
+		verify(writerMapper).toModel(any(), eq(projectId))
+		verify(service).updateMovementById(any(), eq(projectId), eq(uuid), any(), any())
+	}
+
+	@Test
+	fun `Should updateMovementById throw when the movement changed since it was read`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val movement = ParticipantMovementWriterDto(
+			dateTime = now(),
+			type = IN,
+			reason = null,
+			activityId = null,
+			content = listOf(ParticipantMovementContentWriterDto(participantId = uuid))
+		)
+		whenever(writerMapper.toModel(any(), any())).thenReturn(MovementModel(contentType = REGISTERED))
+		whenever(service.findMovementById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(
+				MovementModel(contentType = REGISTERED).apply {
+					lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+				}
+			),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1\"")
+			.bodyValue(movement)
+			.exchange()
+
+		// Assert
+		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
+
+		verify(service, never()).updateMovementById(any(), any(), any(), any(), any())
+	}
+
 	@ParameterizedTest
 	@MethodSource("Wrong MovementDto")
 	fun `Should updateMovementById return 400`(
@@ -646,7 +761,7 @@ class MovementControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -678,7 +793,7 @@ class MovementControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -693,7 +808,7 @@ class MovementControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should deleteMovementById return 200`() {
+	fun `Should deleteMovementById return 204`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
@@ -707,12 +822,125 @@ class MovementControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 
 		verify(service).deleteMovementById(projectId, uuid)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
 		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should findMovements forward the activity filter to the service`() {
+		// Arrange
+		val activityId = UUID.randomUUID()
+		val pageable = PageableModel(0, 20)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(MovementModel()))
+		whenever(service.findMovementsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(MovementReaderDto(contentType = REGISTERED))),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("activityId", activityId))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findMovementsPage(projectId, pageable, MovementSearchParamModel(type = null, activityId = activityId))
+	}
+
+	@Test
+	fun `Should findMovements refuse the activity filter without the activity option`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("activityId", UUID.randomUUID()))))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+		verifyNoInteractions(service)
+	}
+
+	private fun guestMovement() = GuestMovementWriterDto(
+		dateTime = now(),
+		type = OUT,
+		reason = null,
+		content = listOf(MovementContentWriterDto(participantId = UUID.randomUUID())),
+		guests = null,
+	)
+
+	private fun guestModel() = MovementModel(contentType = GUEST).apply {
+		lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+	}
+
+	@Test
+	fun `Should createGuestsMovement expose the location of the new movement`() {
+		// Arrange
+		val createdId = UUID.randomUUID()
+		whenever(service.createMovement(any(), any(), any())).thenReturn(Mono.just(MovementModel(contentType = GUEST)))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = GUEST).apply { id = createdId })
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.post()
+			.uri(uriBuilder("$BASE_URL/guests", listOf(projectId), emptyList()))
+			.bodyValue(guestMovement())
+			.exchange()
+
+		// Assert
+		result.expectHeader().valueEquals("Location", "/api/v2/projects/$projectId/movements/$createdId")
+		result.expectStatus().isCreated
+	}
+
+	@Test
+	fun `Should updateGuestsMovementById throw when the movement changed since it was read`() {
+		// Arrange
+		whenever(service.findMovementById(any(), any(), anyOrNull())).thenReturn(Mono.just(guestModel()))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/guests/{id}", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.header("If-Match", "\"1\"")
+			.bodyValue(guestMovement())
+			.exchange()
+
+		// Assert
+		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
+
+		verify(service, never()).updateMovementById(any(), any(), any(), any(), any())
+	}
+
+	@Test
+	fun `Should updateGuestsMovementById accept the matching If-Match`() {
+		// Arrange
+		whenever(service.findMovementById(any(), any(), anyOrNull())).thenReturn(Mono.just(guestModel()))
+		whenever(service.updateMovementById(any(), any(), any(), any(), any())).thenReturn(Mono.just(guestModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = GUEST))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/guests/{id}", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.header("If-Match", "\"1791885731000\"")
+			.bodyValue(guestMovement())
+			.exchange()
+
+		// Assert
+		result.body<MovementReaderDto>(OK)
+
+		verify(service).updateMovementById(any(), any(), any(), any(), any())
 	}
 }

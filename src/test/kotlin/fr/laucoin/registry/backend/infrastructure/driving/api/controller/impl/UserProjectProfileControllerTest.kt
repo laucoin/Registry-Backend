@@ -11,8 +11,12 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.service.IProjectService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserInvitationReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserInvitationReaderDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -32,6 +36,8 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus.CREATED
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -43,13 +49,19 @@ class UserProjectProfileControllerTest: TestContext() {
 	private lateinit var service: IUserProjectProfileService
 
 	@MockitoBean
-	private lateinit var readerMapper: ProjectProfileReaderDtoMapper
+	private lateinit var readerMapper: UserInvitationReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var projectService: IProjectService
+
+	@MockitoBean
+	private lateinit var projectReaderMapper: ProjectWithProfileReaderDtoMapper
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/users/profiles"
+		private const val BASE_URL = "/api/v2/users/profiles"
 
 		@JvmStatic
 		fun `Should findUserProjectProfiles return 200`(): Stream<Arguments> = Stream.of(
@@ -77,27 +89,27 @@ class UserProjectProfileControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findUserProjectProfiles return 200`(
 		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		availabilitySearched: Boolean?,
-		statusSearched: ProfileStatusEnum?,
-		dateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isAvailable: Boolean?,
+		status: ProfileStatusEnum?,
+		at: String?,
 	) {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = ProjectProfileSearchParamModel(
-			textSearched = textSearched,
-			availabilitySearched = availabilitySearched,
-			statusSearched = statusSearched,
-			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			query = query,
+			isAvailable = isAvailable,
+			status = status,
+			at = at?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
-		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
+		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
-			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
+			PageModel(pageable, totalElements = 1, listOf(UserInvitationReaderDto())),
 		)
 
 		// Act
@@ -109,12 +121,12 @@ class UserProjectProfileControllerTest: TestContext() {
 					BASE_URL,
 					emptyList(),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("availabilitySearched", availabilitySearched),
-						Pair("statusSearched", statusSearched),
-						Pair("dateTimeSearched", dateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isAvailable", isAvailable),
+						Pair("status", status),
+						Pair("at", at),
 					),
 				)
 			)
@@ -125,14 +137,15 @@ class UserProjectProfileControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findProjectProfilesPage(currentUser().id!!, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page)
+		verify(readerMapper).toDtoPage(expectedPage)
 	}
 
 	@Test
 	fun `Should createSupportProjectProfile return 200`() {
 		// Arrange
 		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(projectService.findProjectWithProfileById(any(), eq(projectId))).thenReturn(Mono.just(ProjectModel()))
+		whenever(projectReaderMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -142,8 +155,9 @@ class UserProjectProfileControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
-		verify(readerMapper).toDto(any())
+		result.body<ProjectWithProfileReaderDto>(OK)
+		verify(projectService).findProjectWithProfileById(any(), eq(projectId))
+		verify(projectReaderMapper).toDto(any())
 		verify(service).createSupportProjectProfile(any(), eq(projectId))
 	}
 
@@ -157,7 +171,7 @@ class UserProjectProfileControllerTest: TestContext() {
 				ProjectProfileModel()
 			)
 		)
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(UserInvitationReaderDto())
 
 		// Act
 		val result = webClient
@@ -167,14 +181,14 @@ class UserProjectProfileControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectProfileReaderDto>(OK)
+		result.body<UserInvitationReaderDto>(OK)
 
 		verify(readerMapper).toDto(any())
 		verify(service).updateUserProjectProfileStatusById(any(), eq(uuid), eq(if (accepted) ACCEPTED else REJECTED))
 	}
 
 	@Test
-	fun `Should deleteUserProfileById return 200`() {
+	fun `Should deleteUserProfileById return 204`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
@@ -188,7 +202,7 @@ class UserProjectProfileControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 
 		verify(service).deleteUserProjectProfileById(any(), eq(uuid))
 	}

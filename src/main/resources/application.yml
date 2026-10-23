@@ -162,3 +162,4 @@ springdoc:
     enabled: ${registry.feature.documentation.enabled}
     oauth:
       client-id: ${external.idp.swagger.client-id}
+      use-pkce-with-authorization-code-grant: true

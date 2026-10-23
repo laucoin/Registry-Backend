@@ -29,8 +29,8 @@ interface IGroupContentEntityRepository: ReactiveCrudRepository<GroupContentEnti
         SELECT t.*, $SELECT_CONTENT_TO_CONTENT
         FROM $GROUP_CONTENT_TABLE t
         INNER JOIN $GROUP_TABLE gt ON t.$GROUP_CONTENT_GROUP_ID = gt.$ID $CONTENT_TO_CONTENT_JOIN
-        WHERE gt.$LINKED_PROJECT_ID = :projectId AND t.$GROUP_CONTENT_GROUP_ID IN (:groupIds) AND (:visibilitySearched IS NULL OR $PARTICIPANT_TABLE.$VISIBLE = :visibilitySearched) AND (
-            :availabilitySearched IS NULL OR :availabilitySearched = (
+        WHERE gt.$LINKED_PROJECT_ID = :projectId AND t.$GROUP_CONTENT_GROUP_ID IN (:groupIds) AND (:isVisible IS NULL OR $PARTICIPANT_TABLE.$VISIBLE = :isVisible) AND (
+            :isAvailable IS NULL OR :isAvailable = (
                 (
                     COALESCE($PARTICIPANT_TABLE.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
                     OR (COALESCE($PARTICIPANT_TABLE.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE($PARTICIPANT_TABLE.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
@@ -46,8 +46,8 @@ interface IGroupContentEntityRepository: ReactiveCrudRepository<GroupContentEnti
 	fun findAllByGroupIds(
 		projectId: UUID,
 		groupIds: List<UUID>,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?
+		isVisible: Boolean?,
+		isAvailable: Boolean?
 	): Flux<GroupContentEntity>
 
 	@Query("DELETE FROM $GROUP_CONTENT_TABLE WHERE $GROUP_CONTENT_GROUP_ID = :groupId AND $GROUP_CONTENT_PARTICIPANT_ID IN (:participantIds)")

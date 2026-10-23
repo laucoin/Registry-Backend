@@ -47,7 +47,7 @@ class SecurityControllerTest : TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/authentication"
+		private const val BASE_URL = "/api/v2/authentication"
 
 		@JvmStatic
 		fun `blank redirectUri`(): Stream<Arguments> {

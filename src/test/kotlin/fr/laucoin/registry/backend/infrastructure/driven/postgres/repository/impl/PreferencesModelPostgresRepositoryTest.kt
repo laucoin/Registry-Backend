@@ -26,13 +26,13 @@ class PreferencesModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findByUserId call repository findByUserId`() {
 		// Act
-		val result = repository.findByUserId(currentUser().id!!, visibilitySearched = null).block()
+		val result = repository.findByUserId(currentUser().id!!, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findByUserId(
 			currentUser().id!!,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}

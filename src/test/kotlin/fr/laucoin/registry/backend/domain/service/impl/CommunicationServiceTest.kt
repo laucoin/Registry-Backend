@@ -262,18 +262,18 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should searchOutMovementWithActivityByText call port findActivityWithLimit`() {
 		// Arrange
-		val textSearched = "search"
+		val query = "search"
 		val search = ActivitySearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = true,
-			availabilitySearched = true,
-			dateTimeSearched = null,
+			query = query,
+			isVisible = true,
+			isAvailable = true,
+			at = null,
 		)
 
 		whenever(movementPort.findActivityWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonMovement()))
 
 		// Act
-		service.searchOutMovementWithActivityByText(projectId, textSearched).collectList().block()
+		service.searchOutMovementWithActivityByText(projectId, query).collectList().block()
 
 		// Assert
 		verify(movementPort).findActivityWithLimit(MAX_ACTIVITIES, projectId, search)
@@ -282,17 +282,17 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should searchAlertByText call port findWithLimit`() {
 		// Arrange
-		val textSearched = "search"
+		val query = "search"
 		val search = AlertSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = true,
-			statusSearched = IN_PROGRESS,
+			query = query,
+			isVisible = true,
+			status = IN_PROGRESS,
 		)
 
 		whenever(alertPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonAlert()))
 
 		// Act
-		service.searchAlertByText(projectId, textSearched).collectList().block()
+		service.searchAlertByText(projectId, query).collectList().block()
 
 		// Assert
 		verify(alertPort).findWithLimit(MAX_ALERTS, projectId, search)
@@ -325,8 +325,8 @@ class CommunicationServiceTest {
 		verify(projectService).validateDateTime(
 			eq(projectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
-		verify(movementPort, times(callToMovement)).findById(projectId, movementId, visibilitySearched = null)
-		verify(alertPort, times(callToAlert)).findById(projectId, alertId, visibilitySearched = null)
+		verify(movementPort, times(callToMovement)).findById(projectId, movementId, isVisible = null)
+		verify(alertPort, times(callToAlert)).findById(projectId, alertId, isVisible = null)
 		verify(port).create(communication)
 	}
 
@@ -412,8 +412,8 @@ class CommunicationServiceTest {
 		verify(projectService).validateDateTime(
 			projectId, CustomDateTimeModel(now), COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(port).findById(projectId, communicationId, visibilitySearched = null)
-		verify(movementPort, never()).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, communicationId, isVisible = null)
+		verify(movementPort, never()).findById(projectId, movementId, isVisible = null)
 		verify(port).update(communication)
 	}
 
@@ -427,7 +427,7 @@ class CommunicationServiceTest {
 		service.disableCommunicationById(currentUser(), projectId, communicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = true)
+		verify(port).findById(projectId, communicationId, isVisible = true)
 		verify(port).update(commonCommunication().apply { visible = false })
 	}
 
@@ -443,7 +443,7 @@ class CommunicationServiceTest {
 		service.enableCommunicationById(currentUser(), projectId, communicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = false)
+		verify(port).findById(projectId, communicationId, isVisible = false)
 		verify(port).update(commonCommunication())
 	}
 
@@ -457,7 +457,7 @@ class CommunicationServiceTest {
 		service.deleteCommunicationById(currentUser(), projectId, communicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = null)
+		verify(port).findById(projectId, communicationId, isVisible = null)
 		verify(port).deleteById(communicationId)
 	}
 

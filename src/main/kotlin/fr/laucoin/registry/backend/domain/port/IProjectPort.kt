@@ -11,7 +11,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IProjectPort {
-	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
+	fun findById(id: UUID, isVisible: Boolean?): Mono<ProjectModel>
 	fun findPage(
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,

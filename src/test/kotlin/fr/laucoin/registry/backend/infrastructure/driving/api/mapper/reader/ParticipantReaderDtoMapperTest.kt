@@ -2,11 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
 import java.time.LocalDate
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -23,10 +21,9 @@ class ParticipantReaderDtoMapperTest {
 	private val partialUserMapper: PartialUserReaderDtoMapper = mock()
 	private val typeMapper: ParticipantTypeReaderDtoMapper = mock()
 	private val statusMapper: PresenceStatusReaderDtoMapper = mock()
-	private val projectMapper: ProjectReaderDtoMapper = mock()
 	private val groupMapper: GroupWithoutMemberReaderDtoMapper = mock()
 	private val mapper: ParticipantReaderDtoMapper =
-		ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, projectMapper, groupMapper)
+		ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, groupMapper)
 
 	private companion object {
 		@JvmStatic
@@ -52,7 +49,6 @@ class ParticipantReaderDtoMapperTest {
 				),
 				Arguments.of(
 					ParticipantModel().apply {
-						project = ProjectModel()
 						status = IN
 						user = UserModel()
 						birthday = LocalDate.now().minusYears(18)
@@ -70,12 +66,10 @@ class ParticipantReaderDtoMapperTest {
 	fun `Should toDto convert ParticipantModel to ParticipantReaderDto`(
 		participant: ParticipantModel,
 		expectedMajor: Boolean,
-		expectedProjectCast: Int,
 		expectedUserCast: Int,
 	) {
 		// Arrange
 		whenever(partialUserMapper.toDto(any())).thenReturn(PartialUserReaderDto())
-		whenever(projectMapper.toDto(any())).thenReturn(ProjectReaderDto())
 		whenever(groupMapper.toDtoList(any())).thenReturn(listOf(GroupReaderDto()))
 
 		// Act
@@ -83,9 +77,6 @@ class ParticipantReaderDtoMapperTest {
 
 		// Assert
 		verify(partialUserMapper, times(expectedUserCast)).toDto(participant.user ?: UserModel())
-		verify(projectMapper, times(expectedProjectCast)).toDto(
-			participant.project ?: ProjectModel(),
-		)
 		verify(groupMapper, times(2)).toDtoList(participant.groups)
 
 		assertEquals(participant.id, result.id)
@@ -95,7 +86,6 @@ class ParticipantReaderDtoMapperTest {
 		assertEquals(expectedMajor, result.major)
 		assertEquals(participant.startAvailability, result.startAvailability)
 		assertEquals(participant.endAvailability, result.endAvailability)
-		assertEquals(participant.purged, result.purged)
 		assertEquals(participant.visible, result.visible)
 		assertEquals(participant.creation, result.creation)
 		assertEquals(participant.lastEdition, result.lastEdition)

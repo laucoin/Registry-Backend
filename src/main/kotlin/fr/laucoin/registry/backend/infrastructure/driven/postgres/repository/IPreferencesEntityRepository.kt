@@ -22,5 +22,5 @@ interface IPreferencesEntityRepository: ReactiveCrudRepository<PreferencesEntity
         WHERE t.$PREFERENCE_USER_ID = :userId AND $VISIBLE_CLAUSE
         """
 	)
-	fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesEntity>
+	fun findByUserId(userId: UUID, isVisible: Boolean?): Mono<PreferencesEntity>
 }

@@ -32,7 +32,7 @@ object ModelExt {
 	fun commonProjectProfile() = ProjectProfileModel().apply {
 		id = projectProfileId
 		user = commonUser()
-		project = commonProject()
+		this.projectId = ModelExt.projectId
 	}
 
 	fun commonUser() = UserModel().apply {
@@ -40,26 +40,26 @@ object ModelExt {
 		lastLogin = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
 	}
 
-	fun commonGroup() = GroupModel().apply { id = groupId; project = commonProject() }
+	fun commonGroup() = GroupModel().apply { id = groupId; this.projectId = ModelExt.projectId }
 	fun commonAlert() = AlertModel().apply {
 		id = alertId
 		dateTime = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
-		project = commonProject()
+		this.projectId = ModelExt.projectId
 	}
 
 	fun commonMovement() = MovementModel().apply {
 		id = movementId
 		dateTime = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
-		project = commonProject()
+		this.projectId = ModelExt.projectId
 	}
 
-	fun commonParticipant() = ParticipantModel().apply { id = participantId; project = commonProject() }
-	fun commonActivity() = ActivityModel().apply { id = activityId; project = commonProject() }
+	fun commonParticipant() = ParticipantModel().apply { id = participantId; this.projectId = ModelExt.projectId }
+	fun commonActivity() = ActivityModel().apply { id = activityId; this.projectId = ModelExt.projectId }
 	fun commonCommunication() = CommunicationModel().apply {
 		id = communicationId
 		dateTime = ZonedDateTime.of(2020, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC)
-		project = commonProject()
+		this.projectId = ModelExt.projectId
 	}
 
-	fun commonVehicle() = VehicleModel().apply { id = vehicleId; project = commonProject() }
+	fun commonVehicle() = VehicleModel().apply { id = vehicleId; this.projectId = ModelExt.projectId }
 }

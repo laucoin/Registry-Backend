@@ -26,7 +26,7 @@ class CsrfTokenHeaderHandlerTest {
 	fun `Should filter set the computed token as a response header and call the chain`() {
 		// Arrange
 		val exchange = MockServerWebExchange.from(
-			MockServerHttpRequest.method(GET, "/api/v1/whatever").cookie(HttpCookie(ACCESS_TOKEN_COOKIE, "accessToken"))
+			MockServerHttpRequest.method(GET, "/api/v2/whatever").cookie(HttpCookie(ACCESS_TOKEN_COOKIE, "accessToken"))
 		)
 
 		// Act

@@ -66,38 +66,38 @@ class CommunicationService(
 	override fun findCommunicationById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<CommunicationModel> {
-		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
+		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
 	}
 
 	override fun searchOutMovementWithActivityByText(
 		projectId: UUID,
-		textSearched: String?
+		query: String?
 	): Flux<MovementModel> {
 		return movementPort.findActivityWithLimit(
 			maxActivityResult,
 			projectId,
 			ActivitySearchParamModel(
-				textSearched = textSearched,
-				visibilitySearched = true,
-				availabilitySearched = true,
-				dateTimeSearched = null,
+				query = query,
+				isVisible = true,
+				isAvailable = true,
+				at = null,
 			)
 		)
 	}
 
 	override fun searchAlertByText(
 		projectId: UUID,
-		textSearched: String?
+		query: String?
 	): Flux<AlertModel> {
 		return alertPort.findWithLimit(
 			maxAlertResult,
 			projectId,
 			AlertSearchParamModel(
-				textSearched,
-				visibilitySearched = true,
-				statusSearched = AlertStatusEnum.IN_PROGRESS,
+				query,
+				isVisible = true,
+				status = AlertStatusEnum.IN_PROGRESS,
 			)
 		)
 	}
@@ -107,7 +107,7 @@ class CommunicationService(
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
 		return projectService.validateDateTime(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -123,11 +123,11 @@ class CommunicationService(
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
 		return projectService.validateDateTime(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findCommunicationById(projectId, id, visibilitySearched = null) }
+			.flatMap { findCommunicationById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(communication, it) }
 			.flatMap { validateNoAlertConflict(currentUser, communication, it) }
 			.map {
@@ -145,7 +145,7 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<CommunicationModel> {
-		return findCommunicationById(projectId, id, visibilitySearched = true)
+		return findCommunicationById(projectId, id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateCommunication(currentUser)
 	}
@@ -155,7 +155,7 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<CommunicationModel> {
-		return findCommunicationById(projectId, id, visibilitySearched = false)
+		return findCommunicationById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateCommunication(currentUser)
 	}
@@ -165,7 +165,7 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<Unit> {
-		return findCommunicationById(projectId, id, visibilitySearched = null)
+		return findCommunicationById(projectId, id, isVisible = null)
 			.flatMap { port.deleteById(it.id!!) }
 	}
 
@@ -201,9 +201,9 @@ class CommunicationService(
 		return if (Objects.isNull(communication.movement) || communication.movement!!.id == oldCommunication?.movement?.id)
 			Mono.just(communicationToReturn)
 		else movementPort.findById(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			communication.movement!!.id!!,
-			visibilitySearched = null
+			isVisible = null
 		)
 			.switchIfEmpty {
 				Mono.error(
@@ -257,7 +257,7 @@ class CommunicationService(
 		return if (Objects.isNull(communication.alert) || communication.alert!!.id == oldCommunication?.alert?.id)
 			Mono.just(communicationToReturn)
 		else {
-			if (!currentUser.hasAuthority(communication.project!!.id!!, REGISTRY_PROJECT_OPTION_ALERT)) {
+			if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
 				throw RegistryException(
 					status = FORBIDDEN,
 					code = NOT_ENOUGH_PERMISSION,
@@ -265,9 +265,9 @@ class CommunicationService(
 			}
 
 			alertPort.findById(
-				communication.project!!.id!!,
+				communication.projectId!!,
 				communication.alert!!.id!!,
-				visibilitySearched = null
+				isVisible = null
 			)
 				.switchIfEmpty {
 					Mono.error(

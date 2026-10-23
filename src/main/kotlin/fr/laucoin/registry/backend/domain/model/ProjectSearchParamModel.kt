@@ -3,17 +3,24 @@ package fr.laucoin.registry.backend.domain.model
 import java.time.ZonedDateTime
 
 data class ProjectSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	var dateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	var at: ZonedDateTime? = null,
+	var sort: SortModel? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, dateTimeSearched) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		query: String? = null,
+		isVisible: Boolean? = null,
+		at: ZonedDateTime? = null,
+		sort: SortModel? = null,
+	): this(isVisible, at, sort = sort) {
+		this.query = if (query.isNullOrBlank()) null else query
+	}
+
+	companion object {
+		val SORT_FIELDS = setOf(
+			"name", "begin", "end",
+		)
 	}
 }
-

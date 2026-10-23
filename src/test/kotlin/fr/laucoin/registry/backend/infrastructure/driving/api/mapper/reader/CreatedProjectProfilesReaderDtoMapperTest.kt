@@ -63,15 +63,15 @@ class CreatedProjectProfilesReaderDtoMapperTest {
 	) {
 		// Arrange
 		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(model),
 		)
 		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(dto),

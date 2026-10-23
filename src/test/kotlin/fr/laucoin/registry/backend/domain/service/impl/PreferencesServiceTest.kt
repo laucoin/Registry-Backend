@@ -94,7 +94,7 @@ class PreferencesServiceTest {
 		service.findByUser(currentUser()).block()
 
 		// Assert
-		verify(port, times(expectedCallOnFindByUserId)).findByUserId(currentUser().id!!, visibilitySearched = null)
+		verify(port, times(expectedCallOnFindByUserId)).findByUserId(currentUser().id!!, isVisible = null)
 		verify(port, times(expectedCallOnSave)).save(any())
 	}
 
@@ -118,7 +118,7 @@ class PreferencesServiceTest {
 		service.updateTheme(currentUser, newTheme).block()
 
 		// Assert
-		verify(port).findByUserId(uuid, visibilitySearched = null)
+		verify(port).findByUserId(uuid, isVisible = null)
 		verify(port, times(expectedCallOnUpdateTheme)).save(any())
 		verify(principalCache, times(expectedCallOnUpdateTheme)).invalidate(oidc)
 	}
@@ -143,7 +143,7 @@ class PreferencesServiceTest {
 		service.updateLanguage(currentUser, newLanguage).block()
 
 		// Assert
-		verify(port).findByUserId(uuid, visibilitySearched = null)
+		verify(port).findByUserId(uuid, isVisible = null)
 		verify(port, times(expectedCallOnUpdateLanguage)).save(any())
 		verify(principalCache, times(expectedCallOnUpdateLanguage)).invalidate(oidc)
 	}

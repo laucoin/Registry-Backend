@@ -1,11 +1,27 @@
 package fr.laucoin.registry.backend.domain.extension
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import java.time.LocalDate
 import java.time.OffsetTime
+import java.time.ZonedDateTime
 import java.util.Objects
+import org.springframework.http.HttpStatus.BAD_REQUEST
 
 object DateExt {
+	fun requireOrderedRange(from: LocalDate?, to: LocalDate?) {
+		if (from != null && to != null && from.isAfter(to)) {
+			throw RegistryException(BAD_REQUEST, DATE_RANGE_FROM_LATER_THAN_TO)
+		}
+	}
+
+	fun requireOrderedRange(from: ZonedDateTime?, to: ZonedDateTime?) {
+		if (from != null && to != null && from.isAfter(to)) {
+			throw RegistryException(BAD_REQUEST, DATE_RANGE_FROM_LATER_THAN_TO)
+		}
+	}
+
 	fun CustomDateTimeModel?.asStartIsAfterOther(other: CustomDateTimeModel?): Boolean {
 		return when {
 			Objects.isNull(other) -> Objects.nonNull(this)

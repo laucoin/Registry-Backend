@@ -25,7 +25,6 @@ class UserReaderDtoMapper(
 			}.orElse(null),
 			birthday = model.birthday,
 			lastLogin = model.lastLogin,
-			purged = model.purged,
 		).apply {
 			id = model.id
 			visible = model.visible

@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class VehicleReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val statusMapper: PresenceStatusReaderDtoMapper,
 ): IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
 	override fun toDto(model: VehicleModel): VehicleReaderDto {
@@ -27,7 +26,6 @@ class VehicleReaderDtoMapper(
 			endAvailability = model.endAvailability,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

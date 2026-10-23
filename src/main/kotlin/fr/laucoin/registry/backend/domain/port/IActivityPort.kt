@@ -10,14 +10,14 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IActivityPort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
 	): Mono<PageModel<ActivityModel>>
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ActivityModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: ActivitySearchParamModel): Flux<ActivityModel>
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: ActivityModel): Mono<ActivityModel>

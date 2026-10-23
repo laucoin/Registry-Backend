@@ -4,7 +4,7 @@
 #     authorization_code login (sub_mode user_uuid -> the JWT `sub` is the user UUID, which
 #     TokenConverterService links to tb_user.oidc_id);
 #   - a public OAuth2 provider + application at slug `registry-swagger` for Swagger UI's
-#     implicit-flow "Authorize" button (SwaggerConfig.kt), redirecting back to the management
+#     authorization-code + PKCE "Authorize" button (SwaggerConfig.kt), redirecting back to the management
 #     port (see README: SERVER_MANAGEMENT_PORT);
 #   - the six seed users from src/main/resources/db/seed/R__seed_dev_users.sql (same emails
 #     and given/family names), all sharing the AU_PASS password. Their Authentik UUIDs
@@ -86,8 +86,8 @@ entries:
   # ------------------------------------------------------------------------- Swagger UI (public)
   # Swagger runs in the browser and holds no secret, so it cannot be the backend's confidential
   # client: the provider would refuse it at the token endpoint for failing to authenticate.
-  # SwaggerConfig.kt configures the OAuth2 implicit flow, so this provider is public/implicit
-  # rather than the authorization_code + PKCE shape a browser client would otherwise use.
+  # SwaggerConfig.kt configures the OAuth2 authorization code flow with PKCE. The implicit flow
+  # is not usable here: Authentik rejects the plain `response_type=token` Swagger UI sends.
   - model: authentik_providers_oauth2.oauth2provider
     id: registry-swagger-provider
     identifiers:
@@ -96,7 +96,7 @@ entries:
       client_type: public
       client_id: !Context registry_swagger_client_id
       grant_types:
-        - implicit
+        - authorization_code
       sub_mode: user_uuid
       authentication_flow: !Find [ authentik_flows.flow, [ slug, default-authentication-flow ] ]
       authorization_flow: !Find [ authentik_flows.flow, [ slug, default-provider-authorization-implicit-consent ] ]

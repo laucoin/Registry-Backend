@@ -5,6 +5,6 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 interface IPreferencesPort {
-	fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesModel>
+	fun findByUserId(userId: UUID, isVisible: Boolean?): Mono<PreferencesModel>
 	fun save(preference: PreferencesModel): Mono<PreferencesModel>
 }

@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ParticipantEntityMapper
@@ -103,6 +102,65 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findUnusedSince only select participants created before the threshold`() {
+		// Act & Assert
+		assertTrue(postgresRepository.findUnusedSince(LocalDate.EPOCH).collectList().block()!!.isEmpty())
+		assertTrue(postgresRepository.findUnusedSince(LocalDate.now().plusYears(1)).collectList().block()!!.isNotEmpty())
+	}
+
+	@Test
+	fun `Should findPage keep the close matches and drop the unrelated ones`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val reference = repository.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null)).block()!!.content.first()
+
+		// Act
+		val close = repository.findPage(
+			projectId, pageable, ParticipantSearchParamModel(query = reference.lastName, at = null),
+		).block()!!
+		val unrelated = repository.findPage(
+			projectId, pageable, ParticipantSearchParamModel(query = "zzqxjv", at = null),
+		).block()!!
+
+		// Assert
+		assertTrue(close.content.any { it.id == reference.id })
+		assertEquals(0, unrelated.content.size)
+	}
+
+	@Test
+	fun `Should findPage split the participants by account link`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val total = repository.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null)).block()!!.totalElements
+
+		// Act
+		val linked = repository.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null, hasUser = true)).block()!!
+		val unlinked = repository.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null, hasUser = false)).block()!!
+
+		// Assert
+		assertTrue(linked.content.all { it.user != null })
+		assertTrue(unlinked.content.all { it.user == null })
+		assertEquals(total, linked.totalElements + unlinked.totalElements)
+	}
+
+	@Test
+	fun `Should findPage keep the birthdays inside the requested period`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val from = LocalDate.of(2000, 1, 1)
+		val to = LocalDate.of(2010, 12, 31)
+
+		// Act
+		val result = repository.findPage(
+			projectId, pageable, ParticipantSearchParamModel(query = null, at = null, birthdayFrom = from, birthdayTo = to),
+		).block()!!
+
+		// Assert
+		assertTrue(result.content.isNotEmpty())
+		assertTrue(result.content.all { it.birthday != null && !it.birthday!!.isBefore(from) && !it.birthday!!.isAfter(to) })
+	}
+
+	@Test
 	fun `Should findPage call repository findAll`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
@@ -113,19 +171,24 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(50, result.totalElements)
 		assertEquals(5, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
+			query = null,
 			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			type = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			at = null,
+			hasUser = null,
+			birthdayFrom = null,
+			birthdayTo = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -143,19 +206,24 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(3, result.totalPages)
 		verify(postgresRepository).findAllByGroupId(
 			projectId,
 			groupId,
-			textSearched = null,
+			query = null,
 			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			type = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			at = null,
+			hasUser = null,
+			birthdayFrom = null,
+			birthdayTo = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -169,15 +237,15 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			isVisible = null,
+			at = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -188,8 +256,19 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 		repository.findByUserId(projectId, currentUser().id!!).collectList().block()
 
 		// Assert
-		verify(postgresRepository).findByUserId(projectId, currentUser().id!!, dateTimeSearched = null)
+		verify(postgresRepository).findByUserId(projectId, currentUser().id!!, at = null)
 		verify(mapper).toModel(any())
+	}
+
+	@Test
+	fun `Should findAllByUserId call repository findAllByUserId`() {
+		// Act
+		val result = repository.findAllByUserId(currentUser().id!!).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository).findAllByUserId(currentUser().id!!)
+		verify(mapper, times(result.size)).toModel(any())
 	}
 
 	@Test
@@ -206,13 +285,13 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 		assertEquals(10, result.size)
 		verify(postgresRepository).findWithLimit(
 			projectId,
-			textSearched = null,
+			query = null,
 			isMajor = null,
-			typeSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			type = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			at = null,
 			size,
 		)
 		verify(mapper, times(10)).toModel(any())
@@ -221,15 +300,15 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, participantId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, participantId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			participantId,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			isVisible = null,
+			at = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -240,15 +319,15 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
-			dateTimeSearched = null,
+			isVisible = null,
+			at = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -269,7 +348,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "match"
 				birthday = LocalDate.now().minusYears(30)
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 			val bornAnotherDay = ParticipantModel().apply {
@@ -277,7 +356,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "no-match"
 				birthday = LocalDate.now().minusYears(30).minusDays(1)
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -294,7 +373,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 		@Order(2)
 		fun `Should findBirthdays match on month-day regardless of birth year`() {
 			// Act
-			val result = repository.findBirthdays(projectId, visibilitySearched = null).collectList().block()!!
+			val result = repository.findBirthdays(projectId, isVisible = null).collectList().block()!!
 
 			// Assert
 			assertTrue(result.any { it.id == matchingId })
@@ -309,8 +388,8 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			repository.deleteById(nonMatchingId).block()
 
 			// Assert
-			assertNull(repository.findById(projectId, matchingId, visibilitySearched = null).block())
-			assertNull(repository.findById(projectId, nonMatchingId, visibilitySearched = null).block())
+			assertNull(repository.findById(projectId, matchingId, isVisible = null).block())
+			assertNull(repository.findById(projectId, nonMatchingId, isVisible = null).block())
 		}
 	}
 
@@ -329,7 +408,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "test"
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -355,8 +434,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				groups = listOf(GroupModel().apply { id = groupId })
-				project = ProjectModel().apply { id = projectId }
-				purged = false
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -366,7 +444,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
+			verify(postgresRepository).findById(projectId, uuid, isVisible = null, at = null)
 			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>())
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
@@ -382,8 +460,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 				lastName = "test updated"
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
-				project = ProjectModel().apply { id = projectId }
-				purged = false
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -393,7 +470,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null, dateTimeSearched = null)
+			verify(postgresRepository).findById(projectId, uuid, isVisible = null, at = null)
 			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(uuid, listOf(groupId))
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())

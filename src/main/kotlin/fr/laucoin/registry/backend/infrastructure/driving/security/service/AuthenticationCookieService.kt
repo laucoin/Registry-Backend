@@ -25,7 +25,7 @@ class AuthenticationCookieService(
 	 * itself and its own sub-paths, so a narrower scope would silently exclude sibling routes like
 	 * `/logout/uri`, which needs this cookie to revoke the refresh token at the identity provider.
 	 */
-	private val refreshTokenPath: String get() = "$apiPrefix/v1/authentication"
+	private val refreshTokenPath: String get() = "$apiPrefix/v2/authentication"
 
 	fun setAuthCookies(response: ServerHttpResponse, token: TokenModel) {
 		response.addCookie(buildCookie(ACCESS_TOKEN_COOKIE, token.accessToken, apiPrefix, Duration.ofSeconds(token.expiresIn)))

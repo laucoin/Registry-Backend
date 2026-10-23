@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
@@ -96,16 +95,18 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(20, result.totalElements)
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isPresent = null,
+			at = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -119,16 +120,16 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		expectedContentRepositoryCall: Int,
 	) {
 		// Act
-		val visibilitySearched = null
-		val availabilitySearched = null
-		repository.findContent(projectId, ids, visibilitySearched, availabilitySearched).collectList().block()
+		val isVisible = null
+		val isAvailable = null
+		repository.findContent(projectId, ids, isVisible, isAvailable).collectList().block()
 
 		// Assert
 		verify(contentPostgresRepository, times(expectedContentRepositoryCall)).findAllByGroupIds(
 			projectId,
 			ids,
-			visibilitySearched,
-			availabilitySearched,
+			isVisible,
+			isAvailable,
 		)
 		verify(contentMapper, atLeast(expectedContentRepositoryCall)).toModel(any())
 	}
@@ -140,14 +141,14 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -166,10 +167,10 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isPresent = null,
+			at = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -182,9 +183,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			repository.findByIdWithContent(
 				projectId,
 				groupId,
-				visibilitySearched = null,
-				memberVisibilitySearched = null,
-				memberAvailabilitySearched = null
+				isVisible = null,
+				memberIsVisible = null,
+				memberIsAvailable = null
 			).block()
 
 		// Assert
@@ -192,13 +193,13 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findById(
 			projectId,
 			groupId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(contentPostgresRepository).findAllByGroupIds(
 			projectId,
 			listOf(groupId),
-			visibilitySearched = null,
-			availabilitySearched = null,
+			isVisible = null,
+			isAvailable = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -213,9 +214,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			repository.findByIdWithContent(
 				projectId,
 				uuid,
-				visibilitySearched = null,
-				memberVisibilitySearched = null,
-				memberAvailabilitySearched = null
+				isVisible = null,
+				memberIsVisible = null,
+				memberIsAvailable = null
 			).block()
 
 		// Assert
@@ -223,13 +224,13 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(contentPostgresRepository).findAllByGroupIds(
 			projectId,
 			listOf(uuid),
-			visibilitySearched = null,
-			availabilitySearched = null,
+			isVisible = null,
+			isAvailable = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -246,7 +247,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val group = GroupModel().apply {
 				name = "test"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -268,7 +269,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			val group = GroupModel().apply {
 				id = uuid
 				name = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				members = listOf(ParticipantModel().apply { id = participantId })
 				create(currentUser())
 			}
@@ -278,12 +279,12 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+			verify(postgresRepository).findById(projectId, uuid, isVisible = null)
 			verify(contentPostgresRepository).findAllByGroupIds(
 				projectId,
 				listOf(uuid),
-				visibilitySearched = null,
-				availabilitySearched = null
+				isVisible = null,
+				isAvailable = null
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
@@ -296,7 +297,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			val group = GroupModel().apply {
 				id = uuid
 				name = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				members = emptyList()
 				create(currentUser())
 			}
@@ -306,12 +307,12 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+			verify(postgresRepository).findById(projectId, uuid, isVisible = null)
 			verify(contentPostgresRepository).findAllByGroupIds(
 				projectId,
 				listOf(uuid),
-				visibilitySearched = null,
-				availabilitySearched = null
+				isVisible = null,
+				isAvailable = null
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())

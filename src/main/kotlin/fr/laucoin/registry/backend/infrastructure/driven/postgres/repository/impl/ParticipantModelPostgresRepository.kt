@@ -34,20 +34,25 @@ class ParticipantModelPostgresRepository(
 	): Mono<PageModel<ParticipantModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.textSearched,
+			searchParams.query,
 			searchParams.isMajor,
-			searchParams.typeSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
+			searchParams.type,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.isPresent,
+			searchParams.at,
+			searchParams.hasUser,
+			searchParams.birthdayFrom,
+			searchParams.birthdayTo,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
-	override fun findBirthdays(projectId: UUID, visibilitySearched: Boolean?): Flux<ParticipantModel> {
-		return repository.findAllWithBirthday(projectId, visibilitySearched)
+	override fun findBirthdays(projectId: UUID, isVisible: Boolean?): Flux<ParticipantModel> {
+		return repository.findAllWithBirthday(projectId, isVisible)
 			.map(mapper::toModel)
 	}
 
@@ -57,13 +62,16 @@ class ParticipantModelPostgresRepository(
 	): Mono<Long> {
 		return repository.countAll(
 			projectId,
-			searchParams.textSearched,
+			searchParams.query,
 			searchParams.isMajor,
-			searchParams.typeSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
+			searchParams.type,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.isPresent,
+			searchParams.at,
+			searchParams.hasUser,
+			searchParams.birthdayFrom,
+			searchParams.birthdayTo,
 		)
 	}
 
@@ -76,25 +84,34 @@ class ParticipantModelPostgresRepository(
 		return repository.findAllByGroupId(
 			projectId,
 			groupId,
-			searchParams.textSearched,
+			searchParams.query,
 			searchParams.isMajor,
-			searchParams.typeSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
+			searchParams.type,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.isPresent,
+			searchParams.at,
+			searchParams.hasUser,
+			searchParams.birthdayFrom,
+			searchParams.birthdayTo,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
-	override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel> {
+	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ParticipantModel> {
 		return if (ids.isEmpty()) Flux.empty()
-		else repository.findAllByIds(projectId, ids, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
+		else repository.findAllByIds(projectId, ids, isVisible, at = null).map(mapper::toModel)
 	}
 
 	override fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel> {
 		return repository.findByUserId(projectId, userId, null).map(mapper::toModel)
+	}
+
+	override fun findAllByUserId(userId: UUID): Flux<ParticipantModel> {
+		return repository.findAllByUserId(userId).map(mapper::toModel)
 	}
 
 	override fun findWithLimit(
@@ -104,13 +121,13 @@ class ParticipantModelPostgresRepository(
 	): Flux<ParticipantModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.textSearched,
+			searchParams.query,
 			searchParams.isMajor,
-			searchParams.typeSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
+			searchParams.type,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.isPresent,
+			searchParams.at,
 			limit,
 		).map(mapper::toModel)
 	}
@@ -137,8 +154,8 @@ class ParticipantModelPostgresRepository(
 		return repository.findUnusedSince(dateThreshold)
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel> {
-		return repository.findById(projectId, id, visibilitySearched, dateTimeSearched = null).map(mapper::toModel)
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel> {
+		return repository.findById(projectId, id, isVisible, at = null).map(mapper::toModel)
 	}
 
 	override fun create(element: ParticipantModel): Mono<ParticipantModel> {
@@ -149,7 +166,7 @@ class ParticipantModelPostgresRepository(
 
 	override fun update(element: ParticipantModel): Mono<ParticipantModel> {
 		return save(element)
-			.flatMap { findById(element.project!!.id!!, element.id!!, visibilitySearched = null) }
+			.flatMap { findById(element.projectId!!, element.id!!, isVisible = null) }
 			.saveNewGroups(element)
 			.removeDeletedGroups(element)
 			.`as`(transactionalOperator::transactional)

@@ -35,11 +35,14 @@ class ProjectProfileModelPostgresRepository(
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByUserId(
 			userId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.statusSearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.status,
+			searchParams.at,
+			searchParams.role,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
@@ -52,11 +55,14 @@ class ProjectProfileModelPostgresRepository(
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByProjectId(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.statusSearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.status,
+			searchParams.at,
+			searchParams.role,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
@@ -66,27 +72,27 @@ class ProjectProfileModelPostgresRepository(
 		projectId: UUID,
 		userIds: List<UUID>,
 		profileIdToExclude: UUID?,
-		statusSearched: List<ProfileStatusEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		status: List<ProfileStatusEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
 	): Flux<UUID> {
 		if (userIds.isEmpty()) return Flux.empty()
 		return repository.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			projectId,
 			userIds,
 			profileIdToExclude,
-			statusSearched,
-			startDateTimeSearched,
-			endDateTimeSearched
+			status,
+			from,
+			to
 		)
 	}
 
 	override fun findProjectProfilesRolesByUserId(userId: UUID): Flux<ProjectProfileRoleModel> {
 		return repository.findAllRolesByUserId(
 			userId,
-			visibilitySearched = null,
-			availabilitySearched = true,
-			statusSearched = listOf(ACCEPTED),
+			isVisible = null,
+			isAvailable = true,
+			status = listOf(ACCEPTED),
 		).map(roleMapper::toModel)
 	}
 
@@ -97,15 +103,15 @@ class ProjectProfileModelPostgresRepository(
 	override fun findProjectProfileByUserIdAndId(
 		userId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<ProjectProfileModel> {
-		return repository.findByUserIdAndId(userId, id, visibilitySearched)
+		return repository.findByUserIdAndId(userId, id, isVisible)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel> {
-		return repository.findByProjectIdAndId(projectId, id, visibilitySearched)
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileModel> {
+		return repository.findByProjectIdAndId(projectId, id, isVisible)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}
@@ -118,26 +124,41 @@ class ProjectProfileModelPostgresRepository(
 		return repository.findProjectProfileByProjectAndUserId(
 			projectId,
 			userId,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.statusSearched,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.status,
 		)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}
 
+	override fun findProjectProfilesByUserIdAndProjectIds(
+		userId: UUID,
+		projectIds: List<UUID>,
+		searchParams: ProjectProfileSearchParamModel,
+	): Flux<ProjectProfileModel> {
+		if (projectIds.isEmpty()) return Flux.empty()
+		return repository.findByUserIdAndProjectIds(
+			userId,
+			projectIds,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.status,
+		).map(mapper::toModel)
+	}
+
 	override fun findLevel0ProjectProfileRoleByUserId(
 		userId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileRoleCountModel> {
-		return repository.findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched).map(roleCountMapper::toModel)
+		return repository.findLevel0ProjectProfileRoleByUserId(userId, isVisible).map(roleCountMapper::toModel)
 	}
 
 	override fun findLevel0ProjectProfileRoleByProjectId(
 		projectId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileModel> {
-		return repository.findLevel0ProjectProfileRoleByProjectId(projectId, visibilitySearched).map(mapper::toModel)
+		return repository.findLevel0ProjectProfileRoleByProjectId(projectId, isVisible).map(mapper::toModel)
 	}
 
 	override fun create(element: ProjectProfileModel): Mono<ProjectProfileModel> {
