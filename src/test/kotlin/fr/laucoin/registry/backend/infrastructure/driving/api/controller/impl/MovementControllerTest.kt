@@ -15,6 +15,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
@@ -387,6 +389,35 @@ class MovementControllerTest : TestContext() {
 		result.assertError(BAD_REQUEST, MOVEMENT_IDS_TOO_MANY)
 
 		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findMovementCommunications convert the page number into an offset`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val pageable = PageableModel(offset = 40, limit = 20)
+		whenever(service.findMovementCommunicationsPage(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(pageable, totalElements = 0, emptyList())))
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION),
+				buildAuthority(REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R),
+			)
+			.get()
+			.uri(
+				uriBuilder(
+					"$BASE_URL/{id}/communications",
+					listOf(defaultProjectId, uuid),
+					listOf(Pair("page", 2), Pair("size", 20)),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.expectStatus().isOk
+		verify(service).findMovementCommunicationsPage(eq(defaultProjectId), eq(uuid), eq(pageable), any())
 	}
 
 	@Test

@@ -201,7 +201,7 @@ class MovementV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<CommunicationReaderDto>> {
-		val pageable = PageableModel(page, size)
+		val pageable = PageableModel(page * size, size)
 		val searchParams = CommunicationSearchParamModel(
 			query, isVisible, from, to,
 			sort = sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
