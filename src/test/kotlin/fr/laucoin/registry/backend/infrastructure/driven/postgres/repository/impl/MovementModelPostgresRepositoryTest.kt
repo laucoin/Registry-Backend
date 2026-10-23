@@ -131,18 +131,22 @@ class MovementModelPostgresRepositoryTest: TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 200)
 		val current = repository.findCurrentPage(projectId, pageable, MovementSearchParamModel(type = null)).block()!!.content
-		val activityId = repository.findPage(projectId, pageable, MovementSearchParamModel(type = null)).block()!!
-			.content.firstNotNullOf { it.activity?.id }
+		val all = repository.findPage(projectId, pageable, MovementSearchParamModel(type = null)).block()!!.content
+		val activityId = all.firstNotNullOf { it.activity?.id }
 
 		// Act
 		val result = repository.findCurrentPage(
 			projectId, pageable, MovementSearchParamModel(type = null, activityId = activityId),
+		).block()!!
+		val foreign = repository.findCurrentPage(
+			projectId, pageable, MovementSearchParamModel(type = null, activityId = UUID.randomUUID()),
 		).block()!!
 
 		// Assert
 		assertEquals(current.count { it.activity?.id == activityId }, result.content.size)
 		assertEquals(result.content.size.toLong(), result.totalElements)
 		assertTrue(result.content.all { it.activity?.id == activityId })
+		assertEquals(0, foreign.content.size)
 	}
 
 	@Test

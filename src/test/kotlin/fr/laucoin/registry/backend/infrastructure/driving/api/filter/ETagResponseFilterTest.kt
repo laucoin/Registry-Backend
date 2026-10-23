@@ -1,12 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.filter
 
+import io.netty.buffer.UnpooledByteBufAllocator
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.springframework.core.io.buffer.NettyDataBuffer
+import org.springframework.core.io.buffer.NettyDataBufferFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
@@ -134,5 +138,86 @@ class ETagResponseFilterTest {
 		// Assert
 		assertEquals(body, exchange.response.bodyAsString.block())
 		assertNull(exchange.response.headers.eTag)
+	}
+
+	@Test
+	fun `Should compute the ETag of a body of exactly one mebibyte and skip one byte more`() {
+		// Arrange
+		val skeleton = """{"padding":"","lastEdition":{"dateTime":"2026-10-13T10:02:11.123Z"}}"""
+		fun bodyOf(size: Int) = skeleton.replace("\"padding\":\"\"", "\"padding\":\"" + "x".repeat(size - skeleton.length) + "\"")
+		fun eTagOf(body: String): String? {
+			val exchange = MockServerWebExchange.from(MockServerHttpRequest.get(itemPath))
+			val chain = WebFilterChain {
+				it.response.headers.contentType = APPLICATION_JSON
+				it.response.writeWith(Mono.just(it.response.bufferFactory().wrap(body.toByteArray())))
+			}
+			filter.filter(exchange, chain).block()
+			return exchange.response.headers.eTag
+		}
+
+		// Act
+		val atCap = eTagOf(bodyOf(1_048_576))
+		val overCap = eTagOf(bodyOf(1_048_577))
+
+		// Assert
+		assertEquals("\"1791885731123\"", atCap)
+		assertNull(overCap)
+	}
+
+	@Test
+	fun `Should propagate a failure of the body without an ETag`() {
+		// Arrange
+		val exchange = MockServerWebExchange.from(MockServerHttpRequest.get(itemPath))
+		val chain = WebFilterChain {
+			it.response.headers.contentType = APPLICATION_JSON
+			it.response.writeWith(
+				Flux.concat(
+					Mono.just(it.response.bufferFactory().wrap("""{"name":""".toByteArray())),
+					Flux.error(IllegalStateException("connection reset")),
+				),
+			)
+		}
+
+		// Act
+		val failure = assertThrows(IllegalStateException::class.java) { filter.filter(exchange, chain).block() }
+
+		// Assert
+		assertEquals("connection reset", failure.message)
+		assertNull(exchange.response.headers.eTag)
+	}
+
+	@Test
+	fun `Should write an oversized body split in several buffers unchanged and without ETag`() {
+		// Arrange
+		val exchange = MockServerWebExchange.from(MockServerHttpRequest.get(itemPath))
+		val parts = listOf("""{"padding":"""", "x".repeat(1_048_577), """","lastEdition":{"dateTime":"2026-10-13T10:02:11.123Z"}}""")
+		val chain = WebFilterChain {
+			it.response.headers.contentType = APPLICATION_JSON
+			it.response.writeWith(Flux.fromIterable(parts).map { part -> it.response.bufferFactory().wrap(part.toByteArray()) })
+		}
+
+		// Act
+		filter.filter(exchange, chain).block()
+
+		// Assert
+		assertEquals(parts.joinToString(""), exchange.response.bodyAsString.block())
+		assertNull(exchange.response.headers.eTag)
+	}
+
+	@Test
+	fun `Should release the buffers already received when the body fails`() {
+		// Arrange
+		val exchange = MockServerWebExchange.from(MockServerHttpRequest.get(itemPath))
+		val buffer = NettyDataBufferFactory(UnpooledByteBufAllocator.DEFAULT).wrap("""{"name":""".toByteArray())
+		val chain = WebFilterChain {
+			it.response.headers.contentType = APPLICATION_JSON
+			it.response.writeWith(Flux.concat(Mono.just(buffer), Flux.error(IllegalStateException("connection reset"))))
+		}
+
+		// Act
+		assertThrows(IllegalStateException::class.java) { filter.filter(exchange, chain).block() }
+
+		// Assert
+		assertEquals(0, (buffer as NettyDataBuffer).nativeBuffer.refCnt())
 	}
 }

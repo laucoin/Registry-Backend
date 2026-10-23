@@ -46,16 +46,6 @@ object CommunicationQueries {
 	const val COMMUNICATION_TEXT_SEARCH_CLAUSE =
 		"(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
 
-	const val COMMUNICATION_TARGET_CLAUSE = """
-        (
-            CAST(:target AS TEXT) IS NULL OR CAST(:target AS TEXT) = CASE
-                WHEN t.$COMMUNICATION_MOVEMENT_ID IS NOT NULL THEN 'MOVEMENT'
-                WHEN t.$COMMUNICATION_ALERT_ID IS NOT NULL THEN 'ALERT'
-                ELSE 'NONE'
-            END
-        )
-    """
-
 	private const val LINKED_MOVEMENT_TABLE = "movement_tb"
 	private const val LINKED_ACTIVITY_TABLE = "activity_tb"
 	const val SELECT_LINKED_MOVEMENT = """

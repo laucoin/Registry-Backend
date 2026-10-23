@@ -61,7 +61,6 @@ class RegistryControllerAdvice(
 			exchange,
 			status = BAD_REQUEST,
 			code = PARAMETER_TYPE_MISMATCH,
-			args = arrayOf(exception.cause).filterNotNull().toTypedArray(),
 		)
 	}
 

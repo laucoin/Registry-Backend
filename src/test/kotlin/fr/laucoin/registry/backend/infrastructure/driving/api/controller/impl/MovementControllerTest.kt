@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_AND_REASON_ARE_DEFINED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_PARTICIPANT_ID_NULL
@@ -11,6 +12,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
@@ -19,6 +21,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.OTHER
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -942,5 +945,91 @@ class MovementControllerTest: TestContext() {
 		result.body<MovementReaderDto>(OK)
 
 		verify(service).updateMovementById(any(), any(), any(), any(), any())
+	}
+
+	@Test
+	fun `Should createMovement refuse more than 200 contents`() {
+		// Arrange
+		val movement = ParticipantMovementWriterDto(
+			dateTime = now(),
+			type = IN,
+			reason = null,
+			activityId = null,
+			content = List(201) { ParticipantMovementContentWriterDto(participantId = UUID.randomUUID()) },
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(movement)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createMovement refuse a pool name over 150 characters`() {
+		// Arrange
+		val movement = ParticipantMovementWriterDto(
+			dateTime = now(),
+			type = IN,
+			reason = null,
+			activityId = null,
+			content = listOf(ParticipantMovementContentWriterDto(participantId = UUID.randomUUID(), poolName = "p".repeat(151))),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(movement)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createGuestsMovement refuse more than 200 guests`() {
+		// Arrange
+		val guests = List(201) { GuestMovementWriterDto.GuestWriterDto(firstName = "Ada", lastName = "Lovelace", birthday = LocalDate.of(2010, 1, 1)) }
+		val body = GuestMovementWriterDto(dateTime = now(), type = IN, reason = MovementReasonEnum.VISIT, content = null, guests = guests)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.post()
+			.uri(uriBuilder("$BASE_URL/guests", listOf(projectId), emptyList()))
+			.bodyValue(body)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createGuestsMovement refuse more than 200 contents`() {
+		// Arrange
+		val content = List(201) { MovementContentWriterDto(participantId = UUID.randomUUID()) }
+		val body = GuestMovementWriterDto(dateTime = now(), type = OUT, reason = null, guests = null, content = content)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.post()
+			.uri(uriBuilder("$BASE_URL/guests", listOf(projectId), emptyList()))
+			.bodyValue(body)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(service)
 	}
 }

@@ -1,9 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
 import fr.laucoin.registry.backend.test.TestContext
+import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
@@ -11,8 +13,10 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -61,5 +65,36 @@ class PreferencesControllerTest: TestContext() {
 		// Assert
 		result.body<PreferencesModel>(OK)
 		verify(service).updateLanguage(any(), eq("fr-FR"))
+	}
+
+	@Test
+	fun `Should updateLanguage refuse a language over 10 characters`() {
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/language", emptyList(), listOf(Pair("language", "a".repeat(11)))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateLanguage accept a language of exactly 10 characters`() {
+		// Arrange
+		whenever(service.updateLanguage(any(), any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/language", emptyList(), listOf(Pair("language", "a".repeat(10)))))
+			.exchange()
+
+		// Assert
+		result.body<PreferencesModel>(OK)
+		verify(service).updateLanguage(any(), eq("a".repeat(10)))
 	}
 }

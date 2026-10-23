@@ -25,5 +25,5 @@ object SortExt {
 		return SortModel(field, isDescending)
 	}
 
-	private fun String.echoable(): String = take(MAX_ECHOED_LENGTH).filter { it.isLetterOrDigit() }
+	private fun String.echoable(): String = take(MAX_ECHOED_LENGTH).filter { it.isLetterOrDigit() || it == '_' }
 }

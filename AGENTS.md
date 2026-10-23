@@ -76,7 +76,7 @@ The root package `fr.laucoin.registry.backend` contains **only** `config/`, `dom
 | Group                | Keys                                                                                                                                |
 |----------------------|-------------------------------------------------------------------------------------------------------------------------------------|
 | Datasource           | `registry.datasource.base-url` (host:port, no scheme), `.database`, `.schemas`, `.username`, `.password`                            |
-| IDP                  | `external.idp.jwks-uri`, `.authorization-uri`, `.token-uri`, `.end-session-uri`, `.client-id`, `.client-secret`                     |
+| IDP                  | `external.idp.jwks-uri`, `.authorization-uri`, `.token-uri`, `.end-session-uri`, `.client-id`, `.client-secret`, `.allowed-redirect-uris`, `.allowed-logout-redirect-uris` |
 | CORS                 | `external.cors.urls` — comma-separated allow-list, **never** `*`                                                                    |
 | Server               | `registry.server.port` (8081), `registry.server.logging-level`                                                                      |
 | Features             | `registry.feature.documentation.enabled` (Swagger), `registry.feature.observability.enabled` (Prometheus)                           |

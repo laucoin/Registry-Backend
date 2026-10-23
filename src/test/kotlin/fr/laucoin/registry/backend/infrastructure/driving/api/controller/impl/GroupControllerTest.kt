@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_START_LATER_THAN_END
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -60,6 +61,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CONTENT_TOO_LARGE
 import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.NO_CONTENT
@@ -94,6 +96,9 @@ class GroupControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
+		private const val OVER_BODY_LIMIT = 600_000
+		private const val UNDER_BODY_LIMIT = 500_000
+
 		private const val BASE_URL = "/api/v2/projects/{projectId}/groups"
 
 		@JvmStatic
@@ -755,6 +760,79 @@ class GroupControllerTest: TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, GROUP_MEMBERS_TOO_MANY)
 
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should addMembersToGroupById accept exactly 200 members at once`() {
+		// Arrange
+		val memberIds = List(200) { UUID.randomUUID() }
+		whenever(service.addMembersToGroupById(any(), any(), any(), any())).thenReturn(Mono.just(Pair(memberIds, emptyList())))
+		whenever(addedGroupMembersReaderMapper.toDto(any())).thenReturn(AddedGroupMembersReaderDto(emptyList(), emptyList()))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
+			.post()
+			.uri(uriBuilder("$BASE_URL/{id}/members", listOf(projectId, UUID.randomUUID()), emptyList()))
+			.bodyValue(memberIds)
+			.exchange()
+
+		// Assert
+		result.body<AddedGroupMembersReaderDto>(OK)
+	}
+
+	@Test
+	fun `Should createGroup refuse more than 200 members`() {
+		// Arrange
+		val group = GroupWriterDto(name = "name", members = List(201) { UUID.randomUUID() })
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(group)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createGroup refuse a request body above the in-memory limit`() {
+		// Arrange
+		val group = GroupWriterDto(name = "a".repeat(OVER_BODY_LIMIT), members = emptyList())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(group)
+			.exchange()
+
+		// Assert
+		result.expectStatus().isEqualTo(CONTENT_TOO_LARGE)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createGroup read a request body just under the in-memory limit`() {
+		// Arrange
+		val group = GroupWriterDto(name = "a".repeat(UNDER_BODY_LIMIT), members = listOf(UUID.randomUUID()))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.bodyValue(group)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, GROUP_NAME_TOO_LONG)
 		verifyNoInteractions(service)
 	}
 }

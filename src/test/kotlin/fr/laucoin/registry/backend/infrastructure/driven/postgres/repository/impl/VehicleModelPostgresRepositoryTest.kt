@@ -119,10 +119,10 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 200)
 		val reference = repository.findPage(projectId, pageable, VehicleSearchParamModel(query = null, at = null)).block()!!.content
-			.first { vehicle -> vehicle.brand!!.any { it in "aeiou" } && vehicle.brand!!.none { it in "àâäéèêëîïôöùûü" } }
+			.first { vehicle -> vehicle.brand != null && vehicle.brand!!.lowercase().any { it in "aeiou" } && vehicle.brand!!.none { it in "àâäéèêëîïôöùûüÀÂÄÉÈÊËÎÏÔÖÙÛÜ" } }
 		val brand = reference.brand!!
-		val vowel = brand.indexOfFirst { it in "aeiou" }
-		val accented = brand.replaceRange(vowel, vowel + 1, mapOf('a' to "à", 'e' to "é", 'i' to "î", 'o' to "ô", 'u' to "ù")[brand[vowel]]!!)
+		val vowel = brand.indexOfFirst { it.lowercaseChar() in "aeiou" }
+		val accented = brand.replaceRange(vowel, vowel + 1, mapOf('a' to "à", 'e' to "é", 'i' to "î", 'o' to "ô", 'u' to "ù")[brand[vowel].lowercaseChar()]!!)
 
 		// Act
 		val result = repository.findPage(

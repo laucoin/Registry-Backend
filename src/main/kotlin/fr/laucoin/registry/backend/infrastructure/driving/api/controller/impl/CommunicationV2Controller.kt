@@ -1,11 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.enumeration.CommunicationTargetEnum
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ICommunicationV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
@@ -18,7 +13,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Aler
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.CommunicationWriterDtoMapper
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
@@ -34,26 +28,6 @@ class CommunicationV2Controller(
 	private val readerMovementMapper: MovementReaderDtoMapper,
 	private val writerMapper: CommunicationWriterDtoMapper,
 ): ICommunicationV2Controller {
-	override fun findCommunications(
-		projectId: UUID,
-		page: Int,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		target: CommunicationTargetEnum?,
-		sort: String?,
-	): Mono<PageModel<CommunicationReaderDto>> {
-		val pageable = PageableModel(page * size, size)
-		val searchParams = CommunicationSearchParamModel(
-			query, isVisible, from, to, target,
-			sort = sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
-		)
-
-		return service.findCommunicationPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
-	}
-
 	override fun findCommunicationById(projectId: UUID, id: UUID): Mono<CommunicationReaderDto> {
 		return service.findCommunicationById(projectId, id, isVisible = null).map(readerMapper::toDto)
 	}

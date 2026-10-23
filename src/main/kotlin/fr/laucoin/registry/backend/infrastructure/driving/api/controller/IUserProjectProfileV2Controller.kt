@@ -3,8 +3,13 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROFILE_C
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PROJECT_PROFILE_ROLE_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.ROLE_PATTERN
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -16,6 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -49,7 +55,7 @@ interface IUserProjectProfileV2Controller {
 			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 		) size: Int,
 		@Parameter(description = "Text matched against the project name (accent-insensitive substring)")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = 100, message = PARAMETER_TOO_LONG) query: String?,
+		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Availability filter at the current time: true keeps available elements only, false keeps unavailable ones only, omitted keeps both")
 		@RequestParam(required = false) isAvailable: Boolean?,
 		@RequestParam(required = false) status: ProfileStatusEnum?,
@@ -57,9 +63,12 @@ interface IUserProjectProfileV2Controller {
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Exact role of the profile, as listed by the roles endpoint")
-		@RequestParam(required = false) @Valid @Size(max = 50, message = PARAMETER_TOO_LONG) role: String?,
+		@RequestParam(required = false)
+		@Valid
+		@Size(max = PROJECT_PROFILE_ROLE_MAX, message = PARAMETER_TOO_LONG)
+		@Pattern(regexp = ROLE_PATTERN, message = PARAMETER_FORMAT_INVALID) role: String?,
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: projectName, role, status, startAccess, endAccess")
-		@RequestParam(required = false) @Valid @Size(max = 32, message = PARAMETER_TOO_LONG) sort: String?,
+		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<UserInvitationReaderDto>>
 
 	@Operation(

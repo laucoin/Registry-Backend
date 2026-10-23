@@ -4,10 +4,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_OR_ALERT_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
@@ -16,12 +12,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
-import fr.laucoin.registry.backend.domain.enumeration.CommunicationTargetEnum
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CommunicationWriterDto
@@ -36,8 +28,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Test
@@ -60,7 +50,6 @@ import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.PRECONDITION_FAILED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
-import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -79,73 +68,6 @@ class CommunicationControllerTest: TestContext() {
 
 	private companion object {
 		private const val BASE_URL = "/api/v2/projects/{projectId}/communications"
-
-		@JvmStatic
-		fun `Should findCommunications prepare param, call service and finally cast the result`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of("not locale", null, null, null, null, null, null),
-				Arguments.of(null, 0, null, null, null, null, null),
-				Arguments.of(null, null, 200, null, null, null, null),
-				Arguments.of(null, null, null, null, null, null, null),
-				Arguments.of(null, null, null, "text", null, null, null),
-				Arguments.of(null, null, null, null, true, null, null),
-				Arguments.of(null, null, null, null, null, "2024-11-14T18:34:33.000Z", null),
-				Arguments.of(null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
-			)
-		}
-
-		@JvmStatic
-		fun `Should findCommunications forward the target filter to the service`(): Stream<Arguments> =
-			CommunicationTargetEnum.entries.stream().map { Arguments.of(it) }
-
-		@JvmStatic
-		fun `Should findCommunications throw due to wrong params`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of("not uuid", null, null, null, null, null, null, PARAMETER_TYPE_MISMATCH),
-				Arguments.of(projectId.toString(), -1, null, null, null, null, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
-				Arguments.of(projectId.toString(), null, 0, null, null, null, null, PAGE_SIZE_IS_LOWER_THAN_ONE),
-				Arguments.of(
-					projectId.toString(),
-					null,
-					201,
-					null,
-					null,
-					null,
-					null,
-					PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-				),
-				Arguments.of(
-					projectId.toString(),
-					null,
-					null,
-					null,
-					"not boolean",
-					null,
-					null,
-					PARAMETER_TYPE_MISMATCH
-				),
-				Arguments.of(
-					projectId.toString(),
-					null,
-					null,
-					null,
-					null,
-					"2024/11/14 18:34:33",
-					null,
-					PARAMETER_TYPE_MISMATCH
-				),
-				Arguments.of(
-					projectId.toString(),
-					null,
-					null,
-					null,
-					null,
-					null,
-					"2024/11/14 18:34:33",
-					PARAMETER_TYPE_MISMATCH
-				),
-			)
-		}
 
 		@JvmStatic
 		fun `Wrong CommunicationDto`(): Stream<Arguments> = Stream.of(
@@ -175,113 +97,6 @@ class CommunicationControllerTest: TestContext() {
 				COMMUNICATION_MESSAGE_TOO_LONG
 			),
 		)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should findCommunications prepare param, call service and finally cast the result`(
-		requestedLocale: String?,
-		page: Int?,
-		size: Int?,
-		query: String?,
-		isVisible: Boolean?,
-		from: String?,
-		to: String?,
-	) {
-		// Arrange
-		val expectedPageNumber = page ?: 0
-		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
-		val searchParams = CommunicationSearchParamModel(
-			query = query,
-			isVisible = isVisible,
-			from = from?.let {
-				ZonedDateTime.parse(
-					it,
-					DateTimeFormatter.ISO_DATE_TIME
-				)
-			},
-			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
-		)
-		val expectedPage = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
-		whenever(service.findCommunicationPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
-		whenever(readerMapper.toDtoPage(any())).thenReturn(
-			PageModel(pageable, totalElements = 1, listOf(CommunicationReaderDto())),
-		)
-
-		// Act
-		val result = webClient
-			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
-				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
-			)
-			.get()
-			.uri(
-				uriBuilder(
-					BASE_URL,
-					listOf(projectId),
-					listOf(
-						Pair("page", page),
-						Pair("size", size),
-						Pair("q", query),
-						Pair("isVisible", isVisible),
-						Pair("from", from),
-						Pair("to", to),
-					),
-				)
-			)
-			.headers { headers -> requestedLocale?.let { headers.add(ACCEPT_LANGUAGE, it) } }
-			.exchange()
-
-		// Assert
-		result.body<PageModel<*>>(OK)
-
-		verify(service).findCommunicationPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(expectedPage)
-		verifyNoInteractions(writerMapper)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should findCommunications throw due to wrong params`(
-		communicationProjectId: String?,
-		page: Int?,
-		size: Int?,
-		query: String?,
-		isVisible: String?,
-		from: String?,
-		to: String?,
-		expectedMessage: String,
-	) {
-		// Act
-		val result = webClient
-			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
-				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
-			)
-			.get()
-			.uri(
-				uriBuilder(
-					BASE_URL,
-					if (Objects.nonNull(communicationProjectId)) listOf(communicationProjectId!!) else emptyList(),
-					listOf(
-						Pair("page", page),
-						Pair("size", size),
-						Pair("q", query),
-						Pair("isVisible", isVisible),
-						Pair("from", from),
-						Pair("to", to),
-					),
-				)
-			)
-			.exchange()
-
-		// Assert
-		result.assertError(BAD_REQUEST, expectedMessage)
-
-		verifyNoInteractions(readerMapper)
-		verifyNoInteractions(writerMapper)
-		verifyNoInteractions(service)
 	}
 
 	@Test
@@ -657,52 +472,6 @@ class CommunicationControllerTest: TestContext() {
 
 		// Assert
 		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-
-		verifyNoInteractions(service)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should findCommunications forward the target filter to the service`(target: CommunicationTargetEnum) {
-		// Arrange
-		val pageable = PageableModel(0, 20)
-		val searchParams = CommunicationSearchParamModel(query = null, target = target)
-		val expectedPage = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
-		whenever(service.findCommunicationPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
-		whenever(readerMapper.toDtoPage(any())).thenReturn(
-			PageModel(pageable, totalElements = 1, listOf(CommunicationReaderDto())),
-		)
-
-		// Act
-		val result = webClient
-			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
-				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION),
-			)
-			.get()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("target", target))))
-			.exchange()
-
-		// Assert
-		result.body<PageModel<*>>(OK)
-
-		verify(service).findCommunicationPage(projectId, pageable, searchParams)
-	}
-
-	@Test
-	fun `Should findCommunications throw due to unknown target`() {
-		// Act
-		val result = webClient
-			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
-				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION),
-			)
-			.get()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), listOf(Pair("target", "SOMEWHERE"))))
-			.exchange()
-
-		// Assert
-		result.assertError(BAD_REQUEST, PARAMETER_TYPE_MISMATCH)
 
 		verifyNoInteractions(service)
 	}

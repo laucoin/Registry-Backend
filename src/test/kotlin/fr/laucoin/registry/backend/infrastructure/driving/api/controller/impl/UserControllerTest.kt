@@ -3,6 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
@@ -342,5 +344,63 @@ class UserControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findUsersPage(pageable, UserSearchParamModel(query = null, role = "ROLE_USER"))
+	}
+
+	@Test
+	fun `Should findUsers refuse a role filter over 50 characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_R)
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("role", "R".repeat(51)))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateUserRole refuse a role over 50 characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_U)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(UUID.randomUUID()), emptyList()))
+			.bodyValue(UserRoleWriterDto("R".repeat(51)))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findUsers refuse a role filter with forbidden characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_R)
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("role", "ROLE';--"))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateUserRole refuse a role with forbidden characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_U)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(UUID.randomUUID()), emptyList()))
+			.bodyValue(UserRoleWriterDto("ROLE';--"))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
 	}
 }

@@ -1,10 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.enumeration.CommunicationTargetEnum
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ICommunicationEntityRepository
@@ -16,7 +13,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
@@ -30,7 +26,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -61,51 +56,6 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				),
 			)
 		}
-	}
-
-	@Test
-	fun `Should findPage call repository findAll`() {
-		// Arrange
-		val pageable = PageableModel(0, 10)
-		val params = CommunicationSearchParamModel()
-
-		// Act
-		val result = repository.findPage(projectId, pageable, params).block()
-
-		// Assert
-		assertNotNull(result)
-		assertEquals(0, result.page)
-		assertEquals(10, result.size)
-		assertEquals(550, result.totalElements)
-		assertEquals(55, result.totalPages)
-		verify(postgresRepository).findAll(
-			projectId,
-			query = null,
-			isVisible = null,
-			from = null,
-			to = null,
-			target = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
-		)
-		verify(mapper, atLeastOnce()).toModel(any())
-	}
-
-	@Test
-	fun `Should findPage split the communications by target`() {
-		// Arrange
-		val pageable = PageableModel(0, 10)
-
-		// Act
-		val counts = CommunicationTargetEnum.entries.map {
-			repository.findPage(projectId, pageable, CommunicationSearchParamModel(query = null, target = it))
-				.block()!!.totalElements
-		}
-
-		// Assert
-		assertEquals(550L, counts.sum())
 	}
 
 	@ParameterizedTest

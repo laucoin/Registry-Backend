@@ -1,22 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
-import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
-import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
-import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
-import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
@@ -40,6 +34,7 @@ import fr.laucoin.registry.backend.test.ModelExt.vehicleId
 import fr.laucoin.registry.backend.test.TestContext
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
@@ -76,7 +71,7 @@ class ListSortingRepositoryTest : TestContext() {
 		val name: String,
 		val field: String,
 		val run: (SortModel) -> Mono<out PageModel<*>>,
-		val key: (Any) -> Comparable<Any>?,
+		val key: (Any) -> Comparable<*>?,
 	)
 
 	@TestFactory
@@ -93,7 +88,10 @@ class ListSortingRepositoryTest : TestContext() {
 			val keys = case.run(sort).block()!!.content.map { element -> case.key(element!!) }
 
 			// Assert
-			val present = keys.filterNotNull()
+			@Suppress("UNCHECKED_CAST")
+			val present = keys.filterNotNull() as List<Comparable<Any>>
+			assertTrue(present.size > 1)
+			assertTrue(present.toSet().size > 1)
 			assertEquals(if (isDescending) present.sortedDescending() else present.sorted(), present)
 			assertEquals(keys.filterNotNull().size, keys.indexOfLast { it != null } + 1)
 		}
@@ -117,15 +115,20 @@ class ListSortingRepositoryTest : TestContext() {
 	}
 
 	@Suppress("UNCHECKED_CAST")
+	private fun <T : Any> orderCase(
+		name: String,
+		field: String,
+		run: (SortModel) -> Mono<out PageModel<T>>,
+		key: (T) -> Comparable<*>?,
+	) = OrderCase(name, field, run, { key(it as T) })
+
 	private fun orderCases(): List<OrderCase> = listOf(
-		OrderCase("alerts", "dateTime", { alertPort.findPage(projectId, pageable, AlertSearchParamModel(query = null, sort = it)) }) { (it as AlertModel).dateTime.toInstant() as Comparable<Any> },
-		OrderCase("communications", "dateTime", { communicationPort.findPage(projectId, pageable, CommunicationSearchParamModel(query = null, sort = it)) }) { (it as CommunicationModel).dateTime.toInstant() as Comparable<Any> },
-		OrderCase("movements", "dateTime", { movementPort.findPage(projectId, pageable, MovementSearchParamModel(type = null, sort = it)) }) { (it as MovementModel).dateTime.toInstant() as Comparable<Any> },
-		OrderCase("participants", "birthday", { participantPort.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null, sort = it)) }) { (it as ParticipantModel).birthday as Comparable<Any>? },
-		OrderCase("users", "birthday", { userPort.findPage(pageable, UserSearchParamModel(query = null, sort = it)) }) { (it as UserModel).birthday as Comparable<Any>? },
-		OrderCase("users", "lastLogin", { userPort.findPage(pageable, UserSearchParamModel(query = null, sort = it)) }) { (it as UserModel).lastLogin?.toInstant() as Comparable<Any>? },
-		OrderCase("activities", "minAllowedParticipants", { activityPort.findPage(projectId, pageable, ActivitySearchParamModel(query = null, sort = it)) }) { (it as ActivityModel).allowedParticipants?.lower as Comparable<Any>? },
-		OrderCase("activities", "maxAllowedParticipants", { activityPort.findPage(projectId, pageable, ActivitySearchParamModel(query = null, sort = it)) }) { (it as ActivityModel).allowedParticipants?.upper as Comparable<Any>? },
+		orderCase("alerts", "status", { alertPort.findPage(projectId, pageable, AlertSearchParamModel(query = null, sort = it)) }) { it.status?.name },
+		orderCase("movements", "dateTime", { movementPort.findPage(projectId, pageable, MovementSearchParamModel(type = null, sort = it)) }) { it.dateTime.toInstant() },
+		orderCase("participants", "birthday", { participantPort.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null, sort = it)) }) { it.birthday },
+		orderCase("users", "birthday", { userPort.findPage(pageable, UserSearchParamModel(query = null, sort = it)) }) { it.birthday },
+		orderCase("activities", "minAllowedParticipants", { activityPort.findPage(projectId, pageable, ActivitySearchParamModel(query = null, sort = it)) }) { it.allowedParticipants?.lower },
+		orderCase("activities", "maxAllowedParticipants", { activityPort.findPage(projectId, pageable, ActivitySearchParamModel(query = null, sort = it)) }) { it.allowedParticipants?.upper },
 	)
 
 	private fun directions(case: SortCase, field: String): Stream<DynamicTest> = Stream.of(false, true).map { isDescending ->
@@ -152,9 +155,6 @@ class ListSortingRepositoryTest : TestContext() {
 	)
 
 	private fun communicationCases() = listOf(
-		SortCase("communications", CommunicationSearchParamModel.SORT_FIELDS) {
-			communicationPort.findPage(projectId, pageable, CommunicationSearchParamModel(query = null, sort = it))
-		},
 		SortCase("movement communications", CommunicationSearchParamModel.SORT_FIELDS) {
 			communicationPort.findPageByMovementId(projectId, movementId, pageable, CommunicationSearchParamModel(query = null, sort = it))
 		},

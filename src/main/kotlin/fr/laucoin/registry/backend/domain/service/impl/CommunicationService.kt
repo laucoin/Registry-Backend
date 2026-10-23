@@ -20,12 +20,9 @@ import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
@@ -55,14 +52,6 @@ class CommunicationService(
 	@param:Value($$"${registry.feature.communication.searched.max-alert-result}")
 	private val maxAlertResult: Int,
 ): ICommunicationService, GenericService() {
-	override fun findCommunicationPage(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel
-	): Mono<PageModel<CommunicationModel>> {
-		return port.findPage(projectId, pageable, searchParams)
-	}
-
 	override fun findCommunicationById(
 		projectId: UUID,
 		id: UUID,
