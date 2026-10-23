@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
-import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
@@ -26,8 +25,14 @@ import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilterChain
 import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
+import tools.jackson.databind.json.JsonMapper
 
 class AuthenticationRateLimitHandlerTest {
+	private companion object {
+		const val MAX_TRACKED_CLIENTS = 1000L
+	}
+
+	private val objectMapper = JsonMapper.builder().build()
 	private val translateService: ITranslateService = mock()
 	private val localeContextResolver: LocaleContextResolver = mock()
 	private val chainCalls = AtomicInteger(0)
@@ -43,7 +48,7 @@ class AuthenticationRateLimitHandlerTest {
 	}
 
 	private fun filter(capacity: Int = 2, windowSeconds: Long = 60): AuthenticationRateLimitHandler =
-		AuthenticationRateLimitHandler(translateService, localeContextResolver, Gson(), capacity, windowSeconds)
+		AuthenticationRateLimitHandler(translateService, localeContextResolver, objectMapper, capacity, windowSeconds, MAX_TRACKED_CLIENTS)
 
 	private fun exchange(
 		path: String,
@@ -97,9 +102,9 @@ class AuthenticationRateLimitHandlerTest {
 		limiter.filter(exchange, chain).block()
 
 		// Assert
-		val body = Gson().fromJson((exchange.response as MockServerHttpResponse).bodyAsString.block(), Map::class.java)
+		val body = objectMapper.readValue((exchange.response as MockServerHttpResponse).bodyAsString.block(), Map::class.java)
 		assertEquals(APPLICATION_PROBLEM_JSON, exchange.response.headers.contentType)
-		assertEquals(429.0, body["status"])
+		assertEquals(429, body["status"])
 		assertEquals("429", body["code"])
 		assertEquals("about:blank", body["type"])
 		assertEquals("/api/v2/authentication/token", body["instance"])

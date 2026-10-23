@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.nimbusds.jose.shaded.gson.Gson
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
 import fr.laucoin.registry.backend.domain.service.ITranslateService
@@ -21,18 +20,21 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
+import tools.jackson.databind.ObjectMapper
 
 class AuthenticationRateLimitHandler(
 	private val translateService: ITranslateService,
 	private val localeContextResolver: LocaleContextResolver,
-	private val gson: Gson,
+	private val objectMapper: ObjectMapper,
 	private val capacity: Int,
 	private val windowSeconds: Long,
+	maxTrackedClients: Long,
 ) : WebFilter {
 	private val pathMatcher = AntPathMatcher()
 
 	private val counters: Cache<String, SlidingWindowCounter> = Caffeine.newBuilder()
 		.expireAfterAccess(Duration.ofSeconds(windowSeconds * EXPIRY_GRACE_MULTIPLIER))
+		.maximumSize(maxTrackedClients)
 		.build()
 
 	override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
@@ -71,7 +73,7 @@ class AuthenticationRateLimitHandler(
 			code = TOO_MANY_REQUESTS.value().toString(),
 		)
 
-		return response.writeWith(Mono.just(response.bufferFactory().wrap(gson.toJson(error).toByteArray())))
+		return response.writeWith(Mono.just(response.bufferFactory().wrap(objectMapper.writeValueAsBytes(error))))
 	}
 
 	private class SlidingWindowCounter(private val capacity: Int, private val window: Duration) {

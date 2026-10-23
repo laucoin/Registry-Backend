@@ -116,6 +116,7 @@ registry:
       auth:
         capacity: ${REGISTRY_AUTH_RATE_LIMIT_CAPACITY:10}
         window-seconds: ${REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+        max-tracked-clients: ${REGISTRY_AUTH_RATE_LIMIT_MAX_TRACKED_CLIENTS:10000}
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
