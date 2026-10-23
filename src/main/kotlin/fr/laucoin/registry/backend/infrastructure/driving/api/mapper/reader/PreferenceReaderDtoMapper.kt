@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component
 class PreferenceReaderDtoMapper: IGenericReaderDtoMapper<PreferencesModel, PreferenceReaderDto> {
 	override fun toDto(model: PreferencesModel): PreferenceReaderDto {
 		return PreferenceReaderDto(
+			userId = model.userId,
 			theme = model.theme,
 			language = model.language,
 			refreshMode = model.refreshMode,

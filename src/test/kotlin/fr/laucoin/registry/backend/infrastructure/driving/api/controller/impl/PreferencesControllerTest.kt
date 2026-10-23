@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum.FAST
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -47,7 +47,7 @@ class PreferencesControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<PreferencesModel>(OK)
+		result.body<PreferenceReaderDto>(OK)
 		verify(service).updateTheme(any(), eq(DARK))
 	}
 
@@ -64,7 +64,7 @@ class PreferencesControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<PreferencesModel>(OK)
+		result.body<PreferenceReaderDto>(OK)
 		verify(service).updateLanguage(any(), eq("fr-FR"))
 	}
 
@@ -95,7 +95,7 @@ class PreferencesControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<PreferencesModel>(OK)
+		result.body<PreferenceReaderDto>(OK)
 		verify(service).updateLanguage(any(), eq("a".repeat(10)))
 	}
 
@@ -112,7 +112,7 @@ class PreferencesControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<PreferencesModel>(OK)
+		result.body<PreferenceReaderDto>(OK)
 		verify(service).updateRefreshMode(any(), eq(FAST))
 	}
 }
