@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -119,6 +120,21 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findPage expose the effective dates backfilled from the seed movements`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+
+		// Act
+		val participants = repository.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null)).block()!!.content
+
+		// Assert
+		assertTrue(participants.any { it.effectiveArrival != null })
+		assertTrue(participants.filter { it.effectiveArrival != null }.all { !it.effectiveArrival!!.isAfter(it.lastMovement) })
+		assertTrue(participants.filter { it.type == REGISTERED }.all { it.effectiveDeparture == null })
+		assertTrue(participants.filter { it.type == GUEST && it.effectiveDeparture != null }.all { it.effectiveDeparture == it.lastMovement })
+	}
+
+	@Test
 	fun `Should findPage split the participants by account link`() {
 		// Arrange
 		val pageable = PageableModel(0, 200)
@@ -173,7 +189,8 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			type = null,
 			isVisible = null,
 			isAvailable = null,
-			isPresent = null,
+			status = null,
+			presence = null,
 			at = null,
 			hasUser = null,
 			birthdayFrom = null,
@@ -208,7 +225,8 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			type = null,
 			isVisible = null,
 			isAvailable = null,
-			isPresent = null,
+			status = null,
+			presence = null,
 			at = null,
 			hasUser = null,
 			birthdayFrom = null,
@@ -281,7 +299,8 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			type = null,
 			isVisible = null,
 			isAvailable = null,
-			isPresent = null,
+			status = null,
+			presence = null,
 			at = null,
 			size,
 		)
@@ -411,7 +430,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			assertNotNull(result)
 			verify(postgresRepository).save(any())
 			verify(mapper).toEntity(any())
-			verify(mapper).toModel(any())
+			verify(mapper, times(2)).toModel(any())
 		}
 
 		@Test
@@ -435,7 +454,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, isVisible = null, at = null)
+			verify(postgresRepository, times(2)).findById(projectId, uuid, isVisible = null, at = null)
 			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>())
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
@@ -461,7 +480,7 @@ class ParticipantModelPostgresRepositoryTest: TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, isVisible = null, at = null)
+			verify(postgresRepository, times(2)).findById(projectId, uuid, isVisible = null, at = null)
 			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(uuid, listOf(groupId))
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())

@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OVERDUE
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -47,6 +48,8 @@ class PresenceStatusReaderDtoMapper(
 	): String {
 		val now = CustomDateTimeModel.now()
 		return when {
+			model == OVERDUE -> translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model")
+
 			Objects.nonNull(lastMovement) && listOf(IN, OUT).contains(model) -> {
 				val interval = Duration.between(lastMovement, now.toZonedDateTime())
 

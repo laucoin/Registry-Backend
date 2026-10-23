@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.domain.port
 
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -31,7 +31,21 @@ interface IParticipantPort {
 	fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel>
 	fun findAllByUserId(userId: UUID): Flux<ParticipantModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
-	fun updateAllEndAvailability(ids: List<UUID>, endAvailability: CustomDateTimeModel): Flux<ParticipantModel>
+	fun findPlannedOnOwnDate(
+		projectId: UUID,
+		type: MovementTypeEnum,
+		day: LocalDate,
+		limit: Int,
+	): Flux<ParticipantModel>
+
+	fun findPlannedOnGroupDate(
+		projectId: UUID,
+		type: MovementTypeEnum,
+		day: LocalDate,
+		limit: Int,
+	): Flux<Pair<UUID, ParticipantModel>>
+
+	fun refreshEffectiveDates(ids: List<UUID>): Mono<Unit>
 	fun saveAllGuest(guests: List<ParticipantModel>): Flux<ParticipantModel>
 	fun deleteAll(ids: List<UUID>): Mono<Unit>
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>

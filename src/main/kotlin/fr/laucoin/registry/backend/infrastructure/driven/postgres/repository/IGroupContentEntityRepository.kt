@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.G
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.CONTENT_TO_CONTENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.SELECT_CONTENT_TO_CONTENT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
@@ -38,7 +39,8 @@ interface IGroupContentEntityRepository: ReactiveCrudRepository<GroupContentEnti
                 (
                     COALESCE($PARTICIPANT_TABLE.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
                     OR (COALESCE($PARTICIPANT_TABLE.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE($PARTICIPANT_TABLE.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
-                )
+                ) AND
+                $PARTICIPANT_TABLE.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
             )
         )
     """

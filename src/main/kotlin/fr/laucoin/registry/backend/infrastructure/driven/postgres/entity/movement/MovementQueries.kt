@@ -58,6 +58,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
@@ -237,7 +238,7 @@ object MovementQueries {
             FROM $PARTICIPANT_TABLE t
             LEFT JOIN last_participant_movement ON last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID = t.$ID
             LEFT JOIN filtered_groups fg ON t.$ID = fg.$GROUP_CONTENT_PARTICIPANT_ID
-            WHERE t.$VISIBLE IS TRUE AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
+            WHERE t.$VISIBLE IS TRUE AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
                 (
                     COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
                     OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)

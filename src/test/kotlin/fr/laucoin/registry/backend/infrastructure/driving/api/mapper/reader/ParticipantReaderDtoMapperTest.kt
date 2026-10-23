@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -52,6 +53,8 @@ class ParticipantReaderDtoMapperTest {
 						status = IN
 						user = UserModel()
 						birthday = LocalDate.now().minusYears(18)
+						effectiveArrival = ZonedDateTime.now().minusDays(3)
+						effectiveDeparture = ZonedDateTime.now().minusDays(1)
 					},
 					true,
 					1,
@@ -86,6 +89,8 @@ class ParticipantReaderDtoMapperTest {
 		assertEquals(expectedMajor, result.major)
 		assertEquals(participant.startAvailability, result.startAvailability)
 		assertEquals(participant.endAvailability, result.endAvailability)
+		assertEquals(participant.effectiveArrival, result.effectiveArrival)
+		assertEquals(participant.effectiveDeparture, result.effectiveDeparture)
 		assertEquals(participant.visible, result.visible)
 		assertEquals(participant.creation, result.creation)
 		assertEquals(participant.lastEdition, result.lastEdition)

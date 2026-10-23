@@ -2,8 +2,6 @@ package fr.laucoin.registry.backend.domain.model
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.Companion.isAvailable
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.Companion.isPresent
 import fr.laucoin.registry.backend.domain.extension.DateExt.requireOrderedRange
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -13,7 +11,8 @@ data class ParticipantSearchParamModel(
 	var type: ParticipantTypeEnum? = null,
 	var isVisible: Boolean? = null,
 	var isAvailable: Boolean? = null,
-	var isPresent: Boolean? = null,
+	var status: PresenceStatusEnum? = null,
+	var presence: PresenceStatusEnum? = null,
 	var at: ZonedDateTime? = null,
 	var hasUser: Boolean? = null,
 	var birthdayFrom: LocalDate? = null,
@@ -37,12 +36,14 @@ data class ParticipantSearchParamModel(
 		birthdayFrom: LocalDate? = null,
 		birthdayTo: LocalDate? = null,
 		sort: SortModel? = null,
+		presence: PresenceStatusEnum? = null,
 	): this(
 		isMajor = isMajor,
 		type = type,
 		isVisible = isVisible,
-		isAvailable = status.isAvailable(),
-		isPresent = status.isPresent(),
+		isAvailable = null,
+		status = status,
+		presence = presence,
 		at = at,
 		hasUser = hasUser,
 		birthdayFrom = birthdayFrom,

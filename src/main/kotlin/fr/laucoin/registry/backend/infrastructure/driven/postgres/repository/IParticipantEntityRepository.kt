@@ -1,16 +1,24 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_NAME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.GROUP_DRIVES_PARTICIPANT_PLANNED_DATE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.GROUP_PLANNED_DATE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_OWN_PLANNED_DATE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_PLANNED_ELIGIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_WITHOUT_OWN_PLANNED_DATE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
@@ -23,10 +31,12 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.partici
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_MAJOR_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_PRESENCE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_SORT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_STATUS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_TYPE_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_USER_LINK_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.SELECT_LAST_MOVEMENT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.UPDATE_PARTICIPANT_EFFECTIVE_DATES
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.SELECT_LINKED_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.SELECT_LINKED_USER
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.SELECT_PARTICIPANT_SEARCH
@@ -41,9 +51,9 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
-import java.time.OffsetTime
 import java.time.ZonedDateTime
 import java.util.UUID
+import org.springframework.data.r2dbc.repository.Modifying
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
@@ -61,7 +71,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         ORDER BY $PARTICIPANT_SORT similarity_score DESC, t.$PARTICIPANT_LAST_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -73,7 +83,8 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
 		isAvailable: Boolean?,
-		isPresent: Boolean?,
+		status: PresenceStatusEnum?,
+		presence: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		hasUser: Boolean?,
 		birthdayFrom: LocalDate?,
@@ -89,7 +100,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT COUNT(t.$ID)
         FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN $GROUPS_JOIN
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         """
 	)
 	fun countAll(
@@ -99,7 +110,8 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
 		isAvailable: Boolean?,
-		isPresent: Boolean?,
+		status: PresenceStatusEnum?,
+		presence: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		hasUser: Boolean?,
 		birthdayFrom: LocalDate?,
@@ -112,7 +124,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $GROUP_CONTENT_TABLE ON t.id = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID AND $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID = :groupId
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         ORDER BY $PARTICIPANT_SORT similarity_score DESC, t.$PARTICIPANT_LAST_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -125,7 +137,8 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
 		isAvailable: Boolean?,
-		isPresent: Boolean?,
+		status: PresenceStatusEnum?,
+		presence: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		hasUser: Boolean?,
 		birthdayFrom: LocalDate?,
@@ -190,7 +203,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         WITH $WITH_PARTICIPANT_LAST_MOVEMENT, $WITH_PARTICIPANT_GROUPS
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_GROUPS, $SELECT_PARTICIPANT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
         LIMIT :limit
         """
@@ -202,7 +215,8 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
 		isAvailable: Boolean?,
-		isPresent: Boolean?,
+		status: PresenceStatusEnum?,
+		presence: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		limit: Int,
 	): Flux<ParticipantEntity>
@@ -224,16 +238,45 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 
 	@Query(
 		"""
-        UPDATE $PARTICIPANT_TABLE SET $PARTICIPANT_END_AVAILABILITY_TIME = :endAvailabilityTime, $PARTICIPANT_END_AVAILABILITY_DATE = :endAvailabilityDate
-        WHERE $ID IN (:ids)
-        RETURNING *
+        WITH $WITH_PARTICIPANT_LAST_MOVEMENT
+        SELECT t.$ID FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_PLANNED_ELIGIBLE_CLAUSE AND $PARTICIPANT_OWN_PLANNED_DATE_CLAUSE
+        ORDER BY t.$PARTICIPANT_LAST_NAME, t.$ID
+        LIMIT :limit
         """
 	)
-	fun updateAllEndAvailability(
-		ids: List<UUID>,
-		endAvailabilityTime: OffsetTime?,
-		endAvailabilityDate: LocalDate?
-	): Flux<ParticipantEntity>
+	fun findIdsPlannedOnOwnDate(
+		projectId: UUID,
+		isVisible: Boolean?,
+		isArrival: Boolean,
+		day: LocalDate,
+		limit: Int,
+	): Flux<UUID>
+
+	@Query(
+		"""
+        WITH $WITH_PARTICIPANT_LAST_MOVEMENT
+        SELECT DISTINCT ON (t.$ID) gc.$ID, gc.$GROUP_CONTENT_GROUP_ID, gc.$GROUP_CONTENT_PARTICIPANT_ID
+        FROM $GROUP_CONTENT_TABLE gc
+        INNER JOIN $GROUP_TABLE g ON g.$ID = gc.$GROUP_CONTENT_GROUP_ID AND g.$VISIBLE IS TRUE
+        INNER JOIN $PARTICIPANT_TABLE t ON t.$ID = gc.$GROUP_CONTENT_PARTICIPANT_ID $LAST_MOVEMENT_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_PLANNED_ELIGIBLE_CLAUSE AND $PARTICIPANT_WITHOUT_OWN_PLANNED_DATE_CLAUSE
+            AND $GROUP_PLANNED_DATE_CLAUSE AND $GROUP_DRIVES_PARTICIPANT_PLANNED_DATE_CLAUSE
+        ORDER BY t.$ID, g.$GROUP_NAME
+        LIMIT :limit
+        """
+	)
+	fun findGroupContentsPlannedOnGroupDate(
+		projectId: UUID,
+		isVisible: Boolean?,
+		isArrival: Boolean,
+		day: LocalDate,
+		limit: Int,
+	): Flux<GroupContentEntity>
+
+	@Modifying
+	@Query(UPDATE_PARTICIPANT_EFFECTIVE_DATES)
+	fun refreshEffectiveDates(ids: List<UUID>): Mono<Long>
 
 	@Query(
 		"""

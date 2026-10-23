@@ -23,16 +23,17 @@ class DateClausesTest : TestContext() {
 	@Autowired
 	private lateinit var databaseClient: DatabaseClient
 
-	private data class WindowResource(val name: String, val clause: String, val columns: List<String>, val extraJoin: String = "")
+	private data class WindowResource(val name: String, val clause: String, val columns: List<String>, val extraJoin: String = "", val extraColumns: String = "")
 
 	private companion object {
 		val AVAILABILITY = listOf("start_availability_date", "start_availability_time", "end_availability_date", "end_availability_time")
+		const val DEPARTURE_COLUMN = ", CAST(NULL AS TIMESTAMP WITH TIME ZONE) AS effective_departure"
 		const val GROUP_JOIN = "CROSS JOIN (SELECT CAST(NULL AS JSON) AS groups, CAST(NULL AS JSON) AS available_groups_on_date) fg"
 
 		val WINDOWS = listOf(
 			WindowResource("groups", DATE_IN_GROUP_DATES_RANGE_CLAUSE, AVAILABILITY),
 			WindowResource("vehicles", DATE_IN_VEHICLE_DATES_RANGE_CLAUSE, AVAILABILITY),
-			WindowResource("participants", DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE, AVAILABILITY, GROUP_JOIN),
+			WindowResource("participants", DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE, AVAILABILITY, GROUP_JOIN, DEPARTURE_COLUMN),
 			WindowResource("projects", DATE_IN_PROJECT_DATES_RANGE_CLAUSE, listOf("begin_date", "begin_time", "end_date", "end_time")),
 			WindowResource("profiles", DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE, listOf("start_access_date", "start_access_time", "end_access_date", "end_access_time")),
 		)
@@ -113,7 +114,7 @@ class DateClausesTest : TestContext() {
 		return """
             SELECT 1 FROM (
                 SELECT DATE '2024-05-01' AS $startDate, TIME WITH TIME ZONE '10:00:00+02' AS $startTime,
-                       DATE '2024-05-02' AS $endDate, TIME WITH TIME ZONE '10:00:00+02' AS $endTime
+                       DATE '2024-05-02' AS $endDate, TIME WITH TIME ZONE '10:00:00+02' AS $endTime${resource.extraColumns}
             ) t ${resource.extraJoin} WHERE ${resource.clause}
         """
 	}
@@ -126,7 +127,7 @@ class DateClausesTest : TestContext() {
 	private fun fixtureOf(resource: WindowResource, startDate: String, startTime: String, endDate: String, endTime: String): String {
 		val (startDateColumn, startTimeColumn, endDateColumn, endTimeColumn) = resource.columns
 		return "SELECT CAST($startDate AS DATE) AS $startDateColumn, CAST($startTime AS TIME WITH TIME ZONE) AS $startTimeColumn, " +
-			"CAST($endDate AS DATE) AS $endDateColumn, CAST($endTime AS TIME WITH TIME ZONE) AS $endTimeColumn"
+			"CAST($endDate AS DATE) AS $endDateColumn, CAST($endTime AS TIME WITH TIME ZONE) AS $endTimeColumn${resource.extraColumns}"
 	}
 
 	@TestFactory

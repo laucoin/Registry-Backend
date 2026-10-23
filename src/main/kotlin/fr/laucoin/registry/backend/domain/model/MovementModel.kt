@@ -24,6 +24,8 @@ data class MovementModel(
 		var vehicle: VehicleModel? = null,
 	)
 
+	fun participantIds(): List<UUID> = content.mapNotNull { it.participant?.id }.distinct()
+
 	fun getNewContent(movement: MovementModel): List<MovementContentModel> {
 		return movement.content
 			.filter { new -> Objects.isNull(content.find { new.participant?.id == it.participant?.id && new.poolName == it.poolName && new.vehicle?.id == it.vehicle?.id }) }
