@@ -112,6 +112,7 @@ fails the startup loudly instead of silently booting on something unintended.
 | `REGISTRY_AUTH_RATE_LIMIT_CAPACITY` | `10` | Max `POST` calls per client IP, per window, allowed on `/authentication/token` and `/token/refresh` — the only unauthenticated endpoints. In-memory (per instance, resets on restart): also rate-limit the public endpoints at the reverse proxy |
 | `REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Length in seconds of the rate-limit window above |
 | `REGISTRY_AUTH_RATE_LIMIT_MAX_TRACKED_CLIENTS` | `10000` | Max number of client IPs tracked at once by the rate limiter above; the least recently used entries are evicted beyond it |
+| `REGISTRY_MOVEMENT_FUTURE_TOLERANCE` | `2m` | Clock skew tolerated between a client and the server when a movement is dated slightly in the future; a later date is rejected |
 | `REGISTRY_CODEC_MAX_IN_MEMORY_SIZE` | `512KB` | Maximum size of a request body buffered in memory; larger bodies are rejected |
 
 > [!NOTE]
