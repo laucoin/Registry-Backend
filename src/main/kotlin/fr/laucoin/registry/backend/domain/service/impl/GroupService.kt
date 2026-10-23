@@ -83,6 +83,10 @@ class GroupService(
 			.notFoundIfEmpty(id)
 	}
 
+	override fun findGroupSummaryById(projectId: UUID, id: UUID): Mono<GroupModel> {
+		return port.findSummaryById(projectId, id).notFoundIfEmpty(id)
+	}
+
 	override fun searchParticipantsByText(projectId: UUID, query: String?): Flux<ParticipantModel> {
 		return participantPort.findWithLimit(
 			maxParticipantResult,

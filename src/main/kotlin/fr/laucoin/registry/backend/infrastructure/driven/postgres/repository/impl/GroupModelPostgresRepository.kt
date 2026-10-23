@@ -92,6 +92,10 @@ class GroupModelPostgresRepository(
 			.map(mapper::toModel)
 	}
 
+	override fun findSummaryById(projectId: UUID, id: UUID): Mono<GroupModel> {
+		return repository.findSummaryById(projectId, id).map(mapper::toModel)
+	}
+
 	override fun lockByIds(ids: List<UUID>): Flux<UUID> {
 		return if (ids.isEmpty()) Flux.empty() else repository.lockByIds(ids)
 	}

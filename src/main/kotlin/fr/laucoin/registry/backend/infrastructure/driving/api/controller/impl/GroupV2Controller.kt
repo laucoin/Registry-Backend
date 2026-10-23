@@ -143,7 +143,7 @@ class GroupV2Controller(
 			LockableResourceEnum.GROUP,
 			id,
 			exchange.expectedLastEditions(),
-			current = { service.findGroupById(projectId, id, null, null, null) },
+			current = { service.findGroupSummaryById(projectId, id) },
 			action = { service.updateGroupById(currentUser, projectId, id, groupModel) },
 		).map(readerLightMapper::toDto)
 	}

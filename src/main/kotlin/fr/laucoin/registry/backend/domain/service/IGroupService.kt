@@ -38,6 +38,8 @@ interface IGroupService {
 		memberIsAvailable: Boolean?
 	): Mono<GroupModel>
 
+	fun findGroupSummaryById(projectId: UUID, id: UUID): Mono<GroupModel>
+
 	fun searchParticipantsByText(projectId: UUID, query: String?): Flux<ParticipantModel>
 	fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel>
 	fun updateGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
