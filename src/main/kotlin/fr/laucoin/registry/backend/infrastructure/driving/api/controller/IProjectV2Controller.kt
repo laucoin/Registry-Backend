@@ -49,6 +49,7 @@ interface IProjectV2Controller {
 		summary = "Find Projects",
 		description = "Find or get paginated Projects with the current User's Profile. Without REGISTRY_PROJECT_R authority, only the Projects with an accepted and currently valid Profile are returned.",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@GetMapping
 	fun findProjects(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

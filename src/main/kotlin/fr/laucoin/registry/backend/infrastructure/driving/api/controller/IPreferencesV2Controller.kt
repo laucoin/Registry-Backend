@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
+import org.springframework.security.access.prepost.PreAuthorize
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PREFERENCES_LANGUAGE_MAX
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
@@ -24,6 +25,7 @@ interface IPreferencesV2Controller {
 		summary = "Save theme",
 		description = "Save theme preferences for other devices",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@PostMapping("/theme")
 	fun updateTheme(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -34,6 +36,7 @@ interface IPreferencesV2Controller {
 		summary = "Save language",
 		description = "Save language preferences for other devices",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@PostMapping("/language")
 	fun updateLanguage(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -45,6 +48,7 @@ interface IPreferencesV2Controller {
 		summary = "Save refresh mode",
 		description = "Save automatic data refresh frequency preferences for other devices",
 	)
+	@PreAuthorize("isAuthenticated()")
 	@PostMapping("/refresh-mode")
 	fun updateRefreshMode(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
