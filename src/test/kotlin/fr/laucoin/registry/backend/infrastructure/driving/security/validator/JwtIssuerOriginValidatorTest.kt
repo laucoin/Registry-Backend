@@ -55,6 +55,30 @@ class JwtIssuerOriginValidatorTest {
 	}
 
 	@Test
+	fun `Should validate fail when issuer host only starts with the trusted origin`() {
+		// Arrange
+		val token = jwt("https://idp.example.com.attacker.org/application/o/registry/")
+
+		// Act
+		val result = validator.validate(token)
+
+		// Assert
+		assertTrue(result.hasErrors())
+	}
+
+	@Test
+	fun `Should validate fail when issuer port differs from the trusted origin`() {
+		// Arrange
+		val token = jwt("https://idp.example.com:8443/application/o/registry/")
+
+		// Act
+		val result = validator.validate(token)
+
+		// Assert
+		assertTrue(result.hasErrors())
+	}
+
+	@Test
 	fun `Should validate fail when issuer claim is missing`() {
 		// Arrange
 		val token = jwt(null)
