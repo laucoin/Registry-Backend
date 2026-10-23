@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementReason
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.VISIT
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
@@ -10,14 +9,15 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
-import fr.laucoin.registry.backend.test.ModelExt.activityId
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementReason
+import fr.laucoin.registry.backend.test.ModelExt.defaultActivityId
 import jakarta.validation.ConstraintValidatorContext
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
+import java.util.stream.Stream
 
 class MovementReasonValidatorTest {
 	private val movementReasonValidator = MovementReasonValidator()
@@ -416,7 +416,7 @@ class MovementReasonValidatorTest {
 					dateTime = null,
 					type = OUT,
 					reason = null,
-					activityId = activityId,
+					activityId = defaultActivityId,
 					content = null,
 				),
 				true

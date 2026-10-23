@@ -11,10 +11,12 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.core.io.buffer.NettyDataBuffer
 import org.springframework.core.io.buffer.NettyDataBufferFactory
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.http.MediaType
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest
 import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.web.server.WebFilterChain
@@ -57,7 +59,7 @@ class ETagResponseFilterTest {
 		expectedETag: String?,
 	) {
 		// Arrange
-		val exchange = MockServerWebExchange.from(MockServerHttpRequest.method(org.springframework.http.HttpMethod.valueOf(method), path))
+		val exchange = MockServerWebExchange.from(MockServerHttpRequest.method(HttpMethod.valueOf(method), path))
 		val chain = WebFilterChain {
 			status?.let { code -> it.response.statusCode = code }
 			it.response.headers.contentType = APPLICATION_JSON
@@ -76,7 +78,7 @@ class ETagResponseFilterTest {
 		// Arrange
 		val exchange = MockServerWebExchange.from(MockServerHttpRequest.get(itemPath))
 		val chain = WebFilterChain {
-			it.response.headers.contentType = org.springframework.http.MediaType.TEXT_PLAIN
+			it.response.headers.contentType = MediaType.TEXT_PLAIN
 			it.response.writeWith(Mono.just(it.response.bufferFactory().wrap("""{"lastEdition":{"dateTime":"2026-10-13T10:02:11Z"}}""".toByteArray()))).then(it.response.setComplete())
 		}
 

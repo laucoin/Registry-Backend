@@ -12,9 +12,9 @@ import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.userId
-import fr.laucoin.registry.backend.test.ModelExt.userOidcId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserOidcId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
@@ -55,7 +55,7 @@ class TokenConverterServiceTest {
 
 	private val jwt = mock<Jwt>()
 	private val claims: Map<String, Any> = mapOf(
-		USER_ID_KEY to userOidcId.toString(),
+		USER_ID_KEY to defaultUserOidcId.toString(),
 		EMAIL_KEY to currentUser().email!!,
 		FIRST_NAME_KEY to currentUser().firstName!!,
 		LAST_NAME_KEY to currentUser().lastName!!,
@@ -150,7 +150,7 @@ class TokenConverterServiceTest {
 		assertEquals(expectedMessage, result.message)
 
 		verifyNoInteractions(roleService)
-		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
 		verifyNoInteractions(profilePort)
 	}
 
@@ -165,7 +165,7 @@ class TokenConverterServiceTest {
 		expectedUserUpdate: Int,
 	) {
 		// Arrange
-		val projectRole = ProjectProfileRoleModel(projectId, projectOptions, projectIsVisible, PROJECT_ROLE)
+		val projectRole = ProjectProfileRoleModel(defaultProjectId, projectOptions, projectIsVisible, PROJECT_ROLE)
 
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.justOrEmpty(oidcDatabaseUser))
@@ -184,17 +184,17 @@ class TokenConverterServiceTest {
 		service.convert(jwt).block()
 
 		// Assert
-		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
 		verify(userService, times(expectedUserCreation))
-			.createUser(userOidcId, currentUser.email!!, currentUser.firstName, currentUser.lastName)
+			.createUser(defaultUserOidcId, currentUser.email!!, currentUser.firstName, currentUser.lastName)
 
 		verify(userService, times(expectedUserUpdate)).updateUserIfPersonalDataChanged(
 			any(), eq(currentUser.email!!), eq(currentUser.firstName), eq(currentUser.lastName)
 		)
 
-		verify(profilePort).findProjectProfilesRolesByUserId(userId)
+		verify(profilePort).findProjectProfilesRolesByUserId(defaultUserId)
 		verify(roleService).getAuthoritiesByUserRole(USER_ROLE)
-		verify(roleService).getAuthoritiesByProjectRole(eq(PROJECT_ROLE), eq(projectId), anyOrNull())
+		verify(roleService).getAuthoritiesByProjectRole(eq(PROJECT_ROLE), eq(defaultProjectId), anyOrNull())
 	}
 
 	@Test
@@ -214,7 +214,7 @@ class TokenConverterServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
 
-		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verify(userService, never()).linkUserToOidcId(any(), any())
 		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
@@ -238,8 +238,8 @@ class TokenConverterServiceTest {
 		service.convert(jwt).block()
 
 		// Assert
-		verify(userService).findUserByOidcId(userOidcId, isVisible = null)
-		verify(userService).linkUserToOidcId(existingUser, userOidcId)
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userService).linkUserToOidcId(existingUser, defaultUserOidcId)
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
 	}

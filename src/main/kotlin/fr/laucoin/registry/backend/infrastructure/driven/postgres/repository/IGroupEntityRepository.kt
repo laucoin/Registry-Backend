@@ -10,7 +10,9 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.G
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.DATE_IN_GROUP_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_INSIDE_MEMBERS_JOIN
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_MEMBER_USER_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_MEMBERS_JOIN
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_ON_SITE_MEMBERS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_PRESENCE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_TEXT_SEARCH_CLAUSE
@@ -41,6 +43,7 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
         SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
+            AND $GROUP_MEMBER_USER_CLAUSE AND $GROUP_ON_SITE_MEMBERS_CLAUSE
         ORDER BY $GROUP_SORT t.$GROUP_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -51,6 +54,8 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 		isVisible: Boolean?,
 		isPresent: Boolean?,
 		at: ZonedDateTime?,
+		memberUserId: UUID?,
+		hasOnSiteMembers: Boolean?,
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,

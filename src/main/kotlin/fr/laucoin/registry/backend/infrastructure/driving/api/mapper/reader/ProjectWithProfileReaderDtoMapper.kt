@@ -19,6 +19,8 @@ class ProjectWithProfileReaderDtoMapper(
 			begin = project.begin,
 			end = project.end,
 			options = project.options,
+			counts = project.counts,
+			favorite = model.favorite,
 			profile = Optional.ofNullable(model.profile).map(profileMapper::toDto).map {
 				ProjectCurrentProfileReaderDto(
 					role = it.role,

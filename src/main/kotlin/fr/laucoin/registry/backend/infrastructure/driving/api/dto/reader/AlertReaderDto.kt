@@ -7,4 +7,6 @@ class AlertReaderDto(
 	var title: String? = null,
 	var dateTime: ZonedDateTime? = null,
 	var status: LabelDto? = null,
+	var criticality: LabelDto? = null,
+	var lastCommunication: AlertLastCommunicationReaderDto? = null,
 ): GenericReaderDto()

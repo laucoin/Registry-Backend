@@ -43,6 +43,7 @@ class GroupV2Controller(
 	private val writerMapper: GroupWriterDtoMapper,
 ): IGroupV2Controller {
 	override fun findGroups(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		page: Int,
 		size: Int,
@@ -50,11 +51,15 @@ class GroupV2Controller(
 		isVisible: Boolean?,
 		isPresent: Boolean?,
 		at: ZonedDateTime?,
+		mine: Boolean?,
+		hasOnSiteMembers: Boolean?,
 		sort: String?,
 	): Mono<PageModel<GroupWithoutMemberReaderDto>> {
 		val pageable = PageableModel(page * size, size)
 		val searchParams = GroupSearchParamModel(
 			query, isVisible, isPresent, at,
+			memberUserId = currentUser.id.takeIf { mine == true },
+			hasOnSiteMembers = hasOnSiteMembers,
 			sort = sort.toSortModel(GroupSearchParamModel.SORT_FIELDS),
 		)
 
@@ -73,6 +78,7 @@ class GroupV2Controller(
 		status: PresenceStatusEnum?,
 		at: ZonedDateTime?,
 		hasUser: Boolean?,
+		onSite: Boolean?,
 		birthdayFrom: LocalDate?,
 		birthdayTo: LocalDate?,
 		sort: String?,
@@ -81,6 +87,7 @@ class GroupV2Controller(
 		val searchParams = ParticipantSearchParamModel(
 			query, isMajor, type, isVisible, status, at,
 			hasUser = hasUser,
+			isOnSite = onSite,
 			birthdayFrom = birthdayFrom,
 			birthdayTo = birthdayTo,
 			sort = sort.toSortModel(ParticipantSearchParamModel.SORT_FIELDS),

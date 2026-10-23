@@ -1,13 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_CRITICALITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_DATE_IN_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_LAST_COMMUNICATION_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_STATUS_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_TEXT_SEARCH_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_CRITICALITY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_LAST_COMMUNICATION
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_SEARCH
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
@@ -35,9 +40,9 @@ import reactor.core.publisher.Mono
 interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
-        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
+        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_ALERT_CRITICALITY, $SELECT_ALERT_LAST_COMMUNICATION, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN $ALERT_LAST_COMMUNICATION_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_CRITICALITY_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $ALERT_SORT similarity_score DESC, t.$ALERT_DATE_TIME DESC, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -46,6 +51,9 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 		projectId: UUID,
 		query: String?,
 		status: List<AlertStatusEnum>?,
+		criticality: AlertCriticalityEnum?,
+		reinforcedAfterHours: Long,
+		highAfterHours: Long,
 		isVisible: Boolean?,
 		from: ZonedDateTime?,
 		to: ZonedDateTime?,
@@ -77,12 +85,18 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_ALERT_CRITICALITY, $SELECT_ALERT_LAST_COMMUNICATION, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN $ALERT_LAST_COMMUNICATION_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND t.$ID = :id
         """
 	)
-	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertEntity>
+	fun findById(
+		projectId: UUID,
+		id: UUID,
+		isVisible: Boolean?,
+		reinforcedAfterHours: Long,
+		highAfterHours: Long,
+	): Mono<AlertEntity>
 
 	@Query(
 		"""

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.requireOrderedRange
 import java.time.ZonedDateTime
@@ -10,6 +11,7 @@ data class AlertSearchParamModel(
 	val status: List<AlertStatusEnum> = AlertStatusEnum.entries.toList(),
 	var from: ZonedDateTime? = null,
 	var to: ZonedDateTime? = null,
+	val criticality: AlertCriticalityEnum? = null,
 	var sort: SortModel? = null,
 ) {
 	init {
@@ -24,12 +26,14 @@ data class AlertSearchParamModel(
 		status: AlertStatusEnum? = null,
 		from: ZonedDateTime? = null,
 		to: ZonedDateTime? = null,
+		criticality: AlertCriticalityEnum? = null,
 		sort: SortModel? = null,
 	): this(
 		isVisible,
 		if (Objects.nonNull(status)) listOf(status!!) else AlertStatusEnum.entries.toList(),
 		from,
 		to,
+		criticality,
 		sort = sort,
 	) {
 		this.query = if (query.isNullOrBlank()) null else query
@@ -37,7 +41,7 @@ data class AlertSearchParamModel(
 
 	companion object {
 		val SORT_FIELDS = setOf(
-			"title", "dateTime", "status",
+			"title", "dateTime", "status", "criticality",
 		)
 	}
 }

@@ -75,7 +75,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 	@Query(
 		"""
         WITH $WITH_CURRENT_MOVEMENT
-        SELECT * FROM (
+        SELECT *, COUNT(*) OVER() AS $FULL_COUNT FROM (
             SELECT DISTINCT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR
             FROM $MOVEMENT_TABLE t $CURRENT_MOVEMENT_JOIN $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
             WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_LINKED_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
@@ -97,24 +97,6 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		limit: Int,
 		offset: Int,
 	): Flux<MovementEntity>
-
-	@Query(
-		"""
-        WITH $WITH_CURRENT_MOVEMENT
-        SELECT COUNT(DISTINCT t.$ID)
-        FROM $MOVEMENT_TABLE t $CURRENT_MOVEMENT_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_LINKED_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countCurrent(
-		projectId: UUID,
-		isVisible: Boolean?,
-		hasActivity: Boolean?,
-		activityId: UUID?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?
-	): Mono<Long>
 
 	@Query(
 		"""

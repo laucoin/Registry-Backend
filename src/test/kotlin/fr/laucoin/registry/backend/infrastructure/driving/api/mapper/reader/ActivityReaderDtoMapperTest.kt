@@ -8,20 +8,22 @@ import fr.laucoin.registry.backend.domain.model.NumericRangeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.activityId
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.time.Duration
+import fr.laucoin.registry.backend.test.ModelExt.defaultActivityId
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.ACTIVITY
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.time.Duration
 
 class ActivityReaderDtoMapperTest {
 	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
@@ -38,7 +40,7 @@ class ActivityReaderDtoMapperTest {
 			allowedParticipants = NumericRangeModel(lower = 1, upper = 10)
 			startAvailability = CustomDateTimeModel.MIN
 			endAvailability = CustomDateTimeModel.MAX
-			id = activityId
+			id = defaultActivityId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -52,7 +54,7 @@ class ActivityReaderDtoMapperTest {
 			allowedParticipants = NumericRangeModel(lower = 1, upper = 10)
 			startAvailability = CustomDateTimeModel.MIN
 			endAvailability = CustomDateTimeModel.MAX
-			id = activityId
+			id = defaultActivityId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -69,7 +71,7 @@ class ActivityReaderDtoMapperTest {
 
 	@BeforeEach
 	fun setup() {
-		whenever(availabilityMapper.toDto(any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(availabilityMapper.toDto(any(), eq(ACTIVITY), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
 	}
 
 	@ParameterizedTest
@@ -86,7 +88,7 @@ class ActivityReaderDtoMapperTest {
 		assertEquals(dto, result)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, ACTIVITY, model.startAvailability, model.endAvailability)
 
 	}
 
@@ -108,7 +110,7 @@ class ActivityReaderDtoMapperTest {
 		assertEquals(dtos, result)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, ACTIVITY, model.startAvailability, model.endAvailability)
 
 	}
 
@@ -143,7 +145,7 @@ class ActivityReaderDtoMapperTest {
 		assertEquals(dtoPage, result)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, ACTIVITY, model.startAvailability, model.endAvailability)
 
 	}
 }

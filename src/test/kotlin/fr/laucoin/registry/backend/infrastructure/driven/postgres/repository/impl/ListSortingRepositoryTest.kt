@@ -23,24 +23,24 @@ import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
-import fr.laucoin.registry.backend.test.ModelExt.activityId
-import fr.laucoin.registry.backend.test.ModelExt.alertId
-import fr.laucoin.registry.backend.test.ModelExt.groupId
-import fr.laucoin.registry.backend.test.ModelExt.movementId
-import fr.laucoin.registry.backend.test.ModelExt.participantId
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.userId
-import fr.laucoin.registry.backend.test.ModelExt.vehicleId
+import fr.laucoin.registry.backend.test.ModelExt.defaultActivityId
+import fr.laucoin.registry.backend.test.ModelExt.defaultAlertId
+import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
+import fr.laucoin.registry.backend.test.ModelExt.defaultMovementId
+import fr.laucoin.registry.backend.test.ModelExt.defaultParticipantId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
+import fr.laucoin.registry.backend.test.ModelExt.defaultVehicleId
 import fr.laucoin.registry.backend.test.TestContext
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.beans.factory.annotation.Autowired
 import reactor.core.publisher.Mono
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ListSortingRepositoryTest : TestContext() {
 	private data class SortCase(
@@ -49,16 +49,35 @@ class ListSortingRepositoryTest : TestContext() {
 		val run: (SortModel?) -> Mono<out PageModel<*>>,
 	)
 
-	@Autowired private lateinit var activityPort: IActivityPort
-	@Autowired private lateinit var alertPort: IAlertPort
-	@Autowired private lateinit var communicationPort: ICommunicationPort
-	@Autowired private lateinit var groupPort: IGroupPort
-	@Autowired private lateinit var movementPort: IMovementPort
-	@Autowired private lateinit var participantPort: IParticipantPort
-	@Autowired private lateinit var projectPort: IProjectPort
-	@Autowired private lateinit var projectProfilePort: IProjectProfilePort
-	@Autowired private lateinit var userPort: IUserPort
-	@Autowired private lateinit var vehiclePort: IVehiclePort
+	@Autowired
+	private lateinit var activityPort: IActivityPort
+
+	@Autowired
+	private lateinit var alertPort: IAlertPort
+
+	@Autowired
+	private lateinit var communicationPort: ICommunicationPort
+
+	@Autowired
+	private lateinit var groupPort: IGroupPort
+
+	@Autowired
+	private lateinit var movementPort: IMovementPort
+
+	@Autowired
+	private lateinit var participantPort: IParticipantPort
+
+	@Autowired
+	private lateinit var projectPort: IProjectPort
+
+	@Autowired
+	private lateinit var projectProfilePort: IProjectProfilePort
+
+	@Autowired
+	private lateinit var userPort: IUserPort
+
+	@Autowired
+	private lateinit var vehiclePort: IVehiclePort
 
 	private val pageable = PageableModel(0, 200)
 
@@ -76,7 +95,8 @@ class ListSortingRepositoryTest : TestContext() {
 
 	@TestFactory
 	fun `Should order the elements by their sort key in both directions`(): Stream<DynamicTest> {
-		return orderCases().stream().flatMap { case -> Stream.of(false, true).map { isDescending -> orderTest(case, isDescending) } }
+		return orderCases().stream()
+			.flatMap { case -> Stream.of(false, true).map { isDescending -> orderTest(case, isDescending) } }
 	}
 
 	private fun orderTest(case: OrderCase, isDescending: Boolean): DynamicTest {
@@ -101,12 +121,15 @@ class ListSortingRepositoryTest : TestContext() {
 	fun `Should page a sort on a repeated key without repeating or skipping elements`() {
 		// Arrange
 		val sort = SortModel("type")
-		val total = movementPort.findPage(projectId, pageable, MovementSearchParamModel(type = null, sort = sort)).block()!!
+		val total =
+			movementPort.findPage(defaultProjectId, pageable, MovementSearchParamModel(type = null, sort = sort))
+				.block()!!
 		val pages = (0 until Math.ceilDiv(total.totalElements.toInt(), 7)).map { PageableModel(it * 7, 7) }
 
 		// Act
 		val ids = pages.flatMap {
-			movementPort.findPage(projectId, it, MovementSearchParamModel(type = null, sort = sort)).block()!!.content.map { movement -> movement.id }
+			movementPort.findPage(defaultProjectId, it, MovementSearchParamModel(type = null, sort = sort))
+				.block()!!.content.map { movement -> movement.id }
 		}
 
 		// Assert
@@ -123,76 +146,159 @@ class ListSortingRepositoryTest : TestContext() {
 	) = OrderCase(name, field, run, { key(it as T) })
 
 	private fun orderCases(): List<OrderCase> = listOf(
-		orderCase("alerts", "status", { alertPort.findPage(projectId, pageable, AlertSearchParamModel(query = null, sort = it)) }) { it.status?.name },
-		orderCase("movements", "dateTime", { movementPort.findPage(projectId, pageable, MovementSearchParamModel(type = null, sort = it)) }) { it.dateTime.toInstant() },
-		orderCase("participants", "birthday", { participantPort.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null, sort = it)) }) { it.birthday },
-		orderCase("users", "birthday", { userPort.findPage(pageable, UserSearchParamModel(query = null, sort = it)) }) { it.birthday },
-		orderCase("activities", "minAllowedParticipants", { activityPort.findPage(projectId, pageable, ActivitySearchParamModel(query = null, sort = it)) }) { it.allowedParticipants?.lower },
-		orderCase("activities", "maxAllowedParticipants", { activityPort.findPage(projectId, pageable, ActivitySearchParamModel(query = null, sort = it)) }) { it.allowedParticipants?.upper },
+		orderCase(
+			"alerts",
+			"status",
+			{
+				alertPort.findPage(
+					defaultProjectId,
+					pageable,
+					AlertSearchParamModel(query = null, sort = it)
+				)
+			}) { it.status?.name },
+		orderCase(
+			"movements",
+			"dateTime",
+			{
+				movementPort.findPage(
+					defaultProjectId,
+					pageable,
+					MovementSearchParamModel(type = null, sort = it)
+				)
+			}) { it.dateTime.toInstant() },
+		orderCase(
+			"participants",
+			"birthday",
+			{
+				participantPort.findPage(
+					defaultProjectId,
+					pageable,
+					ParticipantSearchParamModel(query = null, at = null, sort = it)
+				)
+			}) { it.birthday },
+		orderCase(
+			"users",
+			"birthday",
+			{ userPort.findPage(pageable, UserSearchParamModel(query = null, sort = it)) }) { it.birthday },
+		orderCase(
+			"activities",
+			"minAllowedParticipants",
+			{
+				activityPort.findPage(
+					defaultProjectId,
+					pageable,
+					ActivitySearchParamModel(query = null, sort = it)
+				)
+			}) { it.allowedParticipants?.lower },
+		orderCase(
+			"activities",
+			"maxAllowedParticipants",
+			{
+				activityPort.findPage(
+					defaultProjectId,
+					pageable,
+					ActivitySearchParamModel(query = null, sort = it)
+				)
+			}) { it.allowedParticipants?.upper },
 	)
 
-	private fun directions(case: SortCase, field: String): Stream<DynamicTest> = Stream.of(false, true).map { isDescending ->
-		dynamicTest("${case.name} sorted by ${if (isDescending) "-" else ""}$field") {
-			// Arrange
-			val expected = case.run(null).block()!!
+	private fun directions(case: SortCase, field: String): Stream<DynamicTest> =
+		Stream.of(false, true).map { isDescending ->
+			dynamicTest("${case.name} sorted by ${if (isDescending) "-" else ""}$field") {
+				// Arrange
+				val expected = case.run(null).block()!!
 
-			// Act
-			val result = case.run(SortModel(field, isDescending)).block()!!
+				// Act
+				val result = case.run(SortModel(field, isDescending)).block()!!
 
-			// Assert
-			assertEquals(expected.totalElements, result.totalElements)
-			assertEquals(expected.content.size, result.content.size)
+				// Assert
+				assertEquals(expected.totalElements, result.totalElements)
+				assertEquals(expected.content.size, result.content.size)
+			}
 		}
-	}
 
 	private fun cases(): List<SortCase> = alertCases() + communicationCases() + groupCases() + movementCases() +
-		participantCases() + projectCases() + profileCases() + userCases() + vehicleCases()
+			participantCases() + projectCases() + profileCases() + userCases() + vehicleCases()
 
 	private fun alertCases() = listOf(
 		SortCase("alerts", AlertSearchParamModel.SORT_FIELDS) {
-			alertPort.findPage(projectId, pageable, AlertSearchParamModel(query = null, sort = it))
+			alertPort.findPage(defaultProjectId, pageable, AlertSearchParamModel(query = null, sort = it))
 		},
 	)
 
 	private fun communicationCases() = listOf(
 		SortCase("movement communications", CommunicationSearchParamModel.SORT_FIELDS) {
-			communicationPort.findPageByMovementId(projectId, movementId, pageable, CommunicationSearchParamModel(query = null, sort = it))
+			communicationPort.findPageByMovementId(
+				defaultProjectId,
+				defaultMovementId,
+				pageable,
+				CommunicationSearchParamModel(query = null, sort = it)
+			)
 		},
 		SortCase("alert communications", CommunicationSearchParamModel.SORT_FIELDS) {
-			communicationPort.findPageByAlertId(projectId, alertId, pageable, CommunicationSearchParamModel(query = null, sort = it))
+			communicationPort.findPageByAlertId(
+				defaultProjectId,
+				defaultAlertId,
+				pageable,
+				CommunicationSearchParamModel(query = null, sort = it)
+			)
 		},
 	)
 
 	private fun groupCases() = listOf(
 		SortCase("groups", GroupSearchParamModel.SORT_FIELDS) {
-			groupPort.findPage(projectId, pageable, GroupSearchParamModel(query = null, sort = it))
+			groupPort.findPage(defaultProjectId, pageable, GroupSearchParamModel(query = null, sort = it))
 		},
 	)
 
 	private fun movementCases() = listOf(
 		SortCase("movements", MovementSearchParamModel.SORT_FIELDS) {
-			movementPort.findPage(projectId, pageable, MovementSearchParamModel(type = null, sort = it))
+			movementPort.findPage(defaultProjectId, pageable, MovementSearchParamModel(type = null, sort = it))
 		},
 		SortCase("current movements", MovementSearchParamModel.SORT_FIELDS) {
-			movementPort.findCurrentPage(projectId, pageable, MovementSearchParamModel(type = null, sort = it))
+			movementPort.findCurrentPage(defaultProjectId, pageable, MovementSearchParamModel(type = null, sort = it))
 		},
 		SortCase("participant movements", MovementSearchParamModel.SORT_FIELDS) {
-			movementPort.findPageByParticipantId(projectId, participantId, pageable, MovementSearchParamModel(type = null, sort = it))
+			movementPort.findPageByParticipantId(
+				defaultProjectId,
+				defaultParticipantId,
+				pageable,
+				MovementSearchParamModel(type = null, sort = it)
+			)
 		},
 		SortCase("vehicle movements", MovementSearchParamModel.SORT_FIELDS) {
-			movementPort.findPageByVehicleId(projectId, vehicleId, pageable, MovementSearchParamModel(type = null, sort = it))
+			movementPort.findPageByVehicleId(
+				defaultProjectId,
+				defaultVehicleId,
+				pageable,
+				MovementSearchParamModel(type = null, sort = it)
+			)
 		},
 		SortCase("activity movements", MovementSearchParamModel.SORT_FIELDS) {
-			movementPort.findPageByActivityId(projectId, activityId, pageable, MovementSearchParamModel(type = null, sort = it))
+			movementPort.findPageByActivityId(
+				defaultProjectId,
+				defaultActivityId,
+				pageable,
+				MovementSearchParamModel(type = null, sort = it)
+			)
 		},
 	)
 
 	private fun participantCases() = listOf(
 		SortCase("participants", ParticipantSearchParamModel.SORT_FIELDS) {
-			participantPort.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, at = null, sort = it))
+			participantPort.findPage(
+				defaultProjectId,
+				pageable,
+				ParticipantSearchParamModel(query = null, at = null, sort = it)
+			)
 		},
 		SortCase("group members", ParticipantSearchParamModel.SORT_FIELDS) {
-			participantPort.findPageByGroupId(projectId, groupId, pageable, ParticipantSearchParamModel(query = null, at = null, sort = it))
+			participantPort.findPageByGroupId(
+				defaultProjectId,
+				defaultGroupId,
+				pageable,
+				ParticipantSearchParamModel(query = null, at = null, sort = it)
+			)
 		},
 	)
 
@@ -201,16 +307,24 @@ class ListSortingRepositoryTest : TestContext() {
 			projectPort.findPage(pageable, ProjectSearchParamModel(query = null, sort = it))
 		},
 		SortCase("projects of a list of ids", ProjectSearchParamModel.SORT_FIELDS) {
-			projectPort.findPage(listOf(projectId), pageable, ProjectSearchParamModel(query = null, sort = it))
+			projectPort.findPage(listOf(defaultProjectId), pageable, ProjectSearchParamModel(query = null, sort = it))
 		},
 	)
 
 	private fun profileCases() = listOf(
 		SortCase("project profiles", ProjectProfileSearchParamModel.SORT_FIELDS) {
-			projectProfilePort.findProjectProfilesPageByProjectId(projectId, pageable, ProjectProfileSearchParamModel(query = null, sort = it))
+			projectProfilePort.findProjectProfilesPageByProjectId(
+				defaultProjectId,
+				pageable,
+				ProjectProfileSearchParamModel(query = null, sort = it)
+			)
 		},
 		SortCase("user profiles", ProjectProfileSearchParamModel.PROJECT_SORT_FIELDS) {
-			projectProfilePort.findProjectProfilesPageByUserId(userId, pageable, ProjectProfileSearchParamModel(query = null, sort = it))
+			projectProfilePort.findProjectProfilesPageByUserId(
+				defaultUserId,
+				pageable,
+				ProjectProfileSearchParamModel(query = null, sort = it)
+			)
 		},
 	)
 
@@ -222,7 +336,11 @@ class ListSortingRepositoryTest : TestContext() {
 
 	private fun vehicleCases() = listOf(
 		SortCase("vehicles", VehicleSearchParamModel.SORT_FIELDS) {
-			vehiclePort.findPage(projectId, pageable, VehicleSearchParamModel(query = null, at = null, sort = it))
+			vehiclePort.findPage(
+				defaultProjectId,
+				pageable,
+				VehicleSearchParamModel(query = null, at = null, sort = it)
+			)
 		},
 	)
 }

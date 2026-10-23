@@ -8,19 +8,21 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.groupId
-import java.util.stream.Stream
-import kotlin.test.assertEquals
+import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.GROUP
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class GroupWithoutMemberReaderDtoMapperTest {
 	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
@@ -39,7 +41,11 @@ class GroupWithoutMemberReaderDtoMapperTest {
 			membersCount = 1
 			insideMembersCount = 2
 			outsideMembersCount = 3
-			id = groupId
+			onSiteMembersCount = 6
+			inMembersCount = 3
+			outMembersCount = 2
+			overdueMembersCount = 1
+			id = defaultGroupId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -53,7 +59,11 @@ class GroupWithoutMemberReaderDtoMapperTest {
 			membersCount = 1
 			insideMembersCount = 2
 			outsideMembersCount = 3
-			id = groupId
+			onSiteMembersCount = 6
+			inMembersCount = 3
+			outMembersCount = 2
+			overdueMembersCount = 1
+			id = defaultGroupId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -70,7 +80,7 @@ class GroupWithoutMemberReaderDtoMapperTest {
 
 	@BeforeEach
 	fun setup() {
-		whenever(availabilityMapper.toDto(any(), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(availabilityMapper.toDto(any(), eq(GROUP), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
 	}
 
 	@ParameterizedTest
@@ -95,7 +105,7 @@ class GroupWithoutMemberReaderDtoMapperTest {
 		assertEquals(dto.visible, result.visible)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
 
 	}
 
@@ -117,7 +127,7 @@ class GroupWithoutMemberReaderDtoMapperTest {
 		assertEquals(dtos.size, result.size)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
 
 	}
 
@@ -156,7 +166,7 @@ class GroupWithoutMemberReaderDtoMapperTest {
 		assertEquals(dtoPage.content.size, result.content.size)
 
 		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, model.startAvailability, model.endAvailability)
+			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
 
 	}
 }

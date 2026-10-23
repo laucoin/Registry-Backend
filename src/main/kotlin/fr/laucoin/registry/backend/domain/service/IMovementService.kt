@@ -11,6 +11,7 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PlannedMovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -72,7 +73,7 @@ interface IMovementService {
 		searchParams: CommunicationSearchParamModel,
 	): Mono<PageModel<CommunicationModel>>
 
-	fun findPlannedMovements(projectId: UUID, type: MovementTypeEnum, date: LocalDate?): Flux<MovementModel>
+	fun findPlannedMovements(projectId: UUID, type: MovementTypeEnum, date: LocalDate?): Flux<PlannedMovementModel>
 
 	fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel>
 

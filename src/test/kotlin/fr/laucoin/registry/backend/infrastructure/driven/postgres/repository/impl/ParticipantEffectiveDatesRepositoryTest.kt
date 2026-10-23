@@ -14,15 +14,9 @@ import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentMod
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -31,10 +25,16 @@ import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.r2dbc.core.DatabaseClient
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 @TestInstance(PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class ParticipantEffectiveDatesRepositoryTest: TestContext() {
+class ParticipantEffectiveDatesRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var participantPort: IParticipantPort
 
@@ -125,9 +125,11 @@ class ParticipantEffectiveDatesRepositoryTest: TestContext() {
 		assertEquals(Unit, result)
 	}
 
-	private fun arrivalOf(id: UUID): ZonedDateTime? = participantPort.findById(projectId, id, null).block()!!.effectiveArrival
+	private fun arrivalOf(id: UUID): ZonedDateTime? =
+		participantPort.findById(defaultProjectId, id, null).block()!!.effectiveArrival
 
-	private fun departureOf(id: UUID): ZonedDateTime? = participantPort.findById(projectId, id, null).block()!!.effectiveDeparture
+	private fun departureOf(id: UUID): ZonedDateTime? =
+		participantPort.findById(defaultProjectId, id, null).block()!!.effectiveDeparture
 
 	private fun createParticipant(lastName: String, participantType: ParticipantTypeEnum): UUID {
 		val participant = ParticipantModel().apply {
@@ -135,7 +137,7 @@ class ParticipantEffectiveDatesRepositoryTest: TestContext() {
 			this.lastName = lastName
 			birthday = LocalDate.EPOCH
 			type = participantType
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		return participantPort.create(participant).block()!!.id!!
@@ -152,8 +154,9 @@ class ParticipantEffectiveDatesRepositoryTest: TestContext() {
 			type = movementType
 			this.reason = reason
 			contentType = if (participantId == guestId) GUEST else REGISTERED
-			content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			content =
+				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		return movementPort.create(movement).block()!!.id!!

@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_LANGUAGE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_REFRESH_MODE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_THEME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_USER_ID
@@ -20,7 +21,8 @@ object UserQueries {
 	const val SELECT_PREFERENCES = """
         $PREFERENCE_TABLE.$ID AS $PREFERENCE_ID,
         $PREFERENCE_TABLE.$PREFERENCE_THEME,
-        $PREFERENCE_TABLE.$PREFERENCE_LANGUAGE
+        $PREFERENCE_TABLE.$PREFERENCE_LANGUAGE,
+        $PREFERENCE_TABLE.$PREFERENCE_REFRESH_MODE
     """
 
 	const val PREFERENCES_JOIN = """

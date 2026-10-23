@@ -6,4 +6,5 @@ object PreferenceFields {
 	const val PREFERENCE_USER_ID = "user_id"
 	const val PREFERENCE_THEME = "theme"
 	const val PREFERENCE_LANGUAGE = "language"
+	const val PREFERENCE_REFRESH_MODE = "refresh_mode"
 }

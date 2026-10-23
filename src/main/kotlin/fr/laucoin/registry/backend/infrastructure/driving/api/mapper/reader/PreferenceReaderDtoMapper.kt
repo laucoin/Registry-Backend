@@ -10,6 +10,7 @@ class PreferenceReaderDtoMapper: IGenericReaderDtoMapper<PreferencesModel, Prefe
 		return PreferenceReaderDto(
 			theme = model.theme,
 			language = model.language,
+			refreshMode = model.refreshMode,
 		)
 	}
 }

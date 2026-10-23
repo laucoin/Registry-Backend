@@ -18,6 +18,10 @@ object GroupFields {
 	const val GROUP_MEMBERS_COUNT = "members_count"
 	const val GROUP_INSIDE_MEMBERS_COUNT = "inside_members_count"
 	const val GROUP_OUTSIDE_MEMBERS_COUNT = "outside_members_count"
+	const val GROUP_ON_SITE_MEMBERS_COUNT = "on_site_members_count"
+	const val GROUP_IN_MEMBERS_COUNT = "in_members_count"
+	const val GROUP_OUT_MEMBERS_COUNT = "out_members_count"
+	const val GROUP_OVERDUE_MEMBERS_COUNT = "overdue_members_count"
 
 	private const val PARTICIPANT_PREFIX = "participant_"
 	const val GROUP_CONTENT_PARTICIPANT_ID = "$PARTICIPANT_PREFIX$ID"

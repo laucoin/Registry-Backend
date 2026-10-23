@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PREFERENCES_LANGUAGE_MAX
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
@@ -38,5 +39,15 @@ interface IPreferencesV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@Parameter(description = "Language code, e.g. 'en', 'en-US', 'fr', 'fr-FR', etc.")
 		@RequestParam(required = true) @Valid @Size(max = PREFERENCES_LANGUAGE_MAX, message = PARAMETER_TOO_LONG) language: String,
+	): Mono<PreferencesModel>
+
+	@Operation(
+		summary = "Save refresh mode",
+		description = "Save automatic data refresh frequency preferences for other devices",
+	)
+	@PostMapping("/refresh-mode")
+	fun updateRefreshMode(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@RequestParam(required = true) mode: RefreshModeEnum,
 	): Mono<PreferencesModel>
 }

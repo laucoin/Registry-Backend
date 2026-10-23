@@ -9,11 +9,7 @@ import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.userId
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.stream.Stream
-import kotlin.test.assertEquals
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -25,6 +21,10 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class CurrentUserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
@@ -46,7 +46,7 @@ class CurrentUserReaderDtoMapperTest {
 			birthday = LocalDate.of(1980, 1, 1)
 			lastLogin = now
 			role = "ROLE"
-			id = userId
+			id = defaultUserId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -62,7 +62,7 @@ class CurrentUserReaderDtoMapperTest {
 			lastLogin = now,
 			role = LabelDto(value = "ROLE", label = TRANSLATED),
 		).apply {
-			id = userId
+			id = defaultUserId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()

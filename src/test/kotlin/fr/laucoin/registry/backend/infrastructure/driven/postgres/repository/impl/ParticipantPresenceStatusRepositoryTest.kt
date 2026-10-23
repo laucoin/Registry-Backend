@@ -8,8 +8,6 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN as PRESENT
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT as ABSENT
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.UNAVAILABLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -19,15 +17,9 @@ import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -35,10 +27,18 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN as PRESENT
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT as ABSENT
 
 @TestInstance(PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class ParticipantPresenceStatusRepositoryTest: TestContext() {
+class ParticipantPresenceStatusRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var participantPort: IParticipantPort
 
@@ -101,10 +101,15 @@ class ParticipantPresenceStatusRepositoryTest: TestContext() {
 		assertTrue(present.none { absent.contains(it) || unavailable.contains(it) })
 	}
 
-	private fun statusOf(id: UUID): PresenceStatusEnum? = participantPort.findById(projectId, id, null).block()!!.status
+	private fun statusOf(id: UUID): PresenceStatusEnum? =
+		participantPort.findById(defaultProjectId, id, null).block()!!.status
 
 	private fun idsWithStatus(status: PresenceStatusEnum): List<UUID> {
-		return participantPort.findPage(projectId, pageable, ParticipantSearchParamModel(query = null, status = status, at = null))
+		return participantPort.findPage(
+			defaultProjectId,
+			pageable,
+			ParticipantSearchParamModel(query = null, status = status, at = null)
+		)
 			.block()!!.content.mapNotNull { it.id }
 	}
 
@@ -116,7 +121,7 @@ class ParticipantPresenceStatusRepositoryTest: TestContext() {
 			type = REGISTERED
 			startAvailability = CustomDateTimeModel(LocalDate.now().plusDays(start))
 			endAvailability = CustomDateTimeModel(LocalDate.now().plusDays(end))
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		return participantPort.create(participant).block()!!.id!!
@@ -132,8 +137,9 @@ class ParticipantPresenceStatusRepositoryTest: TestContext() {
 			dateTime = at
 			type = movementType
 			this.reason = reason
-			content = listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
-			this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
+			content =
+				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
+			this.projectId = defaultProjectId
 			create(currentUser())
 		}
 		movementPort.create(movement).block()

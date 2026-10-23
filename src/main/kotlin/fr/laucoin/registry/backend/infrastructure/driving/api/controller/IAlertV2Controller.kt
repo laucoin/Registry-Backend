@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
+import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -51,11 +52,12 @@ import reactor.core.publisher.Mono
 interface IAlertV2Controller {
 	@Operation(
 		summary = "Find Alerts",
-		description = "Find or get paginated Alerts",
+		description = "Find or get paginated Alerts. The last communication is returned only to callers allowed to read the alert communications",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_R')")
 	@GetMapping
 	fun findAlerts(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
 		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -67,23 +69,26 @@ interface IAlertV2Controller {
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@RequestParam(required = false) status: AlertStatusEnum?,
+		@Parameter(description = "Criticality filter, only in-progress alerts have one")
+		@RequestParam(required = false) criticality: AlertCriticalityEnum?,
 		@Parameter(description = "Start (inclusive) of the period that must contain the element date-time")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) from: ZonedDateTime?,
 		@Parameter(description = "End (inclusive) of the period that must contain the element date-time")
 		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: title, dateTime, status")
+		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: title, dateTime, status, criticality")
 		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<AlertReaderDto>>
 
 	@Operation(
 		summary = "Find Alert",
-		description = "Find Alert by ID",
+		description = "Find Alert by ID. The last communication is returned only to callers allowed to read the alert communications",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_R')")
 	@GetMapping("/{id}")
 	fun findAlertById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<AlertReaderDto>

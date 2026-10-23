@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
@@ -20,15 +21,10 @@ import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt
-import fr.laucoin.registry.backend.test.ModelExt.commonProject
-import fr.laucoin.registry.backend.test.ModelExt.commonProjectProfile
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProject
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectProfile
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZoneOffset
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -39,6 +35,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -53,10 +50,16 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZoneOffset
+import java.util.UUID
+import java.util.stream.Stream
 
 class ProjectServiceTest {
 	private val port: IProjectPort = mock()
 	private val profilePort: IProjectProfilePort = mock()
+	private val favoritePort: IProjectFavoritePort = mock()
 	private val projectProfileService: IUserProjectProfileService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
@@ -64,6 +67,7 @@ class ProjectServiceTest {
 	private val service: IProjectService = ProjectService(
 		port,
 		profilePort,
+		favoritePort,
 		projectProfileService,
 		transactionalOperator,
 		roleService,
@@ -74,6 +78,7 @@ class ProjectServiceTest {
 	fun setup() {
 		whenever(profilePort.findOidcIdsByProjectId(any())).thenReturn(Flux.empty())
 		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any())).thenReturn(Flux.empty())
+		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.empty())
 	}
 
 	private companion object {
@@ -274,19 +279,19 @@ class ProjectServiceTest {
 	@Test
 	fun `Should findProjectWithProfileById attach the current user profile`() {
 		// Arrange
-		val profile = ProjectProfileModel().apply { id = UUID.randomUUID(); this.projectId = ModelExt.projectId }
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		val profile = ProjectProfileModel().apply { id = UUID.randomUUID(); this.projectId = ModelExt.defaultProjectId }
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
 		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any()))
 			.thenReturn(Flux.just(profile))
 
 		// Act
-		val result = service.findProjectWithProfileById(currentUser(), projectId).block()
+		val result = service.findProjectWithProfileById(currentUser(), defaultProjectId).block()
 
 		// Assert
 		assertEquals(profile, result?.profile)
 		verify(profilePort).findProjectProfilesByUserIdAndProjectIds(
 			eq(currentUser().id!!),
-			eq(listOf(projectId)),
+			eq(listOf(defaultProjectId)),
 			any(),
 		)
 	}
@@ -299,12 +304,12 @@ class ProjectServiceTest {
 		val active = ProjectProfileModel().apply {
 			id = UUID.randomUUID(); status = ACCEPTED; availabilityStatus = AVAILABLE
 		}
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
 		whenever(profilePort.findProjectProfilesByUserIdAndProjectIds(any(), any(), any()))
 			.thenReturn(Flux.just(blocked, active, rejected))
 
 		// Act
-		val result = service.findProjectWithProfileById(currentUser(), projectId).block()
+		val result = service.findProjectWithProfileById(currentUser(), defaultProjectId).block()
 
 		// Assert
 		assertEquals(active, result?.profile)
@@ -313,13 +318,13 @@ class ProjectServiceTest {
 	@Test
 	fun `Should findProjectWithProfileById return the project without profile when the user has none`() {
 		// Arrange
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
 
 		// Act
-		val result = service.findProjectWithProfileById(currentUser(), projectId).block()
+		val result = service.findProjectWithProfileById(currentUser(), defaultProjectId).block()
 
 		// Assert
-		assertEquals(commonProject().id, result?.id)
+		assertEquals(defaultProject().id, result?.id)
 		assertEquals(null, result?.profile)
 	}
 
@@ -353,17 +358,186 @@ class ProjectServiceTest {
 	}
 
 	@Test
+	fun `Should findProjectsPage flag the favorite projects of the current user`() {
+		// Arrange
+		val favorite = ProjectModel().apply { id = UUID.randomUUID() }
+		val other = ProjectModel().apply { id = UUID.randomUUID() }
+		whenever(port.findPage(any(), any())).thenReturn(Mono.just(PageModel(1, 2, 3, 4, listOf(favorite, other))))
+		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.just(favorite.id!!))
+
+		// Act
+		val result = service.findProjectsPage(
+			currentUser(REGISTRY_PROJECT_R),
+			PageableModel(0, 10),
+			withProfile = false,
+			ProjectSearchParamModel(),
+		).block()
+
+		// Assert
+		assertEquals(true, result?.content?.first { it.id == favorite.id }?.favorite)
+		assertEquals(false, result?.content?.first { it.id == other.id }?.favorite)
+		verify(favoritePort).findFavoriteProjectIds(currentUser().id!!, listOf(favorite.id!!, other.id!!))
+	}
+
+	@Test
+	fun `Should findProjectWithProfileById flag the project as favorite`() {
+		// Arrange
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
+		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.just(defaultProjectId))
+
+		// Act
+		val result = service.findProjectWithProfileById(currentUser(), defaultProjectId).block()
+
+		// Assert
+		assertEquals(true, result?.favorite)
+		verify(favoritePort).findFavoriteProjectIds(currentUser().id!!, listOf(defaultProjectId))
+	}
+
+	@Test
+	fun `Should findProjectWithProfileById leave the project as not favorite`() {
+		// Arrange
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
+
+		// Act
+		val result = service.findProjectWithProfileById(currentUser(), defaultProjectId).block()
+
+		// Assert
+		assertEquals(false, result?.favorite)
+	}
+
+	@Test
+	fun `Should addFavoriteProject call port add once the project exists`() {
+		// Arrange
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
+		whenever(favoritePort.add(any(), any())).thenReturn(Mono.just(Unit))
+
+		// Act
+		service.addFavoriteProject(currentUser(), defaultProjectId).block()
+
+		// Assert
+		verify(port).findById(defaultProjectId, isVisible = null)
+		verify(favoritePort).add(currentUser().id!!, defaultProjectId)
+	}
+
+	@Test
+	fun `Should addFavoriteProject throw and not call port add when the project does not exist`() {
+		// Arrange
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.empty())
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.addFavoriteProject(currentUser(), defaultProjectId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		verify(favoritePort, never()).add(any(), any())
+	}
+
+	@Test
+	fun `Should removeFavoriteProject call port remove`() {
+		// Arrange
+		whenever(favoritePort.remove(any(), any())).thenReturn(Mono.just(Unit))
+
+		// Act
+		service.removeFavoriteProject(currentUser(), defaultProjectId).block()
+
+		// Assert
+		verify(favoritePort).remove(currentUser().id!!, defaultProjectId)
+	}
+
+	@Test
+	fun `Should findProjectsPage flag the favorites together with the profiles when listing the user projects`() {
+		// Arrange
+		val favorite = ProjectModel().apply { id = UUID.randomUUID() }
+		whenever(roleService.getProjectIdsFromCurrentUserProfiles(any())).thenReturn(listOf(favorite.id!!))
+		whenever(port.findPage(any(), any(), any())).thenReturn(Mono.just(PageModel(1, 2, 3, 4, listOf(favorite))))
+		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.just(favorite.id!!))
+
+		// Act
+		val result =
+			service.findProjectsPage(currentUser(), PageableModel(0, 10), true, ProjectSearchParamModel()).block()
+
+		// Assert
+		assertEquals(true, result?.content?.single()?.favorite)
+	}
+
+	@Test
+	fun `Should findProjectsPage return an empty page when there is no project`() {
+		// Arrange
+		whenever(port.findPage(any(), any())).thenReturn(Mono.just(PageModel(0, 10, 0, 0, emptyList())))
+
+		// Act
+		val result = service.findProjectsPage(
+			currentUser(REGISTRY_PROJECT_R),
+			PageableModel(0, 10),
+			withProfile = false,
+			ProjectSearchParamModel(),
+		).block()
+
+		// Assert
+		assertEquals(emptyList<ProjectModel>(), result?.content)
+	}
+
+	@Test
+	fun `Should enableProjectById flag the project as favorite`() {
+		// Arrange
+		val project = defaultProject().apply { visible = false }
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
+		whenever(port.update(any())).thenReturn(Mono.just(project))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.just(defaultProjectId))
+
+		// Act
+		val result = service.enableProjectById(currentUser(), defaultProjectId).block()
+
+		// Assert
+		assertEquals(true, result?.favorite)
+	}
+
+	@Test
+	fun `Should findProjectsPage search the favorites of the current user`() {
+		// Arrange
+		val params = ProjectSearchParamModel(query = null, isFavorite = true)
+		whenever(port.findPage(any(), any())).thenReturn(Mono.just(PageModel(0, 10, 0, 0, emptyList())))
+
+		// Act
+		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), PageableModel(0, 10), false, params).block()
+
+		// Assert
+		assertEquals(currentUser().id, params.userId)
+		assertEquals(true, params.isFavorite)
+	}
+
+	@Test
+	fun `Should findProjectsPage replace a forged userId by the principal id for the port`() {
+		// Arrange
+		val forged = UUID.randomUUID()
+		val params = ProjectSearchParamModel(query = null, isFavorite = true).apply { userId = forged }
+		val captor = argumentCaptor<ProjectSearchParamModel>()
+		whenever(roleService.getProjectIdsFromCurrentUserProfiles(any())).thenReturn(emptyList())
+		whenever(port.findPage(any(), any(), any())).thenReturn(Mono.just(PageModel(0, 10, 0, 0, emptyList())))
+
+		// Act
+		service.findProjectsPage(currentUser(), PageableModel(0, 10), true, params).block()
+
+		// Assert
+		verify(port).findPage(any(), any(), captor.capture())
+		assertEquals(currentUser().id, captor.firstValue.userId)
+	}
+
+	@Test
 	fun `Should findProjectById call port findById`() {
 		// Arrange
 		val onlyVisible = true
 
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
 
 		// Act
-		service.findProjectById(projectId, onlyVisible).block()
+		service.findProjectById(defaultProjectId, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(projectId, onlyVisible)
+		verify(port).findById(defaultProjectId, onlyVisible)
 	}
 
 	@Test
@@ -375,18 +549,18 @@ class ProjectServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findProjectById(projectId, onlyVisible).block()
+			service.findProjectById(defaultProjectId, onlyVisible).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
-		assertEquals(projectId.toString(), result.args?.first())
+		assertEquals(defaultProjectId.toString(), result.args?.first())
 
-		assertEquals(commonProject().id.toString(), result.args?.first())
+		assertEquals(defaultProject().id.toString(), result.args?.first())
 
-		verify(port).findById(projectId, onlyVisible)
+		verify(port).findById(defaultProjectId, onlyVisible)
 	}
 
 	@Test
@@ -409,18 +583,18 @@ class ProjectServiceTest {
 		dateTime: CustomDateTimeModel?,
 	) {
 		// Arrange
-		val project = commonProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
+		val project = defaultProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
 		val errorMessage = "ERROR_MESSAGE"
 
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
 
 		// Act
-		val result = service.validateDateTime(projectId, dateTime?.copy(), errorMessage).block()
+		val result = service.validateDateTime(defaultProjectId, dateTime?.copy(), errorMessage).block()
 
 		// Assert
-		assertEquals(projectId, result)
+		assertEquals(defaultProjectId, result)
 
-		verify(port).findById(projectId, isVisible = null)
+		verify(port).findById(defaultProjectId, isVisible = null)
 	}
 
 	@ParameterizedTest
@@ -431,14 +605,14 @@ class ProjectServiceTest {
 		dateTime: CustomDateTimeModel?,
 	) {
 		// Arrange
-		val project = commonProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
+		val project = defaultProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
 		val errorMessage = "ERROR_MESSAGE"
 
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.validateDateTime(projectId, dateTime?.copy(), errorMessage).block()
+			service.validateDateTime(defaultProjectId, dateTime?.copy(), errorMessage).block()
 		}) as RegistryException
 
 		// Assert
@@ -446,7 +620,7 @@ class ProjectServiceTest {
 		assertEquals(errorMessage, result.message)
 		assertEquals(3, result.args?.size)
 
-		verify(port).findById(projectId, isVisible = null)
+		verify(port).findById(defaultProjectId, isVisible = null)
 	}
 
 	@ParameterizedTest
@@ -458,18 +632,18 @@ class ProjectServiceTest {
 		endDateTime: CustomDateTimeModel?,
 	) {
 		// Arrange
-		val project = commonProject().apply { begin = projectBeginDateTime; end = projectEndDateTime }
+		val project = defaultProject().apply { begin = projectBeginDateTime; end = projectEndDateTime }
 		val errorMessage = "ERROR_MESSAGE"
 
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
 
 		// Act
-		val result = service.validateDateTimes(projectId, startDateTime, endDateTime, errorMessage).block()
+		val result = service.validateDateTimes(defaultProjectId, startDateTime, endDateTime, errorMessage).block()
 
 		// Assert
-		assertEquals(projectId, result)
+		assertEquals(defaultProjectId, result)
 
-		verify(port).findById(projectId, isVisible = null)
+		verify(port).findById(defaultProjectId, isVisible = null)
 	}
 
 	@ParameterizedTest
@@ -481,14 +655,15 @@ class ProjectServiceTest {
 		endDateTime: CustomDateTimeModel?,
 	) {
 		// Arrange
-		val project = commonProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
+		val project = defaultProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
 		val errorMessage = "ERROR_MESSAGE"
 
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.validateDateTimes(projectId, startDateTime?.copy(), endDateTime?.copy(), errorMessage).block()
+			service.validateDateTimes(defaultProjectId, startDateTime?.copy(), endDateTime?.copy(), errorMessage)
+				.block()
 		}) as RegistryException
 
 		// Assert
@@ -496,24 +671,39 @@ class ProjectServiceTest {
 		assertEquals(errorMessage, result.message)
 		assertEquals(4, result.args?.size)
 
-		verify(port).findById(projectId, isVisible = null)
+		verify(port).findById(defaultProjectId, isVisible = null)
 	}
 
 	@Test
 	fun `Should createProject call profile service createUserProjectProfileFromProject and port create`() {
 		// Arrange
 		whenever(projectProfileService.createUserProjectProfileFromProject(any(), any()))
-			.thenReturn(Mono.just(commonProjectProfile()))
-		whenever(port.create(any())).thenReturn(Mono.just(commonProject()))
+			.thenReturn(Mono.just(defaultProjectProfile()))
+		whenever(port.create(any())).thenReturn(Mono.just(defaultProject()))
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
-		service.createProject(currentUser(), commonProject()).block()
+		service.createProject(currentUser(), defaultProject()).block()
 
 		// Assert
-		verify(projectProfileService).createUserProjectProfileFromProject(currentUser(), commonProject())
-		verify(port).create(commonProject())
+		verify(projectProfileService).createUserProjectProfileFromProject(currentUser(), defaultProject())
+		verify(port).create(defaultProject())
 		verify(transactionalOperator).transactional(any<Mono<*>>())
+	}
+
+	@Test
+	fun `Should createProject invalidate the cached principal of the creator so the new profile grants its authorities`() {
+		// Arrange
+		whenever(projectProfileService.createUserProjectProfileFromProject(any(), any()))
+			.thenReturn(Mono.just(defaultProjectProfile()))
+		whenever(port.create(any())).thenReturn(Mono.just(defaultProject()))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+
+		// Act
+		service.createProject(currentUser(), defaultProject()).block()
+
+		// Assert
+		verify(principalCache).invalidate(currentUser().oidcId)
 	}
 
 	@ParameterizedTest
@@ -526,48 +716,50 @@ class ProjectServiceTest {
 		expectedVerificationCall: Int,
 	) {
 		// Arrange
-		val projectToUpdate = commonProject()
+		val projectToUpdate = defaultProject()
 			.apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
-		val projectUpdated = commonProject()
+		val projectUpdated = defaultProject()
 			.apply { begin = newProjectBeginDateTime?.copy(); end = newProjectEndDateTime?.copy() }
 
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(projectToUpdate))
 		whenever(port.validDateTime(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(true))
 		whenever(port.update(any())).thenReturn(Mono.just(projectUpdated))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
 
 		// Act
-		service.updateProjectById(currentUser(), projectId, projectUpdated).block()
+		service.updateProjectById(currentUser(), defaultProjectId, projectUpdated).block()
 
 		// Assert
-		verify(port).findById(projectId, isVisible = null)
+		verify(port).findById(defaultProjectId, isVisible = null)
 		verify(port, times(expectedVerificationCall))
-			.validDateTime(eq(projectId), anyOrNull(), anyOrNull())
+			.validDateTime(eq(defaultProjectId), anyOrNull(), anyOrNull())
 		verify(port).update(any())
+		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
 	@Test
 	fun `Should updateProjectById call port findById, validDateTime and throw due to date conflict`() {
 		// Arrange
 		val dateTime = CustomDateTimeModel(LocalDate.EPOCH)
-		val projectUpdated = commonProject().apply { begin = dateTime; end = dateTime }
+		val projectUpdated = defaultProject().apply { begin = dateTime; end = dateTime }
 
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
 		whenever(port.validDateTime(any(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(false))
 		whenever(port.update(any())).thenReturn(Mono.just(projectUpdated))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateProjectById(currentUser(), projectId, projectUpdated).block()
+			service.updateProjectById(currentUser(), defaultProjectId, projectUpdated).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_DATE_CONFLICT_WITH_ELEMENTS, result.message)
-		assertEquals(arrayListOf(commonProject().name), result.args)
+		assertEquals(arrayListOf(defaultProject().name), result.args)
 
-		verify(port).findById(projectId, isVisible = null)
+		verify(port).findById(defaultProjectId, isVisible = null)
 		verify(port).validDateTime(
-			projectId,
+			defaultProjectId,
 			dateTime.toZonedDateTime(OffsetTime.MIN),
 			dateTime.toZonedDateTime(OffsetTime.MAX),
 		)
@@ -577,44 +769,48 @@ class ProjectServiceTest {
 	@Test
 	fun `Should disableProjectById call existing project and call port update`() {
 		// Arrange
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
-		whenever(port.update(any())).thenReturn(Mono.just(commonProject()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
+		whenever(port.update(any())).thenReturn(Mono.just(defaultProject()))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
 
 		// Act
-		service.disableProjectById(currentUser(), projectId).block()
+		service.disableProjectById(currentUser(), defaultProjectId).block()
 
 		// Assert
-		verify(port).findById(projectId, isVisible = true)
-		verify(port).update(commonProject().apply { visible = false })
+		verify(port).findById(defaultProjectId, isVisible = true)
+		verify(port).update(defaultProject().apply { visible = false })
+		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
 	@Test
 	fun `Should enableProjectById call existing project and call port update`() {
 		// Arrange
-		val project = commonProject().apply { visible = false }
+		val project = defaultProject().apply { visible = false }
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
 		whenever(port.update(any())).thenReturn(Mono.just(project))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
 
 		// Act
-		service.enableProjectById(currentUser(), projectId).block()
+		service.enableProjectById(currentUser(), defaultProjectId).block()
 
 		// Assert
-		verify(port).findById(projectId, isVisible = false)
-		verify(port).update(commonProject())
+		verify(port).findById(defaultProjectId, isVisible = false)
+		verify(port).update(defaultProject())
+		verify(transactionalOperator).transactional(any<Mono<*>>())
 	}
 
 	@Test
 	fun `Should deleteProjectById call existing project and call port deleteById`() {
 		// Arrange
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(commonProject()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteProjectById(projectId).block()
+		service.deleteProjectById(defaultProjectId).block()
 
 		// Assert
-		verify(port).findById(projectId, isVisible = null)
-		verify(port).deleteById(projectId)
+		verify(port).findById(defaultProjectId, isVisible = null)
+		verify(port).deleteById(defaultProjectId)
 	}
 
 	@Test

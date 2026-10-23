@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum.FAST
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
@@ -96,5 +97,22 @@ class PreferencesControllerTest: TestContext() {
 		// Assert
 		result.body<PreferencesModel>(OK)
 		verify(service).updateLanguage(any(), eq("a".repeat(10)))
+	}
+
+	@Test
+	fun `Should updateRefreshMode return 200`() {
+		// Arrange
+		whenever(service.updateRefreshMode(any(), any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/refresh-mode", emptyList(), listOf(Pair("mode", "FAST"))))
+			.exchange()
+
+		// Assert
+		result.body<PreferencesModel>(OK)
+		verify(service).updateRefreshMode(any(), eq(FAST))
 	}
 }

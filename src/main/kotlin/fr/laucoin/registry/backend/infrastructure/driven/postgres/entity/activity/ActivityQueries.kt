@@ -25,10 +25,10 @@ object ActivityQueries {
         (
             :isAvailable IS NULL OR :isAvailable = (
                 (
-                    (COALESCE(t.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CURRENT_TIMESTAMP
+                    (COALESCE(t.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    (COALESCE(t.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CURRENT_TIMESTAMP
+                    (COALESCE(t.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                 )
             )
         )
