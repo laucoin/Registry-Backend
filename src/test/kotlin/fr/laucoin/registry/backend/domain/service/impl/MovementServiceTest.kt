@@ -156,16 +156,6 @@ class MovementServiceTest {
 				MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
 			),
 			Arguments.of(
-				Flux.just(commonParticipant().apply { purged = true }),
-				NOT_FOUND,
-				MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
-			),
-			Arguments.of(
-				Flux.just(commonParticipant().apply { purged = true; visible = false }),
-				NOT_FOUND,
-				MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
-			),
-			Arguments.of(
 				Flux.just(commonParticipant().apply { birthday = LocalDate.now() }),
 				UNPROCESSABLE_CONTENT,
 				MOVEMENT_DRIVERS_NOT_MAJOR,
@@ -369,16 +359,16 @@ class MovementServiceTest {
 	@Test
 	fun `Should searchParticipantsAndGroupsByText call participant and group port findWithLimit`() {
 		// Arrange
-		val textSearched = "searched"
-		val typeSearched = REGISTERED
+		val query = "searched"
+		val type = REGISTERED
 		val expectedParticipantSearch = ParticipantSearchParamModel(
 			isMajor = null,
-			typeSearched,
-			visibilitySearched = true,
-			availabilitySearched = true,
-		).apply { this.textSearched = textSearched }
+			type,
+			isVisible = true,
+			isAvailable = true,
+		).apply { this.query = query }
 		val expectedGroupSearch =
-			GroupSearchParamModel(textSearched, visibilitySearched = true, presenceSearched = true)
+			GroupSearchParamModel(query, isVisible = true, isPresent = true)
 
 		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonParticipant()))
 		whenever(groupPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonGroup()))
@@ -386,7 +376,7 @@ class MovementServiceTest {
 			.thenReturn(Flux.just(Pair(groupId, listOf(commonParticipant()))))
 
 		// Act
-		val result = service.searchParticipantsAndGroupsByText(projectId, typeSearched, textSearched).block()
+		val result = service.searchParticipantsAndGroupsByText(projectId, type, query).block()
 
 		// Assert
 		assertEquals(1, result?.t1?.size)
@@ -397,24 +387,24 @@ class MovementServiceTest {
 		verify(participantPort).findWithLimit(MAX_PARTICIPANTS, projectId, expectedParticipantSearch)
 		verify(groupPort).findWithLimit(MAX_GROUPS, projectId, expectedGroupSearch)
 		verify(groupPort).findContent(
-			projectId, listOf(groupId), visibilitySearched = true, availabilitySearched = true
+			projectId, listOf(groupId), isVisible = true, isAvailable = true
 		)
 	}
 
 	@Test
 	fun `Should searchVehiclesByText call vehicle port findWithLimit`() {
 		// Arrange
-		val textSearched = "searched"
+		val query = "searched"
 		val expectedVehicleSearch = VehicleSearchParamModel().apply {
-			this.textSearched = textSearched
-			this.visibilitySearched = true
-			this.availabilitySearched = true
+			this.query = query
+			this.isVisible = true
+			this.isAvailable = true
 		}
 
 		whenever(vehiclePort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonVehicle()))
 
 		// Act
-		service.searchVehiclesByText(projectId, textSearched).collectList().block()
+		service.searchVehiclesByText(projectId, query).collectList().block()
 
 		// Assert
 		verify(vehiclePort).findWithLimit(MAX_VEHICLES, projectId, expectedVehicleSearch)
@@ -423,12 +413,12 @@ class MovementServiceTest {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should searchReasonsByText return filtered reason depending params`(
-		typeSearched: ParticipantTypeEnum,
-		movementTypeSearched: MovementTypeEnum,
+		type: ParticipantTypeEnum,
+		movementType: MovementTypeEnum,
 		expectedReasons: List<MovementReasonEnum>,
 	) {
 		// Act
-		val result = service.searchReasonsByText(typeSearched, movementTypeSearched).collectList().block()
+		val result = service.searchReasonsByText(type, movementType).collectList().block()
 
 		// Assert
 		assertEquals(expectedReasons, result)
@@ -437,22 +427,22 @@ class MovementServiceTest {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should searchActivitiesByText call vehicle port findWithLimit`(
-		typeSearched: ParticipantTypeEnum,
+		type: ParticipantTypeEnum,
 		expectedPortCall: Int,
 		expectedActivities: List<ActivityModel>,
 	) {
 		// Arrange
-		val textSearched = "searched"
+		val query = "searched"
 		val expectedActivitySearch = ActivitySearchParamModel().apply {
-			this.textSearched = textSearched
-			this.visibilitySearched = true
-			this.availabilitySearched = true
+			this.query = query
+			this.isVisible = true
+			this.isAvailable = true
 		}
 
 		whenever(activityPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonActivity()))
 
 		// Act
-		val result = service.searchActivitiesByText(projectId, typeSearched, textSearched).collectList().block()
+		val result = service.searchActivitiesByText(projectId, type, query).collectList().block()
 
 		// Assert
 		assertEquals(expectedActivities, result)
@@ -481,48 +471,48 @@ class MovementServiceTest {
 		// Arrange
 		val registeredPresentAdult = 1L
 		val registeredPresentAdultSearch = ParticipantSearchParamModel(
-			textSearched = null,
+			query = null,
 			isMajor = true,
-			typeSearched = REGISTERED,
-			statusSearched = PresenceStatusEnum.IN,
-			visibilitySearched = true,
-			dateTimeSearched = null
+			type = REGISTERED,
+			status = PresenceStatusEnum.IN,
+			isVisible = true,
+			at = null
 		)
 		val registeredAbsentAdult = 2L
 		val registeredAbsentAdultSearch = ParticipantSearchParamModel(
-			textSearched = null,
+			query = null,
 			isMajor = true,
-			typeSearched = REGISTERED,
-			statusSearched = PresenceStatusEnum.OUT,
-			visibilitySearched = true,
-			dateTimeSearched = null
+			type = REGISTERED,
+			status = PresenceStatusEnum.OUT,
+			isVisible = true,
+			at = null
 		)
 		val registeredPresentMinor = 3L
 		val registeredPresentChildSearch = ParticipantSearchParamModel(
-			textSearched = null,
+			query = null,
 			isMajor = false,
-			typeSearched = REGISTERED,
-			statusSearched = PresenceStatusEnum.IN,
-			visibilitySearched = true,
-			dateTimeSearched = null
+			type = REGISTERED,
+			status = PresenceStatusEnum.IN,
+			isVisible = true,
+			at = null
 		)
 		val registeredAbsentMinor = 4L
 		val registeredAbsentChildSearch = ParticipantSearchParamModel(
-			textSearched = null,
+			query = null,
 			isMajor = false,
-			typeSearched = REGISTERED,
-			statusSearched = PresenceStatusEnum.OUT,
-			visibilitySearched = true,
-			dateTimeSearched = null
+			type = REGISTERED,
+			status = PresenceStatusEnum.OUT,
+			isVisible = true,
+			at = null
 		)
 		val guestPresent = 5L
 		val guestPresentSearch = ParticipantSearchParamModel(
-			textSearched = null,
+			query = null,
 			isMajor = null,
-			typeSearched = GUEST,
-			statusSearched = PresenceStatusEnum.IN,
-			visibilitySearched = true,
-			dateTimeSearched = null
+			type = GUEST,
+			status = PresenceStatusEnum.IN,
+			isVisible = true,
+			at = null
 		)
 
 		whenever(participantPort.countAll(any(), eq(registeredPresentAdultSearch)))
@@ -557,17 +547,17 @@ class MovementServiceTest {
 		// Arrange
 		val presentVehicle = 1L
 		val presentVehicleSearch = VehicleSearchParamModel(
-			textSearched = null,
-			visibilitySearched = true,
-			statusSearched = PresenceStatusEnum.IN,
-			dateTimeSearched = null
+			query = null,
+			isVisible = true,
+			status = PresenceStatusEnum.IN,
+			at = null
 		)
 		val absentVehicle = 2L
 		val absentVehicleSearch = VehicleSearchParamModel(
-			textSearched = null,
-			visibilitySearched = true,
-			statusSearched = PresenceStatusEnum.OUT,
-			dateTimeSearched = null
+			query = null,
+			isVisible = true,
+			status = PresenceStatusEnum.OUT,
+			at = null
 		)
 
 		whenever(vehiclePort.countAll(any(), eq(presentVehicleSearch))).thenReturn(Mono.just(presentVehicle))
@@ -597,7 +587,7 @@ class MovementServiceTest {
 		service.createMovement(currentUser(), movement).block()
 
 		// Assert
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(port).create(any())
 	}
 
@@ -625,7 +615,7 @@ class MovementServiceTest {
 		assertEquals(expectedStatus, result.status)
 		assertEquals(expectedCode, result.code)
 
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verifyNoInteractions(port)
 	}
 
@@ -645,8 +635,8 @@ class MovementServiceTest {
 		service.createMovement(currentUser(), movement, listOf(guest)).block()
 
 		// Assert
-		verify(participantPort).findAllByIds(projectId, emptyList(), visibilitySearched = null)
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, emptyList(), isVisible = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(participantPort).saveAllGuest(any())
 		verify(port).create(any())
 	}
@@ -667,8 +657,8 @@ class MovementServiceTest {
 		service.createMovement(currentUser(), movement).block()
 
 		// Assert
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
-		verify(activityPort).findById(projectId, activityId, visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
+		verify(activityPort).findById(projectId, activityId, isVisible = null)
 		verify(port).create(any())
 	}
 
@@ -696,7 +686,7 @@ class MovementServiceTest {
 		assertEquals(expectedStatus, result.status)
 		assertEquals(expectedCode, result.code)
 
-		verify(activityPort).findById(projectId, activityId, visibilitySearched = null)
+		verify(activityPort).findById(projectId, activityId, isVisible = null)
 		verifyNoInteractions(participantPort)
 		verifyNoInteractions(port)
 	}
@@ -716,8 +706,8 @@ class MovementServiceTest {
 		service.createMovement(currentUser(), movement).block()
 
 		// Assert
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
-		verify(vehiclePort).findAllByIds(projectId, listOf(vehicleId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
+		verify(vehiclePort).findAllByIds(projectId, listOf(vehicleId), isVisible = null)
 		verify(port).create(any())
 	}
 
@@ -745,8 +735,8 @@ class MovementServiceTest {
 		assertEquals(expectedStatus, result.status)
 		assertEquals(expectedCode, result.code)
 
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
-		verify(vehiclePort).findAllByIds(projectId, listOf(vehicleId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
+		verify(vehiclePort).findAllByIds(projectId, listOf(vehicleId), isVisible = null)
 		verifyNoInteractions(port)
 	}
 
@@ -770,7 +760,7 @@ class MovementServiceTest {
 		service.createMovement(currentUser(), movement).block()
 
 		// Assert
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(participantPort).updateAllEndAvailability(listOf(participantId), CustomDateTimeModel(movementDate))
 		verify(port).create(any())
 	}
@@ -795,7 +785,7 @@ class MovementServiceTest {
 		service.createMovement(currentUser(), movement).block()
 
 		// Assert
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(participantPort).updateAllEndAvailability(listOf(participantId), CustomDateTimeModel(movementDate))
 		verify(port).create(any())
 	}
@@ -821,11 +811,11 @@ class MovementServiceTest {
 		service.updateMovementById(currentUser(), projectId, movementId, updatedMovement).block()
 
 		// Assert
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 
 		val participantIds = newParticipants.mapNotNull(ParticipantModel::id)
 		verify(participantPort, times(expectedCallNewParticipant))
-			.findAllByIds(projectId, participantIds, visibilitySearched = null)
+			.findAllByIds(projectId, participantIds, isVisible = null)
 
 		verify(port).update(any())
 	}
@@ -849,7 +839,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(expectedCode, result.code)
 
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 		verify(port, never()).update(any())
 	}
 
@@ -868,7 +858,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_UPDATED, result.code)
 
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 		verify(port, never()).update(any())
 	}
 
@@ -895,11 +885,11 @@ class MovementServiceTest {
 		service.updateMovementById(currentUser(), projectId, movementId, updatedMovement, newGuests).block()
 
 		// Assert
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 
 		val guestIds = newGuests.mapNotNull(ParticipantModel::id)
 		verify(participantPort, times(expectedCallFindParticipants))
-			.findAllByIds(projectId, guestIds, visibilitySearched = null)
+			.findAllByIds(projectId, guestIds, isVisible = null)
 
 		verify(participantPort, times(expectedCallSaveGuest)).saveAllGuest(any())
 		verify(port).update(any())
@@ -926,8 +916,8 @@ class MovementServiceTest {
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT, result.code)
 
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
-		verify(participantPort).findAllByIds(projectId, listOf(participantId), visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
+		verify(participantPort).findAllByIds(projectId, listOf(participantId), isVisible = null)
 		verify(participantPort, never()).saveAllGuest(any())
 		verify(port, never()).update(any())
 	}
@@ -941,9 +931,9 @@ class MovementServiceTest {
 			commonMovement().apply { type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now() }
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
-			visibilitySearched = null,
-			startDateTimeSearched = null,
-			endDateTimeSearched = updatedMovement.dateTime,
+			isVisible = null,
+			from = null,
+			to = updatedMovement.dateTime,
 		)
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
@@ -954,7 +944,7 @@ class MovementServiceTest {
 		service.updateMovementById(currentUser(), projectId, movementId, updatedMovement).block()
 
 		// Assert
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 		verify(communicationPort).countAllByMovementId(projectId, movementId, expectedCommunicationSearch)
 		verify(port).update(any())
 	}
@@ -969,9 +959,9 @@ class MovementServiceTest {
 		val conflictCommunication = 1L
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
-			visibilitySearched = null,
-			startDateTimeSearched = null,
-			endDateTimeSearched = updatedMovement.dateTime,
+			isVisible = null,
+			from = null,
+			to = updatedMovement.dateTime,
 		)
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
@@ -994,7 +984,7 @@ class MovementServiceTest {
 		assertEquals(MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME, result.code)
 		assertEquals(arrayListOf(conflictCommunication), result.args)
 
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 		verify(communicationPort).countAllByMovementId(projectId, movementId, expectedCommunicationSearch)
 		verify(port, never()).update(any())
 	}
@@ -1011,7 +1001,7 @@ class MovementServiceTest {
 		service.disableMovementById(currentUser(), projectId, movementId).block()
 
 		// Assert
-		verify(port).findById(projectId, movementId, visibilitySearched = true)
+		verify(port).findById(projectId, movementId, isVisible = true)
 		verify(port).update(movement.apply { visible = false })
 	}
 
@@ -1030,7 +1020,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_DISABLED, result.code)
 
-		verify(port).findById(projectId, movementId, visibilitySearched = true)
+		verify(port).findById(projectId, movementId, isVisible = true)
 		verify(port, never()).update(any())
 	}
 
@@ -1046,7 +1036,7 @@ class MovementServiceTest {
 		service.enableMovementById(currentUser(), projectId, movementId).block()
 
 		// Assert
-		verify(port).findById(projectId, movementId, visibilitySearched = false)
+		verify(port).findById(projectId, movementId, isVisible = false)
 		verify(port).update(movement.apply { visible = true })
 	}
 
@@ -1065,7 +1055,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_ENABLED, result.code)
 
-		verify(port).findById(projectId, movementId, visibilitySearched = false)
+		verify(port).findById(projectId, movementId, isVisible = false)
 		verify(port, never()).update(any())
 	}
 
@@ -1081,7 +1071,7 @@ class MovementServiceTest {
 		service.deleteMovementById(projectId, movementId).block()
 
 		// Assert
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 		verify(port).deleteById(movementId)
 	}
 
@@ -1100,7 +1090,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_DELETED, result.code)
 
-		verify(port).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(projectId, movementId, isVisible = null)
 		verify(port, never()).deleteById(any())
 	}
 

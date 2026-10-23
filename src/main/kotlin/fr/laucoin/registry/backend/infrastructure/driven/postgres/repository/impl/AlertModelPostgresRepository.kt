@@ -27,11 +27,13 @@ class AlertModelPostgresRepository(
 	): Mono<PageModel<AlertModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.textSearched,
-			searchParams.statusSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.query,
+			searchParams.status,
+			searchParams.isVisible,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, AlertEntity::fullCount, mapper::toModel)
@@ -44,11 +46,11 @@ class AlertModelPostgresRepository(
 	): Flux<AlertModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.statusSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.query,
+			searchParams.status,
+			searchParams.isVisible,
+			searchParams.from,
+			searchParams.to,
 			limit,
 		).map(mapper::toModel)
 	}
@@ -60,12 +62,12 @@ class AlertModelPostgresRepository(
 	override fun findById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<AlertModel> {
 		return repository.findById(
 			projectId,
 			id,
-			visibilitySearched,
+			isVisible,
 		).map(mapper::toModel)
 	}
 

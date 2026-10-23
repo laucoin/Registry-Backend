@@ -31,6 +31,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 
 object GenericQueries {
+	const val TEXT_SEARCH_MIN_SCORE = "0.3"
 	private const val CREATOR_TABLE = "create_tb"
 	const val SELECT_CREATOR = """
         $CREATOR_TABLE.$USER_FIRST_NAME AS $CREATOR_FIRST_NAME,
@@ -62,7 +63,7 @@ object GenericQueries {
 	const val PROJECT_JOIN =
 		"INNER JOIN $PROJECT_TABLE $LINKED_PROJECT_TABLE ON t.$LINKED_PROJECT_ID = $LINKED_PROJECT_TABLE.$ID AND $LINKED_PROJECT_TABLE.$VISIBLE IS TRUE"
 
-	const val VISIBLE_CLAUSE = "(:visibilitySearched IS NULL OR t.$VISIBLE = :visibilitySearched)"
+	const val VISIBLE_CLAUSE = "(:isVisible IS NULL OR t.$VISIBLE = :isVisible)"
 
 	const val PROJECT_CLAUSE = "(t.$LINKED_PROJECT_ID = :projectId)"
 }

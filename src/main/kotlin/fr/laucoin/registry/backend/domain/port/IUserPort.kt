@@ -11,13 +11,13 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IUserPort {
-	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel>
+	fun findById(id: UUID, isVisible: Boolean?): Mono<UserModel>
 	fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
 	fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel>
-	fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel>
-	fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel>
+	fun findByOidcId(oidcId: UUID, isVisible: Boolean?): Mono<CurrentUserModel>
+	fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel>
 	fun findServiceAccount(): Mono<CurrentUserModel>
-	fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel>
+	fun findByRoleLevel(roleLevel: Int, isVisible: Boolean?): Flux<UserModel>
 	fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: UserModel): Mono<UserModel>
 	fun update(element: UserModel): Mono<UserModel>

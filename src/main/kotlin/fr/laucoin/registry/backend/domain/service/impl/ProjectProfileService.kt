@@ -52,16 +52,16 @@ class ProjectProfileService(
 	override fun findProjectProfileById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<ProjectProfileModel> {
-		return port.findById(projectId, id, visibilitySearched)
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
-	override fun searchUsers(textSearched: String?): Flux<UserModel> {
+	override fun searchUsers(query: String?): Flux<UserModel> {
 		return userPort.findWithLimit(
 			maxUserResult,
-			UserSearchParamModel(textSearched, visibilitySearched = true)
+			UserSearchParamModel(query, isVisible = true)
 		)
 	}
 
@@ -70,9 +70,9 @@ class ProjectProfileService(
 			projectId,
 			currentUser.id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			),
 		)
 			.notFoundIfEmpty(Pair(projectId, currentUser.id!!))
@@ -111,7 +111,7 @@ class ProjectProfileService(
 		id: UUID,
 		profile: ProjectProfileModel
 	): Mono<ProjectProfileModel> {
-		return findProjectProfileById(projectId, id, visibilitySearched = null)
+		return findProjectProfileById(projectId, id, isVisible = null)
 			.flatMap {
 				validateNoProfileConflict(
 					projectId,
@@ -138,7 +138,7 @@ class ProjectProfileService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ProjectProfileModel> {
-		return findProjectProfileById(projectId, id, visibilitySearched = true)
+		return findProjectProfileById(projectId, id, isVisible = true)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR)
 			.updateVisibility(visibility = false)
 			.updateProjectProfile(currentUser)
@@ -149,19 +149,19 @@ class ProjectProfileService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ProjectProfileModel> {
-		return findProjectProfileById(projectId, id, visibilitySearched = false)
+		return findProjectProfileById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateProjectProfile(currentUser)
 	}
 
 	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findProjectProfileById(projectId, id, visibilitySearched = null)
+		return findProjectProfileById(projectId, id, isVisible = null)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR)
 			.flatMap { port.deleteById(id).doOnSuccess { _ -> principalCache.invalidate(it.user?.oidcId) } }
 	}
 
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
-		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.project!!.id!!, it, error)
+		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.projectId!!, it, error)
 	}
 
 	private fun Mono<ProjectProfileModel>.validateRole(
@@ -171,9 +171,9 @@ class ProjectProfileService(
 			projectId,
 			currentUser.id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			)
 		)
 			.handle { it, handle ->

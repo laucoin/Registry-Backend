@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component
 @Component
 class MovementReaderDtoMapper(
 	private val translateService: ITranslateService,
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val activityReasonReaderDtoMapper: MovementActivityReasonReaderDtoMapper,
 	private val reasonReaderDtoMapper: MovementReasonReaderDtoMapper,
 	private val movementContentMapper: MovementContentReaderDtoMapper,
@@ -33,7 +32,6 @@ class MovementReaderDtoMapper(
 			content = movementContentMapper.toDtoList(model.content),
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

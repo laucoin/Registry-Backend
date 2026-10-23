@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IActivityEntityRepository
@@ -46,6 +46,10 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 
 	private companion object {
 		@JvmStatic
+		fun `Should findPage accept every supported sort field`(): Stream<Arguments> =
+			ActivitySearchParamModel.SORT_FIELDS.stream().flatMap { Stream.of(Arguments.of(it, false), Arguments.of(it, true)) }
+
+		@JvmStatic
 		fun `Should findAllByIds call repository findAllByIds`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(
@@ -71,20 +75,60 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(15, result.totalElements)
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			at = null,
+			minDuration = null,
+			maxDuration = null,
+			participants = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findPage accept every supported sort field`(field: String, isDescending: Boolean) {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val expectedCount = repository.findPage(projectId, pageable, ActivitySearchParamModel()).block()!!.content.size
+
+		// Act
+		val result = repository.findPage(
+			projectId,
+			pageable,
+			ActivitySearchParamModel(query = null, sort = SortModel(field, isDescending)),
+		).block()!!
+
+		// Assert
+		assertEquals(expectedCount, result.content.size)
+	}
+
+	@Test
+	fun `Should findPage sort the activities by name in both directions`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+
+		// Act
+		val ascending = repository.findPage(
+			projectId, pageable, ActivitySearchParamModel(query = null, sort = SortModel("name")),
+		).block()!!.content.map { it.name }
+		val descending = repository.findPage(
+			projectId, pageable, ActivitySearchParamModel(query = null, sort = SortModel("name", true)),
+		).block()!!.content.map { it.name }
+
+		// Assert
+		assertEquals(ascending.reversed(), descending)
 	}
 
 	@ParameterizedTest
@@ -94,14 +138,14 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(projectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
 			projectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -120,10 +164,13 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
 			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			dateTimeSearched = null,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			at = null,
+			minDuration = null,
+			maxDuration = null,
+			participants = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -132,14 +179,14 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, activityId, visibilitySearched = null).block()
+		val result = repository.findById(projectId, activityId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			activityId,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -150,14 +197,14 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(projectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			projectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -175,7 +222,7 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 			val activity = ActivityModel().apply {
 				name = "test"
 				description = "test"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 
@@ -198,7 +245,7 @@ class ActivityModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				name = "test update"
 				description = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = fr.laucoin.registry.backend.test.ModelExt.projectId
 				create(currentUser())
 			}
 

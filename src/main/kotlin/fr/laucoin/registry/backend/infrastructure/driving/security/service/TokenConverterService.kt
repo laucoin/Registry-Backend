@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.service
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_IMPERSONATED_ACCOUNT
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
@@ -59,11 +58,11 @@ class TokenConverterService(
 	}
 
 	// Not cached on failure: Caffeine's AsyncCache drops an entry whose future completes
-	// exceptionally, so a blocked/purged user always fails fresh from the database.
+	// exceptionally, so a blocked user always fails fresh from the database.
 	private fun resolveCurrentUser(
 		oidcId: UUID, email: String, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> =
-		userService.findUserByOidcId(oidcId, visibilitySearched = null)
+		userService.findUserByOidcId(oidcId, isVisible = null)
 			.throwOnBlockedUser()
 			.updateUserIfPersonalDataChanged(email, firstName, lastName)
 			.createNewUserOnNotFound(oidcId, email, firstName, lastName)
@@ -73,9 +72,6 @@ class TokenConverterService(
 		if (it.isNotVisible()) {
 			log.warn("Signing in attempt blocked for user \"{}\" due to disabled account", it.id)
 			handle.error(JwtConversionException(LOCKED, AUTH_BLOCKED_ACCOUNT))
-		} else if (it.isPurged()) {
-			log.warn("Signing in attempt blocked for impersonate user \"{}\"", it.id)
-			handle.error(JwtConversionException(CONFLICT, AUTH_IMPERSONATED_ACCOUNT))
 		} else handle.next(it)
 	}
 
@@ -90,7 +86,7 @@ class TokenConverterService(
 		oidcId: UUID, email: String, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> = switchIfEmpty {
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
-		userService.findUserByEmail(email, visibilitySearched = null)
+		userService.findUserByEmail(email, isVisible = null)
 			.collectList()
 			.flatMap { matches ->
 				when {

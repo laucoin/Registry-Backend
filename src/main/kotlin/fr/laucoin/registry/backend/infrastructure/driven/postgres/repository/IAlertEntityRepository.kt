@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.A
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_DATE_IN_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_STATUS_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_SEARCH
@@ -20,7 +21,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -35,27 +35,29 @@ import reactor.core.publisher.Mono
 interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
-        ORDER BY similarity_score DESC, t.$ALERT_DATE_TIME DESC
+        ORDER BY $ALERT_SORT similarity_score DESC, t.$ALERT_DATE_TIME DESC, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		status: List<AlertStatusEnum>?,
+		isVisible: Boolean?,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
 		offset: Int,
 	): Flux<AlertEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ALERT_DATE_TIME DESC
@@ -64,23 +66,23 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		query: String?,
+		status: List<AlertStatusEnum>?,
+		isVisible: Boolean?,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
 		limit: Int,
 	): Flux<AlertEntity>
 
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND t.$ID = :id
         """
 	)
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertEntity>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertEntity>
 
 	@Query(
 		"""

@@ -24,9 +24,9 @@ open class GenericProfileService(
 			projectId,
 			userIds,
 			profileId,
-			statusSearched = listOf(ACCEPTED, INVITED),
-			startDateTimeSearched = startAccess,
-			endDateTimeSearched = endAccess,
+			status = listOf(ACCEPTED, INVITED),
+			from = startAccess,
+			to = endAccess,
 		)
 			.collectList()
 			.handle { userIdsWithConflictualProfile, handle ->

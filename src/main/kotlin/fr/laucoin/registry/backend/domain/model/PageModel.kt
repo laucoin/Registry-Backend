@@ -5,16 +5,19 @@ import java.time.ZonedDateTime.now
 import kotlin.math.ceil
 
 data class PageModel<T>(
-	var pageNumber: Int,
-	var pageSize: Int,
+	var page: Int,
+	var size: Int,
 	var totalPages: Int,
 	var totalElements: Long = 0,
 	var content: List<T> = emptyList(),
 	val lastRefresh: ZonedDateTime = now()
 ) {
+	val hasNext: Boolean
+		get() = page + 1 < totalPages
+
 	constructor(pageable: PageableModel, totalElements: Long, pageContent: List<T>): this(
-		pageNumber = pageable.offset / pageable.limit,
-		pageSize = pageable.limit,
+		page = pageable.offset / pageable.limit,
+		size = pageable.limit,
 		totalPages = ceil(totalElements.toDouble() / pageable.limit.toDouble()).toInt(),
 		totalElements = totalElements,
 		content = pageContent,

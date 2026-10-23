@@ -47,9 +47,9 @@ class AlertService(
 	override fun findAlertById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<AlertModel> {
-		return port.findById(projectId, id, visibilitySearched)
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
@@ -64,7 +64,7 @@ class AlertService(
 
 	private fun validateAlertDateWithProjectDates(alert: AlertModel): Mono<UUID> {
 		return projectService.validateDateTime(
-			alert.project!!.id!!,
+			alert.projectId!!,
 			CustomDateTimeModel(alert.dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -94,7 +94,7 @@ class AlertService(
 		alert: AlertModel
 	): Mono<AlertModel> {
 		return validateAlertDateWithProjectDates(alert)
-			.flatMap { findAlertById(projectId, id, visibilitySearched = null) }
+			.flatMap { findAlertById(projectId, id, isVisible = null) }
 			.handle { it, handle ->
 				if (it.status !== IN_PROGRESS) {
 					log.warn("Only {} alert can be update", IN_PROGRESS)
@@ -117,7 +117,7 @@ class AlertService(
 		id: UUID,
 		status: AlertStatusEnum
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = null)
+		return findAlertById(projectId, id, isVisible = null)
 			.map {
 				it.apply {
 					this.status = status
@@ -130,13 +130,13 @@ class AlertService(
 		flatMap { oldAlert ->
 			if (oldAlert.dateTime.isEqual(updatedAlert.dateTime)) Mono.just(oldAlert)
 			else communicationPort.countAllByAlertId(
-				oldAlert.project!!.id!!,
+				oldAlert.projectId!!,
 				oldAlert.id!!,
 				CommunicationSearchParamModel(
-					textSearched = null,
-					visibilitySearched = null,
-					startDateTimeSearched = null,
-					endDateTimeSearched = updatedAlert.dateTime,
+					query = null,
+					isVisible = null,
+					from = null,
+					to = updatedAlert.dateTime,
 				)
 			).handle { it, handle ->
 				if (it > 0L) {
@@ -160,7 +160,7 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = true)
+		return findAlertById(projectId, id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateAlert(currentUser)
 	}
@@ -170,7 +170,7 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = false)
+		return findAlertById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateAlert(currentUser)
 	}
@@ -180,7 +180,7 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<Unit> {
-		return findAlertById(projectId, id, visibilitySearched = null)
+		return findAlertById(projectId, id, isVisible = null)
 			.validateHasNoCommunicationLinked(ALERT_DELETE_HAS_COMMUNICATION)
 			.flatMap { port.deleteById(it.id!!) }
 	}
@@ -203,7 +203,7 @@ class AlertService(
 
 	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
 		communicationPort.countAllByAlertId(
-			oldAlert.project!!.id!!,
+			oldAlert.projectId!!,
 			oldAlert.id!!,
 			CommunicationSearchParamModel(),
 		).handle { it, handle ->

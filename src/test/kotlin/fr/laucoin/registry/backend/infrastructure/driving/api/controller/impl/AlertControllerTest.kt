@@ -5,10 +5,12 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_T
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_TITLE_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
@@ -21,6 +23,7 @@ import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IAlertService
@@ -51,12 +54,16 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CREATED
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpStatus.PRECONDITION_FAILED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
@@ -82,7 +89,7 @@ class AlertControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/alerts"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/alerts"
 
 		@JvmStatic
 		fun `Should findAlerts prepare param, call service and finally cast the result`(): Stream<Arguments> {
@@ -169,6 +176,17 @@ class AlertControllerTest: TestContext() {
 					null,
 					"2024/11/14 18:34:33",
 					PARAMETER_TYPE_MISMATCH
+				),
+				Arguments.of(
+					projectId.toString(),
+					null,
+					null,
+					null,
+					null,
+					null,
+					"2024-02-01T00:00:00Z",
+					"2024-01-01T00:00:00Z",
+					DATE_RANGE_FROM_LATER_THAN_TO
 				),
 			)
 		}
@@ -276,32 +294,32 @@ class AlertControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findAlerts prepare param, call service and finally cast the result`(
 		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		statusSearched: AlertStatusEnum?,
-		startDateTimeSearched: String?,
-		endDateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: Boolean?,
+		status: AlertStatusEnum?,
+		from: String?,
+		to: String?,
 	) {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = AlertSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = visibilitySearched,
-			statusSearched = statusSearched,
-			startDateTimeSearched = startDateTimeSearched?.let {
+			query = query,
+			isVisible = isVisible,
+			status = status,
+			from = from?.let {
 				ZonedDateTime.parse(
 					it,
 					DateTimeFormatter.ISO_DATE_TIME
 				)
 			},
-			endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(AlertModel()))
-		whenever(service.findAlertsPage(any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(AlertModel()))
+		whenever(service.findAlertsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(AlertReaderDto())),
 		)
@@ -315,13 +333,13 @@ class AlertControllerTest: TestContext() {
 					BASE_URL,
 					listOf(projectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("statusSearched", statusSearched),
-						Pair("startDateTimeSearched", startDateTimeSearched),
-						Pair("endDateTimeSearched", endDateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
+						Pair("status", status),
+						Pair("from", from),
+						Pair("to", to),
 					),
 				)
 			)
@@ -332,7 +350,7 @@ class AlertControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findAlertsPage(projectId, pageable, searchParams)
-		verify(readerMapper).toDtoPage(page)
+		verify(readerMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -341,13 +359,13 @@ class AlertControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findAlerts throw due to wrong params`(
 		alertProjectId: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		visibilitySearched: String?,
-		statusSearched: String?,
-		startDateTimeSearched: String?,
-		endDateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: String?,
+		status: String?,
+		from: String?,
+		to: String?,
 		expectedMessage: String,
 	) {
 		// Act
@@ -359,14 +377,14 @@ class AlertControllerTest: TestContext() {
 					BASE_URL,
 					if (Objects.nonNull(alertProjectId)) listOf(alertProjectId!!) else emptyList(),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("statusSearched", statusSearched),
-						Pair("statusSearched", statusSearched),
-						Pair("startDateTimeSearched", startDateTimeSearched),
-						Pair("endDateTimeSearched", endDateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
+						Pair("status", status),
+						Pair("status", status),
+						Pair("from", from),
+						Pair("to", to),
 					),
 				)
 			)
@@ -398,7 +416,7 @@ class AlertControllerTest: TestContext() {
 		// Assert
 		result.body<AlertReaderDto>(OK)
 
-		verify(service).findAlertById(projectId, uuid, visibilitySearched = null)
+		verify(service).findAlertById(projectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(communicationReaderMapper)
@@ -407,31 +425,31 @@ class AlertControllerTest: TestContext() {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findAlertCommunications prepare param, call service and finally cast the result`(
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: String?,
-		endDateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: Boolean?,
+		from: String?,
+		to: String?,
 	) {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = CommunicationSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = visibilitySearched,
-			startDateTimeSearched = startDateTimeSearched?.let {
+			query = query,
+			isVisible = isVisible,
+			from = from?.let {
 				ZonedDateTime.parse(
 					it,
 					DateTimeFormatter.ISO_DATE_TIME
 				)
 			},
-			endDateTimeSearched = endDateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			to = to?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
-		whenever(service.findAlertCommunicationsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(CommunicationModel()))
+		whenever(service.findAlertCommunicationsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(communicationReaderMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(CommunicationReaderDto())),
 		)
@@ -448,12 +466,12 @@ class AlertControllerTest: TestContext() {
 					"$BASE_URL/{id}/communications",
 					listOf(projectId, uuid),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("startDateTimeSearched", startDateTimeSearched),
-						Pair("endDateTimeSearched", endDateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
+						Pair("from", from),
+						Pair("to", to),
 					),
 				)
 			)
@@ -463,7 +481,7 @@ class AlertControllerTest: TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findAlertCommunicationsPage(projectId, uuid, pageable, searchParams)
-		verify(communicationReaderMapper).toDtoPage(page)
+		verify(communicationReaderMapper).toDtoPage(expectedPage)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 	}
@@ -471,8 +489,8 @@ class AlertControllerTest: TestContext() {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findAlertCommunications throw due to wrong params`(
-		pageNumber: Int?,
-		pageSize: Int?,
+		page: Int?,
+		size: Int?,
 		expectedMessage: String,
 	) {
 		// Arrange
@@ -490,8 +508,8 @@ class AlertControllerTest: TestContext() {
 					"$BASE_URL/{id}/communications",
 					listOf(projectId, uuid),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
+						Pair("page", page),
+						Pair("size", size),
 					),
 				)
 			)
@@ -507,8 +525,9 @@ class AlertControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should createAlert return 200`() {
+	fun `Should createAlert return 201`() {
 		// Arrange
+		val createdId = UUID.randomUUID()
 		val alert = AlertCreationWriterDto(
 			title = "Alert 1",
 			dateTime = ZonedDateTime.now(),
@@ -517,7 +536,7 @@ class AlertControllerTest: TestContext() {
 		)
 
 		whenever(service.createAlert(any(), any())).thenReturn(Mono.just(AlertModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto().apply { id = createdId })
 		whenever(creationWriterMapper.toModel(any(), any())).thenReturn(AlertModel())
 
 		// Act
@@ -529,7 +548,8 @@ class AlertControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<AlertReaderDto>(OK)
+		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.body<AlertReaderDto>(CREATED)
 
 		verify(service).createAlert(any(), any())
 		verify(readerMapper).toDto(any())
@@ -589,6 +609,64 @@ class AlertControllerTest: TestContext() {
 		verifyNoInteractions(communicationReaderMapper)
 		verifyNoInteractions(creationWriterMapper)
 		verify(writerMapper).toModel(any(), eq(projectId))
+	}
+
+	@Test
+	fun `Should updateAlert accept the matching If-Match`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(), status = IN_PROGRESS)
+
+		whenever(service.updateAlertById(any(), any(), any(), any())).thenReturn(Mono.just(AlertModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
+		whenever(writerMapper.toModel(any(), any())).thenReturn(AlertModel())
+		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(AlertModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1791885731000\"")
+			.bodyValue(alert)
+			.exchange()
+
+		// Assert
+		result.body<AlertReaderDto>(OK)
+
+		verify(service).updateAlertById(any(), eq(projectId), eq(uuid), any())
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(communicationReaderMapper)
+		verifyNoInteractions(creationWriterMapper)
+		verify(writerMapper).toModel(any(), eq(projectId))
+	}
+
+	@Test
+	fun `Should updateAlertById throw when the element changed since it was read`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(), status = IN_PROGRESS)
+
+		whenever(writerMapper.toModel(any(), any())).thenReturn(AlertModel())
+		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(AlertModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.header("If-Match", "\"1\"")
+			.bodyValue(alert)
+			.exchange()
+
+		// Assert
+		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
+
+		verify(service, never()).updateAlertById(any(), eq(projectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -660,7 +738,7 @@ class AlertControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -685,7 +763,7 @@ class AlertControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId, uuid), emptyList()))
 			.exchange()
 
@@ -700,7 +778,7 @@ class AlertControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should deleteAlertById return 200`() {
+	fun `Should deleteAlertById return 204`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
@@ -714,7 +792,7 @@ class AlertControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(communicationReaderMapper)

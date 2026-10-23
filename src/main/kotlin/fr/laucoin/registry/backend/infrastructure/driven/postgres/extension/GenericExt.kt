@@ -1,27 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.extension
 
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.GenericProjectModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel.HistoryUserModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericProjectEntity
 import java.util.Objects
 
 object GenericExt {
 	fun <M: GenericProjectModel, E: GenericProjectEntity> M.fillWithProjectAndEntity(entity: E): M {
-		project = if (Objects.isNull(entity.projectName)) null
-		else ProjectModel().apply {
-			id = entity.projectId
-			name = entity.projectName
-			begin = if (Objects.isNull(entity.projectStartDate)) null
-			else CustomDateTimeModel(entity.projectStartDate!!, entity.projectStartTime)
-			end = if (Objects.isNull(entity.projectEndDate) && Objects.isNull(entity.projectEndTime)) null
-			else CustomDateTimeModel(entity.projectEndDate!!, entity.projectEndTime)
-			options = entity.projectOptions
-		}
+		projectId = entity.projectId
 
 		fillWithEntity(entity)
 
@@ -58,7 +47,7 @@ object GenericExt {
 	}
 
 	fun <M: GenericProjectModel, E: GenericProjectEntity> E.fillWithProjectAndModel(model: M): E {
-		projectId = model.project?.id
+		projectId = model.projectId
 
 		fillWithModel(model)
 

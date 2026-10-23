@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
@@ -8,24 +7,23 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_OPTIONS_MISSING
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
-import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.projectId
 import fr.laucoin.registry.backend.test.TestContext
@@ -48,17 +46,19 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
-import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.CREATED
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpStatus.PRECONDITION_FAILED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class ProjectControllerTest: TestContext() {
@@ -66,10 +66,7 @@ class ProjectControllerTest: TestContext() {
 	private lateinit var service: IProjectService
 
 	@MockitoBean
-	private lateinit var readerMapper: ProjectReaderDtoMapper
-
-	@MockitoBean
-	private lateinit var optionsReaderMapper: ProjectOptionsReaderDtoMapper
+	private lateinit var readerMapper: ProjectWithProfileReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var writerMapper: ProjectWriterDtoMapper
@@ -78,20 +75,20 @@ class ProjectControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects"
+		private const val BASE_URL = "/api/v2/projects"
 
 		@JvmStatic
 		fun `Should findProjects return 200`(): Stream<Arguments> = Stream.of(
-			Arguments.of(emptyList<String>(), "not locale", null, null, null, null, null, null),
-			Arguments.of(emptyList<String>(), null, 0, null, null, null, null, null),
-			Arguments.of(emptyList<String>(), null, null, 200, null, null, null, null),
-			Arguments.of(emptyList<String>(), null, null, null, null, null, null, null),
-			Arguments.of(emptyList<String>(), null, null, null, "text", null, null, null),
-			Arguments.of(listOf(REGISTRY_PROJECT_R), null, null, null, null, false, null, null),
-			Arguments.of(emptyList<String>(), null, null, null, null, null, true, null),
-			Arguments.of(emptyList<String>(), null, null, null, null, null, false, null),
-			Arguments.of(emptyList<String>(), null, null, null, null, null, null, null),
-			Arguments.of(emptyList<String>(), null, null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
+			Arguments.of(emptyList<String>(), "not locale", null, null, null, null, null),
+			Arguments.of(emptyList<String>(), null, 0, null, null, null, null),
+			Arguments.of(emptyList<String>(), null, null, 200, null, null, null),
+			Arguments.of(emptyList<String>(), null, null, null, null, null, null),
+			Arguments.of(emptyList<String>(), null, null, null, "text", null, null),
+			Arguments.of(listOf(REGISTRY_PROJECT_R), null, null, null, null, null, null),
+			Arguments.of(emptyList<String>(), null, null, null, null, true, null),
+			Arguments.of(emptyList<String>(), null, null, null, null, false, null),
+			Arguments.of(emptyList<String>(), null, null, null, null, null, null),
+			Arguments.of(emptyList<String>(), null, null, null, null, null, "2024-11-14T18:34:33.000Z"),
 		)
 
 		@JvmStatic
@@ -149,27 +146,26 @@ class ProjectControllerTest: TestContext() {
 	fun `Should findProjects return 200`(
 		authorities: List<String>,
 		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		withProfile: Boolean?,
-		visibilitySearched: Boolean?,
-		dateTimeSearched: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: Boolean?,
+		at: String?,
 	) {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
-		val expectedWithProfile = withProfile ?: true
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
+		val expectedWithProfile = !authorities.contains(REGISTRY_PROJECT_R)
 		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
 		val searchParams = ProjectSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = visibilitySearched,
-			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+			query = query,
+			isVisible = isVisible,
+			at = at?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(ProjectModel()))
-		whenever(service.findProjectsPage(any(), any(), any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectModel()))
+		whenever(service.findProjectsPage(any(), any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
-			PageModel(pageable, totalElements = 1, listOf(ProjectReaderDto())),
+			PageModel(pageable, totalElements = 1, listOf(ProjectWithProfileReaderDto())),
 		)
 
 		// Act
@@ -181,12 +177,11 @@ class ProjectControllerTest: TestContext() {
 					BASE_URL,
 					emptyList(),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("withProfile", withProfile),
-						Pair("visibilitySearched", visibilitySearched),
-						Pair("dateTimeSearched", dateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
+						Pair("at", at),
 					),
 				)
 			)
@@ -203,41 +198,14 @@ class ProjectControllerTest: TestContext() {
 			searchParams
 		)
 		verify(readerMapper).toDtoPage(any())
-		verifyNoInteractions(optionsReaderMapper)
-		verifyNoInteractions(writerMapper)
-	}
-
-	@Test
-	fun `Should findProjects return 403`() {
-		// Act
-		val result = webClient
-			.authenticate()
-			.get()
-			.uri(
-				uriBuilder(
-					BASE_URL,
-					emptyList(),
-					listOf(
-						Pair("withProfile", false),
-					),
-				)
-			)
-			.exchange()
-
-		// Assert
-		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-
-		verifyNoInteractions(service)
-		verifyNoInteractions(readerMapper)
-		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
 
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findProjects throw due to wrong params`(
-		pageNumber: Int?,
-		pageSize: Int?,
+		page: Int?,
+		size: Int?,
 		expectedMessage: String,
 	) {
 		// Act
@@ -249,8 +217,8 @@ class ProjectControllerTest: TestContext() {
 					BASE_URL,
 					emptyList(),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
+						Pair("page", page),
+						Pair("size", size),
 					),
 				)
 			)
@@ -260,7 +228,6 @@ class ProjectControllerTest: TestContext() {
 		result.assertError(BAD_REQUEST, expectedMessage)
 
 		verifyNoInteractions(readerMapper)
-		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(service)
 	}
@@ -270,8 +237,8 @@ class ProjectControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(service.findProjectWithProfileById(any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -281,46 +248,17 @@ class ProjectControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectReaderDto>(OK)
+		result.body<ProjectWithProfileReaderDto>(OK)
 
-		verify(service).findProjectById(uuid, visibilitySearched = null)
+		verify(service).findProjectWithProfileById(currentUser(REGISTRY_PROJECT_R), uuid)
 		verify(readerMapper).toDto(any())
-		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
 
 	@Test
-	fun `Should getAvailableProjectOptions return 200`() {
+	fun `Should createProject return 201`() {
 		// Arrange
-		whenever(service.availableProjectOptions()).thenReturn(Flux.just(COMMUNICATION))
-		whenever(optionsReaderMapper.toDto(any())).thenReturn(
-			ProjectOptionsReaderDto(
-				ACTIVITY,
-				"label",
-				"question",
-				emptyList()
-			)
-		)
-
-		// Act
-		val result = webClient
-			.authenticate(REGISTRY_PROJECT_METADATA_R)
-			.get()
-			.uri(uriBuilder("$BASE_URL/options", listOf(projectId), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<List<*>>(OK)
-
-		verify(service).availableProjectOptions()
-		verifyNoInteractions(readerMapper)
-		verify(optionsReaderMapper).toDto(any())
-		verifyNoInteractions(writerMapper)
-	}
-
-	@Test
-	fun `Should createProject return 200`() {
-		// Arrange
+		val createdId = UUID.randomUUID()
 		val project = ProjectWriterDto(
 			name = "project",
 			begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
@@ -329,7 +267,7 @@ class ProjectControllerTest: TestContext() {
 		)
 		whenever(service.createProject(any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto().apply { id = createdId })
 
 		// Act
 		val result = webClient
@@ -340,7 +278,8 @@ class ProjectControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectReaderDto>(OK)
+		result.expectHeader().valueEquals("Location", "${BASE_URL.replace("{projectId}", projectId.toString())}/$createdId")
+		result.body<ProjectWithProfileReaderDto>(CREATED)
 
 		verify(service).createProject(any(), any())
 		verify(readerMapper).toDto(any())
@@ -365,7 +304,6 @@ class ProjectControllerTest: TestContext() {
 		result.assertError(BAD_REQUEST, expectedCode)
 
 		verifyNoInteractions(readerMapper)
-		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(service)
 	}
@@ -382,7 +320,7 @@ class ProjectControllerTest: TestContext() {
 
 		whenever(service.updateProjectById(any(), any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
 		val result = webClient
@@ -393,11 +331,75 @@ class ProjectControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<ProjectReaderDto>(OK)
+		result.body<ProjectWithProfileReaderDto>(OK)
 
 		verify(service).updateProjectById(any(), eq(projectId), any())
 		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any())
+	}
+
+	@Test
+	fun `Should updateProjectById accept the matching If-Match`() {
+		// Arrange
+		val project = ProjectWriterDto(
+			name = "project",
+			begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+			end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+			options = listOf(ACTIVITY)
+		)
+
+		whenever(service.updateProjectById(any(), any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
+		whenever(service.findProjectById(any(), anyOrNull())).thenReturn(
+			Mono.just(ProjectModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId), emptyList()))
+			.header("If-Match", "\"1791885731000\"")
+			.bodyValue(project)
+			.exchange()
+
+		// Assert
+		result.body<ProjectWithProfileReaderDto>(OK)
+
+		verify(service).updateProjectById(any(), eq(projectId), any())
+		verify(readerMapper).toDto(any())
+		verify(writerMapper).toModel(any())
+	}
+
+	@Test
+	fun `Should updateProjectById throw when the element changed since it was read`() {
+		// Arrange
+		val project = ProjectWriterDto(
+			name = "project",
+			begin = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+			end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+			options = listOf(ACTIVITY)
+		)
+
+		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
+		whenever(service.findProjectById(any(), anyOrNull())).thenReturn(
+			Mono.just(ProjectModel().apply { lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z")) }),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId), emptyList()))
+			.header("If-Match", "\"1\"")
+			.bodyValue(project)
+			.exchange()
+
+		// Assert
+		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
+
+		verify(service, never()).updateProjectById(any(), eq(projectId), any())
 	}
 
 	@ParameterizedTest
@@ -418,7 +420,6 @@ class ProjectControllerTest: TestContext() {
 		result.assertError(BAD_REQUEST, expectedCode)
 
 		verifyNoInteractions(readerMapper)
-		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(service)
 	}
@@ -427,17 +428,17 @@ class ProjectControllerTest: TestContext() {
 	fun `Should disableProjectById return 200`() {
 		// Arrange
 		whenever(service.disableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_U))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(projectId), emptyList()))
 			.exchange()
 
 		// Assert
-		result.body<ProjectReaderDto>(OK)
+		result.body<ProjectWithProfileReaderDto>(OK)
 
 		verify(service).disableProjectById(any(), eq(projectId))
 		verify(readerMapper).toDto(any())
@@ -448,26 +449,25 @@ class ProjectControllerTest: TestContext() {
 	fun `Should enableProjectById return 200`() {
 		// Arrange
 		whenever(service.enableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(ProjectReaderDto())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_U))
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(projectId), emptyList()))
 			.exchange()
 
 		// Assert
-		result.body<ProjectReaderDto>(OK)
+		result.body<ProjectWithProfileReaderDto>(OK)
 
 		verify(service).enableProjectById(any(), eq(projectId))
 		verify(readerMapper).toDto(any())
-		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
 
 	@Test
-	fun `Should deleteProjectById return 200`() {
+	fun `Should deleteProjectById return 204`() {
 		// Arrange
 		whenever(service.deleteProjectById(any())).thenReturn(Mono.empty())
 
@@ -479,11 +479,10 @@ class ProjectControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 
 		verify(service).deleteProjectById(eq(projectId))
 		verifyNoInteractions(readerMapper)
-		verifyNoInteractions(optionsReaderMapper)
 		verifyNoInteractions(writerMapper)
 	}
 }

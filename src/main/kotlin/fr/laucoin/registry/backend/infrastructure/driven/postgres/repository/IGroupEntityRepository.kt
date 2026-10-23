@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.G
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_INSIDE_MEMBERS_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_MEMBERS_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_PRESENCE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.SELECT_MEMBERS_COUNTS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.WITH_GROUP_INSIDE_MEMBERS
@@ -23,7 +24,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -38,19 +38,21 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
-        ORDER BY t.$GROUP_NAME
+        ORDER BY $GROUP_SORT t.$GROUP_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isPresent: Boolean?,
+		at: ZonedDateTime?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
 		offset: Int,
 	): Flux<GroupEntity>
@@ -58,17 +60,17 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         """
 	)
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupEntity>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupEntity>
 
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         ORDER BY t.$GROUP_NAME
@@ -77,22 +79,22 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isPresent: Boolean?,
+		at: ZonedDateTime?,
 		limit: Int,
 	): Flux<GroupEntity>
 
 	@Query(
 		"""
         WITH $WITH_PARTICIPANT_GROUPS, $WITH_GROUP_INSIDE_MEMBERS, $WITH_GROUP_MEMBERS
-        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_MEMBERS_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<GroupEntity>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<GroupEntity>
 
 	@Query(
 		"""

@@ -19,7 +19,7 @@ interface IVehicleService {
 		searchParams: VehicleSearchParamModel,
 	): Mono<PageModel<VehicleModel>>
 
-	fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+	fun findVehicleById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel>
 
 	fun findVehicleMovementsPage(
 		projectId: UUID,

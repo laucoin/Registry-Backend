@@ -15,9 +15,11 @@ import org.springframework.http.HttpMethod.GET
 import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.TOO_MANY_REQUESTS
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import java.util.Locale
 import org.springframework.context.i18n.SimpleLocaleContext
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest
+import org.springframework.mock.http.server.reactive.MockServerHttpResponse
 import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilterChain
@@ -57,7 +59,7 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter let the request through when the path is not rate-limited`() {
 		// Arrange
 		val limiter = filter(capacity = 1)
-		val exchange = exchange("/api/v1/authentication/login/uri", GET)
+		val exchange = exchange("/api/v2/authentication/login/uri", GET)
 
 		// Act
 		repeat(5) { limiter.filter(exchange, chain).block() }
@@ -70,7 +72,7 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter allow up to capacity requests then return 429`() {
 		// Arrange
 		val limiter = filter(capacity = 2)
-		val exchange = exchange("/api/v1/authentication/token", POST)
+		val exchange = exchange("/api/v2/authentication/token", POST)
 
 		// Act
 		limiter.filter(exchange, chain).block()
@@ -84,11 +86,30 @@ class AuthenticationRateLimitHandlerTest {
 	}
 
 	@Test
+	fun `Should filter answer the 429 as a problem detail`() {
+		// Arrange
+		val limiter = filter(capacity = 1)
+		val exchange = exchange("/api/v2/authentication/token", POST)
+		limiter.filter(exchange, chain).block()
+
+		// Act
+		limiter.filter(exchange, chain).block()
+
+		// Assert
+		val body = Gson().fromJson((exchange.response as MockServerHttpResponse).bodyAsString.block(), Map::class.java)
+		assertEquals(APPLICATION_PROBLEM_JSON, exchange.response.headers.contentType)
+		assertEquals(429.0, body["status"])
+		assertEquals("429", body["code"])
+		assertEquals("about:blank", body["type"])
+		assertEquals("/api/v2/authentication/token", body["instance"])
+	}
+
+	@Test
 	fun `Should filter rate-limit token refresh independently per client IP`() {
 		// Arrange
 		val limiter = filter(capacity = 1)
-		val clientA = exchange("/api/v1/authentication/token/refresh", POST, "10.0.0.1")
-		val clientB = exchange("/api/v1/authentication/token/refresh", POST, "10.0.0.2")
+		val clientA = exchange("/api/v2/authentication/token/refresh", POST, "10.0.0.1")
+		val clientB = exchange("/api/v2/authentication/token/refresh", POST, "10.0.0.2")
 
 		// Act
 		limiter.filter(clientA, chain).block()
@@ -105,8 +126,8 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter track token and token refresh as independent budgets for the same client`() {
 		// Arrange
 		val limiter = filter(capacity = 1)
-		val token = exchange("/api/v1/authentication/token", POST, "10.0.0.1")
-		val refresh = exchange("/api/v1/authentication/token/refresh", POST, "10.0.0.1")
+		val token = exchange("/api/v2/authentication/token", POST, "10.0.0.1")
+		val refresh = exchange("/api/v2/authentication/token/refresh", POST, "10.0.0.1")
 
 		// Act
 		limiter.filter(token, chain).block()
@@ -122,7 +143,7 @@ class AuthenticationRateLimitHandlerTest {
 	fun `Should filter allow requests again once the window has elapsed`() {
 		// Arrange
 		val limiter = filter(capacity = 1, windowSeconds = 1)
-		val exchange = exchange("/api/v1/authentication/token", POST)
+		val exchange = exchange("/api/v2/authentication/token", POST)
 
 		// Act
 		limiter.filter(exchange, chain).block()

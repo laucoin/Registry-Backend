@@ -12,7 +12,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface IMovementPort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

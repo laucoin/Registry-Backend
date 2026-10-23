@@ -7,8 +7,14 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.prefere
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_THEME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.PREFERENCE_ID
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_PURGED
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_EMAIL
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_FIRST_NAME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_LOGIN
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TYPE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.TEXT_SEARCH_MIN_SCORE
 
 object UserQueries {
 	const val SELECT_PREFERENCES = """
@@ -21,16 +27,32 @@ object UserQueries {
         LEFT JOIN $PREFERENCE_TABLE ON t.$ID = $PREFERENCE_TABLE.$PREFERENCE_USER_ID AND $PREFERENCE_TABLE.$VISIBLE IS TRUE
     """
 
-	const val NOT_PURGED_CLAUSE = "t.$USER_PURGED IS FALSE"
 
 	const val NOT_SERVICE_ACCOUNT = "t.$USER_TYPE <> 'SERVICE_ACCOUNT'"
 
 	const val SELECT_USER_SEARCH = """
         CASE
-            WHEN :textSearched IS NULL THEN 1
-            ELSE similarity(t.search_text, :textSearched)
+            WHEN :query IS NULL THEN 1
+            ELSE word_similarity(:query, t.search_text)
         END AS similarity_score
     """
 
-	const val USER_TEXT_SEARCH_CLAUSE = "(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
+	const val USER_TEXT_SEARCH_CLAUSE = "(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
+
+	const val USER_ROLE_CLAUSE = "(CAST(:role AS TEXT) IS NULL OR t.$USER_ROLE = CAST(:role AS TEXT))"
+
+	const val USER_SORT = """
+        CASE WHEN CAST(:sortField AS TEXT) = 'firstName' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_FIRST_NAME END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'firstName' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_FIRST_NAME END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'lastName' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_NAME END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'lastName' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_NAME END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'email' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_EMAIL END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'email' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_EMAIL END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'role' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_ROLE END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'role' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_ROLE END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'birthday' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_BIRTHDAY END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'birthday' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_BIRTHDAY END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'lastLogin' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_LOGIN END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'lastLogin' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_LOGIN END DESC NULLS LAST,
+    """
 }

@@ -153,10 +153,10 @@ class AlertServiceTest {
 			commonAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now() }
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
-			textSearched = null,
-			visibilitySearched = null,
-			startDateTimeSearched = null,
-			endDateTimeSearched = updatedAlert.dateTime,
+			query = null,
+			isVisible = null,
+			from = null,
+			to = updatedAlert.dateTime,
 		)
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldAlert))
@@ -167,7 +167,7 @@ class AlertServiceTest {
 		service.updateAlertById(currentUser(), projectId, alertId, updatedAlert).block()
 
 		// Assert
-		verify(port).findById(projectId, alertId, visibilitySearched = null)
+		verify(port).findById(projectId, alertId, isVisible = null)
 		verify(communicationPort).countAllByAlertId(projectId, alertId, expectedCommunicationSearch)
 		verify(port).update(any())
 	}
@@ -191,7 +191,7 @@ class AlertServiceTest {
 			CustomDateTimeModel(commonAlert().dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
-		verify(port).findById(projectId, alertId, visibilitySearched = null)
+		verify(port).findById(projectId, alertId, isVisible = null)
 		verify(port, never()).update(commonAlert())
 	}
 
@@ -204,10 +204,10 @@ class AlertServiceTest {
 			commonAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now() }
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
-			textSearched = null,
-			visibilitySearched = null,
-			startDateTimeSearched = null,
-			endDateTimeSearched = updatedAlert.dateTime,
+			query = null,
+			isVisible = null,
+			from = null,
+			to = updatedAlert.dateTime,
 		)
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldAlert))
@@ -223,7 +223,7 @@ class AlertServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME, result.code)
 
-		verify(port).findById(projectId, alertId, visibilitySearched = null)
+		verify(port).findById(projectId, alertId, isVisible = null)
 		verify(communicationPort).countAllByAlertId(projectId, alertId, expectedCommunicationSearch)
 		verify(port, never()).update(any())
 	}
@@ -239,7 +239,7 @@ class AlertServiceTest {
 		service.updateAlertStatusById(currentUser(), projectId, alertId, RESOLVED).block()
 
 		// Assert
-		verify(port).findById(projectId, alertId, visibilitySearched = null)
+		verify(port).findById(projectId, alertId, isVisible = null)
 		verify(port).update(alert.apply { status = RESOLVED })
 	}
 
@@ -253,7 +253,7 @@ class AlertServiceTest {
 		service.disableAlertById(currentUser(), projectId, alertId).block()
 
 		// Assert
-		verify(port).findById(projectId, alertId, visibilitySearched = true)
+		verify(port).findById(projectId, alertId, isVisible = true)
 		verify(port).update(commonAlert().apply { visible = false })
 	}
 
@@ -269,7 +269,7 @@ class AlertServiceTest {
 		service.enableAlertById(currentUser(), projectId, alertId).block()
 
 		// Assert
-		verify(port).findById(projectId, alertId, visibilitySearched = false)
+		verify(port).findById(projectId, alertId, isVisible = false)
 		verify(port).update(commonAlert())
 	}
 
@@ -284,7 +284,7 @@ class AlertServiceTest {
 		service.deleteAlertById(currentUser(), projectId, alertId).block()
 
 		// Assert
-		verify(port).findById(projectId, alertId, visibilitySearched = null)
+		verify(port).findById(projectId, alertId, isVisible = null)
 		verify(communicationPort).countAllByAlertId(projectId, alertId, CommunicationSearchParamModel())
 		verify(port).deleteById(alertId)
 	}
@@ -304,7 +304,7 @@ class AlertServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ALERT_DELETE_HAS_COMMUNICATION, result.message)
 
-		verify(port).findById(projectId, alertId, visibilitySearched = null)
+		verify(port).findById(projectId, alertId, isVisible = null)
 		verify(communicationPort).countAllByAlertId(projectId, alertId, CommunicationSearchParamModel())
 		verify(port, never()).deleteById(any())
 	}

@@ -92,7 +92,7 @@ fails the startup loudly instead of silently booting on something unintended.
 | `IDP_REVOCATION_URI`        | *required* | RFC 7009 token revocation endpoint, called server-to-server on logout to invalidate the access/refresh token immediately instead of leaving them valid until they expire naturally. For example: `http://localhost:9000/application/o/revoke` |
 | `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`           |
 | `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                           |
-| `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (implicit flow). For example: `registry-swagger` |
+| `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (authorization code + PKCE). For example: `registry-swagger` |
 | `IDP_CONNECT_TIMEOUT_MILLIS` | `2000` | TCP connect timeout for the backend's outbound calls to the IdP (login exchange, refresh, revocation) |
 | `IDP_RESPONSE_TIMEOUT_MILLIS` | `5000` | How long to wait for the IdP's response before failing; also used as the timeout for acquiring a pooled connection when the IdP is already saturated |
 | `IDP_MAX_CONNECTIONS`       | `20`       | Max concurrent connections to the IdP in the shared connection pool |
@@ -111,7 +111,7 @@ fails the startup loudly instead of silently booting on something unintended.
 
 > [!NOTE]
 > The browser app authenticates via two `HttpOnly`, `SameSite=Lax` cookies (`registry_access_token`, `registry_refresh_token`)
-> set by `/api/v1/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
+> set by `/api/v2/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
 > still works — it's checked first, cookie as fallback — kept solely so Swagger UI's own OAuth2 "try it out" flow keeps
 > working; no other client should send it.
 

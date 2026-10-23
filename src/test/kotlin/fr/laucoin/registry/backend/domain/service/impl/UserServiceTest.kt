@@ -5,7 +5,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -36,6 +35,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -351,7 +351,7 @@ class UserServiceTest {
 		// Assert
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService).getLevelByUserRole(userToUpdateRole)
-		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, visibilitySearched = true)
+		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, isVisible = true)
 		verify(port).update(any())
 	}
 
@@ -388,7 +388,7 @@ class UserServiceTest {
 
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService, times(expectedGetRoleLevel)).getLevelByUserRole(USER_ROLE)
-		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, visibilitySearched = true)
+		verify(port, times(expectedVerifyLastLevel0)).findByRoleLevel(roleLevel = 0, isVisible = true)
 		verify(port, never()).update(any())
 	}
 
@@ -445,7 +445,7 @@ class UserServiceTest {
 		assertEquals(FORBIDDEN, result.status)
 		assertEquals(USER_BLOCK_CURRENT_USER, result.message)
 
-		verify(port).findById(uuid, visibilitySearched = true)
+		verify(port).findById(uuid, isVisible = true)
 		verify(roleService).getAssignableUserRoles(currentUser())
 		verify(roleService, never()).getLevelByUserRole(anyOrNull())
 		verify(userProjectProfileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
@@ -472,37 +472,28 @@ class UserServiceTest {
 	}
 
 	@Test
-	fun `Should impersonateUserById block and return User`() {
+	fun `Should deleteCurrentUser delete the current user`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
-		val currentUser = currentUser().apply { role = USER_ROLE }
+		val currentUser = currentUser().apply { id = uuid; role = USER_ROLE }
 
-		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(foundUser))
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
-		whenever(
-			userProjectProfileService.validateNotLastProjectRoleLevel0(
-				any(),
-				anyOrNull(),
-				any(),
-				any()
-			)
-		).thenReturn(Mono.just(foundUser))
+		whenever(userProjectProfileService.validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any()))
+			.thenReturn(Mono.just(foundUser))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.impersonateUserById(currentUser, uuid).block()
+		service.deleteCurrentUser(currentUser).block()
 
 		// Assert
-		verify(roleService).getAssignableUserRoles(currentUser)
-		verify(roleService).getLevelByUserRole(USER_ROLE)
-		verify(port).update(any())
+		verify(port).deleteById(uuid)
 		verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
 			uuid,
 			projectId = null,
 			foundUser,
-			USER_IMPERSONATE_LAST_PROJECT_ADMINISTRATOR
+			USER_DELETE_LAST_PROJECT_ADMINISTRATOR
 		)
 	}
 
@@ -541,6 +532,16 @@ class UserServiceTest {
 		)
 	}
 
+	private fun mockPurgeableUsers(vararg uuids: UUID) {
+		whenever(port.findUserIdsOlderThanLastLogin(any())).thenReturn(Flux.just(*uuids))
+		whenever(port.findById(any(), anyOrNull())).thenAnswer {
+			Mono.just(UserModel().apply { id = it.getArgument(0); role = USER_ROLE })
+		}
+		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
+		whenever(userProjectProfileService.validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any()))
+			.thenAnswer { Mono.just(it.getArgument<UserModel>(2)) }
+	}
+
 	@Test
 	fun `Should purgeUsersIfNecessary call not logged user since a date, and call port deleteById`() {
 		// Arrange
@@ -548,7 +549,7 @@ class UserServiceTest {
 		val uuid1 = UUID.randomUUID()
 		val uuid2 = UUID.randomUUID()
 
-		whenever(port.findUserIdsOlderThanLastLogin(any())).thenReturn(Flux.just(uuid1, uuid2))
+		mockPurgeableUsers(uuid1, uuid2)
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
@@ -561,11 +562,32 @@ class UserServiceTest {
 	}
 
 	@Test
+	fun `Should purgeUsersIfNecessary not delete the last administrator of a project`() {
+		// Arrange
+		val date = LocalDate.EPOCH
+		val uuid1 = UUID.randomUUID()
+		val uuid2 = UUID.randomUUID()
+
+		mockPurgeableUsers(uuid1, uuid2)
+		whenever(userProjectProfileService.validateNotLastProjectRoleLevel0(eq(uuid1), anyOrNull(), any(), any()))
+			.thenReturn(Mono.error(RegistryException(CONFLICT, USER_DELETE_LAST_PROJECT_ADMINISTRATOR)))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = service.purgeUsersIfNecessary(date, false).collectList().block()
+
+		// Assert
+		assertEquals(listOf(uuid2), result)
+		verify(port, never()).deleteById(uuid1)
+		verify(port).deleteById(uuid2)
+	}
+
+	@Test
 	fun `Should purgeUsersIfNecessary call not logged user since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
 		val date = LocalDate.EPOCH
 
-		whenever(port.findUserIdsOlderThanLastLogin(any())).thenReturn(Flux.just(UUID.randomUUID()))
+		mockPurgeableUsers(UUID.randomUUID())
 
 		// Act
 		service.purgeUsersIfNecessary(date, true).collectList().block()

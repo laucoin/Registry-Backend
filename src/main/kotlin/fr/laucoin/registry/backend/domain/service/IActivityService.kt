@@ -19,7 +19,7 @@ interface IActivityService {
 		searchParams: ActivitySearchParamModel,
 	): Mono<PageModel<ActivityModel>>
 
-	fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel>
+	fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel>
 
 	fun findActivityMovementsPage(
 		projectId: UUID,
