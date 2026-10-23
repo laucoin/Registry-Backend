@@ -1,12 +1,12 @@
 package fr.laucoin.registry.backend.config
 
 import com.nimbusds.jose.shaded.gson.Gson
+import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CookieBearerTokenHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CsrfTokenHeaderHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.LocaleContextHandler
-import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.PermissionService
@@ -41,15 +41,15 @@ import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FI
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
+import org.springframework.security.web.server.header.ContentSecurityPolicyServerHttpHeadersWriter.CONTENT_SECURITY_POLICY
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
-import org.springframework.web.server.i18n.LocaleContextResolver
-import org.springframework.security.web.server.header.ContentSecurityPolicyServerHttpHeadersWriter.CONTENT_SECURITY_POLICY
 import org.springframework.web.server.ServerWebExchange
+import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 import java.net.URI
 import java.time.Duration
@@ -175,7 +175,7 @@ class SecurityConfig(
 		if (!isSafeMethod && !hasBearerAuth && !isExemptPath) MatchResult.match() else MatchResult.notMatch()
 	}
 
-	companion object {
+	internal companion object {
 		val pathMatcher = AntPathMatcher()
 		val CSRF_SAFE_METHODS = setOf(GET, HEAD, OPTIONS, TRACE)
 
