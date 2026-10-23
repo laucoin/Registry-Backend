@@ -8,6 +8,11 @@ import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.stereotype.Component
 
+/**
+ * Purpose: Writes and reads the authentication cookies.
+ * Scope: Sets and clears the HttpOnly access and refresh cookies and extracts their values.
+ * Limits: Does not issue or validate tokens.
+ */
 @Component
 class AuthenticationCookieService(
 	@param:Value($$"${registry.server.prefix}")

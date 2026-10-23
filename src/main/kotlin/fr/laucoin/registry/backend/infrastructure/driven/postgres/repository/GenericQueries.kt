@@ -30,6 +30,11 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 
+/**
+ * Purpose: Provides the SQL fragments shared by the repositories.
+ * Scope: Holds the audit joins, visibility and project clauses and the text search threshold.
+ * Limits: Fragments only; parameters are always bound, never concatenated.
+ */
 object GenericQueries {
 	const val TEXT_SEARCH_MIN_SCORE = "0.3"
 	private const val CREATOR_TABLE = "create_tb"

@@ -11,6 +11,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the group.
+ * Scope: Declares what the controllers and other services can ask for group.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IGroupService {
 	fun findGroupsPage(
 		projectId: UUID,

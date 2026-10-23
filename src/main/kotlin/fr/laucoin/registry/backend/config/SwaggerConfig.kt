@@ -34,6 +34,11 @@ import java.util.*
         )
     )
 )
+/**
+ * Purpose: Configures the OpenAPI document and its groups.
+ * Scope: Declares the OAuth2 authorization code scheme and the per-resource API groups.
+ * Limits: Serves documentation only when the documentation feature is enabled.
+ */
 class SwaggerConfig(
     @param:Value($$"${registry.security.oauth2.authorization-uri:}")
     private val configAuthUrl: String?,

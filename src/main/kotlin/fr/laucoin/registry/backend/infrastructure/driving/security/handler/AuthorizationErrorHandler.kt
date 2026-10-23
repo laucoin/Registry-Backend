@@ -30,6 +30,11 @@ import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 import tools.jackson.databind.ObjectMapper
 
+/**
+ * Purpose: Writes the problem responses of authentication and authorization failures.
+ * Scope: Answers 401, 403 and token conversion errors with a localized body.
+ * Limits: Never exposes the failure cause.
+ */
 @Component
 class AuthorizationErrorHandler(
 	private val translateService: ITranslateService,

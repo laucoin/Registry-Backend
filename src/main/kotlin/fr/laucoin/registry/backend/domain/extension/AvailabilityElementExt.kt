@@ -13,6 +13,11 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import java.util.Objects
 
+/**
+ * Purpose: Computes the availability status of elements with an availability window.
+ * Scope: Builds the status of projects, groups, activities, vehicles and profiles from their dates.
+ * Limits: Reads the current time only; never persists a status.
+ */
 object AvailabilityElementExt {
 	fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
 		val now = CustomDateTimeModel.now()

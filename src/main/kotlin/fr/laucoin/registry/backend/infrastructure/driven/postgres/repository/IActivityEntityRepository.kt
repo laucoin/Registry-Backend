@@ -32,6 +32,11 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Reactive entity repository of the activity table.
+ * Scope: Holds the parameterized SQL queries (filters, sort, pagination, locks) on activity.
+ * Limits: Used by the Postgres adapter only; returns entities, never domain models.
+ */
 @Repository
 interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID> {
 	@Query(

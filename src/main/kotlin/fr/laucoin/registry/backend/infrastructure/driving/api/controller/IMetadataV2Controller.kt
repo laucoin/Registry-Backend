@@ -10,6 +10,11 @@ import org.springframework.web.bind.annotation.RequestMapping
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the metadata endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Metadata", description = "API for global metadata")
 @RequestMapping("/api/v2/metadata")
 interface IMetadataV2Controller {

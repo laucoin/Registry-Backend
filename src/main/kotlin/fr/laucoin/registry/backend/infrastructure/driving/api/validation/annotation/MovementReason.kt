@@ -7,6 +7,11 @@ import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
+/**
+ * Purpose: Bean validation constraint on the reason of a movement.
+ * Scope: Marks a movement body for the type, reason and activity compatibility validator.
+ * Limits: Declaration only.
+ */
 @Repeatable
 @Target(CLASS)
 @Retention(RUNTIME)

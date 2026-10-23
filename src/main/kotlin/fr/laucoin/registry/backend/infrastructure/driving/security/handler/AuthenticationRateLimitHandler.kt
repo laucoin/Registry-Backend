@@ -22,6 +22,11 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 import tools.jackson.databind.ObjectMapper
 
+/**
+ * Purpose: Rate limits the unauthenticated token endpoints.
+ * Scope: Counts POST calls per client address and path in a sliding window and answers 429 beyond the capacity.
+ * Limits: In memory and per instance; the tracked clients are bounded.
+ */
 class AuthenticationRateLimitHandler(
 	private val translateService: ITranslateService,
 	private val localeContextResolver: LocaleContextResolver,

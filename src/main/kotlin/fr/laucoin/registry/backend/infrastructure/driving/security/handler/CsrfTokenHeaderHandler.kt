@@ -8,12 +8,9 @@ import org.springframework.web.server.WebFilterChain
 import reactor.core.publisher.Mono
 
 /**
- * Spring's CsrfWebFilter only exposes the CsrfToken it generated/loaded as a lazily-subscribed
- * exchange attribute (`Mono<CsrfToken>`) — nothing ever subscribes to it for a pure JSON API (no
- * Thymeleaf form referencing `_csrf.token` to trigger that), so the repository's `saveToken` would
- * never actually run. This filter sets the response header directly instead, independent of that
- * lazy-subscription mechanism — safe here because the token is a cheap, deterministic computation,
- * not something worth deferring.
+ * Purpose: Exposes the CSRF token in a response header.
+ * Scope: Sets the header on every response, since nothing subscribes to the lazy token of a JSON API.
+ * Limits: The token is a cheap deterministic value; it stores nothing.
  */
 class CsrfTokenHeaderHandler(private val tokenService: CsrfTokenService): WebFilter {
 	override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {

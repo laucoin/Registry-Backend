@@ -26,6 +26,11 @@ import reactor.core.publisher.Mono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.resources.ConnectionProvider
 
+/**
+ * Purpose: Talks to the external identity provider.
+ * Scope: Builds login and logout URIs, exchanges and refreshes tokens and revokes them.
+ * Limits: Stores nothing; redirect URI allow-lists are checked by the service.
+ */
 @Service
 class IdpAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,

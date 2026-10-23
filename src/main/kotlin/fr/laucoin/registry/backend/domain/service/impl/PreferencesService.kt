@@ -13,6 +13,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * Purpose: Manages the preferences of the current user.
+ * Scope: Creates the default preferences on first read and updates theme, language and refresh mode.
+ * Limits: Does not read preferences of other users.
+ */
 @Service
 class PreferencesService(
 	private val port: IPreferencesPort,

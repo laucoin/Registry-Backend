@@ -55,6 +55,11 @@ import java.time.Duration
 import tools.jackson.databind.ObjectMapper
 
 
+/**
+ * Purpose: Defines the security filter chains, CORS policy and security headers.
+ * Scope: Owns authentication, CSRF, rate limiting, response headers and the public endpoint list.
+ * Limits: Holds no business authorization; method security on the contracts decides per endpoint.
+ */
 @Configuration
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity

@@ -42,6 +42,11 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: REST contract of the project endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
 @Tag(name = "Projects management", description = "API for Projects-related operations")
 @RequestMapping("/api/v2/projects")
 interface IProjectV2Controller {

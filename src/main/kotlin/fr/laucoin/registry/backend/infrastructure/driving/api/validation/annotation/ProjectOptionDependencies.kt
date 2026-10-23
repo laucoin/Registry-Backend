@@ -6,6 +6,11 @@ import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.FIELD
 import kotlin.reflect.KClass
 
+/**
+ * Purpose: Bean validation constraint on the options of a project.
+ * Scope: Marks the option list for the dependency validator.
+ * Limits: Declaration only.
+ */
 @Repeatable
 @Target(FIELD)
 @Retention(RUNTIME)

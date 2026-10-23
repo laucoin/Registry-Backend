@@ -10,6 +10,11 @@ import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * Purpose: Fills the shared audit fields between models and entities.
+ * Scope: Maps creation and last edition traces and the project id.
+ * Limits: Maps fields only; no query and no business rule.
+ */
 object GenericExt {
 	fun <M: GenericProjectModel, E: GenericProjectEntity> M.fillWithProjectAndEntity(entity: E): M {
 		projectId = entity.projectId

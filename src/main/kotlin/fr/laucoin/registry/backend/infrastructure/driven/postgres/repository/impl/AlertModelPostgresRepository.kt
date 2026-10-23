@@ -16,6 +16,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Postgres adapter of the alert port.
+ * Scope: Delegates to the entity repository and maps entities to domain models.
+ * Limits: Holds no business rule.
+ */
 @Service
 class AlertModelPostgresRepository(
 	private val repository: IAlertEntityRepository,

@@ -28,6 +28,11 @@ import java.time.OffsetTime
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * Purpose: Manages the profiles of the current user across projects.
+ * Scope: Lists and accepts invitations, creates support profiles and guards the last project administrator.
+ * Limits: Does not manage the profiles of other users; see ProjectProfileService.
+ */
 @Service
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
