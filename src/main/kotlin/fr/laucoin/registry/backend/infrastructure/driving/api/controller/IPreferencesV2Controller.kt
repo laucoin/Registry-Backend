@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PREFERE
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -28,7 +28,7 @@ interface IPreferencesV2Controller {
 	fun updateTheme(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@RequestParam(required = true) theme: ThemeEnum,
-	): Mono<PreferencesModel>
+	): Mono<PreferenceReaderDto>
 
 	@Operation(
 		summary = "Save language",
@@ -39,7 +39,7 @@ interface IPreferencesV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@Parameter(description = "Language code, e.g. 'en', 'en-US', 'fr', 'fr-FR', etc.")
 		@RequestParam(required = true) @Valid @Size(max = PREFERENCES_LANGUAGE_MAX, message = PARAMETER_TOO_LONG) language: String,
-	): Mono<PreferencesModel>
+	): Mono<PreferenceReaderDto>
 
 	@Operation(
 		summary = "Save refresh mode",
@@ -49,5 +49,5 @@ interface IPreferencesV2Controller {
 	fun updateRefreshMode(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@RequestParam(required = true) mode: RefreshModeEnum,
-	): Mono<PreferencesModel>
+	): Mono<PreferenceReaderDto>
 }
