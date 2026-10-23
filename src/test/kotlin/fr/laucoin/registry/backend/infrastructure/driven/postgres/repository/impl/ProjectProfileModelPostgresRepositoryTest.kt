@@ -362,6 +362,16 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 	}
 
 	@Test
+	fun `Should lockLevel0ProjectProfilesByUserId call repository lockLevel0ProjectProfilesByUserId`() {
+		// Act
+		val result = repository.lockLevel0ProjectProfilesByUserId(currentUser().id!!).collectList().block()
+
+		// Assert
+		assertFalse(result.isNullOrEmpty())
+		verify(postgresRepository).lockLevel0ProjectProfilesByUserId(currentUser().id!!)
+	}
+
+	@Test
 	fun `Should findLevel0ProjectProfileRoleByProjectId call repository findLevel0ProjectProfileRoleByProjectId`() {
 		// Act
 		val result =

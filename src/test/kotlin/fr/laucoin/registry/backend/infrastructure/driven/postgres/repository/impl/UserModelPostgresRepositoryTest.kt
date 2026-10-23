@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.Current
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUserEntityRepository
 import fr.laucoin.registry.backend.test.TestContext
+import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -182,6 +183,16 @@ class UserModelPostgresRepositoryTest: TestContext() {
 			level,
 			isVisible = null,
 		)
+	}
+
+	@Test
+	fun `Should lockLevel0Users call repository lockLevel0Users`() {
+		// Act
+		val result = repository.lockLevel0Users().collectList().block()
+
+		// Assert
+		assertFalse(result.isNullOrEmpty())
+		verify(postgresRepository).lockLevel0Users()
 	}
 
 	@Test

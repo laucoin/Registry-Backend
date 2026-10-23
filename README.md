@@ -58,7 +58,7 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
    `coordinator`, `participant`, `blocked-user`, `blocked-profile`, `unverified`, all
    `*@sgdf.fr`), sharing the `AU_PASS` password (default `dev123`).
 4. Run the backend with the `local` Spring profile active so its own database gets the matching seed rows (see [
-   `R__seed_dev_users.sql`](src/main/resources/db/seed/R__seed_dev_users.sql)) — without it, those Authentik accounts
+   `R__seed_dev_dataset.sql`](src/main/resources/db/seed/R__seed_dev_dataset.sql)) — without it, those Authentik accounts
    have nothing to link to on first login:
     ```shell script
     SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
@@ -80,6 +80,7 @@ fails the startup loudly instead of silently booting on something unintended.
 | `DATASOURCE_SCHEMA`   | `public`   | Schema the migrations and the application work in                                         |
 | `DATASOURCE_USERNAME` | `registry` | Database user                                                                             |
 | `DATASOURCE_PASSWORD` | *required* | Database password — a secret, see below                                                   |
+| `DATASOURCE_LOCK_TIMEOUT_MS` | `5000` | Maximum wait, in milliseconds, for a row lock (`SELECT … FOR UPDATE`) before the request fails with a `409 CONCURRENT_UPDATE_CONFLICT` |
 
 **Identity provider (OIDC)**
 

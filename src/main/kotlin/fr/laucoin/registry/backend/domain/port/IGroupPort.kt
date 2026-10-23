@@ -32,6 +32,7 @@ interface IGroupPort {
 	): Flux<Pair<UUID, List<ParticipantModel>>>
 
 	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupModel>
+	fun lockByIds(ids: List<UUID>): Flux<UUID>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
 	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
 	fun create(element: GroupModel): Mono<GroupModel>

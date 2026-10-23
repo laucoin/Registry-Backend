@@ -55,6 +55,8 @@ interface IProjectProfilePort {
 		isVisible: Boolean?
 	): Flux<ProjectProfileRoleCountModel>
 
+	fun lockLevel0ProjectProfilesByUserId(userId: UUID): Flux<UUID>
+
 	fun findLevel0ProjectProfileRoleByProjectId(
 		projectId: UUID,
 		isVisible: Boolean?

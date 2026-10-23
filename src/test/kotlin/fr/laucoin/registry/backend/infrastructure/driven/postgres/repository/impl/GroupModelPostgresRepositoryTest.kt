@@ -137,6 +137,20 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 	}
 
 	@ParameterizedTest
+	@MethodSource("Should findAllByIds call repository findAllByIds")
+	fun `Should lockByIds call repository lockByIds only when ids are given`(
+		ids: List<UUID>,
+		expectedDatabaseCall: Int,
+	) {
+		// Act
+		val result = repository.lockByIds(ids).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository, times(expectedDatabaseCall)).lockByIds(ids)
+	}
+
+	@ParameterizedTest
 	@MethodSource
 	fun `Should findAllByIds call repository findAllByIds`(
 		ids: List<UUID>,

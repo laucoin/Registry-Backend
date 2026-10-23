@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
 import fr.laucoin.registry.backend.test.ModelExt.defaultProject
@@ -53,9 +54,14 @@ class UserProjectProfileServiceTest {
 	private val favoritePort: IProjectFavoritePort = mock()
 	private val roleService: IRoleService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
+	private val principalCache: IPrincipalCacheService = mock()
 	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, favoritePort, roleService, transactionalOperator
+		port, favoritePort, roleService, principalCache, transactionalOperator
 	)
+
+	init {
+		whenever(port.lockLevel0ProjectProfilesByUserId(any())).thenReturn(Flux.empty())
+	}
 
 	private companion object {
 		private const val PROJECT_ROLE = "PROJECT_ROLE"
@@ -170,6 +176,7 @@ class UserProjectProfileServiceTest {
 		// Assert
 		assertEquals(user, result)
 
+		verify(port).lockLevel0ProjectProfilesByUserId(defaultUserId)
 		verify(port).findLevel0ProjectProfileRoleByUserId(defaultUserId, isVisible = true)
 	}
 
@@ -235,6 +242,7 @@ class UserProjectProfileServiceTest {
 
 		verify(port).create(any())
 		verify(transactionalOperator).transactional(any<Mono<*>>())
+		verify(principalCache).invalidate(currentUser().oidcId)
 	}
 
 	@Test
@@ -307,6 +315,7 @@ class UserProjectProfileServiceTest {
 		// Assert
 		verify(port).update(any())
 		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, defaultProjectProfileId, isVisible = true)
+		verify(principalCache).invalidate(currentUser().oidcId)
 	}
 
 	@Test
@@ -329,6 +338,7 @@ class UserProjectProfileServiceTest {
 
 		verify(port, never()).update(any())
 		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, defaultProjectProfileId, isVisible = true)
+		verify(principalCache, never()).invalidate(anyOrNull())
 	}
 
 	@Test
@@ -339,6 +349,7 @@ class UserProjectProfileServiceTest {
 		whenever(port.findLevel0ProjectProfileRoleByUserId(any(), any())).thenReturn(Flux.empty())
 		whenever(port.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
 
 		// Act
 		service.deleteUserProjectProfileById(currentUser(), defaultProjectProfileId).block()
@@ -346,5 +357,23 @@ class UserProjectProfileServiceTest {
 		// Assert
 		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, defaultProjectProfileId, isVisible = null)
 		verify(port).deleteById(defaultProjectProfileId)
+		verify(principalCache).invalidate(currentUser().oidcId)
+	}
+
+	@Test
+	fun `Should deleteUserProjectProfileById throw RegistryException when the Profile is not found`() {
+		// Arrange
+		whenever(port.findProjectProfileByUserIdAndId(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.deleteUserProjectProfileById(currentUser(), defaultProjectProfileId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(NOT_FOUND, result.status)
+		verify(port, never()).deleteById(any())
+		verify(principalCache, never()).invalidate(anyOrNull())
 	}
 }

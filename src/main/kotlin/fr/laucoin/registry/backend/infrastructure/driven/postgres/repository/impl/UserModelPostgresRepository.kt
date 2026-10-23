@@ -67,6 +67,8 @@ class UserModelPostgresRepository(
 		return repository.findByRoleLevel(roleLevel, isVisible).map(mapper::toModel)
 	}
 
+	override fun lockLevel0Users(): Flux<UUID> = repository.lockLevel0Users()
+
 	override fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID> {
 		return repository.findUserIdsOlderThanLastLogin(dateThreshold)
 	}

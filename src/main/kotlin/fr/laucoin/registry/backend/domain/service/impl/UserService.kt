@@ -163,6 +163,7 @@ class UserService(
 				it.role = role
 				updateUser(currentUser, it)
 			}
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun findUserByIdWithEligibleRole(
@@ -183,6 +184,7 @@ class UserService(
 			.validateNotLastProjectRoleLevel0(USER_BLOCK_LAST_PROJECT_ADMINISTRATOR)
 			.updateVisibility(visibility = false)
 			.flatMap { updateUser(currentUser, it) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel> {
@@ -207,6 +209,7 @@ class UserService(
 		validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
 			.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
 			.flatMap { port.deleteById(it.id!!).doOnSuccess { _ -> principalCache.invalidate(it.oidcId) } }
+			.`as`(transactionalOperator::transactional)
 
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging users inactive since {}", dateThreshold)
@@ -249,8 +252,9 @@ class UserService(
 			return@flatMap Mono.just(userToUpdate)
 		}
 
-		port.findByRoleLevel(roleLevel = 0, isVisible = true)
-			.any { userToUpdate.id !== it.id }
+		port.lockLevel0Users()
+			.then(Mono.defer { port.findByRoleLevel(roleLevel = 0, isVisible = true).collectList() })
+			.map { administrators -> administrators.any { userToUpdate.id != it.id } }
 			.flatMap { hasOtherAdministrator ->
 				if (!hasOtherAdministrator) {
 					log.warn("The user {} is the last administrator of the application", userToUpdate.id)

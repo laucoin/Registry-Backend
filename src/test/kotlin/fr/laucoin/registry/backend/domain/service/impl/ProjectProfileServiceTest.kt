@@ -41,6 +41,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -54,8 +55,15 @@ class ProjectProfileServiceTest {
 	private val roleService: IRoleService = mock()
 	private val userPort: IUserPort = mock()
 	private val principalCache: IPrincipalCacheService = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
 	private val maxUser: Int = 1
-	private val service = ProjectProfileService(profileService, port, roleService, userPort, principalCache, maxUser)
+	private val service = ProjectProfileService(
+		profileService, port, roleService, userPort, principalCache, transactionalOperator, maxUser
+	)
+
+	init {
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+	}
 
 	private companion object {
 		@JvmStatic

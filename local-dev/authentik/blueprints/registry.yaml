@@ -6,7 +6,7 @@
 #   - a public OAuth2 provider + application at slug `registry-swagger` for Swagger UI's
 #     authorization-code + PKCE "Authorize" button (SwaggerConfig.kt), redirecting back to the management
 #     port (see README: SERVER_MANAGEMENT_PORT);
-#   - the six seed users from src/main/resources/db/seed/R__seed_dev_users.sql (same emails
+#   - the six seed users from src/main/resources/db/seed/R__seed_dev_dataset.sql (same emails
 #     and given/family names), all sharing the AU_PASS password. Their Authentik UUIDs
 #     are random (authentik_core.user.uuid is not settable); the backend links them to the
 #     seeded, email-only accounts on first login (oidc_id is filled in then).
@@ -122,7 +122,7 @@ entries:
       provider: !KeyOf registry-swagger-provider
 
   # ------------------------------------------------------------------------ test personas
-  # Match src/main/resources/db/seed/R__seed_dev_users.sql (loaded under the `local` profile).
+  # Match src/main/resources/db/seed/R__seed_dev_dataset.sql (loaded under the `local` profile).
   # All active in Authentik; the "blocked" semantics live in the backend seed
   # (blocked-user is visible=false there), so logging in as blocked-user links the account
   # and is then rejected by the backend.
