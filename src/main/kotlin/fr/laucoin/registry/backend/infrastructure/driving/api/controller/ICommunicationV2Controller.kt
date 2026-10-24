@@ -123,7 +123,7 @@ interface ICommunicationV2Controller {
 		summary = "Enable Communication",
 		description = "Enable Communication, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_D')")
 	@PostMapping("/{id}/enable")
 	fun enableCommunicationById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

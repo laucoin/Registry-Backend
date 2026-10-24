@@ -42,6 +42,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.test.WebTestClientExt.hiddenElementsAuthorities
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -270,7 +271,7 @@ class VehicleControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.get()
 			.uri(
 				uriBuilder(
@@ -307,7 +308,7 @@ class VehicleControllerTest : TestContext() {
 	) {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.get()
 			.uri(
 				uriBuilder(
@@ -339,7 +340,7 @@ class VehicleControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -387,7 +388,7 @@ class VehicleControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(
+			.authenticate(*hiddenElementsAuthorities(), 
 				buildAuthority(REGISTRY_PROJECT_VEHICLE_HISTORY_R),
 				buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE)
 			)
@@ -429,7 +430,7 @@ class VehicleControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(
+			.authenticate(*hiddenElementsAuthorities(), 
 				buildAuthority(REGISTRY_PROJECT_VEHICLE_HISTORY_R),
 				buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE)
 			)
@@ -662,7 +663,7 @@ class VehicleControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_U), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_D), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -719,7 +720,7 @@ class VehicleControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
 			.get()
 			.uri(
 				uriBuilder(

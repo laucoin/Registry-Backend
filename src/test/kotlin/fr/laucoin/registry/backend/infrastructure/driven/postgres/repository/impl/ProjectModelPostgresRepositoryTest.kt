@@ -86,13 +86,14 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findAll(
 			query = null,
 			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
 			at = null,
 			isFavorite = null,
 			userId = null,
 			sortField = null,
 			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -109,13 +110,14 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findAll(
 			query = null,
 			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
 			at = null,
 			isFavorite = true,
 			userId = params.userId,
 			sortField = null,
 			isDescending = null,
-			10,
-			0,
+			limit = 10,
+			offset = 0,
 		)
 	}
 
@@ -133,13 +135,14 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 			ids,
 			query = null,
 			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
 			at = null,
 			isFavorite = true,
 			userId = params.userId,
 			sortField = null,
 			isDescending = null,
-			10,
-			0,
+			limit = 10,
+			offset = 0,
 		)
 	}
 
@@ -163,13 +166,14 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 			ids,
 			query = null,
 			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
 			at = null,
 			isFavorite = null,
 			userId = null,
 			sortField = null,
 			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}

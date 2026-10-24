@@ -1,8 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_LAST_GROUP_MEMBER
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DISABLE_LAST_GROUP_MEMBER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
@@ -233,7 +231,6 @@ class ParticipantService(
 		id: UUID
 	): Mono<ParticipantModel> {
 		return findParticipantById(projectId, id, isVisible = true)
-			.validateNotLastGroupMember(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER)
 			.updateVisibility(visibility = false)
 			.updateParticipant(currentUser)
 			.`as`(transactionalOperator::transactional)
@@ -252,7 +249,6 @@ class ParticipantService(
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findParticipantById(projectId, id, isVisible = null)
 			.validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
-			.validateNotLastGroupMember(PARTICIPANT_DELETE_LAST_GROUP_MEMBER)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
 	}
@@ -336,26 +332,5 @@ class ParticipantService(
 				handle.error(RegistryException(CONFLICT, error))
 			} else handle.next(participantToUpdate)
 		}
-	}
-
-	private fun findLockedGroups(projectId: UUID, groupIds: List<UUID>): Mono<List<GroupModel>> {
-		return groupPort.lockByIds(groupIds)
-			.then(Mono.defer { groupPort.findAllByIds(projectId, groupIds, isVisible = null).collectList() })
-	}
-
-	private fun Mono<ParticipantModel>.validateNotLastGroupMember(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
-		if (participantToUpdate.groups.isEmpty()) {
-			return@flatMap Mono.just(participantToUpdate)
-		}
-
-		val groupIds = participantToUpdate.groups.mapNotNull { it.id }
-		findLockedGroups(participantToUpdate.projectId!!, groupIds)
-			.map { groups -> groups.any { it.members.size == 1 } }
-			.flatMap { isLastMemberOfAGroup ->
-				if (isLastMemberOfAGroup) {
-					log.warn("The participant {} is the last member of the group(s)", participantToUpdate.id)
-					Mono.error(RegistryException(CONFLICT, error))
-				} else Mono.just(participantToUpdate)
-			}
 	}
 }

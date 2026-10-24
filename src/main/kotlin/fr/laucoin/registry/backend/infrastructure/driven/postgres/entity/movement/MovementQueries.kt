@@ -10,6 +10,9 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activit
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATOR_EMAIL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATOR_FIRST_NAME
@@ -54,6 +57,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_MODEL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_LAST_COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
@@ -93,6 +97,10 @@ object MovementQueries {
     """
 
 	private const val LINKED_ACTIVITY_TABLE = "activity_tb"
+	const val SELECT_LAST_COMMUNICATION = """
+        (SELECT MAX(tc.$COMMUNICATION_DATE_TIME) FROM $COMMUNICATION_TABLE tc WHERE tc.$COMMUNICATION_MOVEMENT_ID = t.$ID) AS $MOVEMENT_LAST_COMMUNICATION_DATE_TIME
+    """
+
 	const val SELECT_LINKED_ACTIVITY = """
         $LINKED_ACTIVITY_TABLE.$ID AS $MOVEMENT_ACTIVITY_ID,
         $LINKED_ACTIVITY_TABLE.$ACTIVITY_NAME AS $MOVEMENT_ACTIVITY_NAME,

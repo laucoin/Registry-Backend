@@ -26,6 +26,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.test.WebTestClientExt.hiddenElementsAuthorities
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -108,7 +109,7 @@ class CommunicationControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(
+			.authenticate(*hiddenElementsAuthorities(), 
 				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
@@ -369,7 +370,7 @@ class CommunicationControllerTest : TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U),
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_D),
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.post()

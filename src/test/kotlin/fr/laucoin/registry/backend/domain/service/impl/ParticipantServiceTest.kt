@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus.FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DISABLE_LAST_GROUP_MEMBER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
@@ -75,7 +74,6 @@ class ParticipantServiceTest {
 	@BeforeEach
 	fun setUp() {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
-		whenever(groupPort.lockByIds(any())).thenReturn(Flux.empty())
 	}
 
 	private companion object {
@@ -181,14 +179,6 @@ class ParticipantServiceTest {
 					defaultParticipant().apply { startAvailability = past; endAvailability = future },
 					defaultParticipant().apply { startAvailability = past; endAvailability = now },
 				),
-			)
-		}
-
-		@JvmStatic
-		fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and call port update`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(emptyList<GroupModel>(), 0),
-				Arguments.of(listOf(defaultGroup()), 1),
 			)
 		}
 	}
@@ -515,21 +505,11 @@ class ParticipantServiceTest {
 		verify(port, never()).update(any())
 	}
 
-	@ParameterizedTest
-	@MethodSource
-	fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and call port update`(
-		participantGroups: List<GroupModel>,
-		expectedCallGroupVerification: Int,
-	) {
+	@Test
+	fun `Should disableParticipantById call existing participant and call port update`() {
 		// Arrange
-		val participant = defaultParticipant().apply { groups = participantGroups }
-		val groups = participantGroups
-			.map { GroupModel().apply { members = listOf(participant, ParticipantModel()) } }
-			.toTypedArray()
-
+		val participant = defaultParticipant()
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-		whenever(groupPort.findAllByIds(any(), any(), anyOrNull()))
-			.thenReturn(Flux.just(*groups))
 		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
 		// Act
@@ -537,34 +517,22 @@ class ParticipantServiceTest {
 
 		// Assert
 		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = true)
-		verify(groupPort, times(expectedCallGroupVerification)).findAllByIds(
-			defaultProjectId, participantGroups.mapNotNull { it.id }, isVisible = null,
-		)
 		verify(port).update(participant.apply { visible = false })
 	}
 
 	@Test
-	fun `Should disableParticipantById call existing participant, check if the last member of one of his groups and throw`() {
+	fun `Should disableParticipantById hide the last member of a group without checking the group`() {
 		// Arrange
 		val participant = defaultParticipant().apply { groups = listOf(defaultGroup()) }
-
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
-		whenever(groupPort.findAllByIds(any(), any(), anyOrNull()))
-			.thenReturn(Flux.just(defaultGroup().apply { members = listOf(participant) }))
 		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
 		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.disableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
-		}) as RegistryException
+		service.disableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
 
 		// Assert
-		assertEquals(CONFLICT, result.status)
-		assertEquals(PARTICIPANT_DISABLE_LAST_GROUP_MEMBER, result.message)
-
-		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = true)
-		verify(groupPort).findAllByIds(defaultProjectId, listOf(defaultGroupId), isVisible = null)
-		verify(port, never()).update(any())
+		verify(groupPort, never()).findAllByIds(any(), any(), anyOrNull())
+		verify(port).update(participant.apply { visible = false })
 	}
 
 	@Test
@@ -595,6 +563,22 @@ class ParticipantServiceTest {
 		// Assert
 		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = null)
 		verify(movementPort).countAllByParticipantId(defaultProjectId, defaultParticipantId, MovementSearchParamModel())
+		verify(port).deleteById(defaultParticipantId)
+	}
+
+	@Test
+	fun `Should deleteParticipantById delete the last member of a group without checking the group`() {
+		// Arrange
+		val participant = defaultParticipant().apply { groups = listOf(defaultGroup()) }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.countAllByParticipantId(any(), any(), any())).thenReturn(Mono.just(0))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
+
+		// Act
+		service.deleteParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
+
+		// Assert
+		verify(groupPort, never()).findAllByIds(any(), any(), anyOrNull())
 		verify(port).deleteById(defaultParticipantId)
 	}
 

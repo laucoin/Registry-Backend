@@ -28,6 +28,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
 
 /**
  * Purpose: REST adapter of the alert endpoints.
@@ -56,10 +58,11 @@ class AlertV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<AlertReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_ALERT_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = AlertSearchParamModel(
 			query,
-			isVisible,
+			visibility,
 			status,
 			from,
 			to,
@@ -75,6 +78,7 @@ class AlertV2Controller(
 	}
 
 	override fun findAlertCommunications(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
 		page: Int,
@@ -85,9 +89,10 @@ class AlertV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<CommunicationReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = CommunicationSearchParamModel(
-			query, isVisible, from, to,
+			query, visibility, from, to,
 			sort = sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
 		)
 

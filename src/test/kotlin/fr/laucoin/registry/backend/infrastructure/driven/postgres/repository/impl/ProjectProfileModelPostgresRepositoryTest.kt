@@ -162,7 +162,7 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 	}
 
 	@Test
-	fun `Should findProjectProfilesRolesByUserId call repository findAllRolesByUserId`() {
+	fun `Should findProjectProfilesRolesByUserId call repository findAllRolesByUserId with visible profiles only`() {
 		// Act
 		val result = repository.findProjectProfilesRolesByUserId(currentUser().id!!)
 			.collectList()
@@ -172,7 +172,7 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).findAllRolesByUserId(
 			currentUser().id!!,
-			isVisible = null,
+			isVisible = true,
 			isAvailable = true,
 			status = listOf(ACCEPTED),
 		)

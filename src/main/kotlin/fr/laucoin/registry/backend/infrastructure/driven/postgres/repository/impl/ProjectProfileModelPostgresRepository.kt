@@ -95,7 +95,7 @@ class ProjectProfileModelPostgresRepository(
 	override fun findProjectProfilesRolesByUserId(userId: UUID): Flux<ProjectProfileRoleModel> {
 		return repository.findAllRolesByUserId(
 			userId,
-			isVisible = null,
+			isVisible = true,
 			isAvailable = true,
 			status = listOf(ACCEPTED),
 		).map(roleMapper::toModel)

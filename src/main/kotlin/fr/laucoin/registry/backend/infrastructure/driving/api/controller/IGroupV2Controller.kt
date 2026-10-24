@@ -100,6 +100,7 @@ interface IGroupV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_R')")
 	@GetMapping("/{id}/members")
 	fun findGroupMembersByGroupId(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
@@ -225,7 +226,7 @@ interface IGroupV2Controller {
 		summary = "Enable Group",
 		description = "Enable Group, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_D')")
 	@PostMapping("/{id}/enable")
 	fun enableGroupById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

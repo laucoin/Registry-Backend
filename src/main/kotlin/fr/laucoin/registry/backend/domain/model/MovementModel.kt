@@ -13,6 +13,7 @@ data class MovementModel(
 	var dateTime: ZonedDateTime = ZonedDateTime.now(),
 	var type: MovementTypeEnum? = null,
 	var reason: MovementReasonEnum? = null,
+	var lastCommunicationDateTime: ZonedDateTime? = null,
 	var activity: ActivityModel? = null,
 	var contentType: ParticipantTypeEnum = ParticipantTypeEnum.REGISTERED,
 	var content: List<MovementContentModel> = emptyList(),

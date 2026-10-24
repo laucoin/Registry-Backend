@@ -50,6 +50,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.test.WebTestClientExt.hiddenElementsAuthorities
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -229,7 +230,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -267,7 +268,7 @@ class ParticipantControllerTest : TestContext() {
 	) {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -300,7 +301,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -349,7 +350,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -390,7 +391,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -717,7 +718,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -774,7 +775,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -795,7 +796,7 @@ class ParticipantControllerTest : TestContext() {
 	fun `Should findParticipants throw when the birthday period is inverted`() {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -852,7 +853,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("onSite", true), Pair("sort", "status"))))
 			.exchange()
@@ -876,7 +877,7 @@ class ParticipantControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("onSite", false))))
 			.exchange()

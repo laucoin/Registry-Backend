@@ -11,6 +11,7 @@ data class ProjectSearchParamModel(
 	var query: String? = null
 	var isFavorite: Boolean? = null
 	var userId: UUID? = null
+	var hiddenReadableIds: List<UUID> = emptyList()
 
 	constructor(
 		query: String? = null,

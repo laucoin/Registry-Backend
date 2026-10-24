@@ -49,6 +49,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.HIDDEN_READABLE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -69,7 +70,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 	@Query(
 		"""
         SELECT t.*, $SELECT_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
+        WHERE $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $HIDDEN_READABLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
         ORDER BY $PROJECT_SORT t.$PROJECT_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -77,6 +78,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 	fun findAll(
 		query: String?,
 		isVisible: Boolean?,
+		hiddenReadableIds: List<UUID>,
 		at: ZonedDateTime?,
 		isFavorite: Boolean?,
 		userId: UUID?,
@@ -89,7 +91,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 	@Query(
 		"""
         SELECT t.*, $SELECT_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE t.$ID IN (:projectIds) AND $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
+        WHERE t.$ID IN (:projectIds) AND $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $HIDDEN_READABLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
         ORDER BY $PROJECT_SORT t.$PROJECT_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -98,6 +100,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 		projectIds: List<UUID>,
 		query: String?,
 		isVisible: Boolean?,
+		hiddenReadableIds: List<UUID>,
 		at: ZonedDateTime?,
 		isFavorite: Boolean?,
 		userId: UUID?,
