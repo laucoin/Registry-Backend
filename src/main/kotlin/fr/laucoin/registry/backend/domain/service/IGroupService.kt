@@ -11,6 +11,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the group.
+ * Scope: Declares what the controllers and other services can ask for group.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IGroupService {
 	fun findGroupsPage(
 		projectId: UUID,
@@ -28,12 +33,14 @@ interface IGroupService {
 	fun findGroupById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		memberVisibilitySearched: Boolean?,
-		memberAvailabilitySearched: Boolean?
+		isVisible: Boolean?,
+		memberIsVisible: Boolean?,
+		memberIsAvailable: Boolean?
 	): Mono<GroupModel>
 
-	fun searchParticipantsByText(projectId: UUID, textSearched: String?): Flux<ParticipantModel>
+	fun findGroupSummaryById(projectId: UUID, id: UUID): Mono<GroupModel>
+
+	fun searchParticipantsByText(projectId: UUID, query: String?): Flux<ParticipantModel>
 	fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel>
 	fun updateGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID, group: GroupModel): Mono<GroupModel>
 	fun addMembersToGroupById(

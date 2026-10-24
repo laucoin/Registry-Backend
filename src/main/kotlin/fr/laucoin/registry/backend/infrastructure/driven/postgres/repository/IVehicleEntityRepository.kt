@@ -8,11 +8,14 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_BRAND_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_MODEL_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.LAST_MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.SELECT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.SELECT_VEHICLE_SEARCH
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_AVAILABILITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_PRESENCE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.WITH_VEHICLE_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
@@ -21,7 +24,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -32,25 +34,34 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Reactive entity repository of the vehicle table.
+ * Scope: Holds the parameterized SQL queries (filters, sort, pagination, locks) on vehicle.
+ * Limits: Used by the Postgres adapter only; returns entities, never domain models.
+ */
 @Repository
 interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> {
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
-        ORDER BY similarity_score DESC, t.$VEHICLE_BRAND
+        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE AND $VEHICLE_BRAND_CLAUSE AND $VEHICLE_MODEL_CLAUSE
+        ORDER BY $VEHICLE_SORT similarity_score DESC, t.$VEHICLE_BRAND, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		at: ZonedDateTime?,
+		brand: String?,
+		model: String?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
 		offset: Int,
 	): Flux<VehicleEntity>
@@ -60,58 +71,62 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
         WITH $WITH_VEHICLE_LAST_MOVEMENT
         SELECT COUNT(t.$ID)
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN
-        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE AND $VEHICLE_BRAND_CLAUSE AND $VEHICLE_MODEL_CLAUSE
         """
 	)
 	fun countAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		at: ZonedDateTime?,
+		brand: String?,
+		model: String?,
 	): Mono<Long>
 
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         ORDER BY t.$VEHICLE_BRAND
         """
 	)
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleEntity>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<VehicleEntity>
 
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_VEHICLE_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE AND $VEHICLE_BRAND_CLAUSE AND $VEHICLE_MODEL_CLAUSE
         ORDER BY similarity_score DESC, t.$VEHICLE_BRAND
         LIMIT :limit
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		presenceSearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		isPresent: Boolean?,
+		at: ZonedDateTime?,
+		brand: String?,
+		model: String?,
 		limit: Int,
 	): Flux<VehicleEntity>
 
 	@Query(
 		"""
         WITH $WITH_VEHICLE_LAST_MOVEMENT
-        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LAST_MOVEMENT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleEntity>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleEntity>
 
 	@Query(
 		"""

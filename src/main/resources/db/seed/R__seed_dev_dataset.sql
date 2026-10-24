@@ -1,6 +1,29 @@
 -- Clear all data from the database
 TRUNCATE TABLE tb_movement_content, tb_communication, tb_movement, tb_activity, tb_vehicle, tb_group_content, tb_group, tb_participant, tb_project_profile, tb_project, tb_preferences, tb_user CASCADE;
 
+-- Session-scoped helper (dropped with the connection): returns a random mock communication message.
+-- Lengths range from a few characters up to the 250-character column limit.
+CREATE OR REPLACE FUNCTION pg_temp.seed_message() RETURNS TEXT AS
+$fn$
+SELECT (ARRAY [
+    'OK',
+    'Arrived',
+    'On my way',
+    'Back at camp',
+    'Group is complete.',
+    'Vehicle is leaving now, ETA 15 minutes.',
+    'Please confirm the headcount before departure.',
+    'Two participants are missing from the list, checking with the group leader.',
+    'Bus delayed by roughly 20 minutes because of traffic on the ring road, the activity start is pushed back accordingly.',
+    'Minor injury during the activity (scraped knee). Handled on site by the first-aid team, the participant is resting and does not need to leave the project.',
+    'Heads up: the weather forecast announces heavy rain from 3 pm. Please bring rain gear, move equipment under shelter and make sure every group has a leader with a phone that is reachable at all times.',
+    'Réception confirmée, départ prévu à 14h30 depuis le parking nord.',
+    'Retour anticipé : un participant est fatigué, le véhicule le ramène au camp.',
+    'Message with special characters: é à ü ñ ç œ – "quotes" & <tags> 100% #42',
+    LEFT(repeat('Maximum length status report, 250 characters. ', 6), 250)
+    ])[1 + FLOOR(RANDOM() * 15)::INT]
+$fn$ LANGUAGE sql VOLATILE;
+
 -- Insert data related to users
 DO
 $$
@@ -24,8 +47,8 @@ $$
                (global_coordinator_id, 'b82d96d3-02e5-4ea5-89fc-a1a50092d8d4', 'USER', 'John', 'DOE',
                 'coordinator@sgdf.fr', 'USER', '1990-01-01', '2025-03-01 15:28:51.144372 +00:00', global_coordinator_id,
                 global_coordinator_id, TRUE),
-               (global_user_id, '37b3186b-4839-472f-a67a-9bd4e8beae4b', 'USER', 'Charles', 'PINA',
-                'participant@sgdf.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00', global_user_id,
+               (global_user_id, '37b3186b-4839-472f-a67a-9bd4e8beae4b', 'USER', 'Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte', 'DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V',
+                'participant.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.fr', 'USER', '2000-01-01', '2025-03-01 15:28:51.144372 +00:00', global_user_id,
                 global_user_id, TRUE),
                (global_blocked_user_id, '3f311520-d686-4a3e-88aa-8b9e58a56f88', 'USER', 'Aliyah', 'NIELSEN',
                 'blocked-user@sgdf.fr', 'USER_ADMINISTRATOR', '1970-01-01', '2025-03-01 15:28:51.144372 +00:00',
@@ -60,59 +83,115 @@ $$
         current_project_begin_time TIME WITH TIME ZONE;
         current_project_end_date   DATE;
         current_project_end_time   TIME WITH TIME ZONE;
+        current_project_ref_date   DATE;
+        current_project_ref_ts     TIMESTAMP WITH TIME ZONE;
     BEGIN
         -- Insert projects
-        INSERT INTO tb_project (id, name, begin_date, begin_time, end_date, end_time, created_by, last_modified_by,
-                                visible)
+        -- Options follow ProjectOptionEnum's dependencies: COMMUNICATION requires ACTIVITY,
+        -- ALERT requires ACTIVITY and COMMUNICATION.
+        INSERT INTO tb_project (id, name, begin_date, begin_time, end_date, end_time, options, created_by,
+                                last_modified_by, visible)
+        -- i=3: not started yet, far in the future (so the dataset stays realistic without regenerating it every few
+        -- minutes); i=8: fully completed (both dates already in the past); i IN (5, 12): perpetual (no dates).
         SELECT CASE WHEN i = 1 THEN global_project_id ELSE gen_random_uuid() END,
-               'Project ' || i,
-               NOW() - (RANDOM() * INTERVAL '30 days'),
-               NOW() - (RANDOM() * INTERVAL '30 minutes'),
-               NOW() + (RANDOM() * INTERVAL '30 days'),
-               NOW() + (RANDOM() * INTERVAL '30 minutes'),
+               (ARRAY [
+                   'Summer Camp',
+                   'Jamboree 2026',
+                   'Winter Ski Trip',
+                   'Regional Gathering of the Scout Groups of Île-de-France',
+                   'Open Day',
+                   'Pioneers'' Weekend',
+                   'Camp Leaders'' Training Week',
+                   'Spring Hike',
+                   'Lac d''Annecy – Water Sports Week',
+                   'International Exchange Programme with our Partner Associations in Germany, Poland and Belgium',
+                   'Harvest Festival',
+                   'Permanent Reception Desk',
+                   REPEAT('W', 150),
+                   'Cathedral Pilgrimage',
+                   LEFT(repeat('Maximum length project name. ', 6), 150)
+                   ])[i],
+               CASE
+                   WHEN i IN (5, 12) THEN NULL
+                   WHEN i = 3 THEN NOW() + INTERVAL '2 years'
+                   WHEN i = 8 THEN NOW() - INTERVAL '90 days'
+                   ELSE NOW() - (RANDOM() * INTERVAL '30 days') END,
+               CASE WHEN i IN (5, 12) THEN NULL ELSE NOW() - (RANDOM() * INTERVAL '30 minutes') END,
+               CASE
+                   WHEN i IN (5, 12) THEN NULL
+                   WHEN i = 3 THEN NOW() + INTERVAL '2 years 30 days'
+                   WHEN i = 8 THEN NOW() - INTERVAL '30 days'
+                   ELSE NOW() + (RANDOM() * INTERVAL '30 days') END,
+               CASE WHEN i IN (5, 12) THEN NULL ELSE NOW() + (RANDOM() * INTERVAL '30 minutes') END,
+               CASE
+                   WHEN i = 1 THEN ARRAY ['VEHICLE', 'ACTIVITY', 'COMMUNICATION', 'ALERT']
+                   ELSE ARRAY_REMOVE(ARRAY [
+                                         CASE WHEN has_vehicle THEN 'VEHICLE' END,
+                                         CASE WHEN has_activity THEN 'ACTIVITY' END,
+                                         CASE WHEN has_activity AND has_communication THEN 'COMMUNICATION' END,
+                                         CASE WHEN has_activity AND has_communication AND has_alert THEN 'ALERT' END
+                                         ], NULL)
+                   END,
                global_admin_id,
                global_admin_id,
                i != 15
-        FROM GENERATE_SERIES(1, 15) AS i;
+        FROM (SELECT i,
+                     RANDOM() < 0.6 AS has_vehicle,
+                     RANDOM() < 0.6 AS has_activity,
+                     RANDOM() < 0.6 AS has_communication,
+                     RANDOM() < 0.6 AS has_alert
+              FROM GENERATE_SERIES(1, 15) AS i) AS project_options;
 
         FOR current_project_id IN SELECT id FROM tb_project
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
+                SELECT COALESCE(begin_date, CURRENT_DATE - 30),
+                       COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       COALESCE(end_date, CURRENT_DATE + 30),
+                       COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00')
                 INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
                 FROM tb_project
                 WHERE id = current_project_id;
 
+                -- "Today" clamped to the project's window: keeps begin/end-relative random spans non-negative for
+                -- a not-yet-started or already-completed project (equals CURRENT_DATE/NOW() for an ongoing one).
+                current_project_ref_date =
+                        LEAST(GREATEST(CURRENT_DATE, current_project_begin_date), current_project_end_date);
+                current_project_ref_ts = LEAST(GREATEST(NOW(), current_project_begin_date + current_project_begin_time),
+                                               current_project_end_date + current_project_end_time);
+
                 INSERT INTO tb_project_profile (id, user_id, project_id, role, status, start_access_date,
-                                                start_access_time, end_access_date, end_access_time, created_by,
-                                                last_modified_by, visible)
+                                                start_access_time, end_access_date, end_access_time,
+                                                created_by, last_modified_by, visible)
                 VALUES (CASE
                             WHEN current_project_id = global_project_id THEN global_project_profile_id
                             ELSE gen_random_uuid() END, global_admin_id, current_project_id, 'PROJECT_ADMINISTRATOR',
                         'ACCEPTED', NULL, NULL, NULL, NULL, global_admin_id, global_admin_id, TRUE),
                        (gen_random_uuid(), global_coordinator_id, current_project_id, 'PROJECT_COORDINATOR', 'INVITED',
                         current_project_begin_date +
-                        (RANDOM() * (CURRENT_DATE - current_project_begin_date)) * INTERVAL '1 day',
-                        current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                     'UTC' -
+                        (RANDOM() * (current_project_ref_date - current_project_begin_date)) * INTERVAL '1 day',
+                        current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM (current_project_ref_ts -
                                                                                      (current_project_begin_date + current_project_begin_time)))) *
                                                      INTERVAL '1 second',
-                        CURRENT_DATE + (RANDOM() * (current_project_end_date - CURRENT_DATE)) * INTERVAL '1 day',
-                        CURRENT_TIME + (RANDOM() * EXTRACT(EPOCH FROM
-                                                           ((current_project_end_date + current_project_end_time) -
-                                                            CURRENT_TIMESTAMP AT TIME ZONE 'UTC'))) *
-                                       INTERVAL '1 second', global_admin_id, global_admin_id, TRUE),
+                        current_project_ref_date +
+                        (RANDOM() * (current_project_end_date - current_project_ref_date)) * INTERVAL '1 day',
+                        current_project_ref_ts::TIME WITH TIME ZONE + (RANDOM() * EXTRACT(EPOCH FROM
+                                                                                          ((current_project_end_date + current_project_end_time) -
+                                                                                           current_project_ref_ts))) *
+                                                                      INTERVAL '1 second', global_admin_id,
+                        global_admin_id, TRUE),
                        (gen_random_uuid(), global_user_id, current_project_id, 'PROJECT_PARTICIPANT', 'INVITED',
                         current_project_begin_date +
-                        (RANDOM() * (CURRENT_DATE - current_project_begin_date)) * INTERVAL '1 day',
-                        current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                     'UTC' -
+                        (RANDOM() * (current_project_ref_date - current_project_begin_date)) * INTERVAL '1 day',
+                        current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM (current_project_ref_ts -
                                                                                      (current_project_begin_date + current_project_begin_time)))) *
                                                      INTERVAL '1 second',
-                        CURRENT_DATE + (RANDOM() * (current_project_end_date - CURRENT_DATE)) * INTERVAL '1 day',
-                        CURRENT_TIME + (RANDOM() * EXTRACT(EPOCH FROM
-                                                           ((current_project_end_date + current_project_end_time) -
-                                                            CURRENT_TIMESTAMP AT TIME ZONE 'UTC'))) *
-                                       INTERVAL '1 second', global_admin_id, global_admin_id, TRUE),
+                        current_project_ref_date +
+                        (RANDOM() * (current_project_end_date - current_project_ref_date)) * INTERVAL '1 day',
+                        current_project_ref_ts::TIME WITH TIME ZONE + (RANDOM() * EXTRACT(EPOCH FROM
+                                                                                          ((current_project_end_date + current_project_end_time) -
+                                                                                           current_project_ref_ts))) *
+                                                                      INTERVAL '1 second', global_admin_id,
+                        global_admin_id, TRUE),
                        (gen_random_uuid(), global_blocked_user_id, current_project_id, 'PROJECT_ADMINISTRATOR',
                         'ACCEPTED', NULL, NULL, NULL, NULL, global_admin_id, global_admin_id, TRUE),
                        (gen_random_uuid(), global_blocked_profile_id, current_project_id, 'PROJECT_ADMINISTRATOR',
@@ -120,6 +199,12 @@ $$
             END LOOP;
     END
 $$;
+
+-- Insert favorite projects
+INSERT INTO tb_project_favorite (user_id, project_id)
+SELECT profile.user_id, profile.project_id
+FROM tb_project_profile profile
+WHERE ABS(HASHTEXT(profile.user_id::TEXT || profile.project_id::TEXT)) % 3 = 0;
 
 -- Insert participants
 DO
@@ -135,13 +220,23 @@ $$
         current_project_begin_time TIME WITH TIME ZONE;
         current_project_end_date   DATE;
         current_project_end_time   TIME WITH TIME ZONE;
+        current_project_ref_date   DATE;
+        current_project_ref_ts     TIMESTAMP WITH TIME ZONE;
     BEGIN
         FOR current_project_id IN SELECT id FROM tb_project
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
+                SELECT COALESCE(begin_date, CURRENT_DATE - 30),
+                       COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       COALESCE(end_date, CURRENT_DATE + 30),
+                       COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00')
                 INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
                 FROM tb_project
                 WHERE id = current_project_id;
+
+                current_project_ref_date =
+                        LEAST(GREATEST(CURRENT_DATE, current_project_begin_date), current_project_end_date);
+                current_project_ref_ts = LEAST(GREATEST(NOW(), current_project_begin_date + current_project_begin_time),
+                                               current_project_end_date + current_project_end_time);
 
                 INSERT INTO tb_participant (id, first_name, last_name, birthday, type, start_availability_date,
                                             start_availability_time, end_availability_date, end_availability_time,
@@ -149,8 +244,19 @@ $$
                 SELECT CASE
                            WHEN i = 1 AND current_project_id = global_project_id THEN global_participant_id
                            ELSE gen_random_uuid() END,
-                       'First ' || i,
-                       'Last ' || i,
+                       CASE
+                           WHEN i % 50 = 7 THEN LEFT(repeat('Maximilien-', 14), 150)
+                           WHEN i % 50 = 8 THEN 'X'
+                           ELSE (ARRAY ['Emma', 'Lucas', 'Léa', 'Hugo', 'Chloé', 'Louis', 'Inès', 'Jules', 'Camille', 'Noah',
+                           'Zoé', 'Adam', 'Anaïs', 'Mohamed', 'Sofia', 'Raphaël', 'Jean-Baptiste', 'Marie-Charlotte',
+                           'Li', 'Eva', 'Maximilien-Alexandre', 'Océane', 'Ahmed', 'Yasmine', 'Thibault'])[1 + FLOOR(RANDOM() * 25)::INT] END,
+                       CASE
+                           WHEN i % 50 = 7 THEN LEFT(repeat('DE LA ROCHE-GUYON ', 9), 150)
+                           WHEN i % 50 = 9 THEN REPEAT('M', 150)
+                           ELSE (ARRAY ['MARTIN', 'BERNARD', 'DUBOIS', 'THOMAS', 'ROBERT', 'RICHARD', 'PETIT', 'DURAND', 'LEROY',
+                           'MOREAU', 'LE GALL', 'DE LA FONTAINE', 'BEN SALAH', 'NGUYEN', 'O''CONNOR', 'DA SILVA',
+                           'LEFEBVRE-DUPONT', 'KOWALSKI', 'FAURE', 'ROUSSEAU', 'DUMOULIN DE SAINT-MARTIN-LE-VIEUX',
+                           'WU', 'ÖZTÜRK', 'GARCÍA', 'MÜLLER'])[1 + FLOOR(RANDOM() * 25)::INT] END,
                        CASE
                            WHEN i % 10 = 0 THEN TIMESTAMP WITH TIME ZONE '1990-01-01 00:00:00+00' + (RANDOM() *
                                                                                                      EXTRACT(EPOCH FROM
@@ -163,22 +269,23 @@ $$
                        CASE WHEN i % 20 = 0 THEN 'GUEST' ELSE 'REGISTERED' END,
                        CASE
                            WHEN i % 10 = 0 THEN current_project_begin_date +
-                                                (RANDOM() * (CURRENT_DATE - current_project_begin_date)) *
+                                                (RANDOM() * (current_project_ref_date - current_project_begin_date)) *
                                                 INTERVAL '1 day' END,
                        CASE
                            WHEN i % 20 = 0 THEN current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                                 (CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                                  'UTC' -
+                                                                                                 (current_project_ref_ts -
                                                                                                   (current_project_begin_date + current_project_begin_time)))) *
                                                                              INTERVAL '1 second' END,
                        CASE
-                           WHEN i % 10 = 0 THEN CURRENT_DATE + (RANDOM() * (current_project_end_date - CURRENT_DATE)) *
-                                                               INTERVAL '1 day' END,
+                           WHEN i % 10 = 0 THEN current_project_ref_date +
+                                                (RANDOM() * (current_project_end_date - current_project_ref_date)) *
+                                                INTERVAL '1 day' END,
                        CASE
-                           WHEN i % 20 = 0 THEN CURRENT_TIME + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                   ((current_project_end_date + current_project_end_time) -
-                                                                                    CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                    'UTC'))) * INTERVAL '1 second' END,
+                           WHEN i % 20 = 0 THEN current_project_ref_ts::TIME WITH TIME ZONE +
+                                                (RANDOM() * EXTRACT(EPOCH FROM
+                                                                    ((current_project_end_date + current_project_end_time) -
+                                                                     current_project_ref_ts))) *
+                                                INTERVAL '1 second' END,
                        CASE
                            WHEN i = 1 THEN global_admin_id
                            WHEN i = 2 THEN global_coordinator_id
@@ -213,14 +320,24 @@ $$
         current_project_begin_time TIME WITH TIME ZONE;
         current_project_end_date   DATE;
         current_project_end_time   TIME WITH TIME ZONE;
+        current_project_ref_date   DATE;
+        current_project_ref_ts     TIMESTAMP WITH TIME ZONE;
         current_group_id           UUID;
     BEGIN
         FOR current_project_id IN SELECT id FROM tb_project
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
+                SELECT COALESCE(begin_date, CURRENT_DATE - 30),
+                       COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       COALESCE(end_date, CURRENT_DATE + 30),
+                       COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00')
                 INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
                 FROM tb_project
                 WHERE id = current_project_id;
+
+                current_project_ref_date =
+                        LEAST(GREATEST(CURRENT_DATE, current_project_begin_date), current_project_end_date);
+                current_project_ref_ts = LEAST(GREATEST(NOW(), current_project_begin_date + current_project_begin_time),
+                                               current_project_end_date + current_project_end_time);
 
                 FOR i IN 1..20
                     LOOP
@@ -233,27 +350,32 @@ $$
                                               end_availability_date, end_availability_time, project_id, created_by,
                                               last_modified_by, visible)
                         VALUES (current_group_id,
-                                'Group ' || i,
+                                (ARRAY ['Red', 'Blue', 'Wolves', 'Eagles', 'Group A', 'Group B', 'Kitchen team',
+                                    'Night watch', 'Senior scouts (16-17)', 'Cubs', 'Les Petits Écureuils',
+                                    'Staff', 'Medical & first aid', 'Logistics and equipment',
+                                    'Volunteers from the neighbouring districts', 'Team 15', 'Hikers',
+                                    'The Early Risers – wake-up call at 6 am',
+                                    LEFT(repeat('Maximum length group name ', 6), 150),
+                                    REPEAT('G', 150)])[i],
                                 CASE
                                     WHEN i % 10 = 0 THEN current_project_begin_date +
-                                                         (RANDOM() * (CURRENT_DATE - current_project_begin_date)) *
+                                                         (RANDOM() * (current_project_ref_date - current_project_begin_date)) *
                                                          INTERVAL '1 day' END,
                                 CASE
                                     WHEN i % 20 = 0 THEN current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                                          (CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                                           'UTC' -
+                                                                                                          (current_project_ref_ts -
                                                                                                            (current_project_begin_date + current_project_begin_time)))) *
                                                                                       INTERVAL '1 second' END,
                                 CASE
-                                    WHEN i % 10 = 0 THEN CURRENT_DATE +
-                                                         (RANDOM() * (current_project_end_date - CURRENT_DATE)) *
+                                    WHEN i % 10 = 0 THEN current_project_ref_date +
+                                                         (RANDOM() * (current_project_end_date - current_project_ref_date)) *
                                                          INTERVAL '1 day' END,
                                 CASE
-                                    WHEN i % 20 = 0 THEN CURRENT_TIME + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                            ((current_project_end_date + current_project_end_time) -
-                                                                                             CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                             'UTC'))) *
-                                                                        INTERVAL '1 second' END,
+                                    WHEN i % 20 = 0 THEN current_project_ref_ts::TIME WITH TIME ZONE +
+                                                         (RANDOM() * EXTRACT(EPOCH FROM
+                                                                             ((current_project_end_date + current_project_end_time) -
+                                                                              current_project_ref_ts))) *
+                                                         INTERVAL '1 second' END,
                                 current_project_id,
                                 (SELECT tpp.user_id
                                  FROM tb_project_profile tpp
@@ -296,13 +418,23 @@ $$
         current_project_begin_time TIME WITH TIME ZONE;
         current_project_end_date   DATE;
         current_project_end_time   TIME WITH TIME ZONE;
+        current_project_ref_date   DATE;
+        current_project_ref_ts     TIMESTAMP WITH TIME ZONE;
     BEGIN
-        FOR current_project_id IN SELECT id FROM tb_project
+        FOR current_project_id IN SELECT id FROM tb_project WHERE 'VEHICLE' = ANY (options)
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
+                SELECT COALESCE(begin_date, CURRENT_DATE - 30),
+                       COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       COALESCE(end_date, CURRENT_DATE + 30),
+                       COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00')
                 INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
                 FROM tb_project
                 WHERE id = current_project_id;
+
+                current_project_ref_date =
+                        LEAST(GREATEST(CURRENT_DATE, current_project_begin_date), current_project_end_date);
+                current_project_ref_ts = LEAST(GREATEST(NOW(), current_project_begin_date + current_project_begin_time),
+                                               current_project_end_date + current_project_end_time);
 
                 INSERT INTO tb_vehicle (id, license_plate, brand, model, start_availability_date,
                                         start_availability_time, end_availability_date, end_availability_time,
@@ -310,27 +442,37 @@ $$
                 SELECT CASE
                            WHEN i = 1 AND current_project_id = global_project_id THEN global_vehicle_id
                            ELSE gen_random_uuid() END,
-                       'AB-' || LPAD((i * 2)::TEXT, 3, '0') || '-DC',
-                       'Brand ' || i,
-                       'Model ' || i,
+                       CASE
+                           WHEN i = 1 THEN 'AB-002-DC'
+                           WHEN i = 14 THEN 'ABCDEFGHI-0123456789'
+                           WHEN i % 5 = 0 THEN 'B-' || CHR(65 + (i % 26)) || CHR(66 + (i % 25)) || ' ' || (1000 + i * 37)
+                           ELSE CHR(65 + (i * 3) % 26) || CHR(65 + (i * 5) % 26) || '-' || LPAD((i * 83 % 1000)::TEXT, 3, '0') ||
+                                '-' || CHR(65 + (i * 7) % 26) || CHR(65 + (i * 11) % 26) END,
+                       (ARRAY ['Renault', 'Peugeot', 'Citroën', 'Volkswagen', 'Ford', 'Mercedes-Benz', 'Fiat', 'Toyota',
+                           'Opel', 'Dacia', 'Iveco', 'Škoda', 'Alfa Romeo', 'Land Rover',
+                           LEFT(repeat('Maximum length brand ', 8), 150)])[i],
+                       (ARRAY ['Trafic', '308', 'Berlingo', 'Transporter', 'Transit', 'Sprinter', 'Ducato', 'Hilux',
+                           'Vivaro', 'Duster', 'Daily', 'Octavia Combi', 'Giulia', 'Defender 110 Station Wagon',
+                           LEFT(repeat('Maximum length model ', 8), 150)])[i],
                        CASE
                            WHEN i % 10 = 0 THEN current_project_begin_date +
-                                                (RANDOM() * (CURRENT_DATE - current_project_begin_date)) *
+                                                (RANDOM() * (current_project_ref_date - current_project_begin_date)) *
                                                 INTERVAL '1 day' END,
                        CASE
                            WHEN i % 20 = 0 THEN current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                                 (CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                                  'UTC' -
+                                                                                                 (current_project_ref_ts -
                                                                                                   (current_project_begin_date + current_project_begin_time)))) *
                                                                              INTERVAL '1 second' END,
                        CASE
-                           WHEN i % 10 = 0 THEN CURRENT_DATE + (RANDOM() * (current_project_end_date - CURRENT_DATE)) *
-                                                               INTERVAL '1 day' END,
+                           WHEN i % 10 = 0 THEN current_project_ref_date +
+                                                (RANDOM() * (current_project_end_date - current_project_ref_date)) *
+                                                INTERVAL '1 day' END,
                        CASE
-                           WHEN i % 20 = 0 THEN CURRENT_TIME + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                   ((current_project_end_date + current_project_end_time) -
-                                                                                    CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                    'UTC'))) * INTERVAL '1 second' END,
+                           WHEN i % 20 = 0 THEN current_project_ref_ts::TIME WITH TIME ZONE +
+                                                (RANDOM() * EXTRACT(EPOCH FROM
+                                                                    ((current_project_end_date + current_project_end_time) -
+                                                                     current_project_ref_ts))) *
+                                                INTERVAL '1 second' END,
                        current_project_id,
                        (SELECT tpp.user_id
                         FROM tb_project_profile tpp
@@ -361,13 +503,23 @@ $$
         current_project_begin_time TIME WITH TIME ZONE;
         current_project_end_date   DATE;
         current_project_end_time   TIME WITH TIME ZONE;
+        current_project_ref_date   DATE;
+        current_project_ref_ts     TIMESTAMP WITH TIME ZONE;
     BEGIN
-        FOR current_project_id IN SELECT id FROM tb_project
+        FOR current_project_id IN SELECT id FROM tb_project WHERE 'ACTIVITY' = ANY (options)
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
+                SELECT COALESCE(begin_date, CURRENT_DATE - 30),
+                       COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       COALESCE(end_date, CURRENT_DATE + 30),
+                       COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00')
                 INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
                 FROM tb_project
                 WHERE id = current_project_id;
+
+                current_project_ref_date =
+                        LEAST(GREATEST(CURRENT_DATE, current_project_begin_date), current_project_end_date);
+                current_project_ref_ts = LEAST(GREATEST(NOW(), current_project_begin_date + current_project_begin_time),
+                                               current_project_end_date + current_project_end_time);
 
                 INSERT INTO tb_activity (id, name, description, duration, min_allowed_participants,
                                          max_allowed_participants, start_availability_date, start_availability_time,
@@ -376,29 +528,46 @@ $$
                 SELECT CASE
                            WHEN i = 1 AND current_project_id = global_project_id THEN global_activity_id
                            ELSE gen_random_uuid() END,
-                       'Activity ' || i,
-                       'Description ' || i,
+                       (ARRAY ['Canoeing', 'Rock climbing', 'Campfire', 'Orienteering', 'Archery',
+                           'Treasure hunt', 'Cooking workshop', 'First-aid training', 'Night game',
+                           'Swimming', 'Mountain biking', 'Arts & crafts', 'Talent show',
+                           REPEAT('A', 150),
+                           LEFT(repeat('Maximum length activity name ', 6), 150)])[i],
+                       (ARRAY [NULL, 'Short and sweet.', 'Bring water and a hat.',
+                           'Participants paddle 6 km down the river in pairs. Life jackets are mandatory and provided on site.',
+                           NULL,
+                           'A guided tour of the old town with stops at five historic landmarks, followed by a free time in the market square. Meeting point: main entrance, 10 minutes before departure. Accessible for wheelchair users except for the last stop.',
+                           'Séance d''initiation encadrée par deux animateurs diplômés : consignes de sécurité, démonstration, puis mise en pratique par petits groupes.',
+                           LEFT(repeat('Maximum length description used to test text wrapping and truncation in lists and detail views. ', 25), 2000),
+                           'Emojis and symbols: ☀ ⛺ 🔥 – 5 km → 10 km',
+                           'Meet at the main gate.',
+                           NULL,
+                           'Please inform the team about any allergy or medical condition before registering.',
+                           'Line one' || E'\n' || 'Line two' || E'\n' || 'Line three',
+                           'Mandatory for all participants under 14.',
+                           REPEAT('Z', 2000)])[i],
                        'PT' || (i % 10 + 1) || 'H',
                        FLOOR(RANDOM() * (5 - 1 + 1) + 1),
                        FLOOR(RANDOM() * (20 - 5 + 1) + 20),
                        CASE
                            WHEN i % 10 = 0 THEN current_project_begin_date +
-                                                (RANDOM() * (CURRENT_DATE - current_project_begin_date)) *
+                                                (RANDOM() * (current_project_ref_date - current_project_begin_date)) *
                                                 INTERVAL '1 day' END,
                        CASE
                            WHEN i % 20 = 0 THEN current_project_begin_time + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                                 (CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                                  'UTC' -
+                                                                                                 (current_project_ref_ts -
                                                                                                   (current_project_begin_date + current_project_begin_time)))) *
                                                                              INTERVAL '1 second' END,
                        CASE
-                           WHEN i % 10 = 0 THEN CURRENT_DATE + (RANDOM() * (current_project_end_date - CURRENT_DATE)) *
-                                                               INTERVAL '1 day' END,
+                           WHEN i % 10 = 0 THEN current_project_ref_date +
+                                                (RANDOM() * (current_project_end_date - current_project_ref_date)) *
+                                                INTERVAL '1 day' END,
                        CASE
-                           WHEN i % 20 = 0 THEN CURRENT_TIME + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                   ((current_project_end_date + current_project_end_time) -
-                                                                                    CURRENT_TIMESTAMP AT TIME ZONE
-                                                                                    'UTC'))) * INTERVAL '1 second' END,
+                           WHEN i % 20 = 0 THEN current_project_ref_ts::TIME WITH TIME ZONE +
+                                                (RANDOM() * EXTRACT(EPOCH FROM
+                                                                    ((current_project_end_date + current_project_end_time) -
+                                                                     current_project_ref_ts))) *
+                                                INTERVAL '1 second' END,
                        current_project_id,
                        (SELECT tpp.user_id
                         FROM tb_project_profile tpp
@@ -419,125 +588,125 @@ $$
 $$;
 
 -- Insert movements for registered participants
+-- Movements/content are built per-project with two set-based statements (instead of one
+-- INSERT per movement and up to 30 more per movement for its content): this replaces ~120k
+-- single-row statements per project with 2, which is what actually made this block slow.
 DO
 $$
     DECLARE
-        chunk_size                          INT  = 100;
-        global_project_id                   UUID = 'b7432b97-cfc6-4109-aaaa-38d348523f1e';
-        global_movement_id                  UUID = '63f4c4e8-bd07-445b-8a6e-899ac490cf0c';
-        current_project_id                  UUID;
-        current_project_begin_date          DATE;
-        current_project_begin_time          TIME WITH TIME ZONE;
-        current_project_end_date            DATE;
-        current_project_end_time            TIME WITH TIME ZONE;
-        current_movement_id                 UUID;
-        current_movement_type               VARCHAR;
-        current_movement_has_activity       BOOLEAN;
-        current_movement_participant_number INTEGER;
-        current_movement_participant_id     UUID;
-        current_movement_participant_major  BOOLEAN;
-        current_movement_pool_name          VARCHAR;
-        current_movement_vehicle_id         UUID;
+        global_project_id  UUID = 'b7432b97-cfc6-4109-aaaa-38d348523f1e';
+        global_movement_id UUID = '63f4c4e8-bd07-445b-8a6e-899ac490cf0c';
+        current_project_id UUID;
     BEGIN
-        FOR current_project_id IN SELECT id FROM tb_project
+        FOR current_project_id IN SELECT id
+                                  FROM tb_project
+                                  WHERE begin_date IS NULL
+                                     OR (begin_date + begin_time) <= NOW()
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
-                INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
-                FROM tb_project
-                WHERE id = current_project_id;
+                WITH project_bounds AS (SELECT COALESCE(begin_date, CURRENT_DATE - 30)                 AS begin_date,
+                                               COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00') AS begin_time,
+                                               LEAST(COALESCE(end_date, CURRENT_DATE + 30) +
+                                                     COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00'),
+                                                     NOW())                                            AS end_ts
+                                        FROM tb_project
+                                        WHERE id = current_project_id),
+                     movement_specs AS (SELECT i,
+                                               CASE
+                                                   WHEN i = 1 AND current_project_id = global_project_id
+                                                       THEN global_movement_id
+                                                   ELSE gen_random_uuid() END                                     AS movement_id,
+                                               CASE WHEN i % 2 = 0 THEN 'IN' ELSE 'OUT' END                       AS type,
+                                               CASE WHEN i % 2 = 0 THEN 'IN' ELSE 'OUT' END = 'OUT' AND i % 5 = 0 AS has_activity,
+                                               pb.begin_date + (RANDOM() * EXTRACT(EPOCH FROM
+                                                                                   (pb.end_ts -
+                                                                                    (pb.begin_date + pb.begin_time)))) *
+                                                               INTERVAL '1 second'                                AS date_time,
+                                               FLOOR(RANDOM() * 30 + 1)::INT                                      AS participant_number,
+                                               (SELECT name
+                                                FROM tb_group
+                                                WHERE project_id = current_project_id
+                                                ORDER BY RANDOM()
+                                                LIMIT 1)                                                          AS pool_name
+                                        FROM GENERATE_SERIES(1, 4000) AS i,
+                                             project_bounds pb),
+                     inserted_movements AS (
+                         INSERT INTO tb_movement (id, date_time, type, reason, activity_id, project_id, created_by,
+                                                  last_modified_by, visible)
+                             SELECT ms.movement_id,
+                                    ms.date_time,
+                                    ms.type,
+                                    CASE
+                                        WHEN ms.type = 'OUT' AND NOT ms.has_activity
+                                            THEN (SELECT UNNEST(ARRAY ['SHOPPING', 'MEDICAL', 'OTHER'])
+                                                  ORDER BY RANDOM()
+                                                  LIMIT 1) END,
+                                    CASE
+                                        WHEN ms.has_activity THEN (SELECT id
+                                                                   FROM tb_activity
+                                                                   WHERE project_id = current_project_id
+                                                                   ORDER BY RANDOM()
+                                                                   LIMIT 1) END,
+                                    current_project_id,
+                                    (SELECT user_id
+                                     FROM tb_project_profile
+                                     WHERE project_id = current_project_id
+                                       AND status = 'ACCEPTED'
+                                     ORDER BY RANDOM()
+                                     LIMIT 1),
+                                    (SELECT user_id
+                                     FROM tb_project_profile
+                                     WHERE project_id = current_project_id
+                                       AND status = 'ACCEPTED'
+                                     ORDER BY RANDOM()
+                                     LIMIT 1),
+                                    ms.i % 50 != 0
+                             FROM movement_specs ms
+                             RETURNING id),
+                     -- vehicle_slot ranks major participants sitting on an even seat within their own movement
+                     -- (1, 2, 3...); tb_movement_content has a UNIQUE(movement_id, vehicle_id) index, so vehicles
+                     -- must be distinct within a movement, not picked independently per participant.
+                     participant_picks AS (SELECT ms.movement_id,
+                                                  ms.participant_number,
+                                                  ms.pool_name,
+                                                  pp.id                                AS participant_id,
+                                                  pp.rn,
+                                                  CASE
+                                                      WHEN pp.rn % 2 = 0 AND pp.major
+                                                          THEN ROW_NUMBER()
+                                                               OVER (PARTITION BY ms.movement_id, (pp.rn % 2 = 0 AND pp.major)
+                                                                   ORDER BY pp.rn) END AS vehicle_slot
+                                           FROM movement_specs ms
+                                                    CROSS JOIN LATERAL (
+                                               SELECT id, major, ROW_NUMBER() OVER () AS rn
+                                               FROM (SELECT id, birthday <= (CURRENT_TIMESTAMP - INTERVAL '18 years') AS major
+                                                     FROM tb_participant
+                                                     WHERE project_id = current_project_id
+                                                       AND type = 'REGISTERED'
+                                                     ORDER BY RANDOM()
+                                                     LIMIT ms.participant_number) AS shuffled_participants
+                                               ) AS pp),
+                     vehicle_picks AS (SELECT pm.movement_id,
+                                              v.id                                                              AS vehicle_id,
+                                              ROW_NUMBER() OVER (PARTITION BY pm.movement_id ORDER BY RANDOM()) AS vehicle_rank
+                                       FROM (SELECT DISTINCT movement_id
+                                             FROM participant_picks
+                                             WHERE vehicle_slot IS NOT NULL) pm
+                                                CROSS JOIN LATERAL (SELECT id FROM tb_vehicle WHERE project_id = current_project_id) v)
+                INSERT
+                INTO tb_movement_content (movement_id, participant_id, pool_name, vehicle_id)
+                SELECT pp.movement_id,
+                       pp.participant_id,
+                       CASE
+                           WHEN pp.participant_number > 4
+                               THEN CASE WHEN pp.rn % 10 = 0 THEN NULL ELSE pp.pool_name END END,
+                       vp.vehicle_id
+                FROM participant_picks pp
+                         JOIN inserted_movements im ON im.id = pp.movement_id
+                         LEFT JOIN vehicle_picks vp
+                                   ON vp.movement_id = pp.movement_id AND vp.vehicle_rank = pp.vehicle_slot;
 
-                FOR i IN 1..4000
-                    LOOP
-                        current_movement_id = CASE
-                                                  WHEN i = 1 AND current_project_id = global_project_id
-                                                      THEN global_movement_id
-                                                  ELSE gen_random_uuid() END;
-                        current_movement_type = CASE WHEN i % 2 = 0 THEN 'IN' ELSE 'OUT' END;
-                        current_movement_has_activity = current_movement_type = 'OUT' AND i % 5 = 0;
-
-                        INSERT INTO tb_movement (id, date_time, type, reason, activity_id, project_id, created_by,
-                                                 last_modified_by, visible)
-                        VALUES (current_movement_id,
-                                current_project_begin_date + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                 ((current_project_begin_date + current_project_begin_time) -
-                                                                                  (current_project_end_date + current_project_end_time)))) *
-                                                             INTERVAL '1 second',
-                                current_movement_type,
-                                CASE
-                                    WHEN current_movement_type = 'OUT' AND NOT current_movement_has_activity
-                                        THEN (SELECT UNNEST(ARRAY ['SHOPPING', 'MEDICAL', 'OTHER'])
-                                              ORDER BY RANDOM()
-                                              LIMIT 1) END,
-                                CASE
-                                    WHEN current_movement_has_activity THEN (SELECT id
-                                                                             FROM tb_activity ta
-                                                                             WHERE ta.project_id = current_project_id
-                                                                             ORDER BY RANDOM()
-                                                                             LIMIT 1) END,
-                                current_project_id,
-                                (SELECT tpp.user_id
-                                 FROM tb_project_profile tpp
-                                 WHERE tpp.project_id = current_project_id
-                                   AND tpp.status = 'ACCEPTED'
-                                 ORDER BY RANDOM()
-                                 LIMIT 1),
-                                (SELECT tpp.user_id
-                                 FROM tb_project_profile tpp
-                                 WHERE tpp.project_id = current_project_id
-                                   AND tpp.status = 'ACCEPTED'
-                                 ORDER BY RANDOM()
-                                 LIMIT 1),
-                                i % 50 != 0);
-
-                        SELECT FLOOR(RANDOM() * 30 + 1) INTO current_movement_participant_number;
-                        SELECT name
-                        INTO current_movement_pool_name
-                        FROM tb_group
-                        WHERE project_id = current_project_id
-                        ORDER BY RANDOM()
-                        LIMIT 1;
-
-                        FOR i IN 1..current_movement_participant_number
-                            LOOP
-                                SELECT id, birthday <= (CURRENT_TIMESTAMP - INTERVAL '18 years')
-                                INTO current_movement_participant_id, current_movement_participant_major
-                                FROM tb_participant
-                                WHERE project_id = current_project_id
-                                  AND type = 'REGISTERED'
-                                ORDER BY RANDOM()
-                                LIMIT 1;
-                                current_movement_vehicle_id = CASE
-                                                                  WHEN i % 2 = 0 THEN CASE
-                                                                                          WHEN current_movement_participant_major
-                                                                                              THEN (SELECT id
-                                                                                                    FROM tb_vehicle tv
-                                                                                                    WHERE tv.project_id = current_project_id
-                                                                                                    ORDER BY RANDOM()
-                                                                                                    LIMIT 1) END END;
-
-                                INSERT INTO tb_movement_content (movement_id, participant_id, pool_name, vehicle_id)
-                                SELECT current_movement_id,
-                                       current_movement_participant_id,
-                                       CASE
-                                           WHEN current_movement_participant_number > 4
-                                               THEN CASE WHEN i % 10 = 0 THEN NULL ELSE current_movement_pool_name END END,
-                                       current_movement_vehicle_id
-                                WHERE NOT EXISTS (SELECT 1
-                                                  FROM tb_movement_content
-                                                  WHERE movement_id = current_movement_id
-                                                    AND participant_id = current_movement_participant_id)
-                                  AND (current_movement_vehicle_id IS NULL OR NOT EXISTS (SELECT 1
-                                                                                          FROM tb_movement_content
-                                                                                          WHERE movement_id = current_movement_id
-                                                                                            AND vehicle_id = current_movement_vehicle_id));
-                            END LOOP;
-
-                        IF i % chunk_size = 0 THEN
-                            COMMIT;
-                        END IF;
-                    END LOOP;
+                COMMIT;
             END LOOP;
-        COMMIT;
     END
 $$;
 
@@ -549,15 +718,20 @@ $$
         current_project_id         UUID;
         current_project_begin_date DATE;
         current_project_begin_time TIME WITH TIME ZONE;
-        current_project_end_date   DATE;
-        current_project_end_time   TIME WITH TIME ZONE;
+        current_project_end_ts     TIMESTAMP WITH TIME ZONE;
         current_movement_id        UUID;
         current_movement_type      VARCHAR;
     BEGIN
-        FOR current_project_id IN SELECT id FROM tb_project
+        FOR current_project_id IN SELECT id
+                                  FROM tb_project
+                                  WHERE begin_date IS NULL
+                                     OR (begin_date + begin_time) <= NOW()
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
-                INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
+                SELECT COALESCE(begin_date, CURRENT_DATE - 30),
+                       COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       LEAST(COALESCE(end_date, CURRENT_DATE + 30) +
+                             COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00'), NOW())
+                INTO current_project_begin_date, current_project_begin_time, current_project_end_ts
                 FROM tb_project
                 WHERE id = current_project_id;
 
@@ -570,8 +744,8 @@ $$
                                                  visible)
                         VALUES (current_movement_id,
                                 current_project_begin_date + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                 ((current_project_begin_date + current_project_begin_time) -
-                                                                                  (current_project_end_date + current_project_end_time)))) *
+                                                                                 (current_project_end_ts -
+                                                                                  (current_project_begin_date + current_project_begin_time)))) *
                                                              INTERVAL '1 second',
                                 current_movement_type,
                                 CASE
@@ -624,13 +798,20 @@ $$
         current_project_id         UUID;
         current_project_begin_date DATE;
         current_project_begin_time TIME WITH TIME ZONE;
-        current_project_end_date   DATE;
-        current_project_end_time   TIME WITH TIME ZONE;
+        current_project_end_ts     TIMESTAMP WITH TIME ZONE;
     BEGIN
-        FOR current_movement_id IN SELECT id FROM tb_movement WHERE activity_id IS NOT NULL
+        FOR current_movement_id IN SELECT tm.id
+                                   FROM tb_movement tm
+                                            INNER JOIN tb_project tp ON tp.id = tm.project_id
+                                   WHERE tm.activity_id IS NOT NULL
+                                     AND 'COMMUNICATION' = ANY (tp.options)
             LOOP
-                SELECT tp.id, tp.begin_date, tp.begin_time, tp.end_date, tp.end_time
-                INTO current_project_id, current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
+                SELECT tp.id,
+                       COALESCE(tp.begin_date, CURRENT_DATE - 30),
+                       COALESCE(tp.begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       LEAST(COALESCE(tp.end_date, CURRENT_DATE + 30) +
+                             COALESCE(tp.end_time, TIME WITH TIME ZONE '23:59:59+00'), NOW())
+                INTO current_project_id, current_project_begin_date, current_project_begin_time, current_project_end_ts
                 FROM tb_movement tm
                          INNER JOIN tb_project tp ON tm.project_id = tp.id
                 WHERE tm.id = current_movement_id;
@@ -638,10 +819,10 @@ $$
                 INSERT INTO tb_communication (date_time, message, movement_id, project_id, created_by, last_modified_by,
                                               visible)
                 SELECT current_project_begin_date + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                        ((current_project_begin_date + current_project_begin_time) -
-                                                                         (current_project_end_date + current_project_end_time)))) *
+                                                                        (current_project_end_ts -
+                                                                         (current_project_begin_date + current_project_begin_time)))) *
                                                     INTERVAL '1 second',
-                       'Message ' || i,
+                       pg_temp.seed_message(),
                        current_movement_id,
                        current_project_id,
                        (SELECT tpp.user_id
@@ -685,14 +866,19 @@ $$
         current_project_id         UUID;
         current_project_begin_date DATE;
         current_project_begin_time TIME WITH TIME ZONE;
-        current_project_end_date   DATE;
-        current_project_end_time   TIME WITH TIME ZONE;
+        current_project_end_ts     TIMESTAMP WITH TIME ZONE;
         current_alert_id           UUID;
     BEGIN
-        FOR current_project_id IN SELECT id FROM tb_project
+        FOR current_project_id IN SELECT id
+                                  FROM tb_project
+                                  WHERE 'ALERT' = ANY (options)
+                                    AND (begin_date IS NULL OR (begin_date + begin_time) <= NOW())
             LOOP
-                SELECT begin_date, begin_time, end_date, end_time
-                INTO current_project_begin_date, current_project_begin_time, current_project_end_date, current_project_end_time
+                SELECT COALESCE(begin_date, CURRENT_DATE - 30),
+                       COALESCE(begin_time, TIME WITH TIME ZONE '00:00:00+00'),
+                       LEAST(COALESCE(end_date, CURRENT_DATE + 30) +
+                             COALESCE(end_time, TIME WITH TIME ZONE '23:59:59+00'), NOW())
+                INTO current_project_begin_date, current_project_begin_time, current_project_end_ts
                 FROM tb_project
                 WHERE id = current_project_id;
 
@@ -705,7 +891,18 @@ $$
 
                         INSERT INTO tb_alert (id, title, status, project_id, created_by, last_modified_by, visible)
                         VALUES (current_alert_id,
-                                'Alert ' || i,
+                                -- Title is nullable (VARCHAR(50)): every 7th alert has none.
+                                CASE
+                                    WHEN i % 7 = 0 THEN NULL
+                                    ELSE (ARRAY ['Missing child', 'Lost bag', 'Fire', 'Late bus', 'Injury',
+                                        'Allergic reaction', 'Storm warning', 'Vehicle breakdown',
+                                        'Participant not on the list', 'Gate left open',
+                                        'Medical emergency at the north camp', 'Equipment stolen',
+                                        'Food poisoning suspected – kitchen team', 'Power outage',
+                                        'Unauthorised visitor on site', LEFT(repeat('Maximum length alert title. ', 2), 50),
+                                        'Participant refuses to follow instructions',
+                                        'Road to the camp closed (flooding on the D12)',
+                                        REPEAT('W', 50), 'Noise complaint'])[1 + (i - 1) % 20] END,
                                 CASE
                                     WHEN i % 10 = 0 THEN 'IN_PROGRESS'
                                     WHEN i % 20 = 0 THEN 'CANCELED'
@@ -737,10 +934,10 @@ $$
                         INSERT INTO tb_communication (date_time, message, alert_id, project_id, created_by,
                                                       last_modified_by, visible)
                         SELECT current_project_begin_date + (RANDOM() * EXTRACT(EPOCH FROM
-                                                                                ((current_project_begin_date + current_project_begin_time) -
-                                                                                 (current_project_end_date + current_project_end_time)))) *
+                                                                                (current_project_end_ts -
+                                                                                 (current_project_begin_date + current_project_begin_time)))) *
                                                             INTERVAL '1 second',
-                               'Message ' || j,
+                               pg_temp.seed_message(),
                                current_alert_id,
                                current_project_id,
                                (SELECT tpp.user_id
@@ -761,3 +958,32 @@ $$
             END LOOP;
     END
 $$;
+
+UPDATE tb_participant p
+SET effective_arrival = first_entry.entered_at
+FROM (SELECT mc.participant_id, MIN(m.date_time) AS entered_at
+      FROM tb_movement m
+               INNER JOIN tb_movement_content mc ON mc.movement_id = m.id
+      WHERE m.visible IS TRUE
+        AND m.type = 'IN'
+      GROUP BY mc.participant_id) first_entry
+WHERE first_entry.participant_id = p.id;
+
+UPDATE tb_participant p
+SET effective_departure = last_exit.left_at
+FROM (SELECT mc.participant_id, MAX(m.date_time) AS left_at
+      FROM tb_movement m
+               INNER JOIN tb_movement_content mc ON mc.movement_id = m.id
+               INNER JOIN tb_participant tp ON tp.id = mc.participant_id
+      WHERE m.visible IS TRUE
+        AND m.type = 'OUT'
+        AND (m.reason = 'DEFINITIVE_DEPARTURE' OR tp.type = 'GUEST')
+      GROUP BY mc.participant_id) last_exit
+WHERE last_exit.participant_id = p.id
+  AND NOT EXISTS (SELECT 1
+                  FROM tb_movement m2
+                           INNER JOIN tb_movement_content mc2 ON mc2.movement_id = m2.id
+                  WHERE mc2.participant_id = p.id
+                    AND m2.visible IS TRUE
+                    AND m2.type = 'IN'
+                    AND m2.date_time > last_exit.left_at);

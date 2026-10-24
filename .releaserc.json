@@ -2,9 +2,7 @@
   "tagFormat": "${version}",
   "repositoryUrl": "https://github.com/laucoin/Registry-Backend.git",
   "branches": [
-    {
-      "name": "main"
-    }
+    "main"
   ],
   "plugins": [
     [
@@ -17,43 +15,19 @@
             "release": "major"
           },
           {
-            "revert": true,
-            "release": "minor"
-          },
-          {
-            "type": "BREAKING_CHANGE",
-            "release": "major"
+            "type": "refactor",
+            "release": "patch"
           },
           {
             "type": "build",
-            "release": "minor"
+            "release": "patch"
           },
           {
             "type": "chore",
-            "release": "minor"
-          },
-          {
-            "type": "feat",
-            "release": "minor"
-          },
-          {
-            "type": "perf",
-            "release": "minor"
-          },
-          {
-            "type": "refactor",
-            "release": "minor"
-          },
-          {
-            "type": "revert",
-            "release": "minor"
+            "release": "patch"
           },
           {
             "type": "style",
-            "release": "minor"
-          },
-          {
-            "type": "ci",
             "release": "patch"
           },
           {
@@ -61,87 +35,16 @@
             "release": "patch"
           },
           {
-            "type": "fix",
+            "type": "test",
             "release": "patch"
           },
           {
-            "type": "test",
+            "type": "revert",
             "release": "patch"
           }
         ]
       }
     ],
-    [
-      "@semantic-release/release-notes-generator",
-      {
-        "preset": "conventionalcommits",
-        "presetConfig": {
-          "types": [
-            {
-              "type": "BREAKING_CHANGE",
-              "section": "💥 Breaking changes",
-              "hidden": false
-            },
-            {
-              "type": "build",
-              "section": "👷 Automation",
-              "hidden": true
-            },
-            {
-              "type": "chore",
-              "section": "📦️ Other",
-              "hidden": false
-            },
-            {
-              "type": "feat",
-              "section": "🚀 Features",
-              "hidden": false
-            },
-            {
-              "type": "perf",
-              "section": "🏎️ Improvements",
-              "hidden": false
-            },
-            {
-              "type": "refactor",
-              "section": "🧹 Improvements",
-              "hidden": false
-            },
-            {
-              "type": "revert",
-              "section": "⏪ Retore",
-              "hidden": false
-            },
-            {
-              "type": "style",
-              "section": "💄 Improvements",
-              "hidden": false
-            },
-            {
-              "type": "ci",
-              "section": "👷 Automation",
-              "hidden": false
-            },
-            {
-              "type": "docs",
-              "section": "📝 Documentation",
-              "hidden": false
-            },
-            {
-              "type": "fix",
-              "section": "🐛 Bug Fixes",
-              "hidden": false
-            },
-            {
-              "type": "test",
-              "section": "🧪 Tests",
-              "hidden": false
-            }
-          ]
-        }
-      }
-    ],
-    "@semantic-release/changelog",
     [
       "@semantic-release/exec",
       {
@@ -149,13 +52,20 @@
       }
     ],
     [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    "@semantic-release/changelog",
+    [
       "@semantic-release/git",
       {
         "assets": [
           "CHANGELOG.md",
           "version.properties"
         ],
-        "message": "build(release): ${nextRelease.version}\n\n${nextRelease.notes}[skip ci]"
+        "message": "ci(release): ${nextRelease.version}\n\n${nextRelease.notes} [skip ci]"
       }
     ],
     "@semantic-release/github"

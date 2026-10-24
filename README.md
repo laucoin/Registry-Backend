@@ -58,7 +58,7 @@ Install [Java 25 or later](https://www.oracle.com/fr/java/technologies/downloads
    `coordinator`, `participant`, `blocked-user`, `blocked-profile`, `unverified`, all
    `*@sgdf.fr`), sharing the `AU_PASS` password (default `dev123`).
 4. Run the backend with the `local` Spring profile active so its own database gets the matching seed rows (see [
-   `R__seed_dev_users.sql`](src/main/resources/db/seed/R__seed_dev_users.sql)) — without it, those Authentik accounts
+   `R__seed_dev_dataset.sql`](src/main/resources/db/seed/R__seed_dev_dataset.sql)) — without it, those Authentik accounts
    have nothing to link to on first login:
     ```shell script
     SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
@@ -80,6 +80,7 @@ fails the startup loudly instead of silently booting on something unintended.
 | `DATASOURCE_SCHEMA`   | `public`   | Schema the migrations and the application work in                                         |
 | `DATASOURCE_USERNAME` | `registry` | Database user                                                                             |
 | `DATASOURCE_PASSWORD` | *required* | Database password — a secret, see below                                                   |
+| `DATASOURCE_LOCK_TIMEOUT_MS` | `5000` | Maximum wait, in milliseconds, for a row lock (`SELECT … FOR UPDATE`) before the request fails with a `409 CONCURRENT_UPDATE_CONFLICT` |
 
 **Identity provider (OIDC)**
 
@@ -92,10 +93,12 @@ fails the startup loudly instead of silently booting on something unintended.
 | `IDP_REVOCATION_URI`        | *required* | RFC 7009 token revocation endpoint, called server-to-server on logout to invalidate the access/refresh token immediately instead of leaving them valid until they expire naturally. For example: `http://localhost:9000/application/o/revoke` |
 | `IDP_PRIVATE_CLIENT_ID`     | *required* | Confidential client the backend itself authenticates as. For example: `registry`           |
 | `IDP_PRIVATE_CLIENT_SECRET` | *required* | Its secret — a secret, see below                                                           |
-| `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (implicit flow). For example: `registry-swagger` |
+| `IDP_PUBLIC_CLIENT_ID`      | *required* | Public client Swagger UI authenticates as (authorization code + PKCE). For example: `registry-swagger` |
 | `IDP_CONNECT_TIMEOUT_MILLIS` | `2000` | TCP connect timeout for the backend's outbound calls to the IdP (login exchange, refresh, revocation) |
 | `IDP_RESPONSE_TIMEOUT_MILLIS` | `5000` | How long to wait for the IdP's response before failing; also used as the timeout for acquiring a pooled connection when the IdP is already saturated |
 | `IDP_MAX_CONNECTIONS`       | `20`       | Max concurrent connections to the IdP in the shared connection pool |
+| `IDP_ALLOWED_REDIRECT_URIS` | *required* | Comma-separated allow-list of the exact `redirectUri` values accepted by `/authentication/login/uri` and `/token`; entries are matched exactly (no wildcard, a trailing `/` matters), blank entries are ignored and any other value is refused with a `400`. For example: `http://localhost:4200/auth/callback` |
+| `IDP_ALLOWED_LOGOUT_REDIRECT_URIS` | *required* | Comma-separated allow-list of the exact `redirectUri` values accepted by `/authentication/logout/uri` (where the user lands after logging out); any other value is refused with a `400`. For example: `http://localhost:4200` |
 
 **Server**
 
@@ -106,12 +109,15 @@ fails the startup loudly instead of silently booting on something unintended.
 | `REGISTRY_LOGGING_LEVEL` | `INFO`     | Or `TRACE`, `DEBUG`, `WARN`, `ERROR` (avoid `DEBUG` in production)                                                                                                                             |
 | `EXTERNAL_CORS_URLS`     | *required* | Origins allowed to call the API, comma-separated. For example: `http://localhost:4200` — the second being the management port, needed for Swagger's *try it out* when documentation is enabled |
 | `COOKIE_SECURE`          | `true`     | `Secure` flag on the `registry_access_token`/`registry_refresh_token` auth cookies. Set to `false` for local plain-HTTP dev — the `local` Spring profile already does this                    |
-| `REGISTRY_AUTH_RATE_LIMIT_CAPACITY` | `10` | Max `POST` calls per client IP, per window, allowed on `/authentication/token` and `/token/refresh` — the only unauthenticated endpoints. In-memory (per instance, resets on restart) |
+| `REGISTRY_AUTH_RATE_LIMIT_CAPACITY` | `10` | Max `POST` calls per client IP, per window, allowed on `/authentication/token` and `/token/refresh` — the only unauthenticated endpoints. In-memory (per instance, resets on restart): also rate-limit the public endpoints at the reverse proxy |
 | `REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Length in seconds of the rate-limit window above |
+| `REGISTRY_AUTH_RATE_LIMIT_MAX_TRACKED_CLIENTS` | `10000` | Max number of client IPs tracked at once by the rate limiter above; the least recently used entries are evicted beyond it |
+| `REGISTRY_MOVEMENT_FUTURE_TOLERANCE` | `2m` | Clock skew tolerated between a client and the server when a movement is dated slightly in the future; a later date is rejected |
+| `REGISTRY_CODEC_MAX_IN_MEMORY_SIZE` | `512KB` | Maximum size of a request body buffered in memory; larger bodies are rejected |
 
 > [!NOTE]
 > The browser app authenticates via two `HttpOnly`, `SameSite=Lax` cookies (`registry_access_token`, `registry_refresh_token`)
-> set by `/api/v1/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
+> set by `/api/v2/authentication/token` and `/token/refresh`, cleared by `/logout/uri`. The `Authorization: Bearer` header
 > still works — it's checked first, cookie as fallback — kept solely so Swagger UI's own OAuth2 "try it out" flow keeps
 > working; no other client should send it.
 
@@ -222,8 +228,6 @@ The GitHub Actions workflows are the review gate — a pull request must be gree
   Semantic Release derives the next version from the commit messages, tags it and publishes the release image; a
   retention job prunes old images. Commit messages must therefore follow
   [Conventional Commits](https://www.conventionalcommits.org/).
-- **Hotfix** ([hotfix.yml](.github/workflows/hotfix.yml)) — pushing a tag matching `*-hotfix-*` (branched off an
-  existing release tag) builds & pushes an isolated hotfix image, outside Semantic Release.
 - **PR Cleanup** ([pr-cleanup.yml](.github/workflows/pr-cleanup.yml)) — deletes the branch image from the registry when
   the pull request closes.
 

@@ -1,0 +1,23 @@
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation
+
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator.ProfileAcceptOrRejectValidator
+import jakarta.validation.Constraint
+import kotlin.annotation.AnnotationRetention.RUNTIME
+import kotlin.annotation.AnnotationTarget.VALUE_PARAMETER
+import kotlin.reflect.KClass
+
+/**
+ * Purpose: Bean validation constraint on the status a user sets on an invitation.
+ * Scope: Marks the status for the accept or reject validator.
+ * Limits: Declaration only.
+ */
+@Repeatable
+@Target(VALUE_PARAMETER)
+@Retention(RUNTIME)
+@Constraint(validatedBy = [ProfileAcceptOrRejectValidator::class])
+annotation class ProfileAcceptOrReject(
+	val message: String = PROJECT_PROFILE_STATUS_NOT_ACCEPTED_OR_REJECTED,
+	val groups: Array<KClass<*>> = [],
+	val payload: Array<KClass<out Any>> = []
+)

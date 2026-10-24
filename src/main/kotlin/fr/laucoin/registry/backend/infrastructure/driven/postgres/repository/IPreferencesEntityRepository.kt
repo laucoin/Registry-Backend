@@ -14,6 +14,11 @@ import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Reactive entity repository of the preferences table.
+ * Scope: Holds the parameterized SQL queries (filters, sort, pagination, locks) on preferences.
+ * Limits: Used by the Postgres adapter only; returns entities, never domain models.
+ */
 @Repository
 interface IPreferencesEntityRepository: ReactiveCrudRepository<PreferencesEntity, UUID> {
 	@Query(
@@ -22,5 +27,5 @@ interface IPreferencesEntityRepository: ReactiveCrudRepository<PreferencesEntity
         WHERE t.$PREFERENCE_USER_ID = :userId AND $VISIBLE_CLAUSE
         """
 	)
-	fun findByUserId(userId: UUID, visibilitySearched: Boolean?): Mono<PreferencesEntity>
+	fun findByUserId(userId: UUID, isVisible: Boolean?): Mono<PreferencesEntity>
 }

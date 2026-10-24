@@ -2,27 +2,23 @@ package fr.laucoin.registry.backend.domain.service
 
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the communication.
+ * Scope: Declares what the controllers and other services can ask for communication.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface ICommunicationService {
-	fun findCommunicationPage(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel,
-	): Mono<PageModel<CommunicationModel>>
+	fun findCommunicationById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<CommunicationModel>
 
-	fun findCommunicationById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
+	fun searchOutMovementWithActivityByText(projectId: UUID, query: String?): Flux<MovementModel>
 
-	fun searchOutMovementWithActivityByText(projectId: UUID, textSearched: String?): Flux<MovementModel>
-
-	fun searchAlertByText(projectId: UUID, textSearched: String?): Flux<AlertModel>
+	fun searchAlertByText(projectId: UUID, query: String?): Flux<AlertModel>
 
 	fun createCommunication(
 		currentUser: CurrentUserModel,

@@ -5,10 +5,10 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 
 @JsonInclude(NON_NULL)
 data class ErrorDto(
-	var statusCode: Int? = null,
-	var statusName: String? = null,
-	var code: String? = null,
+	var type: String = "about:blank",
 	var title: String? = null,
-	var message: String? = null,
+	var status: Int? = null,
+	var detail: String? = null,
+	var instance: String? = null,
+	var code: String? = null,
 )
-

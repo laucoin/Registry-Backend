@@ -1,23 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CommunicationEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.ICommunicationEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.communicationId
-import fr.laucoin.registry.backend.test.ModelExt.movementId
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultCommunicationId
+import fr.laucoin.registry.backend.test.ModelExt.defaultMovementId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -30,14 +22,17 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertNotNull
 
-class CommunicationModelPostgresRepositoryTest: TestContext() {
+class CommunicationModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: ICommunicationEntityRepository
 
@@ -63,33 +58,6 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		}
 	}
 
-	@Test
-	fun `Should findPage call repository findAll`() {
-		// Arrange
-		val pageable = PageableModel(0, 10)
-		val params = CommunicationSearchParamModel()
-
-		// Act
-		val result = repository.findPage(projectId, pageable, params).block()
-
-		// Assert
-		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
-		assertEquals(550, result.totalElements)
-		assertEquals(55, result.totalPages)
-		verify(postgresRepository).findAll(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			startDateTimeSearched = null,
-			endDateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
-		)
-		verify(mapper, atLeastOnce()).toModel(any())
-	}
-
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findAllByIds call repository findAllByIds`(
@@ -97,14 +65,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(defaultProjectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
-			projectId,
+			defaultProjectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -112,14 +80,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, communicationId, visibilitySearched = null).block()
+		val result = repository.findById(defaultProjectId, defaultCommunicationId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
-			projectId,
-			communicationId,
-			visibilitySearched = null,
+			defaultProjectId,
+			defaultCommunicationId,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -130,14 +98,14 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(defaultProjectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
-			projectId,
+			defaultProjectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -155,8 +123,8 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 			val communication = CommunicationModel().apply {
 				dateTime = ZonedDateTime.now()
 				message = "message"
-				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
+				movement = MovementModel().apply { id = defaultMovementId }
+				this.projectId = defaultProjectId
 				create(currentUser())
 			}
 
@@ -179,8 +147,8 @@ class CommunicationModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				dateTime = ZonedDateTime.now()
 				message = "message updated"
-				movement = MovementModel().apply { id = movementId }
-				project = ProjectModel().apply { id = projectId }
+				movement = MovementModel().apply { id = defaultMovementId }
+				this.projectId = defaultProjectId
 				create(currentUser())
 			}
 

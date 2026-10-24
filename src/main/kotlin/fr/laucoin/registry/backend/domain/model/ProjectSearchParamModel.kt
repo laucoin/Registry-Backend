@@ -1,19 +1,34 @@
 package fr.laucoin.registry.backend.domain.model
 
 import java.time.ZonedDateTime
+import java.util.UUID
 
 data class ProjectSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	var dateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	var at: ZonedDateTime? = null,
+	var sort: SortModel? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
+	var isFavorite: Boolean? = null
+	var userId: UUID? = null
+	var hiddenReadableIds: List<UUID> = emptyList()
 
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, dateTimeSearched) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		query: String? = null,
+		isVisible: Boolean? = null,
+		at: ZonedDateTime? = null,
+		sort: SortModel? = null,
+		isFavorite: Boolean? = null,
+	): this(isVisible, at, sort = sort) {
+		this.isFavorite = isFavorite
+		this.query = if (query.isNullOrBlank()) null else query
+	}
+
+	companion object {
+		val SORT_FIELDS = setOf(
+			"name", "begin", "end",
+			"participants", "groups", "acceptedProfiles", "vehicles", "activities", "activeAlerts",
+			"favorite",
+		)
 	}
 }
-

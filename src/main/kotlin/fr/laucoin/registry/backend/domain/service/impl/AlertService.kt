@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DELETE_HAS_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_STATUS_IS_NOT_UPDATABLE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -29,6 +30,11 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages the lifecycle of project alerts and their status transitions.
+ * Scope: Alert creation, status changes and criticality rules.
+ * Limits: Does not send communications; those belong to CommunicationService.
+ */
 @Service
 class AlertService(
 	private val projectService: IProjectService,
@@ -37,19 +43,32 @@ class AlertService(
 	private val transactionalOperator: TransactionalOperator,
 ): IAlertService, GenericService() {
 	override fun findAlertsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel
 	): Mono<PageModel<AlertModel>> {
 		return port.findPage(projectId, pageable, searchParams)
+			.doOnNext { page -> page.content.forEach { restrictToReadableFields(currentUser, it) } }
+	}
+
+	override fun findAlertForUser(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel> {
+		return findAlertById(projectId, id, isVisible = null).map { restrictToReadableFields(currentUser, it) }
+	}
+
+	private fun restrictToReadableFields(currentUser: CurrentUserModel, alert: AlertModel): AlertModel {
+		if (!currentUser.hasAuthority(alert.projectId!!, REGISTRY_PROJECT_ALERT_COMMUNICATION_R)) {
+			alert.lastCommunication = null
+		}
+		return alert
 	}
 
 	override fun findAlertById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<AlertModel> {
-		return port.findById(projectId, id, visibilitySearched)
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
@@ -64,7 +83,7 @@ class AlertService(
 
 	private fun validateAlertDateWithProjectDates(alert: AlertModel): Mono<UUID> {
 		return projectService.validateDateTime(
-			alert.project!!.id!!,
+			alert.projectId!!,
 			CustomDateTimeModel(alert.dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
@@ -81,9 +100,11 @@ class AlertService(
 				communicationPort.create(initialCommunication)
 					.map { createdCommunication ->
 						newAlert.communications = listOf(createdCommunication)
+						newAlert.lastCommunication = createdCommunication
 						newAlert
 					}
 			}
+			.map { restrictToReadableFields(currentUser, it) }
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -94,7 +115,7 @@ class AlertService(
 		alert: AlertModel
 	): Mono<AlertModel> {
 		return validateAlertDateWithProjectDates(alert)
-			.flatMap { findAlertById(projectId, id, visibilitySearched = null) }
+			.flatMap { findAlertById(projectId, id, isVisible = null) }
 			.handle { it, handle ->
 				if (it.status !== IN_PROGRESS) {
 					log.warn("Only {} alert can be update", IN_PROGRESS)
@@ -117,7 +138,7 @@ class AlertService(
 		id: UUID,
 		status: AlertStatusEnum
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = null)
+		return findAlertById(projectId, id, isVisible = null)
 			.map {
 				it.apply {
 					this.status = status
@@ -130,13 +151,13 @@ class AlertService(
 		flatMap { oldAlert ->
 			if (oldAlert.dateTime.isEqual(updatedAlert.dateTime)) Mono.just(oldAlert)
 			else communicationPort.countAllByAlertId(
-				oldAlert.project!!.id!!,
+				oldAlert.projectId!!,
 				oldAlert.id!!,
 				CommunicationSearchParamModel(
-					textSearched = null,
-					visibilitySearched = null,
-					startDateTimeSearched = null,
-					endDateTimeSearched = updatedAlert.dateTime,
+					query = null,
+					isVisible = null,
+					from = null,
+					to = updatedAlert.dateTime,
 				)
 			).handle { it, handle ->
 				if (it > 0L) {
@@ -152,7 +173,7 @@ class AlertService(
 		}
 
 	private fun Mono<AlertModel>.updateAlert(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser) }).map { updated -> restrictToReadableFields(currentUser, updated) }
 	}
 
 	override fun disableAlertById(
@@ -160,7 +181,7 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = true)
+		return findAlertById(projectId, id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateAlert(currentUser)
 	}
@@ -170,7 +191,7 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, visibilitySearched = false)
+		return findAlertById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateAlert(currentUser)
 	}
@@ -180,7 +201,7 @@ class AlertService(
 		projectId: UUID,
 		id: UUID
 	): Mono<Unit> {
-		return findAlertById(projectId, id, visibilitySearched = null)
+		return findAlertById(projectId, id, isVisible = null)
 			.validateHasNoCommunicationLinked(ALERT_DELETE_HAS_COMMUNICATION)
 			.flatMap { port.deleteById(it.id!!) }
 	}
@@ -203,7 +224,7 @@ class AlertService(
 
 	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
 		communicationPort.countAllByAlertId(
-			oldAlert.project!!.id!!,
+			oldAlert.projectId!!,
 			oldAlert.id!!,
 			CommunicationSearchParamModel(),
 		).handle { it, handle ->

@@ -6,15 +6,10 @@ import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.communicationId
-import java.time.ZonedDateTime
-import java.util.stream.Stream
-import kotlin.test.assertEquals
+import fr.laucoin.registry.backend.test.ModelExt.defaultCommunicationId
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -24,26 +19,26 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.ZonedDateTime
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class CommunicationReaderDtoMapperTest {
-	private val projectMapper: ProjectReaderDtoMapper = mock()
 	private val movementMapper: MovementReaderDtoMapper = mock()
 	private val alertMapper: AlertReaderDtoMapper = mock()
-	private val mapper = CommunicationReaderDtoMapper(projectMapper, movementMapper, alertMapper)
+	private val mapper = CommunicationReaderDtoMapper(movementMapper, alertMapper)
 
 	private companion object {
 		private val now = ZonedDateTime.now()
 		private val dtoMovement = MovementReaderDto(dateTime = now, contentType = REGISTERED)
 		private val dtoAlert = AlertReaderDto(dateTime = now)
-		private val dtoProject = ProjectReaderDto()
 
 		private val model = CommunicationModel().apply {
 			dateTime = now
 			message = "Communication message"
 			movement = MovementModel(dateTime = now)
 			alert = AlertModel(dateTime = now)
-			id = communicationId
-			project = ProjectModel()
+			id = defaultCommunicationId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -54,8 +49,7 @@ class CommunicationReaderDtoMapperTest {
 			message = "Communication message"
 			movement = dtoMovement
 			alert = dtoAlert
-			id = communicationId
-			project = ProjectReaderDto()
+			id = defaultCommunicationId
 			visible = true
 			creation = HistoryModel()
 			lastEdition = HistoryModel()
@@ -64,8 +58,8 @@ class CommunicationReaderDtoMapperTest {
 		@JvmStatic
 		fun `CommunicationModel to CommunicationReaderDto data`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(model, dto, 1, 1, 1),
-				Arguments.of(CommunicationModel(dateTime = now), CommunicationReaderDto(dateTime = now), 0, 0, 0),
+				Arguments.of(model, dto, 1, 1),
+				Arguments.of(CommunicationModel(dateTime = now), CommunicationReaderDto(dateTime = now), 0, 0),
 			)
 		}
 	}
@@ -74,7 +68,6 @@ class CommunicationReaderDtoMapperTest {
 	fun setup() {
 		whenever(movementMapper.toDto(any())).thenReturn(dtoMovement)
 		whenever(alertMapper.toDto(any())).thenReturn(dtoAlert)
-		whenever(projectMapper.toDto(any())).thenReturn(dtoProject)
 	}
 
 	@ParameterizedTest
@@ -84,7 +77,6 @@ class CommunicationReaderDtoMapperTest {
 		dto: CommunicationReaderDto,
 		expectedMovementCast: Int,
 		expectedAlertCast: Int,
-		expectedProjectCast: Int,
 	) {
 		// Act
 		val result = mapper.toDto(model)
@@ -96,7 +88,6 @@ class CommunicationReaderDtoMapperTest {
 			.toDto(model.movement ?: MovementModel())
 
 		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel())
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -106,7 +97,6 @@ class CommunicationReaderDtoMapperTest {
 		dto: CommunicationReaderDto,
 		expectedMovementCast: Int,
 		expectedAlertCast: Int,
-		expectedProjectCast: Int,
 	) {
 		// Arrange
 		val models = listOf(model)
@@ -122,7 +112,6 @@ class CommunicationReaderDtoMapperTest {
 			.toDto(model.movement ?: MovementModel())
 
 		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel())
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 
 	@ParameterizedTest
@@ -132,19 +121,18 @@ class CommunicationReaderDtoMapperTest {
 		dto: CommunicationReaderDto,
 		expectedMovementCast: Int,
 		expectedAlertCast: Int,
-		expectedProjectCast: Int,
 	) {
 		// Arrange
 		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(model),
 		)
 		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(dto),
@@ -161,6 +149,5 @@ class CommunicationReaderDtoMapperTest {
 			.toDto(model.movement ?: MovementModel())
 
 		verify(alertMapper, times(expectedAlertCast)).toDto(model.alert ?: AlertModel())
-		verify(projectMapper, times(expectedProjectCast)).toDto(model.project ?: ProjectModel())
 	}
 }

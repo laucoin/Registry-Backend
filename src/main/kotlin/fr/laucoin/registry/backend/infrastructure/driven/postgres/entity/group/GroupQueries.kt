@@ -13,6 +13,10 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.G
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_INSIDE_MEMBERS_COUNT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_ON_SITE_MEMBERS_COUNT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_IN_MEMBERS_COUNT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_OUT_MEMBERS_COUNT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_OVERDUE_MEMBERS_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_MEMBERS_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_OUTSIDE_MEMBERS_COUNT
@@ -26,21 +30,24 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.PARTICIPANT_STATUS_EXPRESSION
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_ARRIVAL
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_ID
 
 object GroupQueries {
 	const val WITH_PARTICIPANT_GROUPS = """
         participants_groups AS (
-            SELECT t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME,
+            SELECT t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME, t.$PARTICIPANT_EFFECTIVE_DEPARTURE,
                 JSON_AGG($GROUP_TABLE.$ID) FILTER (WHERE $GROUP_TABLE.$ID IS NOT NULL) as participant_groups,
                 JSON_AGG(group_presence.$ID) FILTER (WHERE group_presence.$ID IS NOT NULL) as participant_groups_available
             FROM $PARTICIPANT_TABLE t
@@ -49,15 +56,13 @@ object GroupQueries {
             LEFT JOIN $GROUP_TABLE group_presence ON group_presence.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID AND group_presence.$VISIBLE IS TRUE
                 AND (
                     (
-                        COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
-                        OR (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                        (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(group_presence.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                     ) AND (
-                        COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
-                        OR (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                        (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                     )
                 )
             WHERE t.$LINKED_PROJECT_ID = :projectId AND t.$VISIBLE IS TRUE
-            GROUP BY t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME
+            GROUP BY t.$ID, t.$PARTICIPANT_START_AVAILABILITY_DATE, t.$PARTICIPANT_START_AVAILABILITY_TIME, t.$PARTICIPANT_END_AVAILABILITY_DATE, t.$PARTICIPANT_END_AVAILABILITY_TIME, t.$PARTICIPANT_EFFECTIVE_DEPARTURE
         )
     """
 
@@ -69,12 +74,14 @@ object GroupQueries {
                 SELECT MAX(t.$MOVEMENT_DATE_TIME) as $PARTICIPANT_LAST_MOVEMENT_DATE_TIME, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
                 FROM $MOVEMENT_TABLE t
                 INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-                WHERE t.$VISIBLE IS TRUE
+                WHERE t.$LINKED_PROJECT_ID = :projectId AND t.$VISIBLE IS TRUE
                 GROUP BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
             ) AS plm ON plm.$PARTICIPANT_LAST_MOVEMENT_DATE_TIME = t.$MOVEMENT_DATE_TIME
+            INNER JOIN $MOVEMENT_CONTENT_TABLE last_content
+                ON last_content.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID AND last_content.$MOVEMENT_CONTENT_PARTICIPANT_ID = plm.$MOVEMENT_CONTENT_PARTICIPANT_ID
             INNER JOIN $GROUP_CONTENT_TABLE ON plm.$MOVEMENT_CONTENT_PARTICIPANT_ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID
             INNER JOIN participants_groups ON plm.$MOVEMENT_CONTENT_PARTICIPANT_ID = participants_groups.$ID
-            WHERE t.$MOVEMENT_TYPE = 'IN' AND (
+            WHERE t.$LINKED_PROJECT_ID = :projectId AND t.$MOVEMENT_TYPE = 'IN' AND (
                 (
                     (
                         participants_groups.$PARTICIPANT_START_AVAILABILITY_DATE IS NULL AND (
@@ -82,8 +89,8 @@ object GroupQueries {
                             OR (participants_groups.participant_groups_available IS NOT NULL AND json_array_length(participants_groups.participant_groups_available) > 0)
                         )
                     ) OR
-                    COALESCE(participants_groups.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(participants_groups.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(participants_groups.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    COALESCE(participants_groups.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) < CAST(:#{now} AS DATE)
+                    OR (COALESCE(participants_groups.$PARTICIPANT_START_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(participants_groups.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CAST(:#{now} AS TIMETZ))
                 ) AND
                 (
                     (
@@ -92,10 +99,10 @@ object GroupQueries {
                             OR (participants_groups.participant_groups_available IS NOT NULL AND json_array_length(participants_groups.participant_groups_available) > 0)
                         )
                     ) OR
-                    COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) > CAST(:#{now} AS DATE)
+                    OR (COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(participants_groups.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CAST(:#{now} AS TIMETZ))
                 )
-            )
+            ) AND participants_groups.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
             GROUP BY $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID
         )
     """
@@ -110,13 +117,12 @@ object GroupQueries {
         LEFT JOIN inside_members ON inside_members.$GROUP_CONTENT_GROUP_ID = t.$ID
     """
 
-
 	const val WITH_GROUP_MEMBERS = """
         members AS (
             SELECT t.$GROUP_CONTENT_GROUP_ID, COUNT(t.$GROUP_CONTENT_PARTICIPANT_ID) as $GROUP_MEMBERS_COUNT
             FROM $GROUP_CONTENT_TABLE t
             INNER JOIN $PARTICIPANT_TABLE ON t.$GROUP_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
-            WHERE $PARTICIPANT_TABLE.$VISIBLE IS TRUE
+            WHERE $PARTICIPANT_TABLE.$LINKED_PROJECT_ID = :projectId AND $PARTICIPANT_TABLE.$VISIBLE IS TRUE
             GROUP BY t.$GROUP_CONTENT_GROUP_ID
         )
     """
@@ -135,41 +141,75 @@ object GroupQueries {
 	const val CONTENT_TO_CONTENT_JOIN = """
         INNER JOIN $PARTICIPANT_TABLE
             ON t.$GROUP_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
-            AND $PARTICIPANT_TABLE.$PARTICIPANT_PURGED IS FALSE
     """
 
 	const val GROUP_TEXT_SEARCH_CLAUSE = """
         (
-            :textSearched IS NULL OR UNACCENT(t.$GROUP_NAME) ILIKE '%' || UNACCENT(:textSearched) || '%'
+            :query IS NULL OR UNACCENT(t.$GROUP_NAME) ILIKE '%' || UNACCENT(:query) || '%'
         )
     """
 	const val GROUP_PRESENCE_CLAUSE = """
         (
-            :presenceSearched IS NULL OR :presenceSearched = (
+            :isPresent IS NULL OR :isPresent = (
                 (
-                    COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                 )
             )
         )
     """
 
+	const val GROUP_MEMBER_USER_CLAUSE = """
+        (
+            CAST(:memberUserId AS UUID) IS NULL OR EXISTS (
+                SELECT 1 FROM $GROUP_CONTENT_TABLE member_content
+                INNER JOIN $PARTICIPANT_TABLE member ON member.$ID = member_content.$GROUP_CONTENT_PARTICIPANT_ID
+                WHERE member_content.$GROUP_CONTENT_GROUP_ID = t.$ID AND member.$LINKED_PROJECT_ID = :projectId
+                    AND member.$VISIBLE IS TRUE AND member.$PARTICIPANT_USER_ID = CAST(:memberUserId AS UUID)
+            )
+        )
+    """
+
+	const val GROUP_ON_SITE_MEMBERS_CLAUSE = """
+        (
+            CAST(:hasOnSiteMembers AS BOOLEAN) IS NULL OR CAST(:hasOnSiteMembers AS BOOLEAN) = EXISTS (
+                SELECT 1 FROM $GROUP_CONTENT_TABLE site_content
+                INNER JOIN $PARTICIPANT_TABLE site_member ON site_member.$ID = site_content.$GROUP_CONTENT_PARTICIPANT_ID
+                WHERE site_content.$GROUP_CONTENT_GROUP_ID = t.$ID AND site_member.$LINKED_PROJECT_ID = :projectId
+                    AND site_member.$VISIBLE IS TRUE AND site_member.$PARTICIPANT_EFFECTIVE_ARRIVAL IS NOT NULL
+                    AND site_member.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
+            )
+        )
+    """
+
+	const val SELECT_ON_SITE_MEMBERS_COUNTS = """
+        COUNT(*) AS $GROUP_ON_SITE_MEMBERS_COUNT,
+        COUNT(*) FILTER (WHERE $PARTICIPANT_STATUS_EXPRESSION = 'IN') AS $GROUP_IN_MEMBERS_COUNT,
+        COUNT(*) FILTER (WHERE $PARTICIPANT_STATUS_EXPRESSION = 'OUT') AS $GROUP_OUT_MEMBERS_COUNT,
+        COUNT(*) FILTER (WHERE $PARTICIPANT_STATUS_EXPRESSION = 'OVERDUE') AS $GROUP_OVERDUE_MEMBERS_COUNT
+    """
+
 	const val DATE_IN_GROUP_DATES_RANGE_CLAUSE = """
         (
-            :dateTimeSearched IS NULL OR (
+            :at IS NULL OR (
                 (
-                    COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CAST(:dateTimeSearched AS DATE)
-                    OR (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CAST(:dateTimeSearched AS TIME))
+                    (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:at AS TIMESTAMPTZ)
                 ) AND
                 (
-                    COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CAST(:dateTimeSearched AS DATE)
-                    OR (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CAST(:dateTimeSearched AS TIME))
+                    (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:at AS TIMESTAMPTZ)
                 )
             )
         )
+    """
+
+	const val GROUP_SORT = """
+        CASE WHEN CAST(:sortField AS TEXT) = 'name' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$GROUP_NAME END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'name' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$GROUP_NAME END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'startAvailability' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'startAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
     """
 }

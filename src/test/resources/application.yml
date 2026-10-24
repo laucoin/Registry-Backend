@@ -10,6 +10,8 @@ external:
     connect-timeout-millis: 2000
     response-timeout-millis: 5000
     max-connections: 20
+    allowed-redirect-uris: https://registry.test/callback
+    allowed-logout-redirect-uris: https://registry.test
     swagger:
       client-id: client-swagger
   cors:
@@ -51,6 +53,7 @@ registry:
     database: ${DATASOURCE_DATABASE}
     username: ${DATASOURCE_USERNAME}
     password: ${DATASOURCE_PASSWORD}
+    lock-timeout-ms: ${DATASOURCE_LOCK_TIMEOUT_MS:5000}
   feature:
     documentation:
       enabled: true
@@ -72,6 +75,13 @@ registry:
         max-group-result: 5
         max-vehicle-result: 10
         max-activity-result: 10
+      planned:
+        max-result: 200
+      future-tolerance: 2m
+    alert:
+      criticality:
+        reinforced-after-hours: 6
+        high-after-hours: 18
     communication:
       searched:
         max-activity-result: 10
@@ -107,6 +117,7 @@ registry:
       auth:
         capacity: 10
         window-seconds: 60
+        max-tracked-clients: 10000
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
@@ -132,6 +143,9 @@ server:
   port: ${registry.server.port}
 
 spring:
+  http:
+    codecs:
+      max-in-memory-size: 512KB
   application:
     name: ${registry.information.name}
   flyway:
@@ -146,7 +160,7 @@ spring:
     web-application-type: reactive
     banner-mode: off
   r2dbc:
-    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}&options=lock_timeout=${registry.datasource.lock-timeout-ms}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
 

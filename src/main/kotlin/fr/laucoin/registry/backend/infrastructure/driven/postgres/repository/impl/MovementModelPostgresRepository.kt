@@ -20,6 +20,11 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Postgres adapter of the movement port.
+ * Scope: Delegates to the entity repository and maps entities to domain models.
+ * Limits: Holds no business rule.
+ */
 @Service
 class MovementModelPostgresRepository(
 	private val repository: IMovementEntityRepository,
@@ -35,11 +40,14 @@ class MovementModelPostgresRepository(
 	): Mono<PageModel<MovementModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.activityId,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -50,28 +58,19 @@ class MovementModelPostgresRepository(
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel
 	): Mono<PageModel<MovementModel>> {
-		return Mono.zip(
-			repository.countCurrent(
-				projectId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-			),
-			repository.findCurrent(
-				projectId,
-				searchParams.visibilitySearched,
-				searchParams.linkedToActivity,
-				searchParams.typeSearched,
-				searchParams.startDateTimeSearched,
-				searchParams.endDateTimeSearched,
-				pageable.limit,
-				pageable.offset,
-			).map(mapper::toModel).collectList()
-		).map {
-			PageModel(pageable, it.t1, it.t2)
-		}
+		return repository.findCurrent(
+			projectId,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.activityId,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
+			pageable.limit,
+			pageable.offset,
+		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findContent(projectId: UUID, movementIds: List<UUID>): Flux<Pair<UUID, List<MovementContentModel>>> {
@@ -104,11 +103,13 @@ class MovementModelPostgresRepository(
 		return repository.findAllByParticipantId(
 			projectId,
 			participantId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -123,11 +124,13 @@ class MovementModelPostgresRepository(
 		return repository.findAllByVehicleId(
 			projectId,
 			vehicleId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -142,10 +145,12 @@ class MovementModelPostgresRepository(
 		return repository.findAllByActivityId(
 			projectId,
 			activityId,
-			searchParams.visibilitySearched,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
@@ -158,10 +163,10 @@ class MovementModelPostgresRepository(
 	): Flux<MovementModel> {
 		return repository.findByActivityWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.isAvailable,
+			searchParams.at,
 			limit,
 		).map { mapper.toModel(it) }
 	}
@@ -174,11 +179,11 @@ class MovementModelPostgresRepository(
 		return repository.countAllByParticipantId(
 			projectId,
 			participantId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
 		)
 	}
 
@@ -190,11 +195,11 @@ class MovementModelPostgresRepository(
 		return repository.countAllByVehicleId(
 			projectId,
 			vehicleId,
-			searchParams.visibilitySearched,
-			searchParams.linkedToActivity,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.hasActivity,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
 		)
 	}
 
@@ -206,10 +211,10 @@ class MovementModelPostgresRepository(
 		return repository.countAllByActivityId(
 			projectId,
 			activityId,
-			searchParams.visibilitySearched,
-			searchParams.typeSearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.isVisible,
+			searchParams.type,
+			searchParams.from,
+			searchParams.to,
 		)
 	}
 
@@ -217,9 +222,9 @@ class MovementModelPostgresRepository(
 		return repository.findOlderThanAndUncommentedSince(dateThreshold)
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel> {
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel> {
 		return Mono.zip(
-			repository.findById(projectId, id, visibilitySearched).map(mapper::toModel),
+			repository.findById(projectId, id, isVisible).map(mapper::toModel),
 			findContent(projectId, listOf(id)).collectList()
 				.handle<List<MovementContentModel>> { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
 		).map {
@@ -236,7 +241,7 @@ class MovementModelPostgresRepository(
 
 	override fun update(element: MovementModel): Mono<MovementModel> {
 		return save(element)
-			.flatMap { findById(element.project!!.id!!, element.id!!, visibilitySearched = null) }
+			.flatMap { findById(element.projectId!!, element.id!!, isVisible = null) }
 			.removeDeletedContent(element)
 			.saveNewContent(element)
 			.`as`(transactionalOperator::transactional)

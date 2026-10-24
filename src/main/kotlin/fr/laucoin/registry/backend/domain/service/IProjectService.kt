@@ -12,15 +12,21 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the project.
+ * Scope: Declares what the controllers and other services can ask for project.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IProjectService {
 	fun findProjectsPage(
 		currentUser: CurrentUserModel,
 		pageable: PageableModel,
-		withProfile: Boolean,
+		withProfile: Boolean?,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>>
 
-	fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
+	fun findProjectById(id: UUID, isVisible: Boolean?): Mono<ProjectModel>
+	fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
 	fun availableProjectOptions(): Flux<ProjectOptionEnum>
 	fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID>
 	fun validateDateTimes(
@@ -34,6 +40,8 @@ interface IProjectService {
 	fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel>
 	fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
 	fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
+	fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
+	fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
 	fun deleteProjectById(id: UUID): Mono<Unit>
 	fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
 }

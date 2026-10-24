@@ -13,14 +13,21 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the alert.
+ * Scope: Declares what the controllers and other services can ask for alert.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IAlertService {
 	fun findAlertsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel,
 	): Mono<PageModel<AlertModel>>
 
-	fun findAlertById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertModel>
+	fun findAlertById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertModel>
+	fun findAlertForUser(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel>
 
 	fun findAlertCommunicationsPage(
 		projectId: UUID,

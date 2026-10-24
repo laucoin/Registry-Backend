@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OVERDUE
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -12,7 +13,6 @@ import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import org.springframework.stereotype.Component
 import java.time.Duration
-import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.util.Objects
 
@@ -47,45 +47,18 @@ class PresenceStatusReaderDtoMapper(
 	): String {
 		val now = CustomDateTimeModel.now()
 		return when {
-			Objects.nonNull(lastMovement) && listOf(IN, OUT).contains(model) -> {
-				val interval = Duration.between(lastMovement, now.toZonedDateTime())
+			model == OVERDUE -> translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model")
 
-				translateService.getMessage(
-					code = "$PRESENCE_STATUS_DURATION_PREFIX$model",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
+			Objects.nonNull(lastMovement) && listOf(IN, OUT).contains(model) ->
+				durationMessage("$PRESENCE_STATUS_DURATION_PREFIX$model", Duration.between(lastMovement, now.toZonedDateTime()))
 
-			Objects.nonNull(startAvailability) && now.asStartIsAfterOther(startAvailability) -> {
-				val interval = Duration.between(
-					now.toZonedDateTime(),
-					startAvailability?.toZonedDateTime(
-						LocalTime.MIN, now.zone()!!
-					)
-				)
+			Objects.nonNull(startAvailability) && now.asStartIsAfterOther(startAvailability) ->
+				durationMessage("${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE", untilStart(now, startAvailability))
 
-				translateService.getMessage(
-					code = "${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
+			Objects.nonNull(endAvailability) && now.asEndIsBeforeOther(endAvailability) ->
+				durationMessage("${PRESENCE_STATUS_DURATION_PREFIX}LEFT", sinceEnd(now, endAvailability))
 
-			Objects.nonNull(endAvailability) && now.asEndIsBeforeOther(endAvailability) -> {
-				val interval = Duration.between(
-					endAvailability?.toZonedDateTime(
-						LocalTime.MAX, now.zone()!!
-					), now.toZonedDateTime()
-				)
-
-				translateService.getMessage(
-					code = "${PRESENCE_STATUS_DURATION_PREFIX}LEFT",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
-
-			Objects.isNull(lastMovement) -> {
-				translateService.getMessage(code = "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET")
-			}
+			Objects.isNull(lastMovement) -> translateService.getMessage(code = "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET")
 
 			else -> translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model")
 		}

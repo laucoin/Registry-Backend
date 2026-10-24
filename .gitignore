@@ -40,8 +40,8 @@ out/
 ### VS Code ###
 .vscode/
 
-### Claude Code (local-only, thin skills referencing .github/prompts) ###
-.claude/
+### Claude Code (skills and shared settings are versioned) ###
+.claude/settings.local.json
 
 # System Files
 .DS_Store

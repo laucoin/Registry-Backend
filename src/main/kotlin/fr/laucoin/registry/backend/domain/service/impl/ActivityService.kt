@@ -23,6 +23,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Builds the activity feed of a project from its movements, groups and participants.
+ * Scope: Reads and aggregates activity entries through ports.
+ * Limits: Does not write data and does not check permissions (done on the contract).
+ */
 @Service
 class ActivityService(
 	private val projectService: IProjectService,
@@ -37,8 +42,8 @@ class ActivityService(
 		return port.findPage(projectId, pageable, searchParams)
 	}
 
-	override fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
-		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
+	override fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel> {
+		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
 	}
 
 	override fun findActivityMovementsPage(
@@ -52,7 +57,7 @@ class ActivityService(
 
 	override fun createActivity(currentUser: CurrentUserModel, activity: ActivityModel): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
@@ -66,12 +71,12 @@ class ActivityService(
 		activity: ActivityModel
 	): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findActivityById(projectId, id, visibilitySearched = null) }
+			.flatMap { findActivityById(projectId, id, isVisible = null) }
 			.map {
 				it.apply {
 					name = activity.name
@@ -86,19 +91,19 @@ class ActivityService(
 	}
 
 	override fun disableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel> {
-		return findActivityById(projectId, id, visibilitySearched = true)
+		return findActivityById(projectId, id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateActivity(currentUser)
 	}
 
 	override fun enableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel> {
-		return findActivityById(projectId, id, visibilitySearched = false)
+		return findActivityById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateActivity(currentUser)
 	}
 
 	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findActivityById(projectId, id, visibilitySearched = null)
+		return findActivityById(projectId, id, isVisible = null)
 			.validateHasNoMovementLinked(ACTIVITY_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }
 	}
@@ -125,7 +130,7 @@ class ActivityService(
 
 	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->
 		movementPort.countAllByActivityId(
-			activityToUpdate.project!!.id!!,
+			activityToUpdate.projectId!!,
 			activityToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->

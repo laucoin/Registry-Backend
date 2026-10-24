@@ -1,0 +1,106 @@
+package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
+
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
+import fr.laucoin.registry.backend.domain.service.IConcurrencyService
+import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.service.IProjectService
+import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
+import java.time.ZonedDateTime
+import java.util.UUID
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ServerWebExchange
+import reactor.core.publisher.Mono
+
+/**
+ * Purpose: REST adapter of the project endpoints.
+ * Scope: Maps request parameters and DTOs, and delegates to the project use cases.
+ * Limits: Holds no business rule; authorization is declared on the contract.
+ */
+@RestController
+class ProjectV2Controller(
+	private val service: IProjectService,
+	private val concurrencyService: IConcurrencyService,
+	private val readerMapper: ProjectWithProfileReaderDtoMapper,
+	private val writerMapper: ProjectWriterDtoMapper,
+): IProjectV2Controller {
+	override fun findProjects(
+		currentUser: CurrentUserModel,
+		page: Int,
+		size: Int,
+		query: String?,
+		isVisible: Boolean?,
+		isFavorite: Boolean?,
+		withProfile: Boolean?,
+		at: ZonedDateTime?,
+		sort: String?,
+	): Mono<PageModel<ProjectWithProfileReaderDto>> {
+		val pageable = PageableModel(page * size, size)
+		val searchParams = ProjectSearchParamModel(
+			query = query,
+			isVisible = isVisible,
+			at = at,
+			sort = sort.toSortModel(ProjectSearchParamModel.SORT_FIELDS),
+			isFavorite = isFavorite,
+		)
+
+		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams).map(readerMapper::toDtoPage)
+	}
+
+	override fun findProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
+		return service.findProjectWithProfileById(currentUser, id).map(readerMapper::toDto)
+	}
+
+	override fun createProject(currentUser: CurrentUserModel, project: ProjectWriterDto,
+		exchange: ServerWebExchange,
+	): Mono<ResponseEntity<ProjectWithProfileReaderDto>> {
+		val projectModel = writerMapper.toModel(project)
+		return service.createProject(currentUser, projectModel)
+			.map(readerMapper::toDto)
+			.map { exchange.created(it) }
+	}
+
+	override fun updateProjectById(
+		currentUser: CurrentUserModel,
+		id: UUID,
+		project: ProjectWriterDto,
+		exchange: ServerWebExchange,
+	): Mono<ProjectWithProfileReaderDto> {
+		val projectModel = writerMapper.toModel(project)
+		return concurrencyService.updateIfUnchanged(
+			LockableResourceEnum.PROJECT,
+			id,
+			exchange.expectedLastEditions(),
+			current = { service.findProjectById(id, isVisible = null) },
+			action = { service.updateProjectById(currentUser, id, projectModel) },
+		).map(readerMapper::toDto)
+	}
+
+	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
+		return service.disableProjectById(currentUser, id).map(readerMapper::toDto)
+	}
+
+	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
+		return service.enableProjectById(currentUser, id).map(readerMapper::toDto)
+	}
+
+	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return service.addFavoriteProject(currentUser, id)
+	}
+
+	override fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return service.removeFavoriteProject(currentUser, id)
+	}
+
+	override fun deleteProjectById(id: UUID): Mono<Unit> = service.deleteProjectById(id)
+}

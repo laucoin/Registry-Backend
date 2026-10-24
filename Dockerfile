@@ -16,7 +16,7 @@ COPY . .
 # dependency + build cache warm across image builds (persists on a stable
 # builder; see the CI caching note in the README/PR description).
 RUN --mount=type=cache,target=/home/gradle/.gradle \
-    gradle build -x test -PtargetName="$APP_ARTIFACT_NAME"
+    gradle bootJar -PtargetName="$APP_ARTIFACT_NAME"
 
 # ---- Runtime stage (distroless) ---------------------------------------
 # Use distroless image for the final stage

@@ -13,12 +13,10 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
-import fr.laucoin.registry.backend.test.ModelExt.commonVehicle
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.vehicleId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultVehicle
+import fr.laucoin.registry.backend.test.ModelExt.defaultVehicleId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -33,6 +31,8 @@ import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 class VehicleServiceTest {
 	private val port: IVehiclePort = mock()
@@ -50,10 +50,10 @@ class VehicleServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findVehiclesPage(projectId, pageable, params).block()
+		service.findVehiclesPage(defaultProjectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
 	@Test
@@ -61,13 +61,13 @@ class VehicleServiceTest {
 		// Arrange
 		val onlyVisible = true
 
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonVehicle()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
 
 		// Act
-		service.findVehicleById(projectId, vehicleId, onlyVisible).block()
+		service.findVehicleById(defaultProjectId, defaultVehicleId, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(projectId, vehicleId, onlyVisible)
+		verify(port).findById(defaultProjectId, defaultVehicleId, onlyVisible)
 	}
 
 	@Test
@@ -79,16 +79,16 @@ class VehicleServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findVehicleById(projectId, vehicleId, onlyVisible).block()
+			service.findVehicleById(defaultProjectId, defaultVehicleId, onlyVisible).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
-		assertEquals(vehicleId.toString(), result.args?.first())
+		assertEquals(defaultVehicleId.toString(), result.args?.first())
 
-		verify(port).findById(projectId, vehicleId, onlyVisible)
+		verify(port).findById(defaultProjectId, defaultVehicleId, onlyVisible)
 	}
 
 	@Test
@@ -96,25 +96,25 @@ class VehicleServiceTest {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = MovementTypeEnum.IN)
+		val params = MovementSearchParamModel(type = MovementTypeEnum.IN)
 
 		whenever(movementPort.findPageByVehicleId(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findVehicleMovementsPage(projectId, uuid, pageable, params).block()
+		service.findVehicleMovementsPage(defaultProjectId, uuid, pageable, params).block()
 
 		// Assert
-		verify(movementPort).findPageByVehicleId(projectId, uuid, pageable, params)
+		verify(movementPort).findPageByVehicleId(defaultProjectId, uuid, pageable, params)
 	}
 
 	@Test
 	fun `Should createVehicle check date and call port create`() {
 		// Arrange
-		val vehicle = commonVehicle()
+		val vehicle = defaultVehicle()
 
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
-			.thenReturn(Mono.just(projectId))
+			.thenReturn(Mono.just(defaultProjectId))
 
 		whenever(port.create(any())).thenReturn(Mono.just(vehicle))
 
@@ -123,7 +123,7 @@ class VehicleServiceTest {
 
 		// Assert
 		verify(projectService).validateDateTimes(
-			projectId,
+			defaultProjectId,
 			start = null,
 			end = null,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
@@ -135,94 +135,94 @@ class VehicleServiceTest {
 	@Test
 	fun `Should updateVehicleById check date, check existing vehicle, call port updateVehicle`() {
 		// Arrange
-		val vehicle = commonVehicle()
+		val vehicle = defaultVehicle()
 
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
-			.thenReturn(Mono.just(projectId))
+			.thenReturn(Mono.just(defaultProjectId))
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.updateVehicleById(currentUser(), projectId, vehicleId, vehicle).block()
+		service.updateVehicleById(currentUser(), defaultProjectId, defaultVehicleId, vehicle).block()
 
 		// Assert
 		verify(projectService).validateDateTimes(
-			projectId,
+			defaultProjectId,
 			start = null,
 			end = null,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 
-		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
+		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = null)
 		verify(port).update(vehicle)
 	}
 
 	@Test
 	fun `Should disableVehicleById call existing vehicle and call port update`() {
 		// Arrange
-		val vehicle = commonVehicle()
+		val vehicle = defaultVehicle()
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.disableVehicleById(currentUser(), projectId, vehicleId).block()
+		service.disableVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, vehicleId, visibilitySearched = true)
+		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = true)
 		verify(port).update(vehicle.apply { visible = false })
 	}
 
 	@Test
 	fun `Should enableVehicleById call existing vehicle and call port update`() {
 		// Arrange
-		val vehicle = commonVehicle().apply { visible = false }
+		val vehicle = defaultVehicle().apply { visible = false }
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.enableVehicleById(currentUser(), projectId, vehicleId).block()
+		service.enableVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, vehicleId, visibilitySearched = false)
+		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = false)
 		verify(port).update(vehicle.apply { visible = true })
 	}
 
 	@Test
 	fun `Should deleteVehicleById call existing vehicle, check no movement, and call port deleteById`() {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonVehicle()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
 		whenever(movementPort.countAllByVehicleId(any(), any(), any())).thenReturn(Mono.just(0))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteVehicleById(currentUser(), projectId, vehicleId).block()
+		service.deleteVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
 
 		// Assert
-		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
-		verify(movementPort).countAllByVehicleId(projectId, vehicleId, MovementSearchParamModel())
-		verify(port).deleteById(vehicleId)
+		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = null)
+		verify(movementPort).countAllByVehicleId(defaultProjectId, defaultVehicleId, MovementSearchParamModel())
+		verify(port).deleteById(defaultVehicleId)
 	}
 
 	@Test
 	fun `Should deleteVehicleById call existing vehicle, throw if movements are linked`() {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonVehicle()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
 		whenever(movementPort.countAllByVehicleId(any(), any(), any())).thenReturn(Mono.just(1))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.deleteVehicleById(currentUser(), projectId, vehicleId).block()
+			service.deleteVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(VEHICLE_DELETE_HAS_MOVEMENT, result.message)
 
-		verify(port).findById(projectId, vehicleId, visibilitySearched = null)
-		verify(movementPort).countAllByVehicleId(projectId, vehicleId, MovementSearchParamModel())
+		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = null)
+		verify(movementPort).countAllByVehicleId(defaultProjectId, defaultVehicleId, MovementSearchParamModel())
 		verify(port, never()).deleteById(any())
 	}
 

@@ -1,45 +1,37 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
-import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
-import java.util.Objects
-import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * Purpose: Manages the preferences of the current user.
+ * Scope: Creates the default preferences on first read and updates theme, language and refresh mode.
+ * Limits: Does not read preferences of other users.
+ */
 @Service
 class PreferencesService(
 	private val port: IPreferencesPort,
-	private val projectProfilePort: IProjectProfilePort,
+	private val principalCache: IPrincipalCacheService,
 	@param:Value($$"${registry.information.locale.supported}")
 	private val supportedLocales: List<String>,
 ): IPreferencesService, GenericService() {
-	private companion object {
-		private val SEARCH_ACTIVE = ProjectProfileSearchParamModel(
-			visibilitySearched = true,
-			availabilitySearched = true,
-			statusSearched = listOf(ACCEPTED)
-		)
-	}
-
 	override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
-		return port.findByUserId(currentUser.id!!, visibilitySearched = null)
+		return port.findByUserId(currentUser.id!!, isVisible = null)
 			.switchIfEmpty {
 				val preferences = PreferencesModel(userId = currentUser.id)
 				preferences.create(currentUser)
 				port.save(preferences)
-					.flatMap { port.findByUserId(currentUser.id!!, visibilitySearched = null) }
+					.flatMap { port.findByUserId(currentUser.id!!, isVisible = null) }
 			}
 	}
 
@@ -50,7 +42,7 @@ class PreferencesService(
 		return findByUser(currentUser).flatMap {
 			if (it.theme !== theme) {
 				it.theme = theme
-				port.save(it.apply { update(currentUser) })
+				save(currentUser, it)
 			} else Mono.just(it)
 		}
 	}
@@ -63,44 +55,25 @@ class PreferencesService(
 		return findByUser(currentUser).flatMap {
 			if (it.language !== language) {
 				it.language = language
-				port.save(it.apply { update(currentUser) })
+				save(currentUser, it)
 			} else Mono.just(it)
 		}
 	}
 
-	override fun updateUserPreferenceSelectedProjectProfileById(
+	override fun updateRefreshMode(
 		currentUser: CurrentUserModel,
-		profileId: UUID?
-	): Mono<PreferencesModel> {
-		return if (Objects.isNull(profileId)) return selectedProfile(currentUser)
-		else projectProfilePort.findProjectProfileByUserIdAndId(
-			currentUser.id!!,
-			profileId!!,
-			visibilitySearched = true
-		)
-			.notFoundIfEmpty(profileId)
-			.flatMap { selectedProfile(currentUser, it) }
-	}
-
-	override fun updateUserPreferenceSelectedProjectProfileByProjectId(
-		currentUser: CurrentUserModel,
-		projectId: UUID
-	): Mono<PreferencesModel> {
-		return projectProfilePort.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, SEARCH_ACTIVE)
-			.notFoundIfEmpty(projectId)
-			.flatMap { selectedProfile(currentUser, it) }
-	}
-
-	private fun selectedProfile(
-		currentUser: CurrentUserModel,
-		profile: ProjectProfileModel? = null
+		refreshMode: RefreshModeEnum
 	): Mono<PreferencesModel> {
 		return findByUser(currentUser).flatMap {
-			if (it.selectedProfile?.id == profile?.id) Mono.just(it)
-			else {
-				it.selectedProfile = profile
-				port.save(it.apply { update(currentUser) })
-			}
+			if (it.refreshMode !== refreshMode) {
+				it.refreshMode = refreshMode
+				save(currentUser, it)
+			} else Mono.just(it)
 		}
+	}
+
+	private fun save(currentUser: CurrentUserModel, preferences: PreferencesModel): Mono<PreferencesModel> {
+		return port.save(preferences.apply { update(currentUser) })
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 }

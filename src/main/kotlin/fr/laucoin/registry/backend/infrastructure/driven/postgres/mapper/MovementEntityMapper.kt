@@ -25,6 +25,7 @@ class MovementEntityMapper(
 			dateTime = entity.dateTime ?: ZonedDateTime.now()
 			type = entity.type
 			reason = entity.reason
+			lastCommunicationDateTime = entity.lastCommunicationDateTime
 			activity = mapActivity(entity)
 		}.fillWithProjectAndEntity(entity)
 	}

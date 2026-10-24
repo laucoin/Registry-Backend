@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.config
 
-import fr.laucoin.registry.backend.domain.validator.JwtAudienceValidator
-import fr.laucoin.registry.backend.domain.validator.JwtIssuerOriginValidator
+import fr.laucoin.registry.backend.infrastructure.driving.security.validator.JwtAudienceValidator
+import fr.laucoin.registry.backend.infrastructure.driving.security.validator.JwtIssuerOriginValidator
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -11,6 +11,11 @@ import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import java.net.URI
 
+/**
+ * Purpose: Builds the JWT decoder of the resource server.
+ * Scope: Wires the JWKS source with the audience and issuer origin validators.
+ * Limits: Does not map claims to authorities; the token converter does.
+ */
 @Configuration
 class JwtDecoderConfig(
 	@param:Value($$"${registry.security.oauth2.jwks-uri}")

@@ -1,5 +1,10 @@
 package fr.laucoin.registry.backend.domain.constant
 
+/**
+ * Purpose: Declares the project-scoped permission and option names.
+ * Scope: Names matching the seeded `tb_project_permission` rows and the `@PreAuthorize` expressions.
+ * Limits: Holds names only; granting is data in the role tables.
+ */
 object ProjectPermissionConst {
 	const val REGISTRY_PROJECT_OPTION_PREFIX = "REGISTRY_PROJECT_OPTION_"
 	const val REGISTRY_PROJECT_OPTION_VEHICLE = "${REGISTRY_PROJECT_OPTION_PREFIX}VEHICLE"
@@ -21,6 +26,7 @@ object ProjectPermissionConst {
 	const val REGISTRY_PROJECT_PARTICIPANT_U = "REGISTRY_PROJECT_PARTICIPANT_U"
 	const val REGISTRY_PROJECT_PARTICIPANT_D = "REGISTRY_PROJECT_PARTICIPANT_D"
 	const val REGISTRY_PROJECT_PARTICIPANT_METADATA_R = "REGISTRY_PROJECT_PARTICIPANT_METADATA_R"
+	const val REGISTRY_PROJECT_PARTICIPANT_EXPORT = "REGISTRY_PROJECT_PARTICIPANT_EXPORT"
 	const val REGISTRY_PROJECT_GROUP_C = "REGISTRY_PROJECT_GROUP_C"
 	const val REGISTRY_PROJECT_GROUP_R = "REGISTRY_PROJECT_GROUP_R"
 	const val REGISTRY_PROJECT_GROUP_U = "REGISTRY_PROJECT_GROUP_U"

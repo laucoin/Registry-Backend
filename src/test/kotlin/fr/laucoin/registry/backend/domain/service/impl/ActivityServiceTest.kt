@@ -13,12 +13,10 @@ import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import fr.laucoin.registry.backend.test.ModelExt.activityId
-import fr.laucoin.registry.backend.test.ModelExt.commonActivity
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultActivity
+import fr.laucoin.registry.backend.test.ModelExt.defaultActivityId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.LocalDate
-import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -33,6 +31,8 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
 
 class ActivityServiceTest {
 	private val port: IActivityPort = mock()
@@ -49,23 +49,23 @@ class ActivityServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findActivitiesPage(projectId, pageable, params).block()
+		service.findActivitiesPage(defaultProjectId, pageable, params).block()
 
 		// Assert
-		verify(port).findPage(projectId, pageable, params)
+		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
 	@Test
 	fun `Should findActivityById call port findById`() {
 		// Arrange
 		val onlyVisible = true
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonActivity()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
 
 		// Act
-		service.findActivityById(projectId, activityId, onlyVisible).block()
+		service.findActivityById(defaultProjectId, defaultActivityId, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(projectId, activityId, onlyVisible)
+		verify(port).findById(defaultProjectId, defaultActivityId, onlyVisible)
 	}
 
 	@Test
@@ -76,139 +76,139 @@ class ActivityServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findActivityById(projectId, activityId, onlyVisible).block()
+			service.findActivityById(defaultProjectId, defaultActivityId, onlyVisible).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
-		assertEquals(activityId.toString(), result.args?.first())
+		assertEquals(defaultActivityId.toString(), result.args?.first())
 
-		verify(port).findById(projectId, activityId, onlyVisible)
+		verify(port).findById(defaultProjectId, defaultActivityId, onlyVisible)
 	}
 
 	@Test
 	fun `Should findActivityMovementsPage call port findPageByActivityId`() {
 		// Arrange
 		val pageable = PageableModel(0, 10)
-		val params = MovementSearchParamModel(typeSearched = MovementTypeEnum.IN)
+		val params = MovementSearchParamModel(type = MovementTypeEnum.IN)
 
 		whenever(movementPort.findPageByActivityId(any(), any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findActivityMovementsPage(projectId, activityId, pageable, params).block()
+		service.findActivityMovementsPage(defaultProjectId, defaultActivityId, pageable, params).block()
 
 		// Assert
-		verify(movementPort).findPageByActivityId(projectId, activityId, pageable, params)
+		verify(movementPort).findPageByActivityId(defaultProjectId, defaultActivityId, pageable, params)
 	}
 
 	@Test
 	fun `Should createActivity check date and call port create`() {
 		// Arrange
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
-			.thenReturn(Mono.just(projectId))
-		whenever(port.create(any())).thenReturn(Mono.just(commonActivity()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.create(any())).thenReturn(Mono.just(defaultActivity()))
 
 		// Act
-		service.createActivity(currentUser(), commonActivity()).block()
+		service.createActivity(currentUser(), defaultActivity()).block()
 
 		// Assert
 		verify(projectService).validateDateTimes(
-			projectId,
+			defaultProjectId,
 			start = null,
 			end = null,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-		verify(port).create(commonActivity())
+		verify(port).create(defaultActivity())
 	}
 
 	@Test
 	fun `Should updateActivityById check date, check existing activity, call port updateActivity`() {
 		// Arrange
 		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
-			.thenReturn(Mono.just(projectId))
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonActivity()))
-		whenever(port.update(any())).thenReturn(Mono.just(commonActivity()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
+		whenever(port.update(any())).thenReturn(Mono.just(defaultActivity()))
 
 		// Act
-		service.updateActivityById(currentUser(), projectId, activityId, commonActivity()).block()
+		service.updateActivityById(currentUser(), defaultProjectId, defaultActivityId, defaultActivity()).block()
 
 		// Assert
 		verify(projectService).validateDateTimes(
-			projectId,
+			defaultProjectId,
 			start = null,
 			end = null,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(port).findById(projectId, activityId, visibilitySearched = null)
-		verify(port).update(commonActivity())
+		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = null)
+		verify(port).update(defaultActivity())
 	}
 
 	@Test
 	fun `Should disableActivityById call existing activity and call port update`() {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonActivity()))
-		whenever(port.update(any())).thenReturn(Mono.just(commonActivity()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
+		whenever(port.update(any())).thenReturn(Mono.just(defaultActivity()))
 
 		// Act
-		service.disableActivityById(currentUser(), projectId, activityId).block()
+		service.disableActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
 
 		// Assert
-		verify(port).findById(projectId, activityId, visibilitySearched = true)
-		verify(port).update(commonActivity().apply { visible = false })
+		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = true)
+		verify(port).update(defaultActivity().apply { visible = false })
 	}
 
 	@Test
 	fun `Should enableActivityById call existing activity and call port update`() {
 		// Arrange
-		val activity = commonActivity().apply { visible = false }
+		val activity = defaultActivity().apply { visible = false }
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(activity))
 		whenever(port.update(any())).thenReturn(Mono.just(activity))
 
 		// Act
-		service.enableActivityById(currentUser(), projectId, activityId).block()
+		service.enableActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
 
 		// Assert
-		verify(port).findById(projectId, activityId, visibilitySearched = false)
-		verify(port).update(commonActivity())
+		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = false)
+		verify(port).update(defaultActivity())
 	}
 
 	@Test
 	fun `Should deleteActivityById call existing activity, check no movement, and call port deleteById`() {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonActivity()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
 		whenever(movementPort.countAllByActivityId(any(), any(), any())).thenReturn(Mono.just(0))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteActivityById(currentUser(), projectId, activityId).block()
+		service.deleteActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
 
 		// Assert
-		verify(port).findById(projectId, activityId, visibilitySearched = null)
-		verify(movementPort).countAllByActivityId(projectId, activityId, MovementSearchParamModel())
-		verify(port).deleteById(activityId)
+		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = null)
+		verify(movementPort).countAllByActivityId(defaultProjectId, defaultActivityId, MovementSearchParamModel())
+		verify(port).deleteById(defaultActivityId)
 	}
 
 	@Test
 	fun `Should deleteActivityById call existing activity, throw if movements are linked`() {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonActivity()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
 		whenever(movementPort.countAllByActivityId(any(), any(), any())).thenReturn(Mono.just(1))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.deleteActivityById(currentUser(), projectId, activityId).block()
+			service.deleteActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ACTIVITY_DELETE_HAS_MOVEMENT, result.message)
 
-		verify(port).findById(projectId, activityId, visibilitySearched = null)
-		verify(movementPort).countAllByActivityId(projectId, activityId, MovementSearchParamModel())
+		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = null)
+		verify(movementPort).countAllByActivityId(defaultProjectId, defaultActivityId, MovementSearchParamModel())
 		verify(port, never()).deleteById(any())
 	}
 
@@ -236,7 +236,7 @@ class ActivityServiceTest {
 		// Arrange
 		val date = LocalDate.EPOCH
 
-		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(activityId))
+		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(defaultActivityId))
 
 		// Act
 		service.purgeActivitiesIfNecessary(date, true).collectList().block()

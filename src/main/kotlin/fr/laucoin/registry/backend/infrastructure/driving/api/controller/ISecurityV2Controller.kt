@@ -1,0 +1,77 @@
+package fr.laucoin.registry.backend.infrastructure.driving.api.controller
+
+import org.springframework.security.access.prepost.PreAuthorize
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_BLANK
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.AUTHENTICATION_REDIRECT_URI_MAX
+import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AuthenticationInfoWriterDto
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.server.ServerWebExchange
+import reactor.core.publisher.Mono
+
+/**
+ * Purpose: REST contract of the security endpoints under /api/v2.
+ * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
+ * Limits: Declares no behavior; the controller implementation delegates to the services.
+ */
+@Tag(name = "Security management", description = "API for security operations")
+@RequestMapping("/api/v2/authentication")
+interface ISecurityV2Controller {
+	@Operation(
+		summary = "OAuth2 auth URI",
+		description = "Build and return the OAuth2 provider authentication URI",
+	)
+	@GetMapping("/login/uri")
+	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) @Size(max = AUTHENTICATION_REDIRECT_URI_MAX, message = PARAMETER_TOO_LONG) redirectUri: String?): AuthenticationUriModel
+
+	@Operation(
+		summary = "OAuth2 logout URI",
+		description = "Build and return the OAuth2 provider logout URI, clearing the authentication cookies",
+	)
+	@GetMapping("/logout/uri")
+	fun getLogoutUri(
+		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) @Size(max = AUTHENTICATION_REDIRECT_URI_MAX, message = PARAMETER_TOO_LONG) redirectUri: String?,
+		@Parameter(hidden = true) exchange: ServerWebExchange,
+	): Mono<AuthenticationUriModel>
+
+	@Operation(
+		summary = "Fetch token from code",
+		description = "Exchange an authorization code for an OAuth2 provider token, set as HttpOnly cookies",
+	)
+	@PostMapping("/token")
+	fun fetchToken(
+		@RequestBody @Valid authenticationInfo: AuthenticationInfoWriterDto,
+		@Parameter(hidden = true) exchange: ServerWebExchange,
+	): Mono<Void>
+
+	@Operation(
+		summary = "Fetch token from refresh token",
+		description = "Renew the OAuth2 provider token from the refresh token cookie, set as HttpOnly cookies",
+	)
+	@PostMapping("/token/refresh")
+	fun refreshToken(@Parameter(hidden = true) exchange: ServerWebExchange): Mono<Void>
+
+	@Operation(
+		summary = "Get Current User",
+		description = "Get the logged in User",
+	)
+	@PreAuthorize("isAuthenticated()")
+	@GetMapping("/user/current")
+	fun findCurrentUser(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+	): Mono<CurrentUserReaderDto>
+}

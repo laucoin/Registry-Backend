@@ -30,7 +30,13 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 
+/**
+ * Purpose: Provides the SQL fragments shared by the repositories.
+ * Scope: Holds the audit joins, visibility and project clauses and the text search threshold (word similarity of at least 0.3).
+ * Limits: Fragments only; parameters are always bound, never concatenated. The threshold is a SQL constant, not a configuration key.
+ */
 object GenericQueries {
+	const val TEXT_SEARCH_MIN_SCORE = "0.3"
 	private const val CREATOR_TABLE = "create_tb"
 	const val SELECT_CREATOR = """
         $CREATOR_TABLE.$USER_FIRST_NAME AS $CREATOR_FIRST_NAME,
@@ -62,7 +68,10 @@ object GenericQueries {
 	const val PROJECT_JOIN =
 		"INNER JOIN $PROJECT_TABLE $LINKED_PROJECT_TABLE ON t.$LINKED_PROJECT_ID = $LINKED_PROJECT_TABLE.$ID AND $LINKED_PROJECT_TABLE.$VISIBLE IS TRUE"
 
-	const val VISIBLE_CLAUSE = "(:visibilitySearched IS NULL OR t.$VISIBLE = :visibilitySearched)"
+	const val VISIBLE_CLAUSE = "(:isVisible IS NULL OR t.$VISIBLE = :isVisible)"
+
+	/** Hidden elements only show up for the ids the caller is allowed to re-enable. */
+	const val HIDDEN_READABLE_CLAUSE = "(t.$VISIBLE IS TRUE OR t.$ID IN (:hiddenReadableIds))"
 
 	const val PROJECT_CLAUSE = "(t.$LINKED_PROJECT_ID = :projectId)"
 }

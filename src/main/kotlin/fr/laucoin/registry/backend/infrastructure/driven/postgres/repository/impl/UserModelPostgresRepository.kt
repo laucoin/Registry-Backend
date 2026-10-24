@@ -17,6 +17,11 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Postgres adapter of the user port.
+ * Scope: Delegates to the entity repository and maps entities to domain models.
+ * Limits: Holds no business rule.
+ */
 @Service
 class UserModelPostgresRepository(
 	private val repository: IUserEntityRepository,
@@ -25,8 +30,11 @@ class UserModelPostgresRepository(
 ): IUserPort {
 	override fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>> {
 		return repository.findAll(
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.role,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, UserEntity::fullCount, mapper::toModel)
@@ -34,35 +42,37 @@ class UserModelPostgresRepository(
 
 	override fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel> {
 		return repository.findWithLimit(
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
+			searchParams.query,
+			searchParams.isVisible,
 			limit,
 		).map(mapper::toModel)
 	}
 
-	override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<UserModel> {
-		return repository.findById(id, visibilitySearched)
+	override fun findById(id: UUID, isVisible: Boolean?): Mono<UserModel> {
+		return repository.findById(id, isVisible)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}
 
-	override fun findByOidcId(oidcId: UUID, visibilitySearched: Boolean?): Mono<CurrentUserModel> {
-		return repository.findByOidcId(oidcId, visibilitySearched)
+	override fun findByOidcId(oidcId: UUID, isVisible: Boolean?): Mono<CurrentUserModel> {
+		return repository.findByOidcId(oidcId, isVisible)
 			.map(currentUserMapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}
 
-	override fun findByEmail(email: String, visibilitySearched: Boolean?): Flux<CurrentUserModel> {
-		return repository.findByEmail(email, visibilitySearched)
+	override fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel> {
+		return repository.findByEmail(email, isVisible)
 			.map(currentUserMapper::toModel)
 	}
 
 	override fun findServiceAccount(): Mono<CurrentUserModel> =
 		repository.findServiceAccount().map(currentUserMapper::toModel)
 
-	override fun findByRoleLevel(roleLevel: Int, visibilitySearched: Boolean?): Flux<UserModel> {
-		return repository.findByRoleLevel(roleLevel, visibilitySearched).map(mapper::toModel)
+	override fun findByRoleLevel(roleLevel: Int, isVisible: Boolean?): Flux<UserModel> {
+		return repository.findByRoleLevel(roleLevel, isVisible).map(mapper::toModel)
 	}
+
+	override fun lockLevel0Users(): Flux<UUID> = repository.lockLevel0Users()
 
 	override fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID> {
 		return repository.findUserIdsOlderThanLastLogin(dateThreshold)

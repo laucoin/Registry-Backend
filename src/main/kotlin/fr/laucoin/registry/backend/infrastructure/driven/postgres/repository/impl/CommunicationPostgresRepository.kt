@@ -14,35 +14,24 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Postgres adapter of the communication port.
+ * Scope: Delegates to the entity repository and maps entities to domain models.
+ * Limits: Holds no business rule.
+ */
 @Service
 class CommunicationPostgresRepository(
 	private val repository: ICommunicationEntityRepository,
 	private val mapper: CommunicationEntityMapper,
 ): ICommunicationPort {
-	override fun findPage(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel,
-	): Mono<PageModel<CommunicationModel>> {
-		return repository.findAll(
-			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
-			pageable.limit,
-			pageable.offset,
-		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
-	}
-
 	override fun findByMovementIdsWithLimit(
 		limit: Int,
 		projectId: UUID,
 		movementIds: List<UUID>,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 	): Flux<Pair<UUID, List<CommunicationModel>>> {
 		return if (movementIds.isEmpty()) Flux.empty()
-		else repository.findAllByMovementIdsWithLimit(projectId, movementIds, visibilitySearched, limit)
+		else repository.findAllByMovementIdsWithLimit(projectId, movementIds, isVisible, limit)
 			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
@@ -58,10 +47,12 @@ class CommunicationPostgresRepository(
 		return repository.findAllByMovementId(
 			projectId,
 			movementId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
@@ -71,10 +62,10 @@ class CommunicationPostgresRepository(
 		limit: Int,
 		projectId: UUID,
 		alertIds: List<UUID>,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<Pair<UUID, List<CommunicationModel>>> {
 		return if (alertIds.isEmpty()) Flux.empty()
-		else repository.findAllByAlertIdsWithLimit(projectId, alertIds, visibilitySearched, limit)
+		else repository.findAllByAlertIdsWithLimit(projectId, alertIds, isVisible, limit)
 			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
@@ -90,10 +81,12 @@ class CommunicationPostgresRepository(
 		return repository.findAllByAlertId(
 			projectId,
 			alertId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.from,
+			searchParams.to,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
 		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
@@ -102,9 +95,9 @@ class CommunicationPostgresRepository(
 	override fun findAllByIds(
 		projectId: UUID,
 		ids: List<UUID>,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<CommunicationModel> {
-		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched)
+		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, isVisible)
 			.map(mapper::toModel)
 	}
 
@@ -116,10 +109,10 @@ class CommunicationPostgresRepository(
 		return repository.countAllByMovementId(
 			projectId,
 			movementId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.from,
+			searchParams.to,
 		)
 	}
 
@@ -131,10 +124,10 @@ class CommunicationPostgresRepository(
 		return repository.countAllByAlertId(
 			projectId,
 			alertId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.from,
+			searchParams.to,
 		)
 	}
 
@@ -150,8 +143,8 @@ class CommunicationPostgresRepository(
 		}
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel> {
-		return repository.findById(projectId, id, visibilitySearched)
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<CommunicationModel> {
+		return repository.findById(projectId, id, isVisible)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}

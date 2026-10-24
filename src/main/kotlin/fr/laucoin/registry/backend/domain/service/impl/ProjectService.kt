@@ -1,6 +1,12 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.springframework.http.HttpStatus.FORBIDDEN
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
@@ -10,8 +16,11 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -29,10 +38,16 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages projects, their options, counters and favorites.
+ * Scope: Project lifecycle and the creation of the initial administrator profile.
+ * Limits: Does not manage project profiles beyond the initial one.
+ */
 @Service
 class ProjectService(
 	private val port: IProjectPort,
 	private val profilePort: IProjectProfilePort,
+	private val favoritePort: IProjectFavoritePort,
 	private val userProjectProfileService: IUserProjectProfileService,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
@@ -41,20 +56,89 @@ class ProjectService(
 	override fun findProjectsPage(
 		currentUser: CurrentUserModel,
 		pageable: PageableModel,
-		withProfile: Boolean,
+		withProfile: Boolean?,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
-		return if (!withProfile) {
+		// Without the global read authority, only the Projects the User has a valid Profile on are visible
+		val canReadAll = currentUser.hasAuthority(REGISTRY_PROJECT_R)
+		if (!canReadAll && withProfile == false) {
+			return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
+		}
+
+		searchParams.userId = currentUser.id
+		searchParams.hiddenReadableIds = currentUser.projectIdsWith(REGISTRY_PROJECT_D)
+		return (if (!(withProfile ?: !canReadAll)) {
 			port.findPage(pageable, searchParams)
 		} else port.findPage(
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),
 			pageable,
 			searchParams
-		)
+		)).withCurrentUserProfiles(currentUser).withFavorites(currentUser)
 	}
 
-	override fun findProjectById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
-		return port.findById(id, visibilitySearched)
+	override fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
+		return findProjectById(id, isVisible = null)
+			.withCurrentUserProfile(currentUser)
+			.withFavorite(currentUser)
+	}
+
+	private fun Mono<ProjectModel>.withCurrentUserProfile(currentUser: CurrentUserModel): Mono<ProjectModel> =
+		flatMap<ProjectModel> { project ->
+			profilePort.findProjectProfilesByUserIdAndProjectIds(
+				currentUser.id!!,
+				listOf(project.id!!),
+				ProjectProfileSearchParamModel(isVisible = null)
+			)
+				.collectList()
+				.mapNotNull { profiles -> profiles.maxByOrNull { it.priority() } }
+				.map { project.apply { profile = it } }
+				.defaultIfEmpty(project)
+		}
+
+	private fun Mono<PageModel<ProjectModel>>.withCurrentUserProfiles(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> =
+		flatMap<PageModel<ProjectModel>> { page ->
+			profilePort.findProjectProfilesByUserIdAndProjectIds(
+				currentUser.id!!,
+				page.content.mapNotNull { it.id },
+				ProjectProfileSearchParamModel(isVisible = null)
+			)
+				.collectList()
+				.map { found -> found.groupBy { it.projectId!! }.mapValues { (_, list) -> list.maxBy { it.priority() } } }
+				.map { profiles ->
+					page.content.forEach { it.profile = profiles[it.id] }
+					page
+				}
+		}
+
+	private fun Mono<ProjectModel>.withFavorite(currentUser: CurrentUserModel): Mono<ProjectModel> =
+		flatMap { project ->
+			favoritePort.findFavoriteProjectIds(currentUser.id!!, listOf(project.id!!))
+				.hasElements()
+				.map { project.apply { favorite = it } }
+		}
+
+	private fun Mono<PageModel<ProjectModel>>.withFavorites(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> =
+		flatMap { page ->
+			favoritePort.findFavoriteProjectIds(currentUser.id!!, page.content.mapNotNull { it.id })
+				.collectList()
+				.map { it.toSet() }
+				.map { favoriteIds ->
+					page.content.forEach { it.favorite = it.id in favoriteIds }
+					page
+				}
+		}
+
+	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return findProjectById(id, isVisible = null)
+			.flatMap { favoritePort.add(currentUser.id!!, id) }
+	}
+
+	override fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return favoritePort.remove(currentUser.id!!, id)
+	}
+
+	override fun findProjectById(id: UUID, isVisible: Boolean?): Mono<ProjectModel> {
+		return port.findById(id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
@@ -63,7 +147,7 @@ class ProjectService(
 	}
 
 	override fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID> {
-		return findProjectById(id, visibilitySearched = null)
+		return findProjectById(id, isVisible = null)
 			.handle { it, handle ->
 				if (it.isNotInRange(dateTime)) {
 					log.warn("Failed to editing, date {} is out of project range [{}, {}]", dateTime, it.begin, it.end)
@@ -84,30 +168,32 @@ class ProjectService(
 		end: CustomDateTimeModel?,
 		errorCode: String
 	): Mono<UUID> {
-		return findProjectById(id, visibilitySearched = null)
-			.handle { it, handle ->
-				if (it.isNotInRange(start) || it.isNotInRange(end)) {
-					log.warn(
-						"Failed to editing, one or more dates ({}, {}) are out of project range [{}, {}]",
-						start,
-						end,
-						it.begin,
-						it.end
-					)
-					handle.error(
-						RegistryException(
-							status = UNPROCESSABLE_CONTENT,
-							code = errorCode,
-							args = arrayListOf(
-								start.toString(),
-								end.toString(),
-								it.begin.toString(),
-								it.end.toString()
-							),
-						)
-					)
+		return findProjectById(id, isVisible = null)
+			.handle { project, handle ->
+				if (project.isNotInRange(start) || project.isNotInRange(end)) {
+					handle.error(outOfRange(project, start, end, errorCode))
 				} else handle.next(id)
 			}
+	}
+
+	private fun outOfRange(
+		project: ProjectModel,
+		start: CustomDateTimeModel?,
+		end: CustomDateTimeModel?,
+		errorCode: String,
+	): RegistryException {
+		log.warn(
+			"Failed to editing, one or more dates ({}, {}) are out of project range [{}, {}]",
+			start,
+			end,
+			project.begin,
+			project.end
+		)
+		return RegistryException(
+			status = UNPROCESSABLE_CONTENT,
+			code = errorCode,
+			args = arrayListOf(start.toString(), end.toString(), project.begin.toString(), project.end.toString()),
+		)
 	}
 
 	override fun createProject(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
@@ -116,11 +202,13 @@ class ProjectService(
 				userProjectProfileService.createUserProjectProfileFromProject(currentUser, it)
 					.thenReturn(it)
 			}
+			.withCurrentUserProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	override fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = null)
+		return findProjectById(id, isVisible = null)
 			.validateDates(project)
 			.map {
 				it.apply {
@@ -141,6 +229,9 @@ class ProjectService(
 					.doOnNext { principalCache.invalidateAll(it) }
 					.thenReturn(updated)
 			}
+			.withCurrentUserProfile(currentUser)
+			.withFavorite(currentUser)
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun Mono<ProjectModel>.validateDates(project: ProjectModel): Mono<ProjectModel> = flatMap {
@@ -162,19 +253,19 @@ class ProjectService(
 	}
 
 	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = true)
+		return findProjectById(id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateProject(currentUser)
 	}
 
 	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
-		return findProjectById(id, visibilitySearched = false)
+		return findProjectById(id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateProject(currentUser)
 	}
 
 	override fun deleteProjectById(id: UUID): Mono<Unit> {
-		return findProjectById(id, visibilitySearched = null)
+		return findProjectById(id, isVisible = null)
 			.flatMap {
 				profilePort.findOidcIdsByProjectId(id).collectList()
 					.flatMap { oidcIds ->
@@ -198,4 +289,11 @@ class ProjectService(
 				}
 			}, PURGE_DELETE_CONCURRENCY)
 	}
+
+	/**
+	 * A user may hold several profiles on one project (permanent, temporary support, blocked, rejected...):
+	 * the one that actually grants access, i.e. visible, accepted and available, comes first.
+	 */
+	private fun ProjectProfileModel.priority(): Int =
+		(if (visible) 4 else 0) + (if (status == ACCEPTED) 2 else 0) + (if (availabilityStatus == AVAILABLE) 1 else 0)
 }

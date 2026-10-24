@@ -12,6 +12,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Use-case contract of the vehicle.
+ * Scope: Declares what the controllers and other services can ask for vehicle.
+ * Limits: Contract only; the business rules live in the implementation.
+ */
 interface IVehicleService {
 	fun findVehiclesPage(
 		projectId: UUID,
@@ -19,7 +24,7 @@ interface IVehicleService {
 		searchParams: VehicleSearchParamModel,
 	): Mono<PageModel<VehicleModel>>
 
-	fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+	fun findVehicleById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel>
 
 	fun findVehicleMovementsPage(
 		projectId: UUID,

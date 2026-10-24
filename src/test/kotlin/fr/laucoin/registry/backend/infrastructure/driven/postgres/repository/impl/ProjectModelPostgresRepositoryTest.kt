@@ -1,20 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ProjectCountsModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.OffsetDateTime
-import java.time.ZonedDateTime
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -31,8 +28,16 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class ProjectModelPostgresRepositoryTest: TestContext() {
+class ProjectModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IProjectEntityRepository
 
@@ -41,6 +46,14 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 
 	@Autowired
 	private lateinit var port: IProjectPort
+
+	private var createdProjectId: UUID? = null
+
+	@AfterEach
+	fun cleanupCreatedProject() {
+		createdProjectId?.let { port.deleteById(it).block() }
+		createdProjectId = null
+	}
 
 	private companion object {
 		@JvmStatic
@@ -66,24 +79,77 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			query = null,
+			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
+			at = null,
+			isFavorite = null,
+			userId = null,
+			sortField = null,
+			isDescending = null,
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}
 
 	@Test
+	fun `Should findPage pass the favorite filter and the user to the repository`() {
+		// Arrange
+		val params = ProjectSearchParamModel(query = null, isFavorite = true).apply { userId = UUID.randomUUID() }
+
+		// Act
+		port.findPage(PageableModel(0, 10), params).block()
+
+		// Assert
+		verify(postgresRepository).findAll(
+			query = null,
+			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
+			at = null,
+			isFavorite = true,
+			userId = params.userId,
+			sortField = null,
+			isDescending = null,
+			limit = 10,
+			offset = 0,
+		)
+	}
+
+	@Test
+	fun `Should findPage by ids pass the favorite filter and the user to the repository`() {
+		// Arrange
+		val ids = listOf(defaultProjectId)
+		val params = ProjectSearchParamModel(query = null, isFavorite = true).apply { userId = UUID.randomUUID() }
+
+		// Act
+		port.findPage(ids, PageableModel(0, 10), params).block()
+
+		// Assert
+		verify(postgresRepository).findAllInProjectIds(
+			ids,
+			query = null,
+			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
+			at = null,
+			isFavorite = true,
+			userId = params.userId,
+			sortField = null,
+			isDescending = null,
+			limit = 10,
+			offset = 0,
+		)
+	}
+
+	@Test
 	fun `Should findPage call repository findAllInProjectIds`() {
 		// Arrange
-		val ids = listOf(projectId)
+		val ids = listOf(defaultProjectId)
 		val pageable = PageableModel(0, 10)
 		val params = ProjectSearchParamModel()
 
@@ -92,17 +158,22 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAllInProjectIds(
 			ids,
-			textSearched = null,
-			visibilitySearched = null,
-			dateTimeSearched = null,
-			pageable.limit,
-			pageable.offset,
+			query = null,
+			isVisible = null,
+			hiddenReadableIds = listOf(UUID(0, 0)),
+			at = null,
+			isFavorite = null,
+			userId = null,
+			sortField = null,
+			isDescending = null,
+			limit = pageable.limit,
+			offset = pageable.offset,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -115,25 +186,68 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		expected: Boolean,
 	) {
 		// Act
-		val result = port.validDateTime(projectId, begin, end).block()
+		val result = port.validDateTime(defaultProjectId, begin, end).block()
 
 		// Assert
 		assertEquals(expected, result)
-		verify(postgresRepository).validDateTime(projectId, begin, end)
+		verify(postgresRepository).validDateTime(defaultProjectId, begin, end)
 	}
 
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = port.findById(projectId, visibilitySearched = null).block()
+		val result = port.findById(defaultProjectId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
-			projectId,
-			visibilitySearched = null,
+			defaultProjectId,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
+	}
+
+	@Test
+	fun `Should findById fill the counts of the seeded project`() {
+		// Arrange
+		val id = defaultProjectId
+
+		// Act
+		val result = port.findById(id, isVisible = null).block()
+
+		// Assert
+		assertNotNull(result?.counts)
+		assertTrue(result!!.counts!!.participants > 0)
+		assertTrue(result.counts!!.acceptedProfiles > 0)
+	}
+
+	@Test
+	fun `Should findPage fill the counts of every project`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+
+		// Act
+		val result = port.findPage(pageable, ProjectSearchParamModel()).block()
+
+		// Assert
+		assertNotNull(result)
+		assertTrue(result.content.isNotEmpty())
+		assertTrue(result.content.all { it.counts != null })
+	}
+
+	@Test
+	fun `Should create return zero counts and only the counts of enabled options`() {
+		// Arrange
+		val project = ProjectModel(name = "counts", options = listOf(ProjectOptionEnum.VEHICLE)).apply {
+			create(currentUser())
+		}
+
+		// Act
+		val result = port.create(project).block()
+		createdProjectId = result?.id
+
+		// Assert
+		assertEquals(ProjectCountsModel(0, 0, 0, vehicles = 0), result?.counts)
 	}
 
 	@Test
@@ -142,15 +256,25 @@ class ProjectModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = port.findById(uuid, visibilitySearched = null).block()
+		val result = port.findById(uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findProjectsEligibleForPurge only select projects created before the threshold`() {
+		// Act & Assert
+		assertTrue(postgresRepository.findProjectsEligibleForPurge(LocalDate.EPOCH).collectList().block()!!.isEmpty())
+		assertTrue(
+			postgresRepository.findProjectsEligibleForPurge(LocalDate.now().plusYears(1)).collectList().block()!!
+				.isNotEmpty()
+		)
 	}
 
 	@Nested

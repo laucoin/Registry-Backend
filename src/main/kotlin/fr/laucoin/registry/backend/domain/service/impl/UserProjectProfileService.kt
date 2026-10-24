@@ -14,26 +14,36 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.port.IPreferencesPort
+import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
-import java.time.OffsetTime
-import java.util.Objects
-import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
+import java.time.OffsetTime
+import java.util.Objects
+import java.util.UUID
 
+/**
+ * Purpose: Manages the profiles of the current user across projects.
+ * Scope: Lists and accepts invitations, creates support profiles and guards the last project administrator.
+ * Limits: Does not manage the profiles of other users; see ProjectProfileService.
+ */
 @Service
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
+	private val favoritePort: IProjectFavoritePort,
 	private val roleService: IRoleService,
-	private val preferencesPort: IPreferencesPort,
+	private val principalCache: IPrincipalCacheService,
 	private val transactionalOperator: TransactionalOperator,
-): IUserProjectProfileService, GenericProfileService(port) {
+) : IUserProjectProfileService, GenericProfileService(port) {
+	private companion object {
+	}
+
 	override fun findProjectProfilesPage(
 		userId: UUID,
 		pageable: PageableModel,
@@ -41,17 +51,42 @@ class UserProjectProfileService(
 	): Mono<PageModel<ProjectProfileModel>> {
 		return port
 			.findProjectProfilesPageByUserId(userId, pageable, searchParams)
+			.withFavorites(userId)
 	}
 
-	override fun <T: GenericModel> validateNotLastProjectRoleLevel0(
+	override fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel> {
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
+			.withFavorite(currentUser.id!!)
+	}
+
+	private fun Mono<ProjectProfileModel>.withFavorite(userId: UUID): Mono<ProjectProfileModel> =
+		flatMap { profile ->
+			val projectId = profile.project?.id ?: return@flatMap Mono.just(profile)
+			favoritePort.findFavoriteProjectIds(userId, listOf(projectId))
+				.hasElements()
+				.map { profile.apply { project?.favorite = it } }
+		}
+
+	private fun Mono<PageModel<ProjectProfileModel>>.withFavorites(userId: UUID): Mono<PageModel<ProjectProfileModel>> =
+		flatMap { page ->
+			favoritePort.findFavoriteProjectIds(userId, page.content.mapNotNull { it.project?.id }.distinct())
+				.collectList()
+				.map { it.toSet() }
+				.map { favoriteIds ->
+					page.content.forEach { profile -> profile.project?.let { it.favorite = it.id in favoriteIds } }
+					page
+				}
+		}
+
+	override fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,
 		projectId: UUID?,
 		result: T,
 		error: String
 	): Mono<T> {
-		return port.findLevel0ProjectProfileRoleByUserId(userId, visibilitySearched = true)
-			.filter { Objects.isNull(projectId) || Objects.equals(it.project!!.id, projectId) }
-			.collectList()
+		return port.lockLevel0ProjectProfilesByUserId(userId)
+			.then(Mono.defer { port.findLevel0ProjectProfileRoleByUserId(userId, isVisible = true).collectList() })
+			.map { counts -> counts.filter { c -> Objects.isNull(projectId) || Objects.equals(c.project!!.id, projectId) } }
 			.handle { it, handle ->
 				val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
 				if (projects.isNotEmpty()) {
@@ -67,6 +102,7 @@ class UserProjectProfileService(
 	): Mono<ProjectProfileModel> {
 		val profile = ProjectProfileModel().apply {
 			this.project = project
+			this.projectId = project.id
 			this.user = currentUser
 			this.role = roleService.getLevel0RoleFromProjectRoles()
 			this.status = ACCEPTED
@@ -74,7 +110,6 @@ class UserProjectProfileService(
 		profile.create(currentUser)
 
 		return port.create(profile)
-			.updateSelectedProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -83,7 +118,7 @@ class UserProjectProfileService(
 		id: UUID,
 		status: ProfileStatusEnum
 	): Mono<ProjectProfileModel> {
-		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = true)
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = true)
 			.filter { it.status == INVITED }
 			.notFoundIfEmpty(id)
 			.flatMap { profile ->
@@ -91,18 +126,8 @@ class UserProjectProfileService(
 				profile.update(currentUser)
 				port.update(profile)
 			}
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
-
-	private fun Mono<ProjectProfileModel>.updateSelectedProfile(currentUser: CurrentUserModel): Mono<ProjectProfileModel> =
-		flatMap { newProfile ->
-			preferencesPort.findByUserId(currentUser.id!!, visibilitySearched = null)
-				.flatMap {
-					if (Objects.isNull(it.selectedProfile)) {
-						it.selectedProfile = newProfile
-						preferencesPort.save(it).thenReturn(newProfile)
-					} else Mono.just(newProfile)
-				}
-		}
 
 	override fun createSupportProjectProfile(
 		currentUser: CurrentUserModel,
@@ -112,7 +137,7 @@ class UserProjectProfileService(
 		val nowPlusOneHour = CustomDateTimeModel.now().plusHours(1)
 		val profile = ProjectProfileModel().apply {
 			user = currentUser
-			project = ProjectModel().apply { id = projectId }
+			this.projectId = projectId
 			role = roleService.getLevel0RoleFromProjectRoles()
 			status = ACCEPTED
 			startAccess = now
@@ -128,20 +153,23 @@ class UserProjectProfileService(
 			profile.endAccess!!.toZonedDateTime(OffsetTime.MAX),
 		)
 			.flatMap { port.create(profile) }
-			.updateSelectedProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
-		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, visibilitySearched = null)
+		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
+			.notFoundIfEmpty(id)
 			.flatMap {
 				validateNotLastProjectRoleLevel0(
 					it.user!!.id!!,
-					it.project!!.id!!,
+					it.projectId!!,
 					it,
 					PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 				)
 			}
 			.flatMap { port.deleteById(id) }
+			.`as`(transactionalOperator::transactional)
+			.doOnSuccess { principalCache.invalidate(currentUser.oidcId) }
 	}
 }

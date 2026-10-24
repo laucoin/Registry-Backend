@@ -13,6 +13,7 @@ data class MovementModel(
 	var dateTime: ZonedDateTime = ZonedDateTime.now(),
 	var type: MovementTypeEnum? = null,
 	var reason: MovementReasonEnum? = null,
+	var lastCommunicationDateTime: ZonedDateTime? = null,
 	var activity: ActivityModel? = null,
 	var contentType: ParticipantTypeEnum = ParticipantTypeEnum.REGISTERED,
 	var content: List<MovementContentModel> = emptyList(),
@@ -23,6 +24,8 @@ data class MovementModel(
 		var participant: ParticipantModel? = null,
 		var vehicle: VehicleModel? = null,
 	)
+
+	fun participantIds(): List<UUID> = content.mapNotNull { it.participant?.id }.distinct()
 
 	fun getNewContent(movement: MovementModel): List<MovementContentModel> {
 		return movement.content

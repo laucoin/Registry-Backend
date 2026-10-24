@@ -26,14 +26,21 @@ import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Purpose: Manages the groups of a project and their membership.
+ * Scope: Group CRUD, member add/remove and last-member safety rules.
+ * Limits: Does not move groups; movements belong to MovementService.
+ */
 @Service
 class GroupService(
 	private val projectService: IProjectService,
 	private val port: IGroupPort,
 	private val participantPort: IParticipantPort,
+	private val transactionalOperator: TransactionalOperator,
 	@param:Value($$"${registry.feature.group.searched.max-participant-result}")
 	private val maxParticipantResult: Int,
 ): IGroupService, GenericService() {
@@ -62,38 +69,42 @@ class GroupService(
 	override fun findGroupById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		memberVisibilitySearched: Boolean?,
-		memberAvailabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		memberIsVisible: Boolean?,
+		memberIsAvailable: Boolean?,
 	): Mono<GroupModel> {
 		return port.findByIdWithContent(
 			projectId,
 			id,
-			visibilitySearched,
-			memberVisibilitySearched,
-			memberAvailabilitySearched
+			isVisible,
+			memberIsVisible,
+			memberIsAvailable
 		)
 			.notFoundIfEmpty(id)
 	}
 
-	override fun searchParticipantsByText(projectId: UUID, textSearched: String?): Flux<ParticipantModel> {
+	override fun findGroupSummaryById(projectId: UUID, id: UUID): Mono<GroupModel> {
+		return port.findSummaryById(projectId, id).notFoundIfEmpty(id)
+	}
+
+	override fun searchParticipantsByText(projectId: UUID, query: String?): Flux<ParticipantModel> {
 		return participantPort.findWithLimit(
 			maxParticipantResult,
 			projectId,
-			ParticipantSearchParamModel(typeSearched = REGISTERED, visibilitySearched = true).apply {
-				this.textSearched = textSearched
+			ParticipantSearchParamModel(type = REGISTERED, isVisible = true).apply {
+				this.query = query
 			},
 		)
 	}
 
 	override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateMembers(group.project!!.id!!, group, group.members.mapNotNull { p -> p.id }) }
+			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
 			.flatMap { port.create(group.apply { create(currentUser) }) }
 	}
 
@@ -104,34 +115,36 @@ class GroupService(
 		group: GroupModel
 	): Mono<GroupModel> {
 		return projectService.validateDateTimes(
-			group.project!!.id!!,
+			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap {
-				findGroupById(
-					projectId,
-					id,
-					visibilitySearched = null,
-					memberVisibilitySearched = null,
-					memberAvailabilitySearched = null
-				)
-			}
-			.flatMap {
-				val newMemberIds: List<UUID> = it.getNewMemberIds(group)
-				if (newMemberIds.isEmpty()) Mono.just(it)
-				else validateMembers(projectId, it, newMemberIds)
-			}
-			.map {
-				it.apply {
-					it.name = group.name
-					it.startAvailability = group.startAvailability
-					it.endAvailability = group.endAvailability
-					it.members = group.members
-				}
-			}
+			.flatMap { findLockedGroup(projectId, id) }
+			.flatMap { validateNewMembers(projectId, it, group) }
+			.map { applyUpdate(it, group) }
 			.updateGroup(currentUser)
+			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateNewMembers(projectId: UUID, existing: GroupModel, group: GroupModel): Mono<GroupModel> {
+		val newMemberIds: List<UUID> = existing.getNewMemberIds(group)
+		return if (newMemberIds.isEmpty()) Mono.just(existing)
+		else validateMembers(projectId, existing, newMemberIds)
+	}
+
+	private fun applyUpdate(existing: GroupModel, group: GroupModel): GroupModel {
+		return existing.apply {
+			name = group.name
+			startAvailability = group.startAvailability
+			endAvailability = group.endAvailability
+			members = group.members
+		}
+	}
+
+	private fun findLockedGroup(projectId: UUID, id: UUID): Mono<GroupModel> {
+		return port.lockByIds(listOf(id))
+			.then(Mono.defer { findGroupById(projectId, id, isVisible = null, memberIsVisible = null, memberIsAvailable = null) })
 	}
 
 	override fun addMembersToGroupById(
@@ -140,13 +153,7 @@ class GroupService(
 		id: UUID,
 		memberIds: List<UUID>
 	): Mono<Pair<List<UUID>, List<UUID>>> {
-		return findGroupById(
-			projectId,
-			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
-		)
+		return findLockedGroup(projectId, id)
 			.map { Pair(it, it.getNewMemberIds(memberIds)) }
 			.handle { it, handle ->
 				if (it.second.isEmpty()) {
@@ -167,6 +174,7 @@ class GroupService(
 					.updateGroup(currentUser)
 					.map { Pair(newMemberIds, memberIds.minus(newMemberIds.toSet())) }
 			}
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun removeMemberFromGroupById(
@@ -175,13 +183,7 @@ class GroupService(
 		id: UUID,
 		memberId: UUID
 	): Mono<GroupModel> {
-		return findGroupById(
-			projectId,
-			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
-		)
+		return findLockedGroup(projectId, id)
 			.map { it.apply { members = members.filter { m -> m.id != memberId } } }
 			.handle { it, handle ->
 				if (it.members.isEmpty()) {
@@ -196,6 +198,7 @@ class GroupService(
 				}
 			}
 			.updateGroup(currentUser)
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun Mono<GroupModel>.updateGroup(currentUser: CurrentUserModel) = flatMap {
@@ -203,7 +206,7 @@ class GroupService(
 	}
 
 	private fun validateMembers(projectId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
-		return participantPort.findAllByIds(projectId, newMemberIds, visibilitySearched = null)
+		return participantPort.findAllByIds(projectId, newMemberIds, isVisible = null)
 			.filter { it.type == REGISTERED }
 			.collectList()
 			.handle { it, handle ->
@@ -231,9 +234,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = true,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = true,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.updateVisibility(visibility = false)
 			.updateGroup(currentUser)
@@ -243,9 +246,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = false,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = false,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.updateVisibility(visibility = true)
 			.updateGroup(currentUser)
@@ -255,9 +258,9 @@ class GroupService(
 		return findGroupById(
 			projectId,
 			id,
-			visibilitySearched = null,
-			memberVisibilitySearched = null,
-			memberAvailabilitySearched = null
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
 		)
 			.flatMap { port.deleteById(id) }
 	}
