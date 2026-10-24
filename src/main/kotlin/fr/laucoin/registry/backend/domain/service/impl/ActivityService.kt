@@ -24,9 +24,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Builds the activity feed of a project from its movements, groups and participants.
- * Scope: Reads and aggregates activity entries through ports.
- * Limits: Does not write data and does not check permissions (done on the contract).
+ * Objectif : Construit le fil d'activité d'un projet à partir de ses mouvements, groupes et participants.
+ * Périmètre : Lit et agrège les entrées d'activité via les ports.
+ * Limites : N'écrit aucune donnée et ne vérifie pas les permissions (fait sur le contrat).
  */
 @Service
 class ActivityService(

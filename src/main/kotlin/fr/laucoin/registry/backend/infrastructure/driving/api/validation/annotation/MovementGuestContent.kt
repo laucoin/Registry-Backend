@@ -7,9 +7,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint on the content of a guest movement.
- * Scope: Marks a guest movement body for the guest content validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation sur le contenu d'un mouvement d'invité.
+ * Périmètre : Marque un corps de mouvement d'invité pour le validateur de contenu d'invité.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(CLASS)

@@ -8,9 +8,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Runs the retention sweeps that permanently delete inactive users, projects, contents and configurations.
- * Scope: Resolves the date threshold (explicit or configured) and orchestrates the per-resource purges.
- * Limits: Does not schedule itself and does not authorize callers.
+ * Objectif : Exécute les balayages de rétention qui suppriment définitivement les utilisateurs, projets, contenus et configurations inactifs.
+ * Périmètre : Résout le seuil de date (explicite ou configuré) et orchestre les purges par ressource.
+ * Limites : Ne se planifie pas lui-même et n'autorise pas les appelants.
  */
 interface IPurgeService {
 	fun purgeUsers(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID>

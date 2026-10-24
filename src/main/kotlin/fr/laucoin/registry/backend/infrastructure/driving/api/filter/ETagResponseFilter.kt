@@ -30,9 +30,9 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 
 /**
- * Purpose: Adds an ETag header to the JSON responses that return a single resource.
- * Scope: Derives the ETag from the lastEdition date-time of the body of a single read, an update or a state transition.
- * Limits: Creations set their own ETag; lists, bodies without lastEdition and bodies over 1 MiB are untouched, and it never answers 304.
+ * Objectif : Ajoute un en-tête ETag aux réponses JSON qui renvoient une seule ressource.
+ * Périmètre : Dérive l'ETag de la date-heure lastEdition du corps d'une lecture unitaire, d'une mise à jour ou d'une transition d'état.
+ * Limites : Les créations posent leur propre ETag ; les listes, les corps sans lastEdition et les corps de plus de 1 Mio sont laissés intacts, et il ne répond jamais 304.
  */
 @Component
 @Order(LOWEST_PRECEDENCE)

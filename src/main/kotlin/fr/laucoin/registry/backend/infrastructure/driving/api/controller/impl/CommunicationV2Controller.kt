@@ -23,9 +23,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST adapter of the alert communication endpoints.
- * Scope: Maps communication models and DTOs and delegates to ICommunicationService.
- * Limits: Holds no business rule.
+ * Objectif : Adaptateur REST des endpoints de communication des alertes.
+ * Périmètre : Mappe les modèles de communication et les DTO et délègue à ICommunicationService.
+ * Limites : Ne porte aucune règle métier.
  */
 @RestController
 class CommunicationV2Controller(

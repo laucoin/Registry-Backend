@@ -5,9 +5,9 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Takes a pessimistic lock on a single resource row for the duration of the current transaction.
- * Scope: Locks the row of one lockable resource by id; a missing row is not an error.
- * Limits: Does not read the row and never releases the lock itself, which ends with the transaction.
+ * Objectif : Prend un verrou pessimiste sur la ligne d'une ressource pour la durée de la transaction courante.
+ * Périmètre : Verrouille la ligne d'une ressource verrouillable par id ; une ligne absente n'est pas une erreur.
+ * Limites : Ne lit pas la ligne et ne libère jamais le verrou lui-même, qui prend fin avec la transaction.
  */
 interface IRowLockPort {
 	fun lock(resource: LockableResourceEnum, id: UUID): Mono<Unit>

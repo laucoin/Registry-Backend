@@ -31,9 +31,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Manages the groups of a project and their membership.
- * Scope: Group CRUD, member add/remove and last-member safety rules.
- * Limits: Does not move groups; movements belong to MovementService.
+ * Objectif : Gère les groupes d'un projet et leur composition.
+ * Périmètre : CRUD des groupes, ajout/retrait de membres et règles de sécurité du dernier membre.
+ * Limites : Ne déplace pas les groupes ; les mouvements relèvent de MovementService.
  */
 @Service
 class GroupService(

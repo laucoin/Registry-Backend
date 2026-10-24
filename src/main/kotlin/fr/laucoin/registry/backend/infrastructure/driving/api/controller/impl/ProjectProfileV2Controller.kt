@@ -34,9 +34,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST adapter of the project profile endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the project profile use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints du profil de projet.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage du profil de projet.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class ProjectProfileV2Controller(

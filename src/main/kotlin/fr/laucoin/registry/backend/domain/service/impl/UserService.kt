@@ -36,9 +36,9 @@ import java.util.Objects
 import java.util.UUID
 
 /**
- * Purpose: Manages platform users and their roles.
- * Scope: User lifecycle, blocking and last-administrator safeguards.
- * Limits: Does not authenticate users; authentication is delegated to the external IDP.
+ * Objectif : Gère les utilisateurs de la plateforme et leurs rôles.
+ * Périmètre : Cycle de vie des utilisateurs, blocage et garde-fous du dernier administrateur.
+ * Limites : N'authentifie pas les utilisateurs ; l'authentification est déléguée à l'IDP externe.
  */
 @Service
 class UserService(
@@ -51,7 +51,7 @@ class UserService(
 ) : ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
 	private lateinit var serviceAccount: CurrentUserModel
 
-	// Blocking is deliberate: this runs once on the context-refresh thread
+	// Le blocage est voulu : cela s'exécute une seule fois sur le thread de rafraîchissement du contexte
 	override fun onApplicationEvent(event: ContextRefreshedEvent) {
 		serviceAccount = port.findServiceAccount().blockOptional()
 			.orElseThrow { IllegalStateException("Service account not found") }
@@ -218,7 +218,7 @@ class UserService(
 
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging users inactive since {}", dateThreshold)
-		// Sequential: the "last administrator" checks depend on the users deleted earlier in the same run
+		// Séquentiel : les vérifications du "dernier administrateur" dépendent des utilisateurs supprimés plus tôt dans la même exécution
 		return port.findUserIdsOlderThanLastLogin(dateThreshold)
 			.concatMap(::keepIfPurgeable)
 			.concatMap { purgeUser(it, dryRun) }

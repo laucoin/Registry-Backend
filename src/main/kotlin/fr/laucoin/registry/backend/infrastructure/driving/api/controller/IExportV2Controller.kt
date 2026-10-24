@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST contract of the export endpoints under /api/v2.
- * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
- * Limits: Declares no behavior; the controller implementation delegates to the services.
+ * Objectif : Contrat REST des endpoints d'export sous /api/v2.
+ * Périmètre : Porte les routes, les règles d'autorisation, les bornes de validation et les métadonnées OpenAPI.
+ * Limites : Ne déclare aucun comportement ; l'implémentation du contrôleur délègue aux services.
  */
 @Tag(name = "Data export", description = "API for GDPR personal data export (JSON)")
 @RequestMapping("/api/v2")

@@ -11,9 +11,9 @@ import java.util.Objects
 import java.util.UUID
 
 /**
- * Purpose: Fills the shared audit fields between models and entities.
- * Scope: Maps creation and last edition traces and the project id.
- * Limits: Maps fields only; no query and no business rule.
+ * Objectif : Renseigne les champs d'audit partagés entre modèles et entités.
+ * Périmètre : Mappe les traces de création et de dernière édition et l'id du projet.
+ * Limites : Ne mappe que des champs ; ni requête ni règle métier.
  */
 object GenericExt {
 	fun <M: GenericProjectModel, E: GenericProjectEntity> M.fillWithProjectAndEntity(entity: E): M {

@@ -56,9 +56,9 @@ import tools.jackson.databind.ObjectMapper
 
 
 /**
- * Purpose: Defines the security filter chains, CORS policy and security headers.
- * Scope: Owns authentication, CSRF, rate limiting, response headers and the public endpoint list.
- * Limits: Holds no business authorization; method security on the contracts decides per endpoint.
+ * Objectif : Définit les chaînes de filtres de sécurité, la politique CORS et les en-têtes de sécurité.
+ * Périmètre : Porte l'authentification, le CSRF, la limitation de débit, les en-têtes de réponse et la liste des endpoints publics.
+ * Limites : Ne porte aucune autorisation métier ; la sécurité par méthode sur les contrats décide endpoint par endpoint.
  */
 @Configuration
 @EnableWebFluxSecurity
@@ -96,9 +96,9 @@ class SecurityConfig(
 			.authorizeExchange { it.anyExchange().permitAll() }
 			.configureSecurityHeaders(null)
 			.documentationContentSecurityPolicy()
-			// codeql[java/spring-disabled-csrf-protection]: this chain only serves static Swagger/OpenAPI
-			// docs (GET-only, permitAll, no state-changing request ever reaches it) — CSRF is not
-			// applicable here, the same reasoning that already exempts safe HTTP methods on the main chain.
+			// codeql[java/spring-disabled-csrf-protection] : cette chaîne ne sert que la documentation Swagger/OpenAPI
+			// statique (GET uniquement, permitAll, aucune requête modifiant l'état ne l'atteint) — le CSRF ne
+			// s'applique pas ici, selon le même raisonnement que celui qui exempte déjà les méthodes HTTP sûres sur la chaîne principale.
 			.csrf { it.disable() }
 			.formLogin { it.disable() }
 			.logout { it.disable() }
@@ -234,7 +234,7 @@ class SecurityConfig(
 		it.matchers(managementPortMatcher()).permitAll()
 		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
 		it.pathMatchers(POST, "/api/*/authentication/token", "/api/*/authentication/token/refresh").permitAll()
-		// Static, non-sensitive labels (enums): public to avoid authentication/authorities resolution on each call
+		// Libellés statiques non sensibles (enums) : publics pour éviter la résolution de l'authentification et des autorités à chaque appel
 		it.pathMatchers(GET, "/api/*/metadata/**").permitAll()
 		it.anyExchange().authenticated()
 	}

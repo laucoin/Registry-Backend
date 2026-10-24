@@ -24,9 +24,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Manages the vehicles of a project.
- * Scope: Vehicle CRUD, availability and history.
- * Limits: Does not record movements; those belong to MovementService.
+ * Objectif : Gère les véhicules d'un projet.
+ * Périmètre : CRUD des véhicules, disponibilité et historique.
+ * Limites : N'enregistre pas les mouvements ; ils relèvent de MovementService.
  */
 @Service
 class VehicleService(

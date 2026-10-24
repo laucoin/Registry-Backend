@@ -10,9 +10,9 @@ import java.util.Objects
 import org.springframework.http.HttpStatus.BAD_REQUEST
 
 /**
- * Purpose: Compares and validates date and time values.
- * Scope: Owns the ordering rules for custom date-times and the date range check.
- * Limits: Pure functions; no I/O.
+ * Objectif : Compare et valide des valeurs de date et d'heure.
+ * Périmètre : Porte les règles d'ordre des date-heures personnalisées et la vérification de plage de dates.
+ * Limites : Fonctions pures ; aucune E/S.
  */
 object DateExt {
 	fun requireOrderedRange(from: LocalDate?, to: LocalDate?) {

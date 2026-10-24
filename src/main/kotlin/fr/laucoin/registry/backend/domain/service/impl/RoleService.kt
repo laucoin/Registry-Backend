@@ -20,9 +20,9 @@ import java.util.Objects
 import java.util.UUID
 
 /**
- * Purpose: Holds the roles and their permissions in memory.
- * Scope: Loads the role tables at startup and resolves levels, assignable roles and authorities.
- * Limits: Roles are data loaded once; a change needs a restart.
+ * Objectif : Détient en mémoire les rôles et leurs permissions.
+ * Périmètre : Charge les tables de rôles au démarrage et résout les niveaux, les rôles attribuables et les autorités.
+ * Limites : Les rôles sont des données chargées une fois ; un changement nécessite un redémarrage.
  */
 @Service
 class RoleService(
@@ -38,7 +38,7 @@ class RoleService(
 	@Volatile
 	private var projectRoles: Map<String, Pair<Int, List<String>>> = emptyMap()
 
-	// Blocking is deliberate here: this runs once on the context-refresh thread
+	// Le blocage est voulu ici : cela s'exécute une seule fois sur le thread de rafraîchissement du contexte
 	override fun onApplicationEvent(event: ContextRefreshedEvent) {
 		Mono.zip(loadRoles(port.findUserRoles()), loadRoles(port.findProjectRoles()))
 			.doOnNext { userRoles = it.t1; projectRoles = it.t2 }

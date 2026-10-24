@@ -4,10 +4,10 @@ import java.util.Locale
 import org.springframework.context.i18n.LocaleContextHolder
 
 interface ITranslateService {
-	// The `locale` default only resolves correctly on the normal request-handling path — Spring's
-	// exception-translation and @ExceptionHandler dispatch don't carry the Reactor Context that backs
-	// LocaleContextHolder here, so any caller with direct access to the ServerWebExchange (error
-	// handlers, entry points) must resolve and pass the locale explicitly instead of relying on this.
+	// Le défaut de `locale` ne se résout correctement que sur le chemin normal de traitement des requêtes — la traduction
+	// d'exceptions de Spring et le dispatch @ExceptionHandler ne transportent pas le Reactor Context qui alimente
+	// LocaleContextHolder ici ; tout appelant ayant un accès direct au ServerWebExchange (gestionnaires
+	// d'erreurs, entry points) doit donc résoudre et passer la locale explicitement au lieu de s'appuyer dessus.
 	fun getMessage(
 		code: String,
 		args: Array<Any>? = null,

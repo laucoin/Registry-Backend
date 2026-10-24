@@ -27,9 +27,9 @@ import reactor.netty.http.client.HttpClient
 import reactor.netty.resources.ConnectionProvider
 
 /**
- * Purpose: Talks to the external identity provider.
- * Scope: Builds login and logout URIs, exchanges and refreshes tokens and revokes them.
- * Limits: Stores nothing; redirect URI allow-lists are checked by the service.
+ * Objectif : Dialogue avec le fournisseur d'identité externe.
+ * Périmètre : Construit les URI de connexion et de déconnexion, échange, rafraîchit et révoque les tokens.
+ * Limites : Ne stocke rien ; les listes autorisées d'URI de redirection sont vérifiées par le service.
  */
 @Service
 class IdpAuthenticationAdapter(

@@ -22,9 +22,9 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST adapter of the security endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the security use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints de sécurité.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage de sécurité.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class SecurityV2Controller(

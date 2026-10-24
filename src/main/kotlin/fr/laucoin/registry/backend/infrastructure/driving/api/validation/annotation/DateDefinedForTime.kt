@@ -7,9 +7,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint requiring a date whenever a time is given.
- * Scope: Declares the date and time field names checked by its validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation exigeant une date dès qu'une heure est fournie.
+ * Périmètre : Déclare les noms des champs date et heure vérifiés par son validateur.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(CLASS)

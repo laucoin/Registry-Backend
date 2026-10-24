@@ -4,9 +4,9 @@ import java.time.Instant
 import org.springframework.web.server.ServerWebExchange
 
 /**
- * Purpose: Reads the optimistic concurrency precondition carried by the If-Match request header.
- * Scope: Owns the ETag format (last edition instant, in milliseconds) and the parsing of If-Match into expected instants.
- * Limits: Only parses the header; the comparison and the locking belong to the concurrency service.
+ * Objectif : Lit la précondition de concurrence optimiste portée par l'en-tête de requête If-Match.
+ * Périmètre : Porte le format de l'ETag (instant de dernière édition, en millisecondes) et l'analyse de If-Match en instants attendus.
+ * Limites : Ne fait qu'analyser l'en-tête ; la comparaison et le verrouillage relèvent du service de concurrence.
  */
 object ETagExt {
 	private const val ANY = "*"

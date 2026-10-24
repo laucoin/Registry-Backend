@@ -19,9 +19,9 @@ import org.springframework.web.bind.annotation.RequestParam
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST contract of the preferences endpoints under /api/v2.
- * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
- * Limits: Declares no behavior; the controller implementation delegates to the services.
+ * Objectif : Contrat REST des endpoints des préférences sous /api/v2.
+ * Périmètre : Porte les routes, les règles d'autorisation, les bornes de validation et les métadonnées OpenAPI.
+ * Limites : Ne déclare aucun comportement ; l'implémentation du contrôleur délègue aux services.
  */
 @Tag(name = "User's Preferences management", description = "API for User's Preferences-related operations")
 @RequestMapping("/api/v2/users/preferences")

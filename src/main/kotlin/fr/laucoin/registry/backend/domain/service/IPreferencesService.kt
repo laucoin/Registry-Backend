@@ -7,9 +7,9 @@ import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Use-case contract of the preferences.
- * Scope: Declares what the controllers and other services can ask for preferences.
- * Limits: Contract only; the business rules live in the implementation.
+ * Objectif : Contrat de cas d'usage des préférences.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos des préférences.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
  */
 interface IPreferencesService {
 	fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel>

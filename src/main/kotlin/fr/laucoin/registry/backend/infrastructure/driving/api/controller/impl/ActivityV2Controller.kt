@@ -34,9 +34,9 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 
 /**
- * Purpose: REST adapter of the project activity endpoints.
- * Scope: Maps activity models to DTOs and delegates to IActivityService.
- * Limits: Holds no business rule.
+ * Objectif : Adaptateur REST des endpoints d'activité du projet.
+ * Périmètre : Mappe les modèles d'activité vers des DTO et délègue à IActivityService.
+ * Limites : Ne porte aucune règle métier.
  */
 @RestController
 class ActivityV2Controller(

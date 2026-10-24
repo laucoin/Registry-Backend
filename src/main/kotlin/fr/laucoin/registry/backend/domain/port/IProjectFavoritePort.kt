@@ -5,9 +5,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Persists the projects a user marked as favorite.
- * Scope: Adds, removes and looks up favorites for a given user.
- * Limits: Does not check that the user may read the project; the service owns that rule.
+ * Objectif : Persiste les projets qu'un utilisateur a marqués comme favoris.
+ * Périmètre : Ajoute, retire et recherche les favoris d'un utilisateur donné.
+ * Limites : Ne vérifie pas que l'utilisateur peut lire le projet ; le service porte cette règle.
  */
 interface IProjectFavoritePort {
 	fun add(userId: UUID, projectId: UUID): Mono<Unit>

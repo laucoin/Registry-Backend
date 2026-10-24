@@ -7,9 +7,9 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Use-case contract of the personal data export.
- * Scope: Exports the data of a user or of a participant.
- * Limits: Contract only; the implementation owns the authorization.
+ * Objectif : Contrat de cas d'usage de l'export des données personnelles.
+ * Périmètre : Exporte les données d'un utilisateur ou d'un participant.
+ * Limites : Contrat uniquement ; l'implémentation porte l'autorisation.
  */
 interface IExportService {
 	fun exportUser(currentUser: CurrentUserModel, userId: UUID): Mono<UserExportModel>

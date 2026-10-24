@@ -11,9 +11,9 @@ import reactor.core.publisher.Mono
 import java.util.UUID
 
 /**
- * Purpose: Base class of the services, with the helpers they share.
- * Scope: Provides visibility updates, the purge concurrency constant and the activity option guard.
- * Limits: Holds no use case of its own.
+ * Objectif : Classe de base des services, avec les utilitaires qu'ils partagent.
+ * Périmètre : Fournit les mises à jour de visibilité, la constante de concurrence des purges et la garde de l'option d'activité.
+ * Limites : Ne porte aucun cas d'usage propre.
  */
 open class GenericService : LoggerService() {
 	fun <T : GenericModel> Mono<T>.updateVisibility(visibility: Boolean): Mono<T> {

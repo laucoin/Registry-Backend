@@ -6,9 +6,9 @@ import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 
 /**
- * Purpose: Validator of the DateDefinedForTime constraint.
- * Scope: Fails when the time field is defined without its date.
- * Limits: Reads the fields by reflection; no other check.
+ * Objectif : Validateur de la contrainte DateDefinedForTime.
+ * Périmètre : Échoue lorsque le champ heure est défini sans sa date.
+ * Limites : Lit les champs par réflexion ; aucune autre vérification.
  */
 class DateDefinedForTimeValidator: GenericValidator<DateDefinedForTime, CustomDateTimeWriterDto>() {
 	override fun isValid(value: CustomDateTimeWriterDto, context: ConstraintValidatorContext): Boolean {

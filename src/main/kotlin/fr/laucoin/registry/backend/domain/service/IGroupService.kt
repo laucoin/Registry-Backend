@@ -12,9 +12,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Use-case contract of the group.
- * Scope: Declares what the controllers and other services can ask for group.
- * Limits: Contract only; the business rules live in the implementation.
+ * Objectif : Contrat de cas d'usage du groupe.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du groupe.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
  */
 interface IGroupService {
 	fun findGroupsPage(

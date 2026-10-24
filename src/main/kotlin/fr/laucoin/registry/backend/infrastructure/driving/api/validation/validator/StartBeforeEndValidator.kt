@@ -11,9 +11,9 @@ import java.util.Objects
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
 /**
- * Purpose: Validator of the StartBeforeEnd constraint.
- * Scope: Compares two dates or date-times and passes when the start is strictly before the end.
- * Limits: A missing side passes; unsupported types are a server error.
+ * Objectif : Validateur de la contrainte StartBeforeEnd.
+ * Périmètre : Compare deux dates ou date-heures et valide lorsque le début est strictement antérieur à la fin.
+ * Limites : Un côté manquant est accepté ; les types non supportés sont une erreur serveur.
  */
 class StartBeforeEndValidator: GenericValidator<StartBeforeEnd, Any>() {
 	private lateinit var startField: String

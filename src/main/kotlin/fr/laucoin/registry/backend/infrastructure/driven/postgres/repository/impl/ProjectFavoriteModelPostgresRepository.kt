@@ -8,9 +8,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Postgres adapter of the project favorite port.
- * Scope: Delegates the favorite writes and lookups to the entity repository.
- * Limits: Maps no entity, since a favorite is only a user and project id pair.
+ * Objectif : Adaptateur Postgres du port des favoris de projet.
+ * Périmètre : Délègue les écritures et recherches de favoris au repository d'entités.
+ * Limites : Ne mappe aucune entité, un favori n'étant qu'une paire d'ids d'utilisateur et de projet.
  */
 @Service
 class ProjectFavoriteModelPostgresRepository(

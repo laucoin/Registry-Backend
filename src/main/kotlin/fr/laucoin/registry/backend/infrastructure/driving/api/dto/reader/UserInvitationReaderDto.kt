@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import java.util.UUID
 
-/** A user's profile seen from the user side: the project summary matters, the user is implicit. */
+/** Le profil d'un utilisateur vu côté utilisateur : le résumé du projet compte, l'utilisateur est implicite. */
 data class UserInvitationReaderDto(
 	var project: InvitationProjectReaderDto? = null,
 	var role: LabelDto? = null,

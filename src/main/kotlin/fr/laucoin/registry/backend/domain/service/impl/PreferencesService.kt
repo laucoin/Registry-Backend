@@ -14,9 +14,9 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 /**
- * Purpose: Manages the preferences of the current user.
- * Scope: Creates the default preferences on first read and updates theme, language and refresh mode.
- * Limits: Does not read preferences of other users.
+ * Objectif : Gère les préférences de l'utilisateur courant.
+ * Périmètre : Crée les préférences par défaut à la première lecture et met à jour le thème, la langue et le mode de rafraîchissement.
+ * Limites : Ne lit pas les préférences des autres utilisateurs.
  */
 @Service
 class PreferencesService(

@@ -34,9 +34,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Reactive entity repository of the user table.
- * Scope: Holds the parameterized SQL queries (filters, sort, pagination, locks) on user.
- * Limits: Used by the Postgres adapter only; returns entities, never domain models.
+ * Objectif : Repository d'entités réactif de la table de l'utilisateur.
+ * Périmètre : Porte les requêtes SQL paramétrées de l'utilisateur (filtres, tri, pagination, verrous).
+ * Limites : Utilisé uniquement par l'adaptateur Postgres ; renvoie des entités, jamais des modèles du domaine.
  */
 @Repository
 interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {

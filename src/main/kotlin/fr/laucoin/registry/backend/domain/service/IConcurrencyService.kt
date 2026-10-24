@@ -7,9 +7,9 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Guards an update with the optimistic precondition sent by the client.
- * Scope: Locks the resource row, compares its last edition with the expected ones and runs the update in the same transaction.
- * Limits: Without an expected last edition the update runs unguarded; it never merges conflicting changes.
+ * Objectif : Protège une mise à jour avec la précondition optimiste envoyée par le client.
+ * Périmètre : Verrouille la ligne de la ressource, compare sa dernière édition aux éditions attendues et exécute la mise à jour dans la même transaction.
+ * Limites : Sans dernière édition attendue, la mise à jour s'exécute sans garde ; elle ne fusionne jamais des modifications en conflit.
  */
 interface IConcurrencyService {
 	fun <M : GenericModel, R : Any> updateIfUnchanged(

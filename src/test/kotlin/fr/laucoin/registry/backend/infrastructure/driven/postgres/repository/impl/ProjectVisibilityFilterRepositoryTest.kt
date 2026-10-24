@@ -13,8 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.r2dbc.core.DatabaseClient
 
 /**
- * The project columns are no longer selected with the elements, but the INNER JOIN on the project is kept
- * so the elements of a disabled project must stay hidden.
+ * Les colonnes du projet ne sont plus sélectionnées avec les éléments, mais le INNER JOIN sur le projet est conservé
+ * donc les éléments d'un projet désactivé doivent rester masqués.
  */
 class ProjectVisibilityFilterRepositoryTest: TestContext() {
 	@Autowired

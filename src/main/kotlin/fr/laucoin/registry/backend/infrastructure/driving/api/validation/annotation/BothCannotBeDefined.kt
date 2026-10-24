@@ -7,9 +7,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint forbidding two fields to be defined together.
- * Scope: Declares the two field names checked by its validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation interdisant que deux champs soient définis ensemble.
+ * Périmètre : Déclare les deux noms de champs vérifiés par son validateur.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(CLASS)

@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.domain.constant
 
 /**
- * Purpose: Declares the error codes returned by the API.
- * Scope: Groups the codes by resource; each code is also the i18n message key suffix.
- * Limits: Holds codes only, never message text.
+ * Objectif : Déclare les codes d'erreur renvoyés par l'API.
+ * Périmètre : Regroupe les codes par ressource ; chaque code est aussi le suffixe de la clé de message i18n.
+ * Limites : Ne porte que des codes, jamais de texte de message.
  */
 object ErrorConst {
 	const val NOT_IMPLEMENTED_YET = "NOT_IMPLEMENTED_YET"

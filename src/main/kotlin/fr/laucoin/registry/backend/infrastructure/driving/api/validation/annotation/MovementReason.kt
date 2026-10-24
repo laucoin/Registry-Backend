@@ -8,9 +8,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint on the reason of a movement.
- * Scope: Marks a movement body for the type, reason and activity compatibility validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation sur le motif d'un mouvement.
+ * Périmètre : Marque un corps de mouvement pour le validateur de compatibilité entre type, motif et activité.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(CLASS)

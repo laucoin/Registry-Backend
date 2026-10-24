@@ -7,9 +7,9 @@ import kotlin.annotation.AnnotationTarget.FIELD
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint on the options of a project.
- * Scope: Marks the option list for the dependency validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation sur les options d'un projet.
+ * Périmètre : Marque la liste d'options pour le validateur de dépendances.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(FIELD)

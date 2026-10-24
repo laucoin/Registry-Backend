@@ -11,7 +11,7 @@ data class ProjectModel(
 	var end: CustomDateTimeModel? = null,
 	var options: List<ProjectOptionEnum>? = emptyList(),
 ): GenericModel() {
-	// Current user's profile on this project, only filled by user-oriented reads
+	// Profil de l'utilisateur courant sur ce projet, renseigné uniquement par les lectures orientées utilisateur
 	var profile: ProjectProfileModel? = null
 	var favorite: Boolean = false
 

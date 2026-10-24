@@ -32,9 +32,9 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
 
 /**
- * Purpose: REST adapter of the alert endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the alert use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints de l'alerte.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage de l'alerte.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class AlertV2Controller(

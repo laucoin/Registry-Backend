@@ -8,9 +8,9 @@ import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 
 /**
- * Purpose: Validator of the ProfileAcceptOrReject constraint.
- * Scope: Accepts only the statuses a user may set on an invitation.
- * Limits: Does not check the invitation itself.
+ * Objectif : Validateur de la contrainte ProfileAcceptOrReject.
+ * Périmètre : N'accepte que les statuts qu'un utilisateur peut appliquer à une invitation.
+ * Limites : Ne vérifie pas l'invitation elle-même.
  */
 class ProfileAcceptOrRejectValidator: ConstraintValidator<ProfileAcceptOrReject, ProfileStatusEnum> {
 	override fun isValid(value: ProfileStatusEnum, context: ConstraintValidatorContext): Boolean {

@@ -29,9 +29,9 @@ import java.util.Objects
 import java.util.UUID
 
 /**
- * Purpose: Manages the profiles of the current user across projects.
- * Scope: Lists and accepts invitations, creates support profiles and guards the last project administrator.
- * Limits: Does not manage the profiles of other users; see ProjectProfileService.
+ * Objectif : Gère les profils de l'utilisateur courant à travers les projets.
+ * Périmètre : Liste et accepte les invitations, crée les profils de support et protège le dernier administrateur du projet.
+ * Limites : Ne gère pas les profils des autres utilisateurs ; voir ProjectProfileService.
  */
 @Service
 class UserProjectProfileService(
