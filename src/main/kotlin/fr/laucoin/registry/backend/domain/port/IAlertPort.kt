@@ -10,9 +10,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Driven port giving the domain access to the persisted alert.
- * Scope: Declares the reads, searches and writes of alert that the services rely on.
- * Limits: Contract only; the Postgres adapter owns SQL, entities and mapping.
+ * Objectif : Port driven donnant au domaine l'accès à la persistance de l'alerte.
+ * Périmètre : Déclare les lectures, recherches et écritures de l'alerte dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
  */
 interface IAlertPort {
 	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertModel>

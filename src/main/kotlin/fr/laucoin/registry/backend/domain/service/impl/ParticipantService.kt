@@ -41,9 +41,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Manages the participants of a project.
- * Scope: Participant CRUD, effective dates and group membership consistency.
- * Limits: Does not record movements; those belong to MovementService.
+ * Objectif : Gère les participants d'un projet.
+ * Périmètre : CRUD des participants, dates effectives et cohérence de l'appartenance aux groupes.
+ * Limites : N'enregistre pas les mouvements ; ils relèvent de MovementService.
  */
 @Service
 class ParticipantService(

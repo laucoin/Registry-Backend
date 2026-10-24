@@ -21,9 +21,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST contract of the purge endpoints under /api/v2.
- * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
- * Limits: Declares no behavior; the controller implementation delegates to the services.
+ * Objectif : Contrat REST des endpoints de purge sous /api/v2.
+ * Périmètre : Porte les routes, les règles d'autorisation, les bornes de validation et les métadonnées OpenAPI.
+ * Limites : Ne déclare aucun comportement ; l'implémentation du contrôleur délègue aux services.
  */
 @Tag(name = "Scheduled job management", description = "API for Scheduled job management")
 @RequestMapping("/api/v2/purge")

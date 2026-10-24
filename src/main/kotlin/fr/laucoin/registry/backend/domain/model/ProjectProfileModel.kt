@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 
 data class ProjectProfileModel(
 	var user: UserModel? = null,
-	// Project summary, only loaded for user-oriented reads (invitations, current user profiles)
+	// Résumé du projet, chargé uniquement pour les lectures orientées utilisateur (invitations, profils de l'utilisateur courant)
 	var project: ProjectModel? = null,
 	var role: String? = null,
 	var availabilityStatus: AvailabilityStatusEnum? = null,

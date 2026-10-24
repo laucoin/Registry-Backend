@@ -13,9 +13,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Use-case contract of the project.
- * Scope: Declares what the controllers and other services can ask for project.
- * Limits: Contract only; the business rules live in the implementation.
+ * Objectif : Contrat de cas d'usage du projet.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du projet.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
  */
 interface IProjectService {
 	fun findProjectsPage(

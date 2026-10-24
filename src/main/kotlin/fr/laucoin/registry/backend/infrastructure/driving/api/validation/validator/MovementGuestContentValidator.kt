@@ -8,9 +8,9 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMo
 import jakarta.validation.ConstraintValidatorContext
 
 /**
- * Purpose: Validator of the MovementGuestContent constraint.
- * Scope: Requires guests only on an IN movement and existing participants only on an OUT movement.
- * Limits: Does not check that the referenced participants exist.
+ * Objectif : Validateur de la contrainte MovementGuestContent.
+ * Périmètre : Exige des invités uniquement sur un mouvement IN et des participants existants uniquement sur un mouvement OUT.
+ * Limites : Ne vérifie pas que les participants référencés existent.
  */
 class MovementGuestContentValidator: GenericValidator<MovementGuestContent, GuestMovementWriterDto>() {
 	override fun isValid(value: GuestMovementWriterDto, context: ConstraintValidatorContext): Boolean {

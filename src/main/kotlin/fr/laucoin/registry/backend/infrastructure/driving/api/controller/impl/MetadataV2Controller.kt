@@ -25,9 +25,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST adapter of the metadata endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the metadata use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints de métadonnées.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage des métadonnées.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class MetadataV2Controller(

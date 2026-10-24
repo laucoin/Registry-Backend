@@ -13,9 +13,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Reads and writes the user to project favorite links.
- * Scope: Idempotent insert, delete and lookup by user and project ids.
- * Limits: Holds no audit or visibility data; rows are removed by cascade with the user or the project.
+ * Objectif : Lit et écrit les liens favoris entre utilisateur et projet.
+ * Périmètre : Insertion, suppression et recherche idempotentes par ids d'utilisateur et de projet.
+ * Limites : Ne porte aucune donnée d'audit ou de visibilité ; les lignes sont supprimées en cascade avec l'utilisateur ou le projet.
  */
 @Repository
 interface IProjectFavoriteEntityRepository: ReactiveCrudRepository<ProjectFavoriteEntity, UUID> {

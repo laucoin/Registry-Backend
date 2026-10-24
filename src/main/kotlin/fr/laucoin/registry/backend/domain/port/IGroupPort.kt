@@ -10,9 +10,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Driven port giving the domain access to the persisted group.
- * Scope: Declares the reads, searches and writes of group that the services rely on.
- * Limits: Contract only; the Postgres adapter owns SQL, entities and mapping.
+ * Objectif : Port driven donnant au domaine l'accès à la persistance du groupe.
+ * Périmètre : Déclare les lectures, recherches et écritures du groupe dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
  */
 interface IGroupPort {
 	fun findPage(

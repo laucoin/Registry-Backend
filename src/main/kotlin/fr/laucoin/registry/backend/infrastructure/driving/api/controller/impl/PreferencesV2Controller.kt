@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST adapter of the preferences endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the preferences use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints des préférences.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage des préférences.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class PreferencesV2Controller(

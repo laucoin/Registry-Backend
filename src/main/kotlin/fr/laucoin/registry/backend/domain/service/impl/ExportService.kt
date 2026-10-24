@@ -32,9 +32,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Builds the GDPR personal data exports (user and participant) for access and portability rights.
- * Scope: Export authorization rules and assembly of the export models.
- * Limits: Never loads third-party data (other participants, other authors, free-text messages); does not modify data.
+ * Objectif : Construit les exports de données personnelles RGPD (utilisateur et participant) pour les droits d'accès et de portabilité.
+ * Périmètre : Règles d'autorisation de l'export et assemblage des modèles d'export.
+ * Limites : Ne charge jamais de données de tiers (autres participants, autres auteurs, messages en texte libre) ; ne modifie aucune donnée.
  */
 @Service
 class ExportService(

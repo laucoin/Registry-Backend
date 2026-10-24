@@ -19,9 +19,9 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 /**
- * Purpose: REST adapter of the user project profile endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the user project profile use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints du profil de projet de l'utilisateur.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage du profil de projet de l'utilisateur.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class UserProjectProfileV2Controller(

@@ -39,9 +39,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Manages projects, their options, counters and favorites.
- * Scope: Project lifecycle and the creation of the initial administrator profile.
- * Limits: Does not manage project profiles beyond the initial one.
+ * Objectif : Gère les projets, leurs options, compteurs et favoris.
+ * Périmètre : Cycle de vie du projet et création du profil administrateur initial.
+ * Limites : Ne gère pas les profils de projet au-delà du profil initial.
  */
 @Service
 class ProjectService(
@@ -59,7 +59,7 @@ class ProjectService(
 		withProfile: Boolean?,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
-		// Without the global read authority, only the Projects the User has a valid Profile on are visible
+		// Sans l'autorité de lecture globale, seuls les projets sur lesquels l'utilisateur a un profil valide sont visibles
 		val canReadAll = currentUser.hasAuthority(REGISTRY_PROJECT_R)
 		if (!canReadAll && withProfile == false) {
 			return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
@@ -291,8 +291,8 @@ class ProjectService(
 	}
 
 	/**
-	 * A user may hold several profiles on one project (permanent, temporary support, blocked, rejected...):
-	 * the one that actually grants access, i.e. visible, accepted and available, comes first.
+	 * Un utilisateur peut détenir plusieurs profils sur un projet (permanent, support temporaire, bloqué, rejeté...) :
+	 * celui qui donne réellement accès, c'est-à-dire visible, accepté et disponible, passe en premier.
 	 */
 	private fun ProjectProfileModel.priority(): Int =
 		(if (visible) 4 else 0) + (if (status == ACCEPTED) 2 else 0) + (if (availabilityStatus == AVAILABLE) 1 else 0)

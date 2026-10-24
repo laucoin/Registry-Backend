@@ -7,9 +7,9 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
 import org.springframework.security.oauth2.jwt.Jwt
 
 /**
- * Purpose: Validates the issuer origin of the access tokens.
- * Scope: Accepts a token whose issuer has exactly the trusted scheme, host and port.
- * Limits: Does not check the issuer path, signature or expiry.
+ * Objectif : Valide l'origine de l'émetteur des tokens d'accès.
+ * Périmètre : Accepte un token dont l'émetteur a exactement le schéma, l'hôte et le port de confiance.
+ * Limites : Ne vérifie ni le chemin de l'émetteur, ni la signature, ni l'expiration.
  */
 class JwtIssuerOriginValidator(private val trustedOrigin: String) : OAuth2TokenValidator<Jwt> {
 	override fun validate(token: Jwt): OAuth2TokenValidatorResult {

@@ -31,9 +31,9 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 
 /**
- * Purpose: Provides the SQL fragments shared by the repositories.
- * Scope: Holds the audit joins, visibility and project clauses and the text search threshold (word similarity of at least 0.3).
- * Limits: Fragments only; parameters are always bound, never concatenated. The threshold is a SQL constant, not a configuration key.
+ * Objectif : Fournit les fragments SQL partagés par les repositories.
+ * Périmètre : Porte les jointures d'audit, les clauses de visibilité et de projet et le seuil de recherche textuelle (similarité de mots d'au moins 0,3).
+ * Limites : Fragments uniquement ; les paramètres sont toujours liés, jamais concaténés. Le seuil est une constante SQL, pas une clé de configuration.
  */
 object GenericQueries {
 	const val TEXT_SEARCH_MIN_SCORE = "0.3"
@@ -70,7 +70,7 @@ object GenericQueries {
 
 	const val VISIBLE_CLAUSE = "(:isVisible IS NULL OR t.$VISIBLE = :isVisible)"
 
-	/** Hidden elements only show up for the ids the caller is allowed to re-enable. */
+	/** Les éléments masqués n'apparaissent que pour les ids que l'appelant a le droit de réactiver. */
 	const val HIDDEN_READABLE_CLAUSE = "(t.$VISIBLE IS TRUE OR t.$ID IN (:hiddenReadableIds))"
 
 	const val PROJECT_CLAUSE = "(t.$LINKED_PROJECT_ID = :projectId)"

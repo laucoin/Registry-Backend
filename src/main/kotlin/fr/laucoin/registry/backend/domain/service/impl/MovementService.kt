@@ -80,9 +80,9 @@ import java.util.Objects
 import java.util.UUID
 
 /**
- * Purpose: Manages the arrivals, departures and planned movements of participants, groups and vehicles.
- * Scope: Movement validation, effective dates, presence status and availability updates.
- * Limits: Does not manage participant or group definitions.
+ * Objectif : Gère les arrivées, départs et mouvements planifiés des participants, groupes et véhicules.
+ * Périmètre : Validation des mouvements, dates effectives, statut de présence et mises à jour de disponibilité.
+ * Limites : Ne gère pas les définitions des participants ou des groupes.
  */
 @Service
 class MovementService(

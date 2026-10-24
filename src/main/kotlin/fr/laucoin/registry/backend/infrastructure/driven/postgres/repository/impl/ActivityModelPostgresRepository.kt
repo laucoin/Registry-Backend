@@ -16,9 +16,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Postgres adapter of the activity port.
- * Scope: Delegates to the entity repository and maps entities to domain models.
- * Limits: Holds no business rule.
+ * Objectif : Adaptateur Postgres du port de l'activité.
+ * Périmètre : Délègue au repository d'entités et mappe les entités vers les modèles du domaine.
+ * Limites : Ne porte aucune règle métier.
  */
 @Service
 class ActivityModelPostgresRepository(

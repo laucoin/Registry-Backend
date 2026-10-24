@@ -11,9 +11,9 @@ import org.springframework.security.access.PermissionEvaluator
 import org.springframework.security.core.Authentication
 
 /**
- * Purpose: Evaluates the project-scoped permissions of `hasPermission`.
- * Scope: Matches the `{projectId}_{PERMISSION}` authorities of the caller.
- * Limits: Only the object form is supported; the id and type form fails.
+ * Objectif : Évalue les permissions portées par un projet de `hasPermission`.
+ * Périmètre : Fait correspondre les autorités `{projectId}_{PERMISSION}` de l'appelant.
+ * Limites : Seule la forme objet est supportée ; la forme id et type échoue.
  */
 class PermissionService: PermissionEvaluator {
 	private val log = LoggerFactory.getLogger(this::class.java)

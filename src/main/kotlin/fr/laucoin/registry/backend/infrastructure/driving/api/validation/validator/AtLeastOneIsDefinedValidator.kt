@@ -7,9 +7,9 @@ import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 
 /**
- * Purpose: Validator of the AtLeastOneIsDefined constraint.
- * Scope: Passes when at least one of the two configured fields is not null.
- * Limits: Reads the fields by reflection; no other check.
+ * Objectif : Validateur de la contrainte AtLeastOneIsDefined.
+ * Périmètre : Valide lorsqu'au moins un des deux champs configurés n'est pas null.
+ * Limites : Lit les champs par réflexion ; aucune autre vérification.
  */
 class AtLeastOneIsDefinedValidator: GenericValidator<AtLeastOneIsDefined, Any>() {
 	private lateinit var firstField: String

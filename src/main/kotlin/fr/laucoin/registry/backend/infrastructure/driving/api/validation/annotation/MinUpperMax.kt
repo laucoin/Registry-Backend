@@ -7,9 +7,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint requiring a minimum not above its maximum.
- * Scope: Declares the two numeric field names checked by its validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation exigeant un minimum non supérieur à son maximum.
+ * Périmètre : Déclare les deux noms de champs numériques vérifiés par son validateur.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(CLASS)

@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.domain.constant
 
 /**
- * Purpose: Declares the maximum sizes and character sets accepted for request inputs, one constant per object field.
- * Scope: Holds the bounds enforced by bean validation on writer DTOs, request bodies and query parameters.
- * Limits: Does not hold environment-specific values, which stay in the typed configuration properties.
+ * Objectif : Déclare les tailles maximales et jeux de caractères acceptés pour les entrées de requête, une constante par champ d'objet.
+ * Périmètre : Porte les bornes appliquées par la bean validation sur les DTO d'écriture, les corps de requête et les paramètres de requête.
+ * Limites : Ne porte aucune valeur propre à un environnement, qui reste dans les propriétés de configuration typées.
  */
 object ValidationLimitsConst {
 	const val SEARCH_QUERY_MAX = 100

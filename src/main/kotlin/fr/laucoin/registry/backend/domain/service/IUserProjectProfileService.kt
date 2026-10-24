@@ -12,9 +12,9 @@ import reactor.core.publisher.Mono
 import java.util.UUID
 
 /**
- * Purpose: Use-case contract of the user project profile.
- * Scope: Declares what the controllers and other services can ask for user project profile.
- * Limits: Contract only; the business rules live in the implementation.
+ * Objectif : Contrat de cas d'usage du profil de projet de l'utilisateur.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du profil de projet de l'utilisateur.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
  */
 interface IUserProjectProfileService {
 	fun findProjectProfilesPage(

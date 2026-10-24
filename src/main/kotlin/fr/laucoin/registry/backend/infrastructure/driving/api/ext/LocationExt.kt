@@ -8,9 +8,9 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.server.ServerWebExchange
 
 /**
- * Purpose: Builds the 201 response of a creation endpoint, with the Location and ETag headers of the new resource.
- * Scope: Owns the relative Location computation from the request path and the created resource identifier.
- * Limits: Never builds an absolute URI, since the public host is only known by the reverse proxy.
+ * Objectif : Construit la réponse 201 d'un endpoint de création, avec les en-têtes Location et ETag de la nouvelle ressource.
+ * Périmètre : Porte le calcul de la Location relative à partir du chemin de la requête et de l'identifiant de la ressource créée.
+ * Limites : Ne construit jamais d'URI absolue, l'hôte public n'étant connu que du reverse proxy.
  */
 object LocationExt {
 	fun <T: GenericReaderDto> ServerWebExchange.created(body: T, collectionSuffix: String = ""): ResponseEntity<T> {

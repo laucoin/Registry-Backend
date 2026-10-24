@@ -56,8 +56,8 @@ data class CustomDateTimeModel(
 	private fun clampOffsetTimeToPostgresRange(time: OffsetTime): OffsetTime {
 		val offsetSeconds = time.offset.totalSeconds
 
-		// Postgres only supports a range of -14 to +14 hours for offsets
-		// (OffsetTime.MIN/MAX are outside this range (e.g., -18 hours))
+		// Postgres ne supporte qu'une plage de -14 à +14 heures pour les décalages
+		// (OffsetTime.MIN/MAX sont hors de cette plage (p. ex. -18 heures))
 		val minOffsetSeconds = ZoneOffset.ofHours(-14).totalSeconds
 		val maxOffsetSeconds = ZoneOffset.ofHours(14).totalSeconds
 

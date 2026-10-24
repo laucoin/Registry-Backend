@@ -35,9 +35,9 @@ import java.util.*
     )
 )
 /**
- * Purpose: Configures the OpenAPI document and its groups.
- * Scope: Declares the OAuth2 authorization code scheme and the per-resource API groups.
- * Limits: Serves documentation only when the documentation feature is enabled.
+ * Objectif : Configure le document OpenAPI et ses groupes.
+ * Périmètre : Déclare le schéma OAuth2 authorization code et les groupes d'API par ressource.
+ * Limites : Ne sert la documentation que lorsque la fonctionnalité de documentation est activée.
  */
 class SwaggerConfig(
     @param:Value($$"${registry.security.oauth2.authorization-uri:}")

@@ -52,9 +52,9 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 
 /**
- * Purpose: REST adapter of the movement endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the movement use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints du mouvement.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage du mouvement.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class MovementV2Controller(

@@ -18,12 +18,12 @@ val versionProperties = Properties().apply {
 }
 version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 
-// External libraries 📚
+// Bibliothèques externes 📚
 val apacheTextVersion = "1.15.0"
 val swaggerVersion = "3.1.0"
 val caffeineVersion = "3.2.4"
 
-// Testing 🧪
+// Tests 🧪
 val mockWebServer = "5.5.0"
 val testArch = "1.5.0"
 val mockitoKotlinVersion = "6.3.0"
@@ -44,7 +44,7 @@ repositories {
 }
 
 dependencies {
-	// Security 🔒
+	// Sécurité 🔒
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 
@@ -56,17 +56,17 @@ dependencies {
 	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-	// Monitoring & Observability 👀
+	// Supervision et observabilité 👀
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("io.micrometer:micrometer-registry-prometheus")
 
-	// Reactive context propagation (e.g. LocaleContext across WebFlux thread hops) 🔀
+	// Propagation du contexte réactif (p. ex. LocaleContext entre les changements de thread WebFlux) 🔀
 	implementation("io.micrometer:context-propagation")
 
 	// Documentation 📚
 	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
-	// Data 💾
+	// Données 💾
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("com.github.ben-manes.caffeine:caffeine:$caffeineVersion")
@@ -117,7 +117,7 @@ tasks.withType<BootJar>().configureEach {
 	isPreserveFileTimestamps = false
 	isReproducibleFileOrder = true
 }
-// Points git at the versioned hooks in .githooks (replaces husky's "prepare" script)
+// Pointe git vers les hooks versionnés de .githooks (remplace le script "prepare" de husky)
 val installGitHooks by tasks.registering {
 	val gitDir = layout.projectDirectory.dir(".git").asFile
 	onlyIf { gitDir.exists() && System.getenv("CI") == null }

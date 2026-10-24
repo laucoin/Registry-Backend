@@ -6,9 +6,9 @@ import org.springframework.data.spel.spi.EvaluationContextExtension
 import org.springframework.stereotype.Component
 
 /**
- * Purpose: Exposes the application clock to the SpEL expressions of the repository queries.
- * Scope: Gives the queries the current instant through `:#{registryClock.now}` instead of the database clock.
- * Limits: Provides the instant only; the time zone handling stays in the queries.
+ * Objectif : Expose l'horloge de l'application aux expressions SpEL des requêtes des repositories.
+ * Périmètre : Donne aux requêtes l'instant courant via `:#{registryClock.now}` au lieu de l'horloge de la base de données.
+ * Limites : Ne fournit que l'instant ; la gestion du fuseau horaire reste dans les requêtes.
  */
 @Component
 class ClockEvaluationContextExtension(private val clock: Clock): EvaluationContextExtension {

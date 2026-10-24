@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Triggers the four retention sweeps on their configured cron expressions.
- * Scope: Owns the schedule and the logging of failed runs; every run is a real purge with the configured threshold.
- * Limits: Holds no purge logic; a failed run is logged and never retried until the next cron tick.
+ * Objectif : Déclenche les quatre balayages de rétention selon leurs expressions cron configurées.
+ * Périmètre : Porte la planification et la journalisation des exécutions en échec ; chaque exécution est une vraie purge avec le seuil configuré.
+ * Limites : Ne porte aucune logique de purge ; une exécution en échec est journalisée et jamais rejouée avant le prochain déclenchement cron.
  */
 @Component
 class PurgeScheduler(

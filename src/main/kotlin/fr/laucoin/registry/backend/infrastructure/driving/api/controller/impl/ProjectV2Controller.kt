@@ -23,9 +23,9 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST adapter of the project endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the project use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints du projet.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage du projet.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class ProjectV2Controller(

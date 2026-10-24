@@ -31,9 +31,9 @@ import reactor.core.publisher.Mono
 import tools.jackson.databind.ObjectMapper
 
 /**
- * Purpose: Writes the problem responses of authentication and authorization failures.
- * Scope: Answers 401, 403 and token conversion errors with a localized body.
- * Limits: Never exposes the failure cause.
+ * Objectif : Écrit les réponses d'erreur des échecs d'authentification et d'autorisation.
+ * Périmètre : Répond aux erreurs 401, 403 et de conversion de token avec un corps localisé.
+ * Limites : N'expose jamais la cause de l'échec.
  */
 @Component
 class AuthorizationErrorHandler(

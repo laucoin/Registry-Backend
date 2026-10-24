@@ -40,9 +40,9 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: REST contract of the user project profile endpoints under /api/v2.
- * Scope: Carries the routes, authorization rules, validation bounds and OpenAPI metadata.
- * Limits: Declares no behavior; the controller implementation delegates to the services.
+ * Objectif : Contrat REST des endpoints du profil de projet de l'utilisateur sous /api/v2.
+ * Périmètre : Porte les routes, les règles d'autorisation, les bornes de validation et les métadonnées OpenAPI.
+ * Limites : Ne déclare aucun comportement ; l'implémentation du contrôleur délègue aux services.
  */
 @Tag(name = "User's Profiles management", description = "API for User's Profiles-related operations")
 @RequestMapping("/api/v2/users/profiles")

@@ -12,9 +12,9 @@ import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import java.net.URI
 
 /**
- * Purpose: Builds the JWT decoder of the resource server.
- * Scope: Wires the JWKS source with the audience and issuer origin validators.
- * Limits: Does not map claims to authorities; the token converter does.
+ * Objectif : Construit le décodeur JWT du resource server.
+ * Périmètre : Relie la source JWKS aux validateurs d'audience et d'origine de l'émetteur.
+ * Limites : Ne mappe pas les claims vers des autorités ; le convertisseur de token s'en charge.
  */
 @Configuration
 class JwtDecoderConfig(

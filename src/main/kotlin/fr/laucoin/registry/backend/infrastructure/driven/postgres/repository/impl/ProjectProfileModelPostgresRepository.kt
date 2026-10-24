@@ -22,9 +22,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Postgres adapter of the project profile port.
- * Scope: Delegates to the entity repository and maps entities to domain models.
- * Limits: Holds no business rule.
+ * Objectif : Adaptateur Postgres du port du profil de projet.
+ * Périmètre : Délègue au repository d'entités et mappe les entités vers les modèles du domaine.
+ * Limites : Ne porte aucune règle métier.
  */
 @Service
 class ProjectProfileModelPostgresRepository(

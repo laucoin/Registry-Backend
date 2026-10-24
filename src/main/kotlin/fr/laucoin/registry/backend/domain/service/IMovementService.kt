@@ -25,9 +25,9 @@ import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 
 /**
- * Purpose: Use-case contract of the movement.
- * Scope: Declares what the controllers and other services can ask for movement.
- * Limits: Contract only; the business rules live in the implementation.
+ * Objectif : Contrat de cas d'usage du mouvement.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du mouvement.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
  */
 interface IMovementService {
 	fun findMovementsPage(
