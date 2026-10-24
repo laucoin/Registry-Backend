@@ -16,8 +16,9 @@ Strict guidelines for AI agents and developers working on this reactive Kotlin b
   what is at stake, the relevant code or spec reference (`file:line`), 2–4 options each with its consequences and
   trade-offs, and a recommended option placed first. Group related decisions in a single call. Do not ask when a
   convention of this document or the existing code already settles the point.
-- **Code & Comments:** All source code, identifiers, comments, commit messages, and error-key defaults **must** be
-  written in **US English**.
+- **Code & Comments:** All source code, identifiers, commit messages, and error-key defaults **must** be written in
+  **US English**. Comments and KDoc **must** be written in **French**; the `// Arrange`, `// Act`, `// Assert` test
+  markers stay as is.
 - **Strict Scope:** Address only the requested task. Do not refactor surrounding code or fix unrelated items.
 
 ---
@@ -119,7 +120,7 @@ by tests.
 - **Conflict/Missing:** if a request or a spec would require violating a rule of this document, stop. Propose either to
   update this document or to adjust the request/spec, and proceed only once the user has picked one.
 - `README.md` and internal configuration files must be updated whenever an API, feature, configuration key, migration or
-  dependency changes. The README keeps an exhaustive **"How to install and use it? ⚙️"** section (prerequisites,
+  dependency changes. The README keeps an exhaustive **"Comment l'installer et l'utiliser ? ⚙️"** section (prerequisites,
   configuration keys with defaults, local setup, build/run/test commands).
 - ADRs **001–006, 009, 011** govern the backend (007, 008, 012 are frontend-scoped).
 
@@ -127,16 +128,16 @@ by tests.
 
 ## 9. Comments Policy
 
-- Ask the user before adding any comment. Keep comments synthetic; none about migrations, past states or changelogs.
+- Ask the user before adding any comment. Keep comments synthetic; none about migrations, past states or changelogs. Write them in French.
 - Future work or technical debt is marked `// TODO:`.
 - **Standing exception — KDoc header:** every class, interface or non-trivial unit that is not passive (anything outside
   domain models, DTOs, entities and mappers) gets exactly this block above its declaration:
 
 ```kotlin
 /**
- * Purpose: <what it does, one to two sentences, no per-method detail>
- * Scope: <what it owns / is responsible for>
- * Limits: <what it deliberately does not do, or its known boundaries>
+ * Objectif : <ce qu'il fait, une à deux phrases, sans détail par méthode>
+ * Périmètre : <ce dont il est propriétaire / responsable>
+ * Limites : <ce qu'il ne fait volontairement pas, ou ses bornes connues>
  */
 ```
 
