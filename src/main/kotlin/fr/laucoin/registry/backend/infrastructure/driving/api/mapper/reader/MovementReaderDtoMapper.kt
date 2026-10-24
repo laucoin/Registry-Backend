@@ -28,6 +28,7 @@ class MovementReaderDtoMapper(
 			reason = if (Objects.nonNull(model.reason)) reasonReaderDtoMapper.toDto(model.reason!!)
 			else if (Objects.nonNull(model.activity)) activityReasonReaderDtoMapper.toDto(model.activity!!)
 			else null,
+			lastCommunicationDateTime = model.lastCommunicationDateTime,
 			contentType = model.contentType,
 			content = movementContentMapper.toDtoList(model.content),
 		).apply {

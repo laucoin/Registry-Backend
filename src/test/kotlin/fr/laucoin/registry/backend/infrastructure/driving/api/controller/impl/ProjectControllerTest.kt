@@ -314,7 +314,7 @@ class ProjectControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(REGISTRY_PROJECT_R)
+			.authenticate("${uuid}_$PROJECT_SCOPED_PROJECT_R")
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(uuid), emptyList()))
 			.exchange()
@@ -322,9 +322,24 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
 
-		verify(service).findProjectWithProfileById(currentUser(REGISTRY_PROJECT_R), uuid)
+		verify(service).findProjectWithProfileById(any(), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should findProjectById return 403 with the global read authority but no profile on the project`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_PROJECT_R)
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(UUID.randomUUID()), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+		verifyNoInteractions(service)
 	}
 
 	@Test
@@ -553,7 +568,7 @@ class ProjectControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId), emptyList()))
 			.exchange()
@@ -738,7 +753,7 @@ class ProjectControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(REGISTRY_PROJECT_R)
+			.authenticate(buildAuthority(PROJECT_SCOPED_PROJECT_R))
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId), emptyList()))
 			.exchange()

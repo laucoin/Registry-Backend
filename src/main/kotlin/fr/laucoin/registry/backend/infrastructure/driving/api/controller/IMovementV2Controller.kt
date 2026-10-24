@@ -174,6 +174,7 @@ interface IMovementV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R')")
 	@GetMapping("/{id}/communications")
 	fun findMovementCommunications(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
@@ -307,7 +308,7 @@ interface IMovementV2Controller {
 		summary = "Enable Movement",
 		description = "Enable Movement, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_D')")
 	@PostMapping("/{id}/enable")
 	fun enableMovementById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

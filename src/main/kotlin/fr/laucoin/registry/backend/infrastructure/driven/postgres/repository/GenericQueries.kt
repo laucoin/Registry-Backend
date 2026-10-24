@@ -70,5 +70,8 @@ object GenericQueries {
 
 	const val VISIBLE_CLAUSE = "(:isVisible IS NULL OR t.$VISIBLE = :isVisible)"
 
+	/** Hidden elements only show up for the ids the caller is allowed to re-enable. */
+	const val HIDDEN_READABLE_CLAUSE = "(t.$VISIBLE IS TRUE OR t.$ID IN (:hiddenReadableIds))"
+
 	const val PROJECT_CLAUSE = "(t.$LINKED_PROJECT_ID = :projectId)"
 }

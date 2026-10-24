@@ -68,6 +68,7 @@ interface IParticipantV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_R')")
 	@GetMapping
 	fun findParticipants(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
 		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
@@ -218,7 +219,7 @@ interface IParticipantV2Controller {
 		summary = "Enable Participant",
 		description = "Enable Participant, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_D')")
 	@PostMapping("/{id}/enable")
 	fun enableParticipantById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

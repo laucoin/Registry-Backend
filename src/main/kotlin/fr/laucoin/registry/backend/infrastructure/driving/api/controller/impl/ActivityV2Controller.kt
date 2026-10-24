@@ -30,6 +30,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 
 /**
  * Purpose: REST adapter of the project activity endpoints.
@@ -45,6 +47,7 @@ class ActivityV2Controller(
 	private val writerMapper: ActivityWriterDtoMapper,
 ): IActivityV2Controller {
 	override fun findActivities(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		page: Int,
 		size: Int,
@@ -57,9 +60,10 @@ class ActivityV2Controller(
 		participants: Int?,
 		sort: String?,
 	): Mono<PageModel<ActivityReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_ACTIVITY_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ActivitySearchParamModel(
-			query, isVisible, isAvailable, at,
+			query, visibility, isAvailable, at,
 			parseDuration(minDuration), parseDuration(maxDuration), participants,
 			sort.toSortModel(ActivitySearchParamModel.SORT_FIELDS),
 		)
@@ -72,6 +76,7 @@ class ActivityV2Controller(
 	}
 
 	override fun findActivityMovements(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
 		page: Int,
@@ -82,9 +87,10 @@ class ActivityV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
-			isVisible,
+			visibility,
 			hasActivity = null,
 			type,
 			from,

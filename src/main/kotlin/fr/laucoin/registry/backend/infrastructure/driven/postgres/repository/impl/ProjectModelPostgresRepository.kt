@@ -33,6 +33,7 @@ class ProjectModelPostgresRepository(
 		return repository.findAll(
 			searchParams.query,
 			searchParams.isVisible,
+			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
 			searchParams.at,
 			searchParams.isFavorite,
 			searchParams.userId,
@@ -56,6 +57,7 @@ class ProjectModelPostgresRepository(
 			projectIds,
 			searchParams.query,
 			searchParams.isVisible,
+			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
 			searchParams.at,
 			searchParams.isFavorite,
 			searchParams.userId,
@@ -103,5 +105,9 @@ class ProjectModelPostgresRepository(
 
 	override fun deleteById(id: UUID): Mono<Unit> {
 		return repository.deleteById(id).thenReturn(Unit)
+	}
+
+	private companion object {
+		val NO_PROJECT_ID = listOf(UUID(0, 0))
 	}
 }

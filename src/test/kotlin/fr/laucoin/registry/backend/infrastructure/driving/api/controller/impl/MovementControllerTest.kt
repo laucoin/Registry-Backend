@@ -67,6 +67,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.test.WebTestClientExt.hiddenElementsAuthorities
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -281,7 +282,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -319,7 +320,7 @@ class MovementControllerTest : TestContext() {
 	) {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -359,7 +360,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder("$BASE_URL/contents", listOf(defaultProjectId), listOf(Pair("movementIds", uuid))))
 			.exchange()
@@ -380,7 +381,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder("$BASE_URL/contents", listOf(defaultProjectId), movementIds))
 			.exchange()
@@ -401,7 +402,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(
+			.authenticate(*hiddenElementsAuthorities(), 
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION),
 				buildAuthority(REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R),
 			)
@@ -435,7 +436,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -851,7 +852,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -903,7 +904,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_MOVEMENT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("activityId", activityId))))
 			.exchange()
@@ -934,7 +935,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(defaultProjectId), emptyList()))
 			.exchange()
@@ -955,7 +956,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(defaultProjectId), listOf(Pair("date", date))))
 			.exchange()
@@ -974,7 +975,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(authority)
+			.authenticate(*hiddenElementsAuthorities(), authority)
 			.get()
 			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(defaultProjectId), listOf(Pair("date", date))))
 			.exchange()
@@ -993,7 +994,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(authority)
+			.authenticate(*hiddenElementsAuthorities(), authority)
 			.get()
 			.uri(uriBuilder("$BASE_URL/planned/$path", listOf(defaultProjectId), emptyList()))
 			.exchange()

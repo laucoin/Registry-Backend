@@ -29,6 +29,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.MOVEMENT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.MOVEMENT_TYPE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.SELECT_ACTIVITY_MOVEMENT_SEARCH
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.SELECT_LAST_COMMUNICATION
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.SELECT_LINKED_ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.WITH_CURRENT_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
@@ -81,7 +82,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		"""
         WITH $WITH_CURRENT_MOVEMENT
         SELECT *, COUNT(*) OVER() AS $FULL_COUNT FROM (
-            SELECT DISTINCT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+            SELECT DISTINCT t.*, $SELECT_LAST_COMMUNICATION, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR
             FROM $MOVEMENT_TABLE t $CURRENT_MOVEMENT_JOIN $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
             WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_LINKED_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ) t
