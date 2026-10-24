@@ -181,9 +181,9 @@ class PurgeControllerTest : TestContext() {
 	}
 
 	/**
-	 * Purging more aggressively than the configured retention window is a legitimate operation, so
-	 * the constraint must reject future dates only — never dates that are merely more recent than
-	 * the threshold in configuration.
+	 * Purger plus agressivement que la fenêtre de rétention configurée est une opération légitime ;
+	 * la contrainte ne doit donc rejeter que les dates futures — jamais des dates simplement plus récentes que
+	 * le seuil de configuration.
 	 */
 	@ParameterizedTest
 	@ValueSource(ints = [0, -1])

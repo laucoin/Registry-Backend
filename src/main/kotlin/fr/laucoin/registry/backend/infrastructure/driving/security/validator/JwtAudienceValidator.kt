@@ -7,9 +7,9 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
 import org.springframework.security.oauth2.jwt.Jwt
 
 /**
- * Purpose: Validates the audience of the access tokens.
- * Scope: Accepts a token whose audience contains a trusted client id.
- * Limits: Does not check signature or expiry.
+ * Objectif : Valide l'audience des tokens d'accès.
+ * Périmètre : Accepte un token dont l'audience contient un id client de confiance.
+ * Limites : Ne vérifie ni la signature ni l'expiration.
  */
 class JwtAudienceValidator(private val trustedAudiences: Set<String>): OAuth2TokenValidator<Jwt> {
 	override fun validate(token: Jwt): OAuth2TokenValidatorResult {

@@ -9,9 +9,9 @@ import jakarta.validation.ConstraintValidatorContext
 import org.springframework.http.HttpStatus.BAD_REQUEST
 
 /**
- * Purpose: Validator of the ProjectOptionDependencies constraint.
- * Scope: Answers 400 when an enabled option lacks one of the options it depends on.
- * Limits: Does not check the permission to enable an option.
+ * Objectif : Validateur de la contrainte ProjectOptionDependencies.
+ * Périmètre : Répond 400 lorsqu'une option activée n'a pas l'une des options dont elle dépend.
+ * Limites : Ne vérifie pas la permission d'activer une option.
  */
 class ProjectOptionValidator: ConstraintValidator<ProjectOptionDependencies, List<ProjectOptionEnum>> {
 	override fun isValid(options: List<ProjectOptionEnum>?, context: ConstraintValidatorContext): Boolean {

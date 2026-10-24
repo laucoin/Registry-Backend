@@ -7,9 +7,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint requiring a start strictly before its end.
- * Scope: Declares the start and end field names checked by its validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation exigeant un début strictement antérieur à sa fin.
+ * Périmètre : Déclare les noms des champs début et fin vérifiés par son validateur.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(CLASS)

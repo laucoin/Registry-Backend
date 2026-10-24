@@ -3,9 +3,9 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.ext
 import org.apache.commons.text.similarity.JaroWinklerSimilarity
 
 /**
- * Purpose: Matches a translated label against the text typed by the user in a picker.
- * Scope: Owns the fuzzy comparison (Jaro-Winkler) applied to labels that only exist in the user's language.
- * Limits: Works on presentation labels only; domain search stays in SQL.
+ * Objectif : Compare un libellé traduit au texte saisi par l'utilisateur dans un sélecteur.
+ * Périmètre : Porte la comparaison approximative (Jaro-Winkler) appliquée aux libellés qui n'existent que dans la langue de l'utilisateur.
+ * Limites : Ne travaille que sur des libellés de présentation ; la recherche métier reste en SQL.
  */
 object LabelSearchExt {
 	private val similarity = JaroWinklerSimilarity()

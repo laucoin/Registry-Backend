@@ -38,9 +38,9 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 
 /**
- * Purpose: REST adapter of the group endpoints.
- * Scope: Maps request parameters and DTOs, and delegates to the group use cases.
- * Limits: Holds no business rule; authorization is declared on the contract.
+ * Objectif : Adaptateur REST des endpoints du groupe.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage du groupe.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
  */
 @RestController
 class GroupV2Controller(

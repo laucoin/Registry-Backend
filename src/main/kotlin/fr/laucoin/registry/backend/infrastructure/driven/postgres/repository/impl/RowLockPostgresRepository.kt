@@ -27,9 +27,9 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Postgres adapter of the row lock port.
- * Scope: Issues `SELECT ... FOR UPDATE` on the table of the requested resource, with the id as a bound parameter.
- * Limits: Table names come from constants through the resource enum, never from the request.
+ * Objectif : Adaptateur Postgres du port de verrou de ligne.
+ * Périmètre : Émet `SELECT ... FOR UPDATE` sur la table de la ressource demandée, avec l'id comme paramètre lié.
+ * Limites : Les noms de tables viennent de constantes via l'enum des ressources, jamais de la requête.
  */
 @Service
 class RowLockPostgresRepository(

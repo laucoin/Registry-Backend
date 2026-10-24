@@ -160,8 +160,8 @@ object ParticipantQueries {
 
 	const val PARTICIPANT_TEXT_SEARCH_CLAUSE = "(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
 
-	// A participant is an adult when born on or before today minus 18 years.
-	// Mirrors DateExt.isMajor(), which the driver check relies on — keep both in sync.
+	// Un participant est majeur lorsqu'il est né au plus tard aujourd'hui moins 18 ans.
+	// Reflète DateExt.isMajor(), sur lequel s'appuie la vérification du conducteur — garder les deux synchronisés.
 	const val PARTICIPANT_MAJOR_CLAUSE =
 		"(:isMajor IS NULL OR :isMajor = (t.$PARTICIPANT_BIRTHDAY <= CAST(:#{now} AS DATE) - INTERVAL '18 years'))"
 

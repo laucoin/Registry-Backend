@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 
-/** The current user's profile on a project: the user is implicit, so neither the user nor the project are repeated. */
+/** Le profil de l'utilisateur courant sur un projet : l'utilisateur est implicite, donc ni l'utilisateur ni le projet ne sont répétés. */
 data class ProjectCurrentProfileReaderDto(
 	var role: LabelDto? = null,
 	var availabilityStatus: LabelDto? = null,

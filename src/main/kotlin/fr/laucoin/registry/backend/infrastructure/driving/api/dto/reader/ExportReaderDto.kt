@@ -7,7 +7,7 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 
-/** Modification trace; the author is only flagged, never identified, to protect third parties. */
+/** Trace de modification ; l'auteur est seulement signalé, jamais identifié, pour protéger les tiers. */
 @JsonInclude(NON_NULL)
 data class ExportHistoryReaderDto(
 	val dateTime: ZonedDateTime?,

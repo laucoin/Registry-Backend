@@ -15,9 +15,9 @@ import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Computes the stateless CSRF token and serves it to Spring Security.
- * Scope: Derives the token as an HMAC of the presented access token with the IDP client secret, so nothing is stored.
- * Limits: Valid only for the access token it was derived from.
+ * Objectif : Calcule le token CSRF sans état et le fournit à Spring Security.
+ * Périmètre : Dérive le token comme un HMAC du token d'accès présenté avec le secret client de l'IDP, de sorte que rien n'est stocké.
+ * Limites : Valide uniquement pour le token d'accès dont il est dérivé.
  */
 @Component
 class CsrfTokenService(

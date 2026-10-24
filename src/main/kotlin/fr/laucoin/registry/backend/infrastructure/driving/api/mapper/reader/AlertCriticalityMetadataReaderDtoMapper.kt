@@ -9,9 +9,9 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
 /**
- * Purpose: Builds the alert criticality metadata: the levels and the sentence explaining how they are computed.
- * Scope: Reads the configured age thresholds so the displayed rule always matches the computed criticality.
- * Limits: Does not compute any criticality; the age thresholds are applied by the alert queries.
+ * Objectif : Construit les métadonnées de criticité des alertes : les niveaux et la phrase expliquant leur calcul.
+ * Périmètre : Lit les seuils d'ancienneté configurés pour que la règle affichée corresponde toujours à la criticité calculée.
+ * Limites : Ne calcule aucune criticité ; les seuils d'ancienneté sont appliqués par les requêtes des alertes.
  */
 @Component
 class AlertCriticalityMetadataReaderDtoMapper(

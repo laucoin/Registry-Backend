@@ -14,9 +14,9 @@ import fr.laucoin.registry.backend.domain.model.VehicleModel
 import java.util.Objects
 
 /**
- * Purpose: Computes the availability status of elements with an availability window.
- * Scope: Builds the status of projects, groups, activities, vehicles and profiles from their dates.
- * Limits: Reads the current time only; never persists a status.
+ * Objectif : Calcule le statut de disponibilité des éléments dotés d'une fenêtre de disponibilité.
+ * Périmètre : Construit le statut des projets, groupes, activités, véhicules et profils à partir de leurs dates.
+ * Limites : Lit uniquement l'heure courante ; ne persiste jamais un statut.
  */
 object AvailabilityElementExt {
 	fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {

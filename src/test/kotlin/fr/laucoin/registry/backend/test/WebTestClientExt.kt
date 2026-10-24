@@ -40,7 +40,7 @@ object WebTestClientExt {
 
 	fun buildAuthority(authority: String): String = "${defaultProjectId}_$authority"
 
-	/** Delete permissions of every project element: they also allow listing and re-enabling the hidden ones. */
+	/** Permissions de suppression de chaque élément de projet : elles permettent aussi de lister et de réactiver les éléments masqués. */
 	fun hiddenElementsAuthorities(): Array<String> = listOf(
 		"REGISTRY_PROJECT_D", "REGISTRY_PROJECT_PARTICIPANT_D", "REGISTRY_PROJECT_GROUP_D", "REGISTRY_PROJECT_MOVEMENT_D",
 		"REGISTRY_PROJECT_VEHICLE_D", "REGISTRY_PROJECT_ACTIVITY_D", "REGISTRY_PROJECT_COMMUNICATION_D", "REGISTRY_PROJECT_ALERT_D",

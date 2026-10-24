@@ -6,9 +6,9 @@ import fr.laucoin.registry.backend.domain.model.SortModel
 import org.springframework.http.HttpStatus.BAD_REQUEST
 
 /**
- * Purpose: Turns the raw `sort` request value into a validated sort instruction.
- * Scope: Owns the `field` / `-field` syntax and the per-resource allow-list check.
- * Limits: Handles a single sort key and never builds SQL; an unsupported field is echoed truncated and stripped of control characters.
+ * Objectif : Transforme la valeur brute `sort` de la requête en instruction de tri validée.
+ * Périmètre : Porte la syntaxe `field` / `-field` et la vérification de la liste autorisée par ressource.
+ * Limites : Gère une seule clé de tri et ne construit jamais de SQL ; un champ non supporté est renvoyé tronqué et débarrassé de ses caractères de contrôle.
  */
 object SortExt {
 	private const val DESCENDING_PREFIX = "-"

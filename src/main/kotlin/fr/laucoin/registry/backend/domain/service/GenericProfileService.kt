@@ -11,9 +11,9 @@ import org.springframework.http.HttpStatus.CONFLICT
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Shares the profile conflict check between profile services.
- * Scope: Detects users who already hold an overlapping profile on a project.
- * Limits: Does not create or update profiles.
+ * Objectif : Partage la vérification de conflit de profils entre les services de profils.
+ * Périmètre : Détecte les utilisateurs qui détiennent déjà un profil chevauchant sur un projet.
+ * Limites : Ne crée ni ne met à jour les profils.
  */
 open class GenericProfileService(
 	private val repository: IProjectProfilePort,

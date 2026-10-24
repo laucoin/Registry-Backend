@@ -13,9 +13,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Use-case contract of the activity.
- * Scope: Declares what the controllers and other services can ask for activity.
- * Limits: Contract only; the business rules live in the implementation.
+ * Objectif : Contrat de cas d'usage de l'activité.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos de l'activité.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
  */
 interface IActivityService {
 	fun findActivitiesPage(

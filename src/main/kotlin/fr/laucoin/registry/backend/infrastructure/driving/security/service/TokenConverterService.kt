@@ -27,9 +27,9 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 
 
 /**
- * Purpose: Converts a validated JWT into the current user principal.
- * Scope: Loads or provisions the user, refuses blocked accounts and builds its authorities.
- * Limits: Keeps no session; the principal is cached by the principal cache.
+ * Objectif : Convertit un JWT validé en principal de l'utilisateur courant.
+ * Périmètre : Charge ou provisionne l'utilisateur, refuse les comptes bloqués et construit ses autorités.
+ * Limites : Ne conserve aucune session ; le principal est mis en cache par le cache de principals.
  */
 @Component
 class TokenConverterService(
@@ -62,8 +62,8 @@ class TokenConverterService(
 			.map { UsernamePasswordAuthenticationToken(it, null, it.authorities) }
 	}
 
-	// Not cached on failure: Caffeine's AsyncCache drops an entry whose future completes
-	// exceptionally, so a blocked user always fails fresh from the database.
+	// Pas de cache en cas d'échec : l'AsyncCache de Caffeine supprime une entrée dont le future se termine
+	// en exception, donc un utilisateur bloqué échoue toujours à neuf depuis la base de données.
 	private fun resolveCurrentUser(
 		oidcId: UUID, email: String, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> =

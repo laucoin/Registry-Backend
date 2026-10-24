@@ -7,9 +7,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint requiring at least one of two fields to be defined.
- * Scope: Declares the two field names checked by its validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation exigeant qu'au moins un de deux champs soit défini.
+ * Périmètre : Déclare les deux noms de champs vérifiés par son validateur.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(CLASS)

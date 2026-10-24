@@ -5,9 +5,9 @@ import java.util.UUID
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Driven port giving the domain access to the user preferences.
- * Scope: Reads and saves the preferences of a user.
- * Limits: Contract only; the Postgres adapter owns SQL and mapping.
+ * Objectif : Port driven donnant au domaine l'accès aux préférences de l'utilisateur.
+ * Périmètre : Lit et enregistre les préférences d'un utilisateur.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL et le mapping.
  */
 interface IPreferencesPort {
 	fun findByUserId(userId: UUID, isVisible: Boolean?): Mono<PreferencesModel>

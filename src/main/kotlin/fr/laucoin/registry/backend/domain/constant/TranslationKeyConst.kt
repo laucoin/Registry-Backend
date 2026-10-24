@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.domain.constant
 
 /**
- * Purpose: Declares the prefixes of the translation keys.
- * Scope: Groups the message bundle key prefixes used to label enums and errors.
- * Limits: Holds prefixes only, never message text.
+ * Objectif : Déclare les préfixes des clés de traduction.
+ * Périmètre : Regroupe les préfixes de clés des bundles de messages utilisés pour libeller les enums et les erreurs.
+ * Limites : Ne porte que des préfixes, jamais de texte de message.
  */
 object TranslationKeyConst {
 	const val ALERT_CRITICALITY_PREFIX = "alert.criticality."

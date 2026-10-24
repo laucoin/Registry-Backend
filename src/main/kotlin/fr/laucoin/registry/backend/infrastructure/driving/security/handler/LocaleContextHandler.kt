@@ -10,9 +10,9 @@ import reactor.core.publisher.Mono
 import reactor.util.context.Context
 
 /**
- * Purpose: Propagates the request locale to the reactive context.
- * Scope: Resolves the locale once and writes it to the context so messages are localized across thread hops.
- * Limits: Does not choose the locale rules; the resolver does.
+ * Objectif : Propage la locale de la requête vers le contexte réactif.
+ * Périmètre : Résout la locale une fois et l'écrit dans le contexte pour que les messages soient localisés malgré les changements de thread.
+ * Limites : Ne choisit pas les règles de locale ; le resolver s'en charge.
  */
 @Component
 class LocaleContextHandler(private val localeContextResolver: LocaleContextResolver): WebFilter {

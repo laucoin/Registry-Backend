@@ -5,9 +5,9 @@ import fr.laucoin.registry.backend.domain.model.TokenModel
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Use-case contract of the authentication flow.
- * Scope: Builds login and logout URIs and exchanges or refreshes tokens, after checking the redirect URIs.
- * Limits: Contract only; the implementation holds the allow-lists.
+ * Objectif : Contrat de cas d'usage du flux d'authentification.
+ * Périmètre : Construit les URI de connexion et de déconnexion et échange ou rafraîchit les tokens, après vérification des URI de redirection.
+ * Limites : Contrat uniquement ; l'implémentation porte les listes autorisées.
  */
 interface IAuthenticationService {
 	fun getLoginUri(redirectUri: String): AuthenticationUriModel

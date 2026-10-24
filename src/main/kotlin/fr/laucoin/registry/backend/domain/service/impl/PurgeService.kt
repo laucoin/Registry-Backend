@@ -22,9 +22,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Implements the retention sweeps for users, projects, project contents and project configurations.
- * Scope: Owns the threshold resolution and the delete ordering between dependent resources.
- * Limits: Delegates the actual deletion to the resource services; no scheduling, no authorization.
+ * Objectif : Implémente les balayages de rétention des utilisateurs, projets, contenus de projet et configurations de projet.
+ * Périmètre : Porte la résolution du seuil et l'ordre de suppression entre ressources dépendantes.
+ * Limites : Délègue la suppression effective aux services des ressources ; ni planification, ni autorisation.
  */
 @Service
 class PurgeService(

@@ -50,7 +50,7 @@ data class ProjectProfileEntity(
 	@Column(PROJECT_PROFILE_USER_OIDC_ID)
 	var userOidcId: UUID? = null,
 
-	// Project summary, only filled by the user-oriented queries (SELECT_LINKED_PROJECT)
+	// Résumé du projet, renseigné uniquement par les requêtes orientées utilisateur (SELECT_LINKED_PROJECT)
 	@ReadOnlyProperty
 	@Column(LINKED_PROJECT_NAME)
 	var projectName: String? = null,

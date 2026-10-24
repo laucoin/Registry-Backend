@@ -12,9 +12,9 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Guards the redirect URIs handed to the identity provider before delegating to the authentication port.
- * Scope: Owns the exact-match allow-lists for the login/token flow and for the logout flow.
- * Limits: Does not talk to the identity provider itself and does not manage cookies or sessions.
+ * Objectif : Protège les URI de redirection transmises au fournisseur d'identité avant de déléguer au port d'authentification.
+ * Périmètre : Porte les listes autorisées à correspondance exacte pour le flux de connexion/token et pour le flux de déconnexion.
+ * Limites : Ne dialogue pas lui-même avec le fournisseur d'identité et ne gère ni cookies ni sessions.
  */
 @Service
 class AuthenticationService(

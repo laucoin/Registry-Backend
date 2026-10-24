@@ -33,9 +33,9 @@ import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
 /**
- * Purpose: Turns exceptions into localized problem responses.
- * Scope: Maps registry, validation and concurrency errors to status, code and translated message.
- * Limits: Never exposes internal messages or stack traces.
+ * Objectif : Transforme les exceptions en réponses d'erreur localisées.
+ * Périmètre : Mappe les erreurs métier, de validation et de concurrence vers un statut, un code et un message traduit.
+ * Limites : N'expose jamais de messages internes ni de stack traces.
  */
 @RestControllerAdvice
 class RegistryControllerAdvice(

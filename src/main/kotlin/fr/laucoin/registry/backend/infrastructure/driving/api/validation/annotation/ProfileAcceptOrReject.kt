@@ -8,9 +8,9 @@ import kotlin.annotation.AnnotationTarget.VALUE_PARAMETER
 import kotlin.reflect.KClass
 
 /**
- * Purpose: Bean validation constraint on the status a user sets on an invitation.
- * Scope: Marks the status for the accept or reject validator.
- * Limits: Declaration only.
+ * Objectif : Contrainte de bean validation sur le statut qu'un utilisateur applique à une invitation.
+ * Périmètre : Marque le statut pour le validateur d'acceptation ou de rejet.
+ * Limites : Déclaration uniquement.
  */
 @Repeatable
 @Target(VALUE_PARAMETER)

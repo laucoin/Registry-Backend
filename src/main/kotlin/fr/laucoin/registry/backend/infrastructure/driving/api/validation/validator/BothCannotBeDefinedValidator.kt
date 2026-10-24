@@ -7,9 +7,9 @@ import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 
 /**
- * Purpose: Validator of the BothCannotBeDefined constraint.
- * Scope: Fails when both configured fields are defined.
- * Limits: Reads the fields by reflection; no other check.
+ * Objectif : Validateur de la contrainte BothCannotBeDefined.
+ * Périmètre : Échoue lorsque les deux champs configurés sont définis.
+ * Limites : Lit les champs par réflexion ; aucune autre vérification.
  */
 class BothCannotBeDefinedValidator: GenericValidator<BothCannotBeDefined, Any>() {
 	private lateinit var firstField: String

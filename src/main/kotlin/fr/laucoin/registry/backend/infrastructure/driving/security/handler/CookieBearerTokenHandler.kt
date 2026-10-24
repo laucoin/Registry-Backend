@@ -11,9 +11,9 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 /**
- * Purpose: Reads the bearer token from the Authorization header or the access cookie.
- * Scope: Prefers the header and falls back to the access token cookie.
- * Limits: Does not validate the token.
+ * Objectif : Lit le bearer token depuis l'en-tête Authorization ou le cookie d'accès.
+ * Périmètre : Privilégie l'en-tête et se rabat sur le cookie du token d'accès.
+ * Limites : Ne valide pas le token.
  */
 @Component
 class CookieBearerTokenHandler : ServerAuthenticationConverter {

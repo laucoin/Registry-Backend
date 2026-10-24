@@ -9,9 +9,9 @@ import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.stereotype.Component
 
 /**
- * Purpose: Writes and reads the authentication cookies.
- * Scope: Sets and clears the HttpOnly access and refresh cookies and extracts their values.
- * Limits: Does not issue or validate tokens.
+ * Objectif : Écrit et lit les cookies d'authentification.
+ * Périmètre : Pose et efface les cookies HttpOnly d'accès et de rafraîchissement et en extrait les valeurs.
+ * Limites : Ne délivre ni ne valide de tokens.
  */
 @Component
 class AuthenticationCookieService(
@@ -26,9 +26,9 @@ class AuthenticationCookieService(
 	}
 
 	/**
-	 * Scoped to the whole authentication sub-tree, not just `/token` — a cookie's path only covers
-	 * itself and its own sub-paths, so a narrower scope would silently exclude sibling routes like
-	 * `/logout/uri`, which needs this cookie to revoke the refresh token at the identity provider.
+	 * Portée sur toute la sous-arborescence d'authentification, pas seulement `/token` — le chemin d'un cookie ne couvre que
+	 * lui-même et ses propres sous-chemins ; une portée plus étroite exclurait silencieusement des routes sœurs comme
+	 * `/logout/uri`, qui a besoin de ce cookie pour révoquer le refresh token auprès du fournisseur d'identité.
 	 */
 	private val refreshTokenPath: String get() = "$apiPrefix/v2/authentication"
 

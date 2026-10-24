@@ -42,9 +42,9 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 /**
- * Purpose: Manages the communications attached to an alert.
- * Scope: Creation and reading of communications and their alert links.
- * Limits: Does not own alert status rules; those belong to AlertService.
+ * Objectif : Gère les communications rattachées à une alerte.
+ * Périmètre : Création et lecture des communications et de leurs liens avec les alertes.
+ * Limites : Ne porte pas les règles de statut des alertes ; elles relèvent de AlertService.
  */
 @Service
 class CommunicationService(
