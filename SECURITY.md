@@ -1,37 +1,36 @@
-# Security Policy
+# Politique de sécurité
 
-## Supported Versions
+## Versions supportées
 
-This project follows a rolling-release model driven by Semantic Release. Only the
-**five most recent `x.y.z` releases** are kept in
-the container registry and receive security fixes.
+Ce projet suit un modèle de rolling release piloté par Semantic Release. Seules les
+**cinq dernières releases `x.y.z`** sont conservées dans
+le registre de conteneurs et reçoivent les correctifs de sécurité.
 
-| Version                | Supported          |
-| ---------------------- | ------------------ |
-| Latest release         | :white_check_mark: |
-| Previous 4 releases    | :white_check_mark: |
-| Older than 5 releases  | :x:                |
+| Version                  | Supportée          |
+| ------------------------ | ------------------ |
+| Dernière release         | :white_check_mark: |
+| 4 releases précédentes   | :white_check_mark: |
+| Plus ancienne que 5 releases | :x:            |
 
-## Reporting a Vulnerability
+## Signaler une vulnérabilité
 
-**Please do not open a public issue for security vulnerabilities.**
+**Merci de ne pas ouvrir d'issue publique pour les vulnérabilités de sécurité.**
 
-Report privately through GitHub's **"Report a vulnerability"** button under the
-repository's **Security** tab (Private Vulnerability Reporting). If that is
-unavailable, email **luc.aucoin1998@gmail.com** instead.
+Signalez-la en privé via le bouton **« Report a vulnerability »** de GitHub, sous l'onglet **Security** du dépôt
+(Private Vulnerability Reporting). S'il n'est pas disponible, écrivez plutôt à **luc.aucoin1998@gmail.com**.
 
-Please include:
+Merci d'inclure :
 
-- A description of the vulnerability and its impact
-- Steps to reproduce (proof-of-concept if possible)
-- Affected version(s) / image tag(s)
-- Any suggested remediation
+- Une description de la vulnérabilité et de son impact
+- Les étapes de reproduction (preuve de concept si possible)
+- La ou les versions / tags d'image concernés
+- Toute piste de correction
 
-## What to Expect
+## À quoi s'attendre
 
-- **Acknowledgement** within **3 business days**.
-- An initial assessment and severity rating within **7 business days**.
-- Coordinated disclosure: we'll agree on a timeline before any public
-  disclosure, and credit you in the release notes if you wish.
+- **Accusé de réception** sous **3 jours ouvrés**.
+- Une évaluation initiale et un niveau de sévérité sous **7 jours ouvrés**.
+- Divulgation coordonnée : nous convenons d'un calendrier avant toute divulgation publique, et vous mentionnons dans
+  les notes de version si vous le souhaitez.
 
-Thank you for helping keep this project and its users safe.
+Merci de contribuer à la sécurité de ce projet et de ses utilisateurs.
