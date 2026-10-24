@@ -29,6 +29,16 @@ data class CurrentUserModel(
 
 	fun hasAuthority(authority: String): Boolean = authorities.any { it.authority == authority }
 
+	/** Ids of the projects on which the user holds [permission]. */
+	fun projectIdsWith(permission: String): List<UUID> = authorities
+		.mapNotNull { it.authority }
+		.filter { it.endsWith("_$permission") }
+		.mapNotNull { runCatching { UUID.fromString(it.removeSuffix("_$permission")) }.getOrNull() }
+
+	/** Hidden elements are reserved to the callers holding [permission] on [projectId]: the others only get visible ones. */
+	fun visibilityFor(requested: Boolean?, projectId: UUID, permission: String): Boolean? =
+		if (hasAuthority("${projectId}_$permission")) requested else true
+
 	fun hasAuthority(projectId: UUID, authority: String): Boolean =
 		authorities.any { it.authority == "${projectId}_$authority" }
 

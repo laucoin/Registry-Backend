@@ -34,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 
 /**
  * Purpose: REST adapter of the group endpoints.
@@ -63,9 +65,10 @@ class GroupV2Controller(
 		hasOnSiteMembers: Boolean?,
 		sort: String?,
 	): Mono<PageModel<GroupWithoutMemberReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_GROUP_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = GroupSearchParamModel(
-			query, isVisible, isPresent, at,
+			query, visibility, isPresent, at,
 			memberUserId = currentUser.id.takeIf { mine == true },
 			hasOnSiteMembers = hasOnSiteMembers,
 			sort = sort.toSortModel(GroupSearchParamModel.SORT_FIELDS),
@@ -75,6 +78,7 @@ class GroupV2Controller(
 	}
 
 	override fun findGroupMembersByGroupId(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
 		page: Int,
@@ -91,9 +95,10 @@ class GroupV2Controller(
 		birthdayTo: LocalDate?,
 		sort: String?,
 	): Mono<PageModel<ParticipantReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ParticipantSearchParamModel(
-			query, isMajor, type, isVisible, status, at,
+			query, isMajor, type, visibility, status, at,
 			hasUser = hasUser,
 			isOnSite = onSite,
 			birthdayFrom = birthdayFrom,

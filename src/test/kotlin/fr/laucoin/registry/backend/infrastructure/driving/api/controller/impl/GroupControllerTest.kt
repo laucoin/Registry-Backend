@@ -44,6 +44,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.test.WebTestClientExt.hiddenElementsAuthorities
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -209,7 +210,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -246,7 +247,7 @@ class GroupControllerTest : TestContext() {
 	) {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -299,7 +300,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -339,7 +340,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -375,7 +376,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -716,7 +717,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_D))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -875,7 +876,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(
 				uriBuilder(
@@ -905,7 +906,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("mine", true), Pair("hasOnSiteMembers", true))))
 			.exchange()
@@ -929,7 +930,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("mine", false), Pair("hasOnSiteMembers", false))))
 			.exchange()
@@ -956,7 +957,7 @@ class GroupControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), *hiddenElementsAuthorities())
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.exchange()
@@ -968,5 +969,28 @@ class GroupControllerTest : TestContext() {
 			.jsonPath("$.content[0].inMembersCount").isEqualTo(3)
 			.jsonPath("$.content[0].outMembersCount").isEqualTo(2)
 			.jsonPath("$.content[0].overdueMembersCount").isEqualTo(1)
+	}
+
+	@Test
+	fun `Should findGroups only forward visible groups without the delete permission`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(GroupModel()))
+		whenever(service.findGroupsPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(lightReaderMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(GroupReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R), buildAuthority(REGISTRY_PROJECT_GROUP_U))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("isVisible", false))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findGroupsPage(defaultProjectId, pageable, GroupSearchParamModel(isVisible = true))
 	}
 }

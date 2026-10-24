@@ -43,6 +43,7 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
+import fr.laucoin.registry.backend.test.WebTestClientExt.hiddenElementsAuthorities
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -344,7 +345,7 @@ class AlertControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.get()
 			.uri(
 				uriBuilder(
@@ -389,7 +390,7 @@ class AlertControllerTest : TestContext() {
 	) {
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.get()
 			.uri(
 				uriBuilder(
@@ -425,7 +426,7 @@ class AlertControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("criticality", criticality))))
 			.exchange()
@@ -445,7 +446,7 @@ class AlertControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(*hiddenElementsAuthorities(), buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -493,7 +494,7 @@ class AlertControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(
+			.authenticate(*hiddenElementsAuthorities(), 
 				buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R),
 				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT)
 			)
@@ -535,7 +536,7 @@ class AlertControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(
+			.authenticate(*hiddenElementsAuthorities(), 
 				buildAuthority(REGISTRY_PROJECT_ALERT_COMMUNICATION_R),
 				buildAuthority(REGISTRY_PROJECT_OPTION_ALERT)
 			)
@@ -804,7 +805,7 @@ class AlertControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_U), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_D), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()

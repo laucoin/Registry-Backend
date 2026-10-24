@@ -259,6 +259,20 @@ class ProjectServiceTest {
 	}
 
 	@Test
+	fun `Should findProjectsPage only reveal hidden projects the user can delete`() {
+		// Arrange
+		val projectId = UUID.randomUUID()
+		val params = ProjectSearchParamModel()
+		whenever(port.findPage(any(), any())).thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
+
+		// Act
+		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R, "${projectId}_REGISTRY_PROJECT_D"), PageableModel(0, 10), false, params).block()
+
+		// Assert
+		assertEquals(listOf(projectId), params.hiddenReadableIds)
+	}
+
+	@Test
 	fun `Should findProjectsPage refuse to list every project without the global read authority`() {
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {

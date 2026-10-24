@@ -34,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 
 /**
  * Purpose: REST adapter of the participant endpoints.
@@ -51,6 +53,7 @@ class ParticipantV2Controller(
 	private val writerMapper: ParticipantWriterDtoMapper,
 ): IParticipantV2Controller {
 	override fun findParticipants(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		page: Int,
 		size: Int,
@@ -66,12 +69,13 @@ class ParticipantV2Controller(
 		birthdayTo: LocalDate?,
 		sort: String?,
 	): Mono<PageModel<ParticipantReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ParticipantSearchParamModel(
 			query,
 			isMajor,
 			type,
-			isVisible,
+			visibility,
 			status,
 			at,
 			hasUser = hasUser,
@@ -118,9 +122,10 @@ class ParticipantV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
-			isVisible,
+			visibility,
 			hasActivity,
 			type,
 			from,

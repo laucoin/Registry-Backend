@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_LAST_COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
@@ -34,6 +35,9 @@ data class MovementEntity(
 
 	@Column(MOVEMENT_REASON)
 	var reason: MovementReasonEnum? = null,
+	@ReadOnlyProperty
+	@Column(MOVEMENT_LAST_COMMUNICATION_DATE_TIME)
+	var lastCommunicationDateTime: ZonedDateTime? = null,
 
 	@Column(MOVEMENT_ACTIVITY_ID)
 	var activityId: UUID? = null,

@@ -451,6 +451,8 @@ class MovementServiceTest {
 		whenever(groupPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultGroup()))
 		whenever(groupPort.findContent(any(), any(), anyOrNull(), anyOrNull()))
 			.thenReturn(Flux.just(Pair(defaultGroupId, listOf(defaultParticipant()))))
+		val detailedMember = defaultParticipant().apply { status = PresenceStatusEnum.IN }
+		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(detailedMember))
 
 		// Act
 		val result = service.searchParticipantsAndGroupsByText(defaultProjectId, type, query).block()
@@ -459,13 +461,32 @@ class MovementServiceTest {
 		assertEquals(1, result?.t1?.size)
 		assertEquals(defaultParticipant(), result?.t1?.first())
 		assertEquals(1, result?.t2?.size)
-		assertEquals(defaultGroup().apply { members = listOf(defaultParticipant()) }, result?.t2?.first())
+		assertEquals(defaultGroup().apply { members = listOf(detailedMember) }, result?.t2?.first())
+		assertEquals(PresenceStatusEnum.IN, result?.t2?.first()?.members?.first()?.status)
 
 		verify(participantPort).findWithLimit(MAX_PARTICIPANTS, defaultProjectId, expectedParticipantSearch)
 		verify(groupPort).findWithLimit(MAX_GROUPS, defaultProjectId, expectedGroupSearch)
 		verify(groupPort).findContent(
 			defaultProjectId, listOf(defaultGroupId), isVisible = true, isAvailable = true
 		)
+		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipant().id!!), isVisible = true)
+	}
+
+	@Test
+	fun `Should searchParticipantsAndGroupsByText not return a group without any available member`() {
+		// Arrange
+		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(groupPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultGroup()))
+		whenever(groupPort.findContent(any(), any(), anyOrNull(), anyOrNull()))
+			.thenReturn(Flux.just(Pair(defaultGroupId, emptyList<ParticipantModel>())))
+		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+
+		// Act
+		val result = service.searchParticipantsAndGroupsByText(defaultProjectId, REGISTERED, "searched").block()
+
+		// Assert
+		assertEquals(1, result?.t1?.size)
+		assertEquals(0, result?.t2?.size)
 	}
 
 	@Test

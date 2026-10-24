@@ -184,9 +184,26 @@ class MovementService(
 					groups.mapNotNull(GroupModel::id),
 					isVisible = true,
 					isAvailable = true,
-				).map {
-					groups.first { g -> g.id == it.first }.apply { members = it.second }
-				}.collectList()
+				)
+					.filter { (_, members) -> members.isNotEmpty() }
+					.collectList()
+					.flatMap { contents -> withMembersStatus(projectId, groups, contents) }
+			}
+	}
+
+	private fun withMembersStatus(
+		projectId: UUID,
+		groups: List<GroupModel>,
+		contents: List<Pair<UUID, List<ParticipantModel>>>,
+	): Mono<List<GroupModel>> {
+		val memberIds = contents.flatMap { it.second }.mapNotNull(ParticipantModel::id).distinct()
+
+		return participantPort.findAllByIds(projectId, memberIds, isVisible = true)
+			.collectMap { it.id!! }
+			.map { detailed ->
+				contents.map { (groupId, members) ->
+					groups.first { it.id == groupId }.apply { this.members = members.map { detailed[it.id] ?: it } }
+				}
 			}
 	}
 

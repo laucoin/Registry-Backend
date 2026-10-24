@@ -48,6 +48,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 
 /**
  * Purpose: REST adapter of the movement endpoints.
@@ -85,9 +87,10 @@ class MovementV2Controller(
 		activityId: UUID?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
-			isVisible,
+			visibility,
 			hasActivity,
 			type,
 			from,
@@ -185,6 +188,7 @@ class MovementV2Controller(
 	}
 
 	override fun findMovementCommunications(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
 		page: Int,
@@ -195,9 +199,10 @@ class MovementV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<CommunicationReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = CommunicationSearchParamModel(
-			query, isVisible, from, to,
+			query, visibility, from, to,
 			sort = sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
 		)
 

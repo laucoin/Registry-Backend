@@ -40,6 +40,12 @@ object WebTestClientExt {
 
 	fun buildAuthority(authority: String): String = "${defaultProjectId}_$authority"
 
+	/** Delete permissions of every project element: they also allow listing and re-enabling the hidden ones. */
+	fun hiddenElementsAuthorities(): Array<String> = listOf(
+		"REGISTRY_PROJECT_D", "REGISTRY_PROJECT_PARTICIPANT_D", "REGISTRY_PROJECT_GROUP_D", "REGISTRY_PROJECT_MOVEMENT_D",
+		"REGISTRY_PROJECT_VEHICLE_D", "REGISTRY_PROJECT_ACTIVITY_D", "REGISTRY_PROJECT_COMMUNICATION_D", "REGISTRY_PROJECT_ALERT_D",
+	).map(::buildAuthority).toTypedArray()
+
 	fun WebTestClient.authenticate(vararg authorities: String): WebTestClient {
 		val currentUser = currentUser(*authorities)
 		authentication(currentUser)

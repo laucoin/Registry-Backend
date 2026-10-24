@@ -26,6 +26,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_D
 
 /**
  * Purpose: REST adapter of the vehicle endpoints.
@@ -41,6 +43,7 @@ class VehicleV2Controller(
 	private val writerMapper: VehicleWriterDtoMapper,
 ): IVehicleV2Controller {
 	override fun findVehicles(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		page: Int,
 		size: Int,
@@ -52,9 +55,10 @@ class VehicleV2Controller(
 		model: String?,
 		sort: String?,
 	): Mono<PageModel<VehicleReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_VEHICLE_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = VehicleSearchParamModel(
-			query, isVisible, status, at, brand, model,
+			query, visibility, status, at, brand, model,
 			sort = sort.toSortModel(VehicleSearchParamModel.SORT_FIELDS),
 		)
 
@@ -78,9 +82,10 @@ class VehicleV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_D)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
-			isVisible,
+			visibility,
 			hasActivity,
 			type,
 			from,
