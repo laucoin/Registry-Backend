@@ -15,6 +15,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIV
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.CANCELED
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
@@ -28,8 +29,10 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IAlertPort
+import fr.laucoin.registry.backend.domain.port.ICommunicationHistoryPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.defaultAlert
@@ -42,6 +45,7 @@ import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -49,6 +53,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -59,6 +64,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -74,9 +80,20 @@ class CommunicationServiceTest {
 	private val projectService: IProjectService = mock()
 	private val movementPort: IMovementPort = mock()
 	private val alertPort: IAlertPort = mock()
+	private val historyPort: ICommunicationHistoryPort = mock()
+	private val rowLockPort: IRowLockPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: ICommunicationService = CommunicationService(
-		projectService, port, movementPort, alertPort, Clock.systemUTC(), MAX_ACTIVITIES, MAX_ALERTS
+		projectService, port, historyPort, rowLockPort, transactionalOperator, movementPort, alertPort,
+		Clock.systemUTC(), MAX_ACTIVITIES, MAX_ALERTS
 	)
+
+	@BeforeEach
+	fun setup() {
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(historyPort.archiveCommunication(any())).thenReturn(Mono.just(Unit))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+	}
 
 	private companion object {
 		private const val MAX_ACTIVITIES = 1
@@ -398,6 +415,24 @@ class CommunicationServiceTest {
 		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = null)
 		verify(movementPort, never()).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port).update(communication)
+	}
+
+	@Test
+	fun `Should updateCommunicationById lock then archive the current state before updating`() {
+		// Arrange
+		val communication = defaultCommunication().apply { dateTime = now }
+		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(communication))
+		whenever(port.update(any())).thenReturn(Mono.just(communication))
+
+		// Act
+		service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
+
+		// Assert
+		val order = inOrder(rowLockPort, historyPort, port)
+		order.verify(rowLockPort).lock(COMMUNICATION, defaultCommunicationId)
+		order.verify(historyPort).archiveCommunication(defaultCommunicationId)
+		order.verify(port).update(communication)
 	}
 
 	@Test
