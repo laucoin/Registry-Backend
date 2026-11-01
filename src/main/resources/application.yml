@@ -115,6 +115,7 @@ registry:
       url: https://doc.laucoin.fr/registry/
   security:
     default-role: USER
+    trusted-proxies: ${REGISTRY_TRUSTED_PROXIES:}
     cookie:
       secure: ${COOKIE_SECURE:true}
     rate-limit:

@@ -119,6 +119,7 @@ non voulue.
 | `REGISTRY_AUTH_RATE_LIMIT_CAPACITY` | `10` | Nombre maximal d'appels `POST` par IP cliente et par fenêtre sur `/authentication/token` et `/token/refresh` — les seuls endpoints non authentifiés. En mémoire (par instance, remis à zéro au redémarrage) : limiter aussi le débit des endpoints publics au niveau du reverse proxy |
 | `REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Durée en secondes de la fenêtre de limitation ci-dessus |
 | `REGISTRY_AUTH_RATE_LIMIT_MAX_TRACKED_CLIENTS` | `10000` | Nombre maximal d'IP clientes suivies simultanément par le limiteur ci-dessus ; les entrées les moins récemment utilisées sont évincées au-delà |
+| `REGISTRY_TRUSTED_PROXIES` | _(vide)_ | Liste, séparée par des virgules, d'IP ou de CIDR des reverse proxies de confiance (ex. `10.0.0.0/8,192.168.1.5`). Seuls leurs en-têtes `X-Forwarded-For` sont crus pour déterminer l'IP du client tracée dans l'audit ; vide, seule l'adresse de la connexion est utilisée |
 | `REGISTRY_MOVEMENT_FUTURE_TOLERANCE` | `2m` | Décalage d'horloge toléré entre un client et le serveur lorsqu'un mouvement est daté légèrement dans le futur ; une date plus éloignée est rejetée |
 | `REGISTRY_CODEC_MAX_IN_MEMORY_SIZE` | `512KB` | Taille maximale d'un corps de requête mis en mémoire tampon ; les corps plus volumineux sont rejetés |
 | `REGISTRY_UPDATE_TIMEOUT` | `10s` | Durée maximale d'une mise à jour protégée par `If-Match` ; au-delà, la transaction est annulée et la requête échoue avec un `408` |
