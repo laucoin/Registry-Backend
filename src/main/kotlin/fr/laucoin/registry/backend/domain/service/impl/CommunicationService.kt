@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -25,8 +26,10 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IAlertPort
+import fr.laucoin.registry.backend.domain.port.ICommunicationHistoryPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IProjectService
@@ -38,6 +41,7 @@ import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
@@ -51,6 +55,9 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 class CommunicationService(
 	private val projectService: IProjectService,
 	private val port: ICommunicationPort,
+	private val historyPort: ICommunicationHistoryPort,
+	private val rowLockPort: IRowLockPort,
+	private val transactionalOperator: TransactionalOperator,
 	private val movementPort: IMovementPort,
 	private val alertPort: IAlertPort,
 	clock: Clock,
@@ -118,11 +125,8 @@ class CommunicationService(
 		id: UUID,
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
-		return projectService.validateDateTime(
-			communication.projectId!!,
-			CustomDateTimeModel(communication.dateTime),
-			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
-		)
+		return validateCommunicationDate(communication)
+			.flatMap { rowLockPort.lock(COMMUNICATION, id) }
 			.flatMap { findCommunicationById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(communication, it) }
 			.flatMap { validateNoAlertConflict(currentUser, communication, it) }
@@ -133,7 +137,21 @@ class CommunicationService(
 					message = communication.message
 				}
 			}
+			.archiveCurrentState()
 			.updateCommunication(currentUser)
+			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateCommunicationDate(communication: CommunicationModel): Mono<UUID> {
+		return projectService.validateDateTime(
+			communication.projectId!!,
+			CustomDateTimeModel(communication.dateTime),
+			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
+		)
+	}
+
+	private fun Mono<CommunicationModel>.archiveCurrentState(): Mono<CommunicationModel> = flatMap {
+		historyPort.archiveCommunication(it.id!!).thenReturn(it)
 	}
 
 	override fun disableCommunicationById(
