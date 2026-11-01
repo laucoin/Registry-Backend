@@ -14,6 +14,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TYPE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.EMAIL_IGNORING_CASE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.LINKED_TO_IDP
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.NOT_SERVICE_ACCOUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.PREFERENCES_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.SELECT_PREFERENCES
@@ -44,7 +46,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $USER_ROLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $LINKED_TO_IDP AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $USER_ROLE_CLAUSE
         ORDER BY $USER_SORT similarity_score DESC, t.$USER_LAST_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
@@ -56,7 +58,7 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $USER_PROJECT_MEMBER_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $LINKED_TO_IDP AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $USER_PROJECT_MEMBER_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit
         """
@@ -92,10 +94,18 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 		"""
         SELECT t.*, $SELECT_PREFERENCES, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN $PREFERENCES_JOIN
-        WHERE $NOT_SERVICE_ACCOUNT AND t.$USER_EMAIL = :email AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $EMAIL_IGNORING_CASE = lower(:email) AND $VISIBLE_CLAUSE
         """
 	)
 	fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserEntity>
+
+	@Query(
+		"""
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
+        WHERE $NOT_SERVICE_ACCOUNT AND $EMAIL_IGNORING_CASE IN (:emails) AND $VISIBLE_CLAUSE
+        """
+	)
+	fun findByEmails(emails: Collection<String>, isVisible: Boolean?): Flux<UserEntity>
 
 	@Query(
 		"""

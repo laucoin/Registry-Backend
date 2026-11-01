@@ -16,6 +16,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.TEXT_SEARCH_MIN_SCORE
@@ -34,6 +35,10 @@ object UserQueries {
 
 
 	const val NOT_SERVICE_ACCOUNT = "t.$USER_TYPE <> 'SERVICE_ACCOUNT'"
+
+	const val LINKED_TO_IDP = "t.$USER_OIDC_ID IS NOT NULL"
+
+	const val EMAIL_IGNORING_CASE = "lower(t.$USER_EMAIL)"
 
 	const val SELECT_USER_SEARCH = """
         CASE

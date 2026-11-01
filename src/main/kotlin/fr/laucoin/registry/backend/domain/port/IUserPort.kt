@@ -21,6 +21,7 @@ interface IUserPort {
 	fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel>
 	fun findByOidcId(oidcId: UUID, isVisible: Boolean?): Mono<CurrentUserModel>
 	fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel>
+	fun findByEmails(emails: Collection<String>, isVisible: Boolean?): Flux<UserModel>
 	fun findServiceAccount(): Mono<CurrentUserModel>
 	fun findByRoleLevel(roleLevel: Int, isVisible: Boolean?): Flux<UserModel>
 	fun lockLevel0Users(): Flux<UUID>
