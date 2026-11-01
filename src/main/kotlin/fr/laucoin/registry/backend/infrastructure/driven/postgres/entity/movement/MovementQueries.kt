@@ -61,6 +61,10 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.STATISTICS_MAN_SECONDS
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.STATISTICS_MOVEMENT_SECONDS
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.STATISTICS_PARTICIPANT_COUNT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.STATISTICS_PROJECT_PARTICIPANT_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
@@ -262,5 +266,35 @@ object MovementQueries {
         CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_DATE_TIME END DESC NULLS LAST,
         CASE WHEN CAST(:sortField AS TEXT) = 'type' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END ASC NULLS LAST,
         CASE WHEN CAST(:sortField AS TEXT) = 'type' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END DESC NULLS LAST,
+    """
+
+	const val ACTIVITY_STATISTICS = """
+        WITH activity_rows AS (
+            SELECT t.$ID AS movement_id, t.$MOVEMENT_DATE_TIME AS started_at, mct.$MOVEMENT_CONTENT_PARTICIPANT_ID AS participant_id,
+                COALESCE(
+                    (
+                        SELECT MIN(m2.$MOVEMENT_DATE_TIME)
+                        FROM $MOVEMENT_CONTENT_TABLE c2
+                        INNER JOIN $MOVEMENT_TABLE m2 ON c2.$MOVEMENT_CONTENT_MOVEMENT_ID = m2.$ID
+                        WHERE c2.$MOVEMENT_CONTENT_PARTICIPANT_ID = mct.$MOVEMENT_CONTENT_PARTICIPANT_ID
+                            AND m2.$LINKED_PROJECT_ID = t.$LINKED_PROJECT_ID AND m2.$VISIBLE
+                            AND m2.$MOVEMENT_DATE_TIME > t.$MOVEMENT_DATE_TIME
+                            AND (m2.$MOVEMENT_TYPE = 'IN' OR m2.$MOVEMENT_REASON = 'DEFINITIVE_DEPARTURE')
+                    ),
+                    CAST(:#{now} AS TIMESTAMPTZ)
+                ) AS ended_at
+            FROM $MOVEMENT_TABLE t
+            INNER JOIN $MOVEMENT_CONTENT_TABLE mct ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+            INNER JOIN $PARTICIPANT_TABLE p ON p.$ID = mct.$MOVEMENT_CONTENT_PARTICIPANT_ID AND p.$VISIBLE
+            WHERE t.$LINKED_PROJECT_ID = :projectId AND t.$MOVEMENT_ACTIVITY_ID = :activityId AND t.$VISIBLE AND t.$MOVEMENT_TYPE = 'OUT'
+        ),
+        movement_rows AS (
+            SELECT movement_id, started_at, MAX(ended_at) AS ended_at FROM activity_rows GROUP BY movement_id, started_at
+        )
+        SELECT
+            (SELECT COUNT(DISTINCT participant_id) FROM activity_rows) AS $STATISTICS_PARTICIPANT_COUNT,
+            (SELECT COUNT(*) FROM $PARTICIPANT_TABLE WHERE $LINKED_PROJECT_ID = :projectId AND $VISIBLE AND $PARTICIPANT_TYPE = 'REGISTERED') AS $STATISTICS_PROJECT_PARTICIPANT_COUNT,
+            CAST((SELECT COALESCE(SUM(EXTRACT(EPOCH FROM GREATEST(ended_at - started_at, INTERVAL '0'))), 0) FROM movement_rows) AS DOUBLE PRECISION) AS $STATISTICS_MOVEMENT_SECONDS,
+            CAST((SELECT COALESCE(SUM(EXTRACT(EPOCH FROM GREATEST(ended_at - started_at, INTERVAL '0'))), 0) FROM activity_rows) AS DOUBLE PRECISION) AS $STATISTICS_MAN_SECONDS
     """
 }
