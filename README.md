@@ -82,8 +82,14 @@ non voulue.
 | `DATASOURCE_USERNAME` | `registry` | Utilisateur de la base de données                                                                             |
 | `DATASOURCE_PASSWORD` | *requis* | Mot de passe de la base de données — un secret, voir ci-dessous                                                   |
 | `DATASOURCE_LOCK_TIMEOUT_MS` | `5000` | Attente maximale, en millisecondes, d'un verrou de ligne (`SELECT … FOR UPDATE`) avant l'échec de la requête avec un `409 CONCURRENT_UPDATE_CONFLICT` |
+| `DATASOURCE_POOL_INITIAL_SIZE` | `10` | Nombre de connexions R2DBC ouvertes au démarrage |
+| `DATASOURCE_POOL_MAX_SIZE` | `30` | Nombre maximal de connexions R2DBC du pool |
+| `DATASOURCE_POOL_MAX_IDLE_TIME` | `30m` | Durée d'inactivité au-delà de laquelle une connexion du pool est fermée |
+| `DATASOURCE_POOL_MAX_ACQUIRE_TIME` | `5s` | Attente maximale d'une connexion du pool avant l'échec de la requête |
 
 **Fournisseur d'identité (OIDC)**
+
+À la première connexion, un utilisateur déjà présent en base n'est rattaché à son compte OIDC que si son `oidc_id` est vide et si le jeton porte `email_verified: true` ; sinon la connexion est refusée (`409`). `GET /api/v2/authentication/login/uri` accepte un paramètre optionnel `state`, repris tel quel dans l'URI d'autorisation : le client le génère et le vérifie au retour.
 
 | Variable                    | Défaut    | Description                                                                                |
 |-----------------------------|------------|--------------------------------------------------------------------------------------------|
@@ -115,6 +121,8 @@ non voulue.
 | `REGISTRY_AUTH_RATE_LIMIT_MAX_TRACKED_CLIENTS` | `10000` | Nombre maximal d'IP clientes suivies simultanément par le limiteur ci-dessus ; les entrées les moins récemment utilisées sont évincées au-delà |
 | `REGISTRY_MOVEMENT_FUTURE_TOLERANCE` | `2m` | Décalage d'horloge toléré entre un client et le serveur lorsqu'un mouvement est daté légèrement dans le futur ; une date plus éloignée est rejetée |
 | `REGISTRY_CODEC_MAX_IN_MEMORY_SIZE` | `512KB` | Taille maximale d'un corps de requête mis en mémoire tampon ; les corps plus volumineux sont rejetés |
+| `REGISTRY_UPDATE_TIMEOUT` | `10s` | Durée maximale d'une mise à jour protégée par `If-Match` ; au-delà, la transaction est annulée et la requête échoue avec un `408` |
+| `REGISTRY_PRINCIPAL_CACHE_TTL_SECONDS` | `60` | Durée de vie, en secondes, du principal (utilisateur et autorités) mis en cache après la validation du JWT ; un changement de droits est visible au plus tard à l'expiration, ou immédiatement s'il passe par l'API |
 
 > [!NOTE]
 > L'application navigateur s'authentifie via deux cookies `HttpOnly`, `SameSite=Lax` (`registry_access_token`, `registry_refresh_token`)

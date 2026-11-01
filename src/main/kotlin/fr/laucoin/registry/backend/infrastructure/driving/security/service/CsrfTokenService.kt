@@ -21,9 +21,11 @@ import reactor.core.publisher.Mono
  */
 @Component
 class CsrfTokenService(
-	@param:Value($$"${external.idp.client-secret}")
-	private val hmacSecret: String,
+	@Value($$"${external.idp.client-secret}")
+	hmacSecret: String,
 ): ServerCsrfTokenRepository {
+	private val hmacKey = SecretKeySpec(derive(hmacSecret), ALGORITHM)
+
 	fun computeToken(exchange: ServerWebExchange): String = hmac(extractBearer(exchange).orEmpty())
 
 	override fun generateToken(exchange: ServerWebExchange): Mono<CsrfToken> = token(exchange)
@@ -43,12 +45,19 @@ class CsrfTokenService(
 
 	private fun hmac(value: String): String {
 		val mac = Mac.getInstance(ALGORITHM)
-		mac.init(SecretKeySpec(hmacSecret.toByteArray(UTF_8), ALGORITHM))
+		mac.init(hmacKey)
 		val digest = mac.doFinal(value.toByteArray(UTF_8))
 		return Base64.getUrlEncoder().withoutPadding().encodeToString(digest)
 	}
 
+	private fun derive(secret: String): ByteArray {
+		val mac = Mac.getInstance(ALGORITHM)
+		mac.init(SecretKeySpec(secret.toByteArray(UTF_8), ALGORITHM))
+		return mac.doFinal(KEY_DERIVATION_LABEL.toByteArray(UTF_8))
+	}
+
 	companion object {
+		private const val KEY_DERIVATION_LABEL = "registry-csrf-token-v1"
 		const val HEADER_NAME = "X-XSRF-TOKEN"
 		const val PARAMETER_NAME = "_csrf"
 		private const val ALGORITHM = "HmacSHA256"

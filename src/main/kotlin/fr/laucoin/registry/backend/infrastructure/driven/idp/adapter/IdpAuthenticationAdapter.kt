@@ -46,11 +46,11 @@ class IdpAuthenticationAdapter(
 	private val clientId: String,
 	@param:Value($$"${external.idp.client-secret}")
 	private val clientSecret: String,
-	@param:Value($$"${external.idp.connect-timeout-millis}")
+	@Value($$"${external.idp.connect-timeout-millis}")
 	connectTimeoutMillis: Int,
-	@param:Value($$"${external.idp.response-timeout-millis}")
+	@Value($$"${external.idp.response-timeout-millis}")
 	responseTimeoutMillis: Long,
-	@param:Value($$"${external.idp.max-connections}")
+	@Value($$"${external.idp.max-connections}")
 	maxConnections: Int,
 ) : IAuthenticationPort, LoggerService() {
 	private val http: WebClient = buildHttpClient(connectTimeoutMillis, responseTimeoutMillis, maxConnections)
@@ -79,9 +79,10 @@ class IdpAuthenticationAdapter(
 		}
 	}
 
-	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
+	override fun getLoginUri(redirectUri: String, state: String?): AuthenticationUriModel {
+		val stateParameter = state?.let { "&state=${it.urlEncoded()}" }.orEmpty()
 		return AuthenticationUriModel(
-			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=${redirectUri.urlEncoded()}"
+			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=${redirectUri.urlEncoded()}$stateParameter"
 		)
 	}
 

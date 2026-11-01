@@ -59,10 +59,24 @@ class IdpAuthenticationAdapterTest {
 			"${mockWebServer.url("/oauth2/authorize")}?response_type=code&client_id=clientId&redirect_uri=redirectUri"
 
 		// Act
-		val result = adapter.getLoginUri(redirectUri)
+		val result = adapter.getLoginUri(redirectUri, null)
 
 		// Assert
 		assertNotNull(result)
+		assertEquals(expected, result.uri)
+	}
+
+	@Test
+	fun `Should getLoginUri append the encoded state when one is provided`() {
+		// Arrange
+		val state = "a b&c=d"
+		val expected = "${mockWebServer.url("/oauth2/authorize")}" +
+			"?response_type=code&client_id=clientId&redirect_uri=redirectUri&state=a+b%26c%3Dd"
+
+		// Act
+		val result = adapter.getLoginUri("redirectUri", state)
+
+		// Assert
 		assertEquals(expected, result.uri)
 	}
 
@@ -278,7 +292,7 @@ class IdpAuthenticationAdapterTest {
 		val expected = "${mockWebServer.url("/oauth2/authorize")}?response_type=code&client_id=clientId&redirect_uri=https%3A%2F%2Fapp.test%2Fcb%3Fx%3D1%26prompt%3Dnone"
 
 		// Act
-		val result = adapter.getLoginUri(redirectUri)
+		val result = adapter.getLoginUri(redirectUri, null)
 
 		// Assert
 		assertEquals(expected, result.uri)

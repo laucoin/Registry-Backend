@@ -1,8 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuthenticationUriReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AuthenticationUriReaderDtoMapper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
-import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
@@ -31,19 +32,21 @@ class SecurityV2Controller(
 	private val authenticationService: IAuthenticationService,
 	private val cookieService: AuthenticationCookieService,
 	private val mapper: CurrentUserReaderDtoMapper,
+	private val uriMapper: AuthenticationUriReaderDtoMapper,
 	private val userService: IUserService,
 	private val jwtDecoder: ReactiveJwtDecoder,
 	@param:Value($$"${registry.security.oauth2.claims.user-id}")
 	private val userIdKey: String,
 ) : ISecurityV2Controller, LoggerService() {
-	override fun getLoginUri(redirectUri: String?): AuthenticationUriModel {
-		return authenticationService.getLoginUri(redirectUri!!)
+	override fun getLoginUri(redirectUri: String?, state: String?): AuthenticationUriReaderDto {
+		return uriMapper.toDto(authenticationService.getLoginUri(redirectUri!!, state))
 	}
 
-	override fun getLogoutUri(redirectUri: String?, exchange: ServerWebExchange): Mono<AuthenticationUriModel> {
+	override fun getLogoutUri(redirectUri: String?, exchange: ServerWebExchange): Mono<AuthenticationUriReaderDto> {
 		val accessToken = cookieService.extractAccessToken(exchange.request)
 		val refreshToken = cookieService.extractRefreshToken(exchange.request)
 		return authenticationService.getLogoutUri(redirectUri!!, accessToken, refreshToken)
+			.map(uriMapper::toDto)
 			.doOnNext { cookieService.clearAuthCookies(exchange.response) }
 	}
 

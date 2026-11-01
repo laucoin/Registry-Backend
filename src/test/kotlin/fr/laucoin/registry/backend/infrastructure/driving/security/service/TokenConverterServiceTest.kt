@@ -34,6 +34,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.CONFLICT
+import java.util.UUID
 import org.springframework.http.HttpStatus.LOCKED
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.security.oauth2.jwt.Jwt
@@ -50,7 +51,7 @@ class TokenConverterServiceTest {
 	private val profilePort: IProjectProfilePort = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val service = TokenConverterService(
-		userService, profilePort, roleService, principalCache, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY
+		userService, profilePort, roleService, principalCache, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY, EMAIL_VERIFIED_KEY
 	)
 
 	private val jwt = mock<Jwt>()
@@ -66,6 +67,7 @@ class TokenConverterServiceTest {
 		private const val EMAIL_KEY = "email"
 		private const val FIRST_NAME_KEY = "given_name"
 		private const val LAST_NAME_KEY = "family_name"
+		private const val EMAIL_VERIFIED_KEY = "email_verified"
 		private const val USER_ROLE = "USER_ROLE"
 		private const val PROJECT_ROLE = "PROJECT_ROLE"
 
@@ -225,10 +227,11 @@ class TokenConverterServiceTest {
 	@Test
 	fun `Should convert link an existing user found by email to the new OIDC ID`() {
 		// Arrange
-		val existingUser = currentUser().apply { role = USER_ROLE }
+		val existingUser = currentUser().apply { role = USER_ROLE; oidcId = null }
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
 		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(true)
 		whenever(userService.linkUserToOidcId(any(), any())).thenReturn(Mono.just(existingUser))
 
 		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.empty())
@@ -242,6 +245,40 @@ class TokenConverterServiceTest {
 		verify(userService).linkUserToOidcId(existingUser, defaultUserOidcId)
 		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
 		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+	}
+
+	@Test
+	fun `Should convert refuse to link an existing user when the email is not verified`() {
+		// Arrange
+		val existingUser = currentUser().apply { role = USER_ROLE }
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(false)
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+
+		// Act
+		val error = assertThrows(JwtConversionException::class.java) { service.convert(jwt).block() }
+
+		// Assert
+		assertEquals(CONFLICT, error.status)
+		verify(userService, never()).linkUserToOidcId(any(), any())
+	}
+
+	@Test
+	fun `Should convert refuse to link an existing user already bound to another OIDC ID`() {
+		// Arrange
+		val existingUser = currentUser().apply { role = USER_ROLE; oidcId = UUID.randomUUID() }
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(true)
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+
+		// Act
+		val error = assertThrows(JwtConversionException::class.java) { service.convert(jwt).block() }
+
+		// Assert
+		assertEquals(CONFLICT, error.status)
+		verify(userService, never()).linkUserToOidcId(any(), any())
 	}
 
 	@Test

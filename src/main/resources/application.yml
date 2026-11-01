@@ -54,6 +54,8 @@ registry:
     username: ${DATASOURCE_USERNAME:registry}
     password: ${DATASOURCE_PASSWORD}
     lock-timeout-ms: ${DATASOURCE_LOCK_TIMEOUT_MS:5000}
+  concurrency:
+    update-timeout: ${REGISTRY_UPDATE_TIMEOUT:10s}
   feature:
     documentation:
       enabled: ${REGISTRY_DOCUMENTATION_ENABLED:false}
@@ -128,6 +130,7 @@ registry:
       claims:
         user-id: sub
         email: email
+        email-verified: email_verified
         first-name: given_name
         last-name: family_name
       cache:
