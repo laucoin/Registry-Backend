@@ -13,12 +13,14 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IAlertV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertStatisticsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertStatisticsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
@@ -41,6 +43,7 @@ class AlertV2Controller(
 	private val service: IAlertService,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: AlertReaderDtoMapper,
+	private val statisticsReaderMapper: AlertStatisticsReaderDtoMapper,
 	private val communicationReaderMapper: CommunicationReaderDtoMapper,
 	private val writerMapper: AlertWriterDtoMapper,
 	private val creationWriterMapper: AlertCreationWriterDtoMapper,
@@ -71,6 +74,10 @@ class AlertV2Controller(
 		)
 
 		return service.findAlertsPage(currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+	}
+
+	override fun findAlertStatistics(currentUser: CurrentUserModel, projectId: UUID): Mono<AlertStatisticsReaderDto> {
+		return service.findAlertStatistics(projectId).map(statisticsReaderMapper::toDto)
 	}
 
 	override fun findAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertReaderDto> {

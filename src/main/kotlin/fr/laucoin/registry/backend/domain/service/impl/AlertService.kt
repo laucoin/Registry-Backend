@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRES
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -70,6 +71,10 @@ class AlertService(
 			alert.lastCommunication = null
 		}
 		return alert
+	}
+
+	override fun findAlertStatistics(projectId: UUID): Mono<AlertStatisticsModel> {
+		return port.findStatistics(projectId)
 	}
 
 	override fun findAlertById(

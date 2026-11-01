@@ -24,6 +24,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertStatisticsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
@@ -89,6 +90,17 @@ interface IAlertV2Controller {
 		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: title, dateTime, status, criticality")
 		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
 	): Mono<PageModel<AlertReaderDto>>
+
+	@Operation(
+		summary = "Find Alert statistics",
+		description = "Statistics of the visible alerts of the Project: resolved and canceled counts, average resolution time in seconds (resolved alerts only) and real alert rate (resolved over resolved plus canceled). Rates and averages are null when there is nothing to compute them from",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_R')")
+	@GetMapping("/statistics")
+	fun findAlertStatistics(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable projectId: UUID,
+	): Mono<AlertStatisticsReaderDto>
 
 	@Operation(
 		summary = "Find Alert",

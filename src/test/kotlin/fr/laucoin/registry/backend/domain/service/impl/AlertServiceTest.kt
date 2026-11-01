@@ -16,6 +16,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIV
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.RESOLVED
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -96,6 +97,20 @@ class AlertServiceTest {
 
 		// Assert
 		verify(port).findPage(defaultProjectId, pageable, params)
+	}
+
+	@Test
+	fun `Should findAlertStatistics call port findStatistics`() {
+		// Arrange
+		val statistics = AlertStatisticsModel(resolvedCount = 2, canceledCount = 1, averageResolutionSeconds = 60)
+		whenever(port.findStatistics(any())).thenReturn(Mono.just(statistics))
+
+		// Act
+		val result = service.findAlertStatistics(defaultProjectId).block()
+
+		// Assert
+		assertEquals(statistics, result)
+		verify(port).findStatistics(defaultProjectId)
 	}
 
 	@Test
