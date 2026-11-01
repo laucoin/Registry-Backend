@@ -255,6 +255,36 @@ class UserServiceTest {
 	}
 
 	@Test
+	fun `Should findUsersByEmails normalize the emails and ignore the service account`() {
+		// Arrange
+		val user = UserModel().apply { id = UUID.randomUUID(); email = "john@doe.fr" }
+		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.just(user, serviceAccount))
+
+		// Act
+		val result = service.findUsersByEmails(listOf(" John@Doe.FR ")).collectList().block()
+
+		// Assert
+		assertEquals(listOf(user), result)
+		verify(port).findByEmails(listOf("john@doe.fr"), null)
+	}
+
+	@Test
+	fun `Should createPendingUser create a user without OIDC ID and with a normalized email`() {
+		// Arrange
+		whenever(roleService.getDefaultUserRole()).thenReturn(USER_ROLE)
+		whenever(port.create(any())).thenAnswer { Mono.just(it.getArgument<UserModel>(0)) }
+
+		// Act
+		val result = service.createPendingUser(" John@Doe.FR ").block()
+
+		// Assert
+		assertEquals("john@doe.fr", result!!.email)
+		assertEquals(USER_ROLE, result.role)
+		assertEquals(null, result.oidcId)
+		assertEquals(null, result.lastLogin)
+	}
+
+	@Test
 	fun `Should serviceAccount return service account`() {
 		// Act
 		val result = service.serviceAccount()

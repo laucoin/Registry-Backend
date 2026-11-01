@@ -68,6 +68,10 @@ class UserModelPostgresRepository(
 			.map(currentUserMapper::toModel)
 	}
 
+	override fun findByEmails(emails: Collection<String>, isVisible: Boolean?): Flux<UserModel> {
+		return repository.findByEmails(emails, isVisible).map(mapper::toModel)
+	}
+
 	override fun findServiceAccount(): Mono<CurrentUserModel> =
 		repository.findServiceAccount().map(currentUserMapper::toModel)
 
