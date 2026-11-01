@@ -14,11 +14,13 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IActivityV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityStatisticsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityStatisticsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ActivityWriterDtoMapper
 import java.time.ZonedDateTime
@@ -43,6 +45,7 @@ class ActivityV2Controller(
 	private val service: IActivityService,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ActivityReaderDtoMapper,
+	private val statisticsReaderMapper: ActivityStatisticsReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: ActivityWriterDtoMapper,
 ): IActivityV2Controller {
@@ -73,6 +76,14 @@ class ActivityV2Controller(
 
 	override fun findActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityReaderDto> {
 		return service.findActivityById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_ACTIVITY_D)).map(readerMapper::toDto)
+	}
+
+	override fun findActivityStatistics(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+	): Mono<ActivityStatisticsReaderDto> {
+		return service.findActivityStatistics(projectId, id).map(statisticsReaderMapper::toDto)
 	}
 
 	override fun findActivityMovements(

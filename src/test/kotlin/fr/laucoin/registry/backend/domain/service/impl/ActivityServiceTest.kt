@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import reactor.test.StepVerifier
+import org.mockito.kotlin.verifyNoInteractions
+import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import kotlin.test.assertEquals
 import org.mockito.kotlin.argumentCaptor
@@ -70,6 +73,34 @@ class ActivityServiceTest {
 
 		// Assert
 		verify(port).findPage(defaultProjectId, pageable, params)
+	}
+
+	@Test
+	fun `Should findActivityStatistics check the activity then call the movement port`() {
+		// Arrange
+		val statistics = ActivityStatisticsModel(participantCount = 2, projectParticipantCount = 4)
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
+		whenever(movementPort.findStatisticsByActivityId(any(), any())).thenReturn(Mono.just(statistics))
+
+		// Act
+		val result = service.findActivityStatistics(defaultProjectId, defaultActivityId).block()
+
+		// Assert
+		assertEquals(statistics, result)
+		verify(movementPort).findStatisticsByActivityId(defaultProjectId, defaultActivityId)
+	}
+
+	@Test
+	fun `Should findActivityStatistics throw when the activity does not exist`() {
+		// Arrange
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+
+		// Act
+		val result = service.findActivityStatistics(defaultProjectId, defaultActivityId)
+
+		// Assert
+		StepVerifier.create(result).expectError(RegistryException::class.java).verify()
+		verifyNoInteractions(movementPort)
 	}
 
 	@Test

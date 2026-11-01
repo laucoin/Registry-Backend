@@ -1,5 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import org.springframework.http.HttpStatus.FORBIDDEN
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityStatisticsReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityStatisticsReaderDto
+import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_ALLOWED_PARTICIPANTS_MAX_IS_HIGHER_THAN_MIN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_ALLOWED_PARTICIPANTS_TOO_LOW
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DESCRIPTION_TOO_LONG
@@ -90,6 +95,9 @@ class ActivityControllerTest : TestContext() {
 
 	@MockitoBean
 	private lateinit var readerMapper: ActivityReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var statisticsReaderMapper: ActivityStatisticsReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var movementReaderMapper: MovementReaderDtoMapper
@@ -401,6 +409,43 @@ class ActivityControllerTest : TestContext() {
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findActivityStatistics return 200`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.findActivityStatistics(any(), any())).thenReturn(Mono.just(ActivityStatisticsModel()))
+		whenever(statisticsReaderMapper.toDto(any())).thenReturn(ActivityStatisticsReaderDto(0, 0, null, 0, 0))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_HISTORY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}/statistics", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ActivityStatisticsReaderDto>(OK)
+
+		verify(service).findActivityStatistics(eq(defaultProjectId), eq(uuid))
+		verify(statisticsReaderMapper).toDto(any())
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = [REGISTRY_PROJECT_ACTIVITY_HISTORY_R, REGISTRY_PROJECT_OPTION_ACTIVITY])
+	fun `Should findActivityStatistics throw due to missing permission or option`(authority: String) {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(authority))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}/statistics", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
 		verifyNoInteractions(service)
 	}
 

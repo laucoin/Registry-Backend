@@ -41,6 +41,11 @@ object MovementFields {
 
 	const val MOVEMENT_CONTENT_POOL_NAME = "pool_name"
 
+	const val STATISTICS_PARTICIPANT_COUNT = "participant_count"
+	const val STATISTICS_PROJECT_PARTICIPANT_COUNT = "project_participant_count"
+	const val STATISTICS_MOVEMENT_SECONDS = "movement_seconds"
+	const val STATISTICS_MAN_SECONDS = "man_seconds"
+
 	private const val PARTICIPANT_PREFIX = "participant_"
 	const val MOVEMENT_CONTENT_PARTICIPANT_ID = "$PARTICIPANT_PREFIX$ID"
 	const val MOVEMENT_CONTENT_PARTICIPANT_FIRST_NAME = "$PARTICIPANT_PREFIX$PARTICIPANT_FIRST_NAME"
