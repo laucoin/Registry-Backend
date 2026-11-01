@@ -1,5 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import org.springframework.http.HttpStatus.FORBIDDEN
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantTimelineReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantTimelineReaderDto
+import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
@@ -97,6 +102,9 @@ class ParticipantControllerTest : TestContext() {
 
 	@MockitoBean
 	private lateinit var groupReaderMapper: GroupWithoutMemberReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var timelineReaderMapper: ParticipantTimelineReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var movementReaderMapper: MovementReaderDtoMapper
@@ -350,6 +358,42 @@ class ParticipantControllerTest : TestContext() {
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verify(service).findParticipantById(defaultProjectId, uuid, isVisible = true)
+	}
+
+	@Test
+	fun `Should findParticipantTimeline return 200`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.findParticipantTimeline(any(), any())).thenReturn(Mono.just(ParticipantTimelineModel()))
+		whenever(timelineReaderMapper.toDto(any())).thenReturn(ParticipantTimelineReaderDto(emptyList(), emptyList()))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}/timeline", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ParticipantTimelineReaderDto>(OK)
+
+		verify(service).findParticipantTimeline(eq(defaultProjectId), eq(uuid))
+		verify(timelineReaderMapper).toDto(any())
+	}
+
+	@Test
+	fun `Should findParticipantTimeline throw due to missing history permission`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}/timeline", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
+		verifyNoInteractions(service)
 	}
 
 	@ParameterizedTest

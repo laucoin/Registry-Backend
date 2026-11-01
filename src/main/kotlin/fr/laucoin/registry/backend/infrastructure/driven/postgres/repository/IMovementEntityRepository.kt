@@ -4,10 +4,13 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEventEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_MOVEMENT_ID
@@ -15,6 +18,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_REASON
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.ACTIVITY_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.ACTIVITY_MOVEMENT_AVAILABILITY_CLAUSE
@@ -127,6 +132,17 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		limit: Int,
 		offset: Long,
 	): Flux<MovementEntity>
+
+	@Query(
+		"""
+        SELECT t.$MOVEMENT_DATE_TIME, t.$MOVEMENT_TYPE, t.$MOVEMENT_REASON
+        FROM $MOVEMENT_CONTENT_TABLE mct
+        INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID = :participantId AND t.$VISIBLE = TRUE
+        ORDER BY t.$MOVEMENT_DATE_TIME, t.$CREATED_AT, t.$ID
+        """
+	)
+	fun findEventsByParticipantId(projectId: UUID, participantId: UUID): Flux<MovementEventEntity>
 
 	@Query(
 		"""

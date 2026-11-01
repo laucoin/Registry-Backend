@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.MovementEventModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -11,6 +12,7 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementEventEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementEntityRepository
 import java.time.Clock
@@ -32,6 +34,7 @@ class MovementModelPostgresRepository(
 	private val contentRepository: IMovementContentEntityRepository,
 	private val transactionalOperator: TransactionalOperator,
 	private val mapper: MovementEntityMapper,
+	private val eventMapper: MovementEventEntityMapper,
 	private val contentMapper: MovementContentEntityMapper,
 	private val clock: Clock,
 ): IMovementPort {
@@ -94,6 +97,10 @@ class MovementModelPostgresRepository(
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
 			}
+	}
+
+	override fun findEventsByParticipantId(projectId: UUID, participantId: UUID): Flux<MovementEventModel> {
+		return repository.findEventsByParticipantId(projectId, participantId).map(eventMapper::toModel)
 	}
 
 	override fun findPageByParticipantId(

@@ -11,6 +11,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
+import fr.laucoin.registry.backend.domain.extension.OutingExt.toOutings
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -19,7 +21,10 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.OutingModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
+import fr.laucoin.registry.backend.domain.model.TimelineRangeModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
@@ -87,6 +92,30 @@ class ParticipantService(
 	override fun findParticipantById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel> {
 		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
+	}
+
+	override fun findParticipantTimeline(projectId: UUID, id: UUID): Mono<ParticipantTimelineModel> {
+		return findParticipantById(projectId, id, isVisible = null)
+			.flatMap(::toTimeline)
+	}
+
+	private fun toTimeline(participant: ParticipantModel): Mono<ParticipantTimelineModel> {
+		return findOutings(participant)
+			.map { ParticipantTimelineModel(plannedRanges(participant), it) }
+	}
+
+	private fun findOutings(participant: ParticipantModel): Mono<List<OutingModel>> {
+		if (participant.type == GUEST) return Mono.just(emptyList())
+
+		return movementPort.findEventsByParticipantId(participant.projectId!!, participant.id!!)
+			.collectList()
+			.map { it.toOutings(now()) }
+	}
+
+	private fun plannedRanges(participant: ParticipantModel): List<TimelineRangeModel> {
+		if (participant.startAvailability == null && participant.endAvailability == null) return emptyList()
+
+		return listOf(TimelineRangeModel(participant.startAvailability, participant.endAvailability))
 	}
 
 	override fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel> {

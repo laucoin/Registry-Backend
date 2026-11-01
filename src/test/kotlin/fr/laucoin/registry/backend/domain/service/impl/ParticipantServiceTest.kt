@@ -1,5 +1,16 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import reactor.test.StepVerifier
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
+import fr.laucoin.registry.backend.domain.model.TimelineRangeModel
+import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
+import fr.laucoin.registry.backend.domain.model.OutingModel
+import fr.laucoin.registry.backend.domain.model.MovementEventModel
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.SHOPPING
 import org.mockito.kotlin.argThat
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -83,6 +94,83 @@ class ParticipantServiceTest {
 	@BeforeEach
 	fun setUp() {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+	}
+
+	@Test
+	fun `Should findParticipantTimeline return the planned window and the outings of a registered participant`() {
+		// Arrange
+		val departure = ZonedDateTime.of(2026, 7, 1, 9, 0, 0, 0, ZoneOffset.UTC)
+		val participant = defaultParticipant().apply {
+			type = REGISTERED
+			startAvailability = past
+			endAvailability = future
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.findEventsByParticipantId(any(), any())).thenReturn(
+			Flux.just(MovementEventModel(departure, OUT, SHOPPING), MovementEventModel(departure.plusHours(2), IN))
+		)
+
+		// Act
+		val timeline = service.findParticipantTimeline(defaultProjectId, defaultParticipantId).block()!!
+
+		// Assert
+		assertEquals(listOf(TimelineRangeModel(past, future)), timeline.planned)
+		assertEquals(listOf(OutingModel(departure, departure.plusHours(2))), timeline.actual)
+	}
+
+	@Test
+	fun `Should findParticipantTimeline return no planned range when the participant has no availability window`() {
+		// Arrange
+		val participant = defaultParticipant().apply { type = REGISTERED }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.findEventsByParticipantId(any(), any())).thenReturn(Flux.empty())
+
+		// Act
+		val timeline = service.findParticipantTimeline(defaultProjectId, defaultParticipantId).block()!!
+
+		// Assert
+		assertEquals(ParticipantTimelineModel(), timeline)
+	}
+
+	@Test
+	fun `Should findParticipantTimeline keep a half open planned range`() {
+		// Arrange
+		val participant = defaultParticipant().apply { type = REGISTERED; endAvailability = future }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+		whenever(movementPort.findEventsByParticipantId(any(), any())).thenReturn(Flux.empty())
+
+		// Act
+		val timeline = service.findParticipantTimeline(defaultProjectId, defaultParticipantId).block()!!
+
+		// Assert
+		assertEquals(listOf(TimelineRangeModel(null, future)), timeline.planned)
+	}
+
+	@Test
+	fun `Should findParticipantTimeline have no outing for a guest without reading the movements`() {
+		// Arrange
+		val participant = defaultParticipant().apply { type = GUEST }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(participant))
+
+		// Act
+		val timeline = service.findParticipantTimeline(defaultProjectId, defaultParticipantId).block()!!
+
+		// Assert
+		assertEquals(emptyList<OutingModel>(), timeline.actual)
+		verifyNoInteractions(movementPort)
+	}
+
+	@Test
+	fun `Should findParticipantTimeline throw when the participant does not exist`() {
+		// Arrange
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+
+		// Act
+		val result = service.findParticipantTimeline(defaultProjectId, defaultParticipantId)
+
+		// Assert
+		StepVerifier.create(result).expectError(RegistryException::class.java).verify()
+		verifyNoInteractions(movementPort)
 	}
 
 	private companion object {
