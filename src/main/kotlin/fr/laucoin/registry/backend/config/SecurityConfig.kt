@@ -8,12 +8,12 @@ import fr.laucoin.registry.backend.infrastructure.driving.security.handler.Cooki
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CsrfTokenHeaderHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.ExportRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.LocaleContextHandler
-import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.PermissionService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.TokenConverterService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

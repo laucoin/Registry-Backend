@@ -30,6 +30,7 @@ import org.springframework.context.i18n.SimpleLocaleContext
 import org.springframework.http.HttpHeaders.RETRY_AFTER
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpMethod.GET
+import org.springframework.http.HttpMethod.HEAD
 import org.springframework.http.HttpMethod.POST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.TOO_MANY_REQUESTS
@@ -135,6 +136,22 @@ class ExportRateLimitHandlerTest {
 		// Assert
 		assertEquals(2, chainCalls.get())
 		verify(auditService, never()).record(any())
+	}
+
+	@Test
+	fun `Should filter count HEAD requests in the same budget as GET`() {
+		// Arrange
+		val limiter = limiter(capacity = 1)
+		val user = UUID.randomUUID()
+		call(limiter, exchange("/api/v2/users/current/export"), user)
+		val head = exchange("/api/v2/users/current/export", HEAD)
+
+		// Act
+		call(limiter, head, user)
+
+		// Assert
+		assertEquals(TOO_MANY_REQUESTS, head.response.statusCode)
+		assertEquals(1, chainCalls.get())
 	}
 
 	@Test
