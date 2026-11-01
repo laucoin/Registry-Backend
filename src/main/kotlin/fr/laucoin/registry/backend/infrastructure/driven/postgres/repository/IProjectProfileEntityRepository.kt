@@ -82,7 +82,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ProjectProfileEntity>
 
 	@Query(
@@ -105,7 +105,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ProjectProfileEntity>
 
 	@Query(

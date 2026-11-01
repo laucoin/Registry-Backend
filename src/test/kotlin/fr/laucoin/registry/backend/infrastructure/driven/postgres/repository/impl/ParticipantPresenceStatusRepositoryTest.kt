@@ -27,6 +27,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -45,7 +46,7 @@ class ParticipantPresenceStatusRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var movementPort: IMovementPort
 
-	private val base: ZonedDateTime = ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)
+	private val base: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
 	private val pageable = PageableModel(0, 200)
 	private lateinit var expectedNotArrivedId: UUID
 	private lateinit var notArrivedOutOfRangeId: UUID
@@ -119,10 +120,10 @@ class ParticipantPresenceStatusRepositoryTest : TestContext() {
 			this.lastName = lastName
 			birthday = LocalDate.EPOCH
 			type = REGISTERED
-			startAvailability = CustomDateTimeModel(LocalDate.now().plusDays(start))
-			endAvailability = CustomDateTimeModel(LocalDate.now().plusDays(end))
+			startAvailability = CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(start))
+			endAvailability = CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(end))
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return participantPort.create(participant).block()!!.id!!
 	}
@@ -140,7 +141,7 @@ class ParticipantPresenceStatusRepositoryTest : TestContext() {
 			content =
 				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		movementPort.create(movement).block()
 	}

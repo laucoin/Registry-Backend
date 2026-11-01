@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.NumericRangeModel
@@ -13,7 +14,7 @@ import kotlin.time.Duration
 import org.springframework.stereotype.Component
 
 @Component
-class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
+class ActivityEntityMapper(private val clock: Clock): IEntityMapper<ActivityModel, ActivityEntity> {
 	override fun toModel(entity: ActivityEntity): ActivityModel {
 		return ActivityModel().apply {
 			name = entity.name
@@ -22,7 +23,7 @@ class ActivityEntityMapper: IEntityMapper<ActivityModel, ActivityEntity> {
 			allowedParticipants = mapAllowedParticipants(entity)
 			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
 			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
-			status = buildStatus()
+			status = buildStatus(clock)
 		}.fillWithProjectAndEntity(entity)
 	}
 

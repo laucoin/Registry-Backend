@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.model
 
+import java.util.UUID
+
 
 data class UserSearchParamModel(
 	var isVisible: Boolean? = null,
@@ -7,6 +9,8 @@ data class UserSearchParamModel(
 	var sort: SortModel? = null,
 ) {
 	var query: String? = null
+
+	var memberOfProjectId: UUID? = null
 
 	constructor(
 		query: String? = null,

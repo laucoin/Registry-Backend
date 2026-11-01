@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
@@ -39,11 +42,10 @@ class UserProjectProfileService(
 	private val favoritePort: IProjectFavoritePort,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
+	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
-) : IUserProjectProfileService, GenericProfileService(port) {
-	private companion object {
-	}
-
+	clock: Clock,
+) : IUserProjectProfileService, GenericProfileService(port, clock) {
 	override fun findProjectProfilesPage(
 		userId: UUID,
 		pageable: PageableModel,
@@ -107,7 +109,7 @@ class UserProjectProfileService(
 			this.role = roleService.getLevel0RoleFromProjectRoles()
 			this.status = ACCEPTED
 		}
-		profile.create(currentUser)
+		profile.create(currentUser, now())
 
 		return port.create(profile)
 			.`as`(transactionalOperator::transactional)
@@ -123,7 +125,7 @@ class UserProjectProfileService(
 			.notFoundIfEmpty(id)
 			.flatMap { profile ->
 				profile.status = status
-				profile.update(currentUser)
+				profile.update(currentUser, now())
 				port.update(profile)
 			}
 			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
@@ -133,8 +135,8 @@ class UserProjectProfileService(
 		currentUser: CurrentUserModel,
 		projectId: UUID
 	): Mono<ProjectProfileModel> {
-		val now = CustomDateTimeModel.now()
-		val nowPlusOneHour = CustomDateTimeModel.now().plusHours(1)
+		val now = CustomDateTimeModel.now(clock)
+		val nowPlusOneHour = CustomDateTimeModel.now(clock).plusHours(1)
 		val profile = ProjectProfileModel().apply {
 			user = currentUser
 			this.projectId = projectId
@@ -142,9 +144,21 @@ class UserProjectProfileService(
 			status = ACCEPTED
 			startAccess = now
 			endAccess = nowPlusOneHour
-			create(currentUser)
+			create(currentUser, now())
 		}
 
+		return rowLockPort.lock(PROJECT, projectId)
+			.then(Mono.defer { validateNoSupportConflict(currentUser, projectId, profile) })
+			.flatMap { port.create(profile) }
+			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
+	}
+
+	private fun validateNoSupportConflict(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		profile: ProjectProfileModel,
+	): Mono<List<UUID>> {
 		return validateNoProfileConflict(
 			projectId,
 			listOf(currentUser.id!!),
@@ -152,9 +166,6 @@ class UserProjectProfileService(
 			profile.startAccess!!.toZonedDateTime(OffsetTime.MIN),
 			profile.endAccess!!.toZonedDateTime(OffsetTime.MAX),
 		)
-			.flatMap { port.create(profile) }
-			.`as`(transactionalOperator::transactional)
-			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {

@@ -19,6 +19,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -29,7 +30,7 @@ class CommunicationReaderDtoMapperTest {
 	private val mapper = CommunicationReaderDtoMapper(movementMapper, alertMapper)
 
 	private companion object {
-		private val now = ZonedDateTime.now()
+		private val now = ZonedDateTime.now(ZoneOffset.UTC)
 		private val dtoMovement = MovementReaderDto(dateTime = now, contentType = REGISTERED)
 		private val dtoAlert = AlertReaderDto(dateTime = now)
 
@@ -40,8 +41,8 @@ class CommunicationReaderDtoMapperTest {
 			alert = AlertModel(dateTime = now)
 			id = defaultCommunicationId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		private val dto = CommunicationReaderDto().apply {
@@ -51,8 +52,8 @@ class CommunicationReaderDtoMapperTest {
 			alert = dtoAlert
 			id = defaultCommunicationId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		@JvmStatic

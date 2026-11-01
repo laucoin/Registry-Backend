@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -47,8 +49,8 @@ class GroupWithoutMemberReaderDtoMapperTest {
 			overdueMembersCount = 1
 			id = defaultGroupId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		private val dto = GroupWithoutMemberReaderDto().apply {
@@ -65,8 +67,8 @@ class GroupWithoutMemberReaderDtoMapperTest {
 			overdueMembersCount = 1
 			id = defaultGroupId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		@JvmStatic

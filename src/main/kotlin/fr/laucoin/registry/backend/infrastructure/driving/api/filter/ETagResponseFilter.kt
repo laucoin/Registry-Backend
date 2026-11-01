@@ -114,7 +114,7 @@ class ETagResponseFilter(private val objectMapper: ObjectMapper) : WebFilter {
 		private fun toETag(node: JsonNode): String? {
 			return try {
 				when {
-					node.isTextual -> OffsetDateTime.parse(node.asText()).toInstant().toETag()
+					node.isString -> OffsetDateTime.parse(node.asString()).toInstant().toETag()
 					node.isNumber -> decimalToInstant(node.decimalValue()).toETag()
 					else -> null
 				}

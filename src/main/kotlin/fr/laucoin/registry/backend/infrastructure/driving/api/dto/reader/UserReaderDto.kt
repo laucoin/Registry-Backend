@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import java.time.LocalDate
 import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
 
 data class UserReaderDto(
 	var firstName: String? = null,
@@ -11,5 +10,5 @@ data class UserReaderDto(
 	var email: String? = null,
 	var role: LabelDto? = null,
 	var birthday: LocalDate? = null,
-	var lastLogin: ZonedDateTime? = now(),
+	var lastLogin: ZonedDateTime? = null,
 ): GenericReaderDto()

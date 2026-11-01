@@ -20,6 +20,7 @@ import org.springframework.http.HttpHeaders.CONTENT_DISPOSITION
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Mono
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -30,8 +31,8 @@ class ExportControllerTest : TestContext() {
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
-	private val userExport = UserExportModel(ZonedDateTime.now(), UserModel(), null, emptyList(), emptyList())
-	private val participantExport = ParticipantExportModel(ZonedDateTime.now(), "Camp", ParticipantModel(), emptyList())
+	private val userExport = UserExportModel(ZonedDateTime.now(ZoneOffset.UTC), UserModel(), null, emptyList(), emptyList())
+	private val participantExport = ParticipantExportModel(ZonedDateTime.now(ZoneOffset.UTC), "Camp", ParticipantModel(), emptyList())
 
 	@Test
 	fun `Should exportCurrentUser return 200 as an attachment`() {

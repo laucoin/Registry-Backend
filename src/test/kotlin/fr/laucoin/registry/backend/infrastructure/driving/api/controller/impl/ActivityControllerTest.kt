@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTI
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_NAME_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_START_LATER_THAN_END
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
@@ -217,6 +218,7 @@ class ActivityControllerTest : TestContext() {
 		fun `Should findActivityMovements throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -318,7 +320,7 @@ class ActivityControllerTest : TestContext() {
 		// Arrange
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = ActivitySearchParamModel(
 			query = query,
 			isVisible = isVisible,
@@ -425,6 +427,29 @@ class ActivityControllerTest : TestContext() {
 		verifyNoInteractions(movementReaderMapper)
 	}
 
+	@Test
+	fun `Should findActivityById force the visible filter when the user cannot read hidden elements`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.findActivityById(any(), any(), anyOrNull())).thenReturn(Mono.just(ActivityModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ActivityReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_R), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ActivityReaderDto>(OK)
+
+		verify(service).findActivityById(defaultProjectId, uuid, isVisible = true)
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(writerMapper)
+		verifyNoInteractions(movementReaderMapper)
+	}
+
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findActivityMovements prepare param, call service and finally cast the result`(
@@ -439,7 +464,7 @@ class ActivityControllerTest : TestContext() {
 		val uuid = UUID.randomUUID()
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = MovementSearchParamModel(
 			isVisible = isVisible,
 			type = type,
@@ -928,7 +953,7 @@ class ActivityControllerTest : TestContext() {
 	@CsvSource("0,true", "1,true", "2,false")
 	fun `Should findActivities expose whether another page follows`(page: Int, expectedHasNext: Boolean) {
 		// Arrange
-		val pageable = PageableModel(page * 20, 20)
+		val pageable = PageableModel(page.toLong() * 20, 20)
 		val expectedPage = PageModel(pageable, totalElements = 45, listOf(ActivityModel()))
 		whenever(service.findActivitiesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(

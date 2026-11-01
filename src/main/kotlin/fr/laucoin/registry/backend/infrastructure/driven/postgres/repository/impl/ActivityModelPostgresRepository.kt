@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -24,6 +25,7 @@ import reactor.core.publisher.Mono
 class ActivityModelPostgresRepository(
 	private val repository: IActivityEntityRepository,
 	private val mapper: ActivityEntityMapper,
+	private val clock: Clock,
 ): IActivityPort {
 	override fun findPage(
 		projectId: UUID,
@@ -43,7 +45,7 @@ class ActivityModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ActivityEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ActivityEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ActivityModel> {

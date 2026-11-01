@@ -1,11 +1,10 @@
 package fr.laucoin.registry.backend.domain.model
 
 import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
 import java.util.UUID
 
 class HistoryModel(
-	var dateTime: ZonedDateTime = now(),
+	var dateTime: ZonedDateTime,
 	var user: HistoryUserModel? = null
 ) {
 	data class HistoryUserModel(

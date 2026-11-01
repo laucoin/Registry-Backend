@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.test.TestContext
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -31,7 +32,7 @@ class GroupOnSiteCountsRepositoryTest: TestContext() {
 
 	private val projectId = UUID.randomUUID()
 	private val otherProjectId = UUID.randomUUID()
-	private val arrival = ZonedDateTime.now().minusHours(5)
+	private val arrival = ZonedDateTime.now(ZoneOffset.UTC).minusHours(5)
 	private val pageable = PageableModel(0, 200)
 	private lateinit var otherProjectGroupId: UUID
 
@@ -190,7 +191,7 @@ class GroupOnSiteCountsRepositoryTest: TestContext() {
 				"VALUES (:id, 'm', :name, CURRENT_DATE, 'REGISTERED', :p, :v, :arrival, :departure, :end)",
 			"id" to participantId, "name" to name, "p" to project, "v" to member.visible,
 			"arrival" to (if (member.arrived) arrival else null), "departure" to (if (member.departed) arrival.plusHours(3) else null),
-			"end" to (if (member.plannedEndPassed) LocalDate.now().minusDays(1) else null),
+			"end" to (if (member.plannedEndPassed) LocalDate.now(ZoneOffset.UTC).minusDays(1) else null),
 		)
 		execute("INSERT INTO tb_group_content (group_id, participant_id) VALUES (:g, :s)", "g" to groupId, "s" to participantId)
 		member.movements.forEachIndexed { index, type -> insertMovement(participantId, project, type, arrival.plusHours(index.toLong())) }

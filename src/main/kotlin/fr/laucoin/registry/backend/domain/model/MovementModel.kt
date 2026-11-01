@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.constant.DateTimeConst.EPOCH_UTC
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -10,7 +11,7 @@ import java.util.Objects
 import java.util.UUID
 
 data class MovementModel(
-	var dateTime: ZonedDateTime = ZonedDateTime.now(),
+	var dateTime: ZonedDateTime = EPOCH_UTC,
 	var type: MovementTypeEnum? = null,
 	var reason: MovementReasonEnum? = null,
 	var lastCommunicationDateTime: ZonedDateTime? = null,

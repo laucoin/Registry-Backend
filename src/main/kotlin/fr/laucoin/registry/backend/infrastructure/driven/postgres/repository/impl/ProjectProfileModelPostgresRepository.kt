@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -32,6 +33,7 @@ class ProjectProfileModelPostgresRepository(
 	private val mapper: ProjectProfileEntityMapper,
 	private val roleMapper: ProjectProfileRoleEntityMapper,
 	private val roleCountMapper: ProjectProfileRoleCountEntityMapper,
+	private val clock: Clock,
 ): IProjectProfilePort {
 	override fun findProjectProfilesPageByUserId(
 		userId: UUID,
@@ -50,7 +52,7 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ProjectProfileEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findProjectProfilesPageByProjectId(
@@ -70,7 +72,7 @@ class ProjectProfileModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ProjectProfileEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ProjectProfileEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findUserIdsWithProjectProfileForProjectWithProfileExclusion(

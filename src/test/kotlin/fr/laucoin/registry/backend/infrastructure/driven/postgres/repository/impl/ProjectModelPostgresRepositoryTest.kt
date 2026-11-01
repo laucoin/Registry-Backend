@@ -28,6 +28,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
@@ -59,7 +60,7 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		@JvmStatic
 		fun `Should validDateTime call repository validDateTime`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(ZonedDateTime.now(), ZonedDateTime.now(), false),
+				Arguments.of(ZonedDateTime.now(ZoneOffset.UTC), ZonedDateTime.now(ZoneOffset.UTC), false),
 				Arguments.of(OffsetDateTime.MIN.toZonedDateTime(), OffsetDateTime.MIN.toZonedDateTime(), false),
 				Arguments.of(OffsetDateTime.MAX.toZonedDateTime(), OffsetDateTime.MAX.toZonedDateTime(), false),
 				Arguments.of(null, null, true),
@@ -239,7 +240,7 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 	fun `Should create return zero counts and only the counts of enabled options`() {
 		// Arrange
 		val project = ProjectModel(name = "counts", options = listOf(ProjectOptionEnum.VEHICLE)).apply {
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		// Act
@@ -272,7 +273,7 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		// Act & Assert
 		assertTrue(postgresRepository.findProjectsEligibleForPurge(LocalDate.EPOCH).collectList().block()!!.isEmpty())
 		assertTrue(
-			postgresRepository.findProjectsEligibleForPurge(LocalDate.now().plusYears(1)).collectList().block()!!
+			postgresRepository.findProjectsEligibleForPurge(LocalDate.now(ZoneOffset.UTC).plusYears(1)).collectList().block()!!
 				.isNotEmpty()
 		)
 	}
@@ -289,7 +290,7 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 			// Arrange
 			val project = ProjectModel().apply {
 				name = "test"
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -309,7 +310,7 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 			// Arrange
 			val project = ProjectModel().apply {
 				name = "test update"
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

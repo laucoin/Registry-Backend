@@ -7,7 +7,6 @@ import java.util.UUID
 
 interface IRoleService {
 	fun getLevelByUserRole(role: String?): Int?
-	fun getLevelByProjectRole(role: String): Int
 	fun getLevel0RoleFromProjectRoles(): String
 	fun getDefaultUserRole(): String?
 	fun getAuthoritiesByUserRole(role: String?): List<String>

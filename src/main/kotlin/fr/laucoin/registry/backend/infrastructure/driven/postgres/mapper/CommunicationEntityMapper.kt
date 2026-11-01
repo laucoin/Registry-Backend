@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.constant.DateTimeConst.EPOCH_UTC
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -9,7 +10,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communi
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
-import java.time.ZonedDateTime
 import java.util.Optional
 import org.springframework.stereotype.Component
 
@@ -20,7 +20,7 @@ class CommunicationEntityMapper(
 ): IEntityMapper<CommunicationModel, CommunicationEntity> {
 	override fun toModel(entity: CommunicationEntity): CommunicationModel {
 		return CommunicationModel().apply {
-			dateTime = entity.dateTime ?: ZonedDateTime.now()
+			dateTime = entity.dateTime ?: EPOCH_UTC
 			message = entity.message
 			movement = mapMovement(entity)
 			alert = mapAlert(entity)

@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ACTIVITY
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
+import org.springframework.transaction.reactive.TransactionalOperator
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -33,7 +37,10 @@ class ActivityService(
 	private val projectService: IProjectService,
 	private val port: IActivityPort,
 	private val movementPort: IMovementPort,
-): IActivityService, GenericService() {
+	private val rowLockPort: IRowLockPort,
+	private val transactionalOperator: TransactionalOperator,
+	clock: Clock,
+): IActivityService, GenericService(clock) {
 	override fun findActivitiesPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -61,7 +68,7 @@ class ActivityService(
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
-		).flatMap { port.create(activity.apply { create(currentUser) }) }
+		).flatMap { port.create(activity.apply { create(currentUser, now()) }) }
 	}
 
 	override fun updateActivityById(
@@ -104,28 +111,21 @@ class ActivityService(
 
 	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findActivityById(projectId, id, isVisible = null)
+			.flatMap { rowLockPort.lock(ACTIVITY, id).thenReturn(it) }
 			.validateHasNoMovementLinked(ACTIVITY_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun purgeActivitiesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging activities unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
-			.flatMap({
-				if (dryRun) {
-					log.info("[Dry run] activity {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging activity {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Activity {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge activity {}", it, err) }
-				}
-			}, PURGE_DELETE_CONCURRENCY)
+			.purgeEach("activity", dryRun, port::deleteById)
+
 	}
 
 	private fun Mono<ActivityModel>.updateActivity(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser, now()) })
 	}
 
 	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->

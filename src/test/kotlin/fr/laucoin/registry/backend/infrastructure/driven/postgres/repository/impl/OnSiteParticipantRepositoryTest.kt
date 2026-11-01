@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.test.TestContext
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -30,7 +31,7 @@ class OnSiteParticipantRepositoryTest: TestContext() {
 	private val projectId = UUID.randomUUID()
 	private val groupId = UUID.randomUUID()
 	private val pageable = PageableModel(0, 200)
-	private val arrival = ZonedDateTime.now().minusHours(5)
+	private val arrival = ZonedDateTime.now(ZoneOffset.UTC).minusHours(5)
 
 	@BeforeAll
 	fun setup() {
@@ -183,7 +184,7 @@ class OnSiteParticipantRepositoryTest: TestContext() {
 				"VALUES (:id, 'on', :name, CURRENT_DATE, 'REGISTERED', :p, :arrival, :departure, :end)",
 			"id" to id, "name" to lastName, "p" to projectId,
 			"arrival" to (if (arrived) arrival else null), "departure" to (if (departed) arrival.plusHours(2) else null),
-			"end" to (if (plannedEndPassed) LocalDate.now().minusDays(1) else null),
+			"end" to (if (plannedEndPassed) LocalDate.now(ZoneOffset.UTC).minusDays(1) else null),
 		)
 		execute("INSERT INTO tb_group_content (group_id, participant_id) VALUES (:g, :s)", "g" to groupId, "s" to id)
 		movements.forEachIndexed { index, type -> insertMovement(id, type, arrival.plusHours(index.toLong())) }

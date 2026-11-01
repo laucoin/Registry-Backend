@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.stream.Stream
@@ -24,7 +26,7 @@ class ParticipantReaderDtoMapperTest {
 	private val statusMapper: PresenceStatusReaderDtoMapper = mock()
 	private val groupMapper: GroupWithoutMemberReaderDtoMapper = mock()
 	private val mapper: ParticipantReaderDtoMapper =
-		ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, groupMapper)
+		ParticipantReaderDtoMapper(partialUserMapper, typeMapper, statusMapper, groupMapper, Clock.systemUTC())
 
 	private companion object {
 		@JvmStatic
@@ -37,7 +39,7 @@ class ParticipantReaderDtoMapperTest {
 					0,
 				),
 				Arguments.of(
-					ParticipantModel().apply { birthday = LocalDate.now() },
+					ParticipantModel().apply { birthday = LocalDate.now(ZoneOffset.UTC) },
 					false,
 					0,
 					0,
@@ -52,9 +54,9 @@ class ParticipantReaderDtoMapperTest {
 					ParticipantModel().apply {
 						status = IN
 						user = UserModel()
-						birthday = LocalDate.now().minusYears(18)
-						effectiveArrival = ZonedDateTime.now().minusDays(3)
-						effectiveDeparture = ZonedDateTime.now().minusDays(1)
+						birthday = LocalDate.now(ZoneOffset.UTC).minusYears(18)
+						effectiveArrival = ZonedDateTime.now(ZoneOffset.UTC).minusDays(3)
+						effectiveDeparture = ZonedDateTime.now(ZoneOffset.UTC).minusDays(1)
 					},
 					true,
 					1,

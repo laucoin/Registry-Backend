@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.test.TestContext
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -28,7 +29,7 @@ class GroupMembershipFiltersRepositoryTest: TestContext() {
 	private val userId = UUID.randomUUID()
 	private val strangerUserId = UUID.randomUUID()
 	private val pageable = PageableModel(0, 200)
-	private val arrival = ZonedDateTime.now().minusHours(4)
+	private val arrival = ZonedDateTime.now(ZoneOffset.UTC).minusHours(4)
 
 	@BeforeAll
 	fun setup() {

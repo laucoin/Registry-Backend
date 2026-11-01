@@ -11,6 +11,11 @@ import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver
 import reactor.core.publisher.Hooks
 import java.util.Locale
 
+/**
+ * Objectif : Expose les sources de messages (messages et erreurs) et le résolveur de locale de la requête.
+ * Périmètre : Fixe la locale par défaut, charge les bundles `i18n` et propage la locale dans le contexte réactif.
+ * Limites : Ne traduit rien lui-même ; la traduction relève de TranslateService.
+ */
 @Configuration
 class I18nConfig(
 	@param:Value($$"${registry.information.locale.default}") val defaultLocale: Locale,

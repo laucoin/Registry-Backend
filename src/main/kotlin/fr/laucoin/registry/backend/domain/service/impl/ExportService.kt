@@ -44,8 +44,8 @@ class ExportService(
 	private val participantPort: IParticipantPort,
 	private val movementPort: IMovementPort,
 	private val projectPort: IProjectPort,
-	private val clock: Clock,
-): IExportService, GenericService() {
+	clock: Clock,
+): IExportService, GenericService(clock) {
 	companion object {
 		private const val EXPORT_PAGE_SIZE = 200
 	}
@@ -116,7 +116,7 @@ class ExportService(
 		}
 
 	private fun <T : Any> allPages(pageNumber: Int = 0, fetch: (PageableModel) -> Mono<PageModel<T>>): Flux<T> =
-		fetch(PageableModel(pageNumber * EXPORT_PAGE_SIZE, EXPORT_PAGE_SIZE))
+		fetch(PageableModel(pageNumber.toLong() * EXPORT_PAGE_SIZE, EXPORT_PAGE_SIZE))
 			.flatMapMany { page ->
 				val next = if (pageNumber + 1 < page.totalPages) allPages(pageNumber + 1, fetch) else Flux.empty()
 				Flux.fromIterable(page.content).concatWith(next)

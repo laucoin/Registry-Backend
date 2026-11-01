@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -43,7 +44,7 @@ class ParticipantPlannedRepositoryTest : TestContext() {
 	private lateinit var movementPort: IMovementPort
 
 	private val tenantId: UUID = ModelExt.defaultProjectId
-	private val base: ZonedDateTime = ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)
+	private val base: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
 	private val day: LocalDate = LocalDate.of(2099, 1, 15)
 	private var minutes = 0L
 	private val ids = mutableMapOf<String, UUID>()
@@ -203,7 +204,7 @@ class ParticipantPlannedRepositoryTest : TestContext() {
 			startAvailability = start?.let { CustomDateTimeModel(day.plusDays(it - 3)) }
 			endAvailability = end?.let { CustomDateTimeModel(day.plusDays(it - 3)) }
 			projectId = tenantId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return groupPort.create(group).block()!!.id!!
 	}
@@ -244,7 +245,7 @@ class ParticipantPlannedRepositoryTest : TestContext() {
 			endAvailability = end?.let { CustomDateTimeModel(day.plusDays(it - 3)) }
 			this.groups = groups.map { GroupModel().apply { id = groupIds.getValue(it) } }
 			projectId = tenantId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return participantPort.create(participant).block()!!.id!!
 	}
@@ -258,7 +259,7 @@ class ParticipantPlannedRepositoryTest : TestContext() {
 			content =
 				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
 			projectId = tenantId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		movementPort.create(movement).block()
 	}

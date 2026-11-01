@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
@@ -32,6 +33,7 @@ class MovementModelPostgresRepository(
 	private val transactionalOperator: TransactionalOperator,
 	private val mapper: MovementEntityMapper,
 	private val contentMapper: MovementContentEntityMapper,
+	private val clock: Clock,
 ): IMovementPort {
 	override fun findPage(
 		projectId: UUID,
@@ -50,7 +52,7 @@ class MovementModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findCurrentPage(
@@ -70,7 +72,7 @@ class MovementModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findContent(projectId: UUID, movementIds: List<UUID>): Flux<Pair<UUID, List<MovementContentModel>>> {
@@ -112,7 +114,7 @@ class MovementModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPageByVehicleId(
@@ -133,7 +135,7 @@ class MovementModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPageByActivityId(
@@ -153,7 +155,7 @@ class MovementModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, MovementEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findActivityWithLimit(

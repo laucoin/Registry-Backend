@@ -124,7 +124,7 @@ class ListSortingRepositoryTest : TestContext() {
 		val total =
 			movementPort.findPage(defaultProjectId, pageable, MovementSearchParamModel(type = null, sort = sort))
 				.block()!!
-		val pages = (0 until Math.ceilDiv(total.totalElements.toInt(), 7)).map { PageableModel(it * 7, 7) }
+		val pages = (0 until Math.ceilDiv(total.totalElements.toInt(), 7)).map { PageableModel(it * 7L, 7) }
 
 		// Act
 		val ids = pages.flatMap {

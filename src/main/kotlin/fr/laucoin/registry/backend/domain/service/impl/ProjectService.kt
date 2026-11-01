@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
 import org.springframework.http.HttpStatus.FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
@@ -52,7 +53,8 @@ class ProjectService(
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
-): IProjectService, GenericService() {
+	clock: Clock,
+): IProjectService, GenericService(clock) {
 	override fun findProjectsPage(
 		currentUser: CurrentUserModel,
 		pageable: PageableModel,
@@ -197,7 +199,7 @@ class ProjectService(
 	}
 
 	override fun createProject(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
-		return port.create(project.apply { create(currentUser) })
+		return port.create(project.apply { create(currentUser, now()) })
 			.flatMap {
 				userProjectProfileService.createUserProjectProfileFromProject(currentUser, it)
 					.thenReturn(it)
@@ -222,7 +224,7 @@ class ProjectService(
 	}
 
 	private fun Mono<ProjectModel>.updateProject(currentUser: CurrentUserModel) = flatMap { project ->
-		port.update(project.apply { update(currentUser) })
+		port.update(project.apply { update(currentUser, now()) })
 			.flatMap { updated ->
 				profilePort.findOidcIdsByProjectId(project.id!!)
 					.collectList()
@@ -232,6 +234,13 @@ class ProjectService(
 			.withCurrentUserProfile(currentUser)
 			.withFavorite(currentUser)
 			.`as`(transactionalOperator::transactional)
+			.flatMap { updated -> invalidateProjectMembers(updated.id!!).thenReturn(updated) }
+	}
+
+	private fun invalidateProjectMembers(projectId: UUID): Mono<List<UUID>> {
+		return profilePort.findOidcIdsByProjectId(projectId)
+			.collectList()
+			.doOnNext { principalCache.invalidateAll(it) }
 	}
 
 	private fun Mono<ProjectModel>.validateDates(project: ProjectModel): Mono<ProjectModel> = flatMap {
@@ -277,17 +286,8 @@ class ProjectService(
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging projects inactive since {}", dateThreshold)
 		return port.findProjectsEligibleForPurge(dateThreshold)
-			.flatMap({
-				if (dryRun) {
-					log.info("[Dry run] project {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging project {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Project {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge project {}", it, err) }
-				}
-			}, PURGE_DELETE_CONCURRENCY)
+			.purgeEach("project", dryRun, port::deleteById)
+
 	}
 
 	/**

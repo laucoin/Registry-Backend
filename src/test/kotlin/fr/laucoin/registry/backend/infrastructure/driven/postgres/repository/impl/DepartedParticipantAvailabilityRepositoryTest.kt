@@ -28,6 +28,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.r2dbc.core.DatabaseClient
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -62,7 +63,7 @@ class DepartedParticipantAvailabilityRepositoryTest : TestContext() {
 		val group = GroupModel().apply {
 			name = "departed group"
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		// Act
@@ -115,8 +116,8 @@ class DepartedParticipantAvailabilityRepositoryTest : TestContext() {
 	@Order(4)
 	fun `Should keep the departed participants on a date before their departure`() {
 		// Arrange
-		val beforeDeparture = ZonedDateTime.now().minusHours(1)
-		val afterDeparture = ZonedDateTime.now().plusMinutes(1)
+		val beforeDeparture = ZonedDateTime.now(ZoneOffset.UTC).minusHours(1)
+		val afterDeparture = ZonedDateTime.now(ZoneOffset.UTC).plusMinutes(1)
 
 		// Act
 		val before = findIdsAt(beforeDeparture)
@@ -163,11 +164,11 @@ class DepartedParticipantAvailabilityRepositoryTest : TestContext() {
 			this.lastName = lastName
 			birthday = LocalDate.EPOCH
 			type = REGISTERED
-			startAvailability = CustomDateTimeModel(LocalDate.now().minusDays(1))
-			endAvailability = CustomDateTimeModel(LocalDate.now().plusDays(1))
+			startAvailability = CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).minusDays(1))
+			endAvailability = CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(1))
 			groups = listOf(GroupModel().apply { id = groupId })
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return participantPort.create(participant).block()!!.id!!
 	}
@@ -178,13 +179,13 @@ class DepartedParticipantAvailabilityRepositoryTest : TestContext() {
 		reason: MovementReasonEnum?,
 	): UUID {
 		val movement = MovementModel(contentType = REGISTERED).apply {
-			dateTime = ZonedDateTime.now().minusHours(2)
+			dateTime = ZonedDateTime.now(ZoneOffset.UTC).minusHours(2)
 			type = movementType
 			this.reason = reason
 			content =
 				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return movementPort.create(movement).block()!!.id!!
 	}

@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ALERT
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -45,6 +49,7 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -54,7 +59,12 @@ class AlertServiceTest {
 	private val projectService: IProjectService = mock()
 	private val communicationPort: ICommunicationPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
-	private val service: IAlertService = AlertService(projectService, port, communicationPort, transactionalOperator)
+	private val rowLockPort: IRowLockPort = mock()
+	init {
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+	}
+
+	private val service: IAlertService = AlertService(projectService, port, communicationPort, rowLockPort, transactionalOperator, Clock.systemUTC())
 
 	@BeforeEach
 	fun setup() {
@@ -234,6 +244,19 @@ class AlertServiceTest {
 
 		// Assert
 		assertNull(result.lastCommunication)
+		verify(port).findById(defaultProjectId, defaultAlertId, true)
+	}
+
+	@Test
+	fun `Should findAlertForUser read a hidden alert only for a user who can delete alerts`() {
+		// Arrange
+		val alert = defaultAlert()
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
+
+		// Act
+		service.findAlertForUser(currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_D)), defaultProjectId, defaultAlertId).block()
+
+		// Assert
 		verify(port).findById(defaultProjectId, defaultAlertId, null)
 	}
 
@@ -256,9 +279,9 @@ class AlertServiceTest {
 	fun `Should updateAlertById check date, check existing alert, call port updateAlert`() {
 		// Arrange
 		val oldAlert =
-			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now().minusDays(10) }
+			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now(ZoneOffset.UTC).minusDays(10) }
 		val updatedAlert =
-			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now() }
+			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now(ZoneOffset.UTC) }
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
 			query = null,
@@ -307,9 +330,9 @@ class AlertServiceTest {
 	fun `Should updateAlertById throw because of communication conflict`() {
 		// Arrange
 		val oldAlert =
-			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now().minusDays(10) }
+			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now(ZoneOffset.UTC).minusDays(10) }
 		val updatedAlert =
-			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now() }
+			defaultAlert().apply { status = IN_PROGRESS; dateTime = ZonedDateTime.now(ZoneOffset.UTC) }
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
 			query = null,
@@ -394,6 +417,7 @@ class AlertServiceTest {
 		// Assert
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = null)
 		verify(communicationPort).countAllByAlertId(defaultProjectId, defaultAlertId, CommunicationSearchParamModel())
+verify(rowLockPort).lock(ALERT, defaultAlertId)
 		verify(port).deleteById(defaultAlertId)
 	}
 

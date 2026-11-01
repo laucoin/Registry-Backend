@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.extension
 
+import java.time.ZonedDateTime
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -27,11 +29,12 @@ object ReactiveExt {
 
 	fun <E : Any, T> Flux<E>.toPageModel(
 		pageable: PageableModel,
+		clock: Clock,
 		fullCount: (E) -> Long?,
 		toModel: (E) -> T,
 	): Mono<PageModel<T>> {
 		return collectList().map { entities ->
-			PageModel(pageable, entities.firstOrNull()?.let(fullCount) ?: 0L, entities.map(toModel))
+			PageModel(pageable, entities.firstOrNull()?.let(fullCount) ?: 0L, entities.map(toModel), ZonedDateTime.now(clock))
 		}
 	}
 }

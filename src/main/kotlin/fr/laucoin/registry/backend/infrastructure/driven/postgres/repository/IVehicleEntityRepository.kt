@@ -63,7 +63,7 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<VehicleEntity>
 
 	@Query(

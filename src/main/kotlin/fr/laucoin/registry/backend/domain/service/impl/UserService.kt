@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
@@ -48,7 +49,8 @@ class UserService(
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
-) : ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService() {
+	clock: Clock,
+) : ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService(clock) {
 	private lateinit var serviceAccount: CurrentUserModel
 
 	// Le blocage est voulu : cela s'exécute une seule fois sur le thread de rafraîchissement du contexte
@@ -101,9 +103,9 @@ class UserService(
 			firstName = firstName,
 			lastName = lastName,
 			role = roleService.getDefaultUserRole(),
-			lastLogin = ZonedDateTime.now()
+			lastLogin = ZonedDateTime.now(clock)
 		)
-		user.create(serviceAccount)
+		user.create(serviceAccount, now())
 
 		return port.create(user)
 			.map { CurrentUserModel(it) }
@@ -140,7 +142,7 @@ class UserService(
 		return port.findByOidcId(oidcId, isVisible = null)
 			.filter { isNotServiceAccount(it) }
 			.flatMap {
-				it.lastLogin = ZonedDateTime.now()
+				it.lastLogin = ZonedDateTime.now(clock)
 				updateUser(serviceAccount, it)
 			}
 			.then()
@@ -149,13 +151,13 @@ class UserService(
 	override fun linkUserToOidcId(user: CurrentUserModel, oidcId: UUID): Mono<CurrentUserModel> {
 		log.info("Linking existing user \"{}\" to OIDC ID \"{}\"", user.id, oidcId)
 		user.oidcId = oidcId
-		user.lastLogin = ZonedDateTime.now()
+		user.lastLogin = ZonedDateTime.now(clock)
 
 		return updateUser(serviceAccount, user).map { user }
 	}
 
 	private fun updateUser(currentUser: CurrentUserModel, user: UserModel): Mono<UserModel> {
-		return port.update(user.apply { update(currentUser) })
+		return port.update(user.apply { update(currentUser, now()) })
 			.doOnNext { principalCache.invalidate(it.oidcId) }
 	}
 

@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -39,8 +41,8 @@ class ProjectProfileReaderDtoMapperTest {
 						endAccess = CustomDateTimeModel.MAX
 						visible = false
 						status = null
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					BLOCKED.name,
 					0,
@@ -52,8 +54,8 @@ class ProjectProfileReaderDtoMapperTest {
 						endAccess = CustomDateTimeModel.MAX
 						status = ACCEPTED
 						visible = false
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					BLOCKED.name,
 					0,
@@ -68,8 +70,8 @@ class ProjectProfileReaderDtoMapperTest {
 						startAccess = CustomDateTimeModel.MIN
 						endAccess = CustomDateTimeModel.MAX
 						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					ACCEPTED.name,
 					1,
@@ -84,8 +86,8 @@ class ProjectProfileReaderDtoMapperTest {
 						endAccess = CustomDateTimeModel.MAX
 						status = null
 						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					null,
 					1,

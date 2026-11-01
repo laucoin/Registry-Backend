@@ -72,7 +72,7 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<CommunicationEntity>
 
 	@Query(
@@ -126,7 +126,7 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<CommunicationEntity>
 
 	@Query(
