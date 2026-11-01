@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.USER_PROJECT_MEMBER_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.role.RoleFields.ENTITY_ROLE_NAME
@@ -9,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.role.Ro
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.CurrentUserEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_EMAIL
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_OIDC_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
@@ -127,6 +129,6 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	)
 	fun lockLevel0Users(): Flux<UUID>
 
-	@Query("SELECT t.$ID FROM $USER_TABLE t WHERE t.last_login::DATE < :dateThreshold AND $NOT_SERVICE_ACCOUNT")
+	@Query("SELECT t.$ID FROM $USER_TABLE t WHERE COALESCE(t.$USER_LAST_LOGIN, t.$CREATED_AT)::DATE < :dateThreshold AND $NOT_SERVICE_ACCOUNT")
 	fun findUserIdsOlderThanLastLogin(dateThreshold: LocalDate): Flux<UUID>
 }
