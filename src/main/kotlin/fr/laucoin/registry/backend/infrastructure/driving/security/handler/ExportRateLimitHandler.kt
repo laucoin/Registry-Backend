@@ -17,6 +17,7 @@ import java.time.ZonedDateTime
 import java.util.Optional
 import java.util.UUID
 import org.springframework.http.HttpMethod.GET
+import org.springframework.http.HttpMethod.HEAD
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.server.ServerWebExchange
@@ -26,7 +27,7 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Limite fortement le débit des exports de données personnelles pour empêcher une extraction massive.
- * Périmètre : Compte les appels GET d'export par utilisateur authentifié, tous endpoints d'export confondus, sur une fenêtre de temps ; répond 429 au-delà de la capacité et en trace le refus dans l'audit.
+ * Périmètre : Compte les appels GET et HEAD d'export (HEAD exécute le même handler) par utilisateur authentifié, tous endpoints d'export confondus, sur une fenêtre de temps ; répond 429 au-delà de la capacité et en trace le refus dans l'audit.
  * Limites : En mémoire et par instance ; le nombre d'utilisateurs suivis est borné. Doit s'exécuter après l'authentification ; les requêtes non authentifiées lui échappent et sont refusées en aval.
  */
 class ExportRateLimitHandler(
@@ -47,7 +48,7 @@ class ExportRateLimitHandler(
 
 	override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
 		val request = exchange.request
-		val target = if (request.method == GET) exportTarget(request.path.value()) else null
+		val target = if (request.method in EXPORT_METHODS) exportTarget(request.path.value()) else null
 		if (target == null) return chain.filter(exchange)
 
 		return ReactiveSecurityContextHolder.getContext()
@@ -98,6 +99,7 @@ class ExportRateLimitHandler(
 	private companion object {
 		const val USER_EXPORT = "/api/*/users/{id}/export"
 		const val PARTICIPANT_EXPORT = "/api/*/projects/{projectId}/participants/{id}/export"
+		val EXPORT_METHODS = setOf(GET, HEAD)
 		const val CURRENT = "current"
 		const val EXPIRY_GRACE_MULTIPLIER = 10L
 	}
