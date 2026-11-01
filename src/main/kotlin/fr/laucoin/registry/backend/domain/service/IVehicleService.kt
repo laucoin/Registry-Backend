@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
+import fr.laucoin.registry.backend.domain.model.VehicleTimelineModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import java.time.LocalDate
 import java.util.UUID
@@ -23,6 +24,8 @@ interface IVehicleService {
 		pageable: PageableModel,
 		searchParams: VehicleSearchParamModel,
 	): Mono<PageModel<VehicleModel>>
+
+	fun findVehicleTimeline(projectId: UUID, id: UUID): Mono<VehicleTimelineModel>
 
 	fun findVehicleById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel>
 

@@ -49,6 +49,7 @@ interface IMovementPort {
 	): Mono<PageModel<MovementModel>>
 
 	fun findEventsByParticipantId(projectId: UUID, participantId: UUID): Flux<MovementEventModel>
+	fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventModel>
 	fun findPageByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,

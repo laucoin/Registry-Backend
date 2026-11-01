@@ -103,6 +103,10 @@ class MovementModelPostgresRepository(
 		return repository.findEventsByParticipantId(projectId, participantId).map(eventMapper::toModel)
 	}
 
+	override fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventModel> {
+		return repository.findEventsByVehicleId(projectId, vehicleId).map(eventMapper::toModel)
+	}
+
 	override fun findPageByParticipantId(
 		projectId: UUID,
 		participantId: UUID,
