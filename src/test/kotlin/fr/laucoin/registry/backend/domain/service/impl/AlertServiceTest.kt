@@ -22,6 +22,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.port.IAlertHistoryPort
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.service.IAlertService
@@ -38,6 +39,7 @@ import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -56,15 +58,17 @@ import java.util.UUID
 
 class AlertServiceTest {
 	private val port: IAlertPort = mock()
+	private val historyPort: IAlertHistoryPort = mock()
 	private val projectService: IProjectService = mock()
 	private val communicationPort: ICommunicationPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val rowLockPort: IRowLockPort = mock()
 	init {
 		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(historyPort.archiveAlert(any())).thenReturn(Mono.just(Unit))
 	}
 
-	private val service: IAlertService = AlertService(projectService, port, communicationPort, rowLockPort, transactionalOperator, Clock.systemUTC())
+	private val service: IAlertService = AlertService(projectService, port, historyPort, communicationPort, rowLockPort, transactionalOperator, Clock.systemUTC())
 
 	@BeforeEach
 	fun setup() {
@@ -304,6 +308,23 @@ class AlertServiceTest {
 	}
 
 	@Test
+	fun `Should updateAlertById lock then archive the current state before updating`() {
+		// Arrange
+		val alert = defaultAlert().apply { status = IN_PROGRESS }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
+		whenever(port.update(any())).thenReturn(Mono.just(alert))
+
+		// Act
+		service.updateAlertById(currentUser(), defaultProjectId, defaultAlertId, alert).block()
+
+		// Assert
+		val order = inOrder(rowLockPort, historyPort, port)
+		order.verify(rowLockPort).lock(ALERT, defaultAlertId)
+		order.verify(historyPort).archiveAlert(defaultAlertId)
+		order.verify(port).update(any())
+	}
+
+	@Test
 	fun `Should updateAlertById throw because of not in progress status`() {
 		// Arrange
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultAlert()))
@@ -324,6 +345,7 @@ class AlertServiceTest {
 		)
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = null)
 		verify(port, never()).update(defaultAlert())
+		verify(historyPort, never()).archiveAlert(any())
 	}
 
 	@Test
@@ -357,6 +379,7 @@ class AlertServiceTest {
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = null)
 		verify(communicationPort).countAllByAlertId(defaultProjectId, defaultAlertId, expectedCommunicationSearch)
 		verify(port, never()).update(any())
+		verify(historyPort, never()).archiveAlert(any())
 	}
 
 	@Test
