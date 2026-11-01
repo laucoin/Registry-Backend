@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DEL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DELETE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.extension.StringExt.toNormalizedEmail
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -84,22 +85,20 @@ class UserService(
 	}
 
 	override fun findUsersByEmails(emails: Collection<String>): Flux<UserModel> {
-		return port.findByEmails(emails.map(::normalizeEmail), isVisible = null)
+		return port.findByEmails(emails.map { it.toNormalizedEmail() }, isVisible = null)
 			.filter { isNotServiceAccount(it) }
 	}
 
 	override fun createPendingUser(email: String): Mono<UserModel> {
 		log.info("Saving pending user (not yet linked to an OIDC ID) in database")
 		val user = UserModel(
-			email = normalizeEmail(email),
+			email = email.toNormalizedEmail(),
 			role = roleService.getDefaultUserRole(),
 		)
 		user.create(serviceAccount, now())
 
 		return port.create(user)
 	}
-
-	private fun normalizeEmail(email: String): String = email.trim().lowercase()
 
 	override fun serviceAccount(): UserModel = serviceAccount
 

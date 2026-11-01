@@ -28,9 +28,8 @@ interface IProjectProfileService {
 	fun createProjectProfiles(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		userIds: List<UUID>,
 		profiles: List<ProjectProfileModel>
-	): Mono<Pair<List<UUID>, List<UUID>>>
+	): Mono<Pair<List<String>, List<String>>>
 
 	fun updateProjectProfileById(
 		currentUser: CurrentUserModel,

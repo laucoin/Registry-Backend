@@ -138,12 +138,12 @@ class ProjectProfileControllerTest : TestContext() {
 		@JvmStatic
 		fun `Should createProjectProfiles return 400`(): Stream<Arguments> = Stream.of(
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = null, role = "ROLE"),
+				ProjectProfilesWriterDto(emails = null, role = "ROLE"),
 				PROJECT_PROFILE_USERS_EMPTY,
 				PROJECT_PROFILE_USERS_EMPTY,
 			),
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = emptyList(), role = "ROLE"),
+				ProjectProfilesWriterDto(emails = emptyList(), role = "ROLE"),
 				PROJECT_PROFILE_USERS_EMPTY,
 			),
 			Arguments.of(
@@ -151,16 +151,24 @@ class ProjectProfileControllerTest : TestContext() {
 				PROJECT_PROFILE_USERS_EMPTY,
 			),
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = ""),
+				ProjectProfilesWriterDto(emails = listOf("not-an-email"), role = "ROLE"),
+				PARAMETER_FORMAT_INVALID,
+			),
+			Arguments.of(
+				ProjectProfilesWriterDto(emails = listOf("${"a".repeat(320)}@sgdf.fr"), role = "ROLE"),
+				PARAMETER_FORMAT_INVALID,
+			),
+			Arguments.of(
+				ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = ""),
 				PROJECT_PROFILE_ROLE_BLANK,
 			),
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID())),
+				ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr")),
 				PROJECT_PROFILE_ROLE_BLANK,
 			),
 			Arguments.of(
 				ProjectProfilesWriterDto(
-					userIds = listOf(UUID.randomUUID()),
+					emails = listOf("invited@sgdf.fr"),
 					role = "ROLE",
 					startAccess = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
 					endAccess = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
@@ -370,10 +378,9 @@ class ProjectProfileControllerTest : TestContext() {
 	@Test
 	fun `Should createProjectProfiles return 200`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val profiles = ProjectProfilesWriterDto(userIds = listOf(uuid), role = "ROLE")
-		whenever(service.createProjectProfiles(any(), any(), any(), any())).thenReturn(
-			Mono.just(Pair(listOf(UUID.randomUUID()), emptyList()))
+		val profiles = ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = "ROLE")
+		whenever(service.createProjectProfiles(any(), any(), any())).thenReturn(
+			Mono.just(Pair(listOf("invited@sgdf.fr"), emptyList()))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
 		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
@@ -400,36 +407,24 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(writerMapper)
 		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
 		verify(createdProjectProfilesReaderMapper).toDto(any())
-		verify(service).createProjectProfiles(
-			any(),
-			eq(defaultProjectId),
-			eq(profiles.userIds!!),
-			any()
-		)
+		verify(service).createProjectProfiles(any(), eq(defaultProjectId), any())
 	}
 
 	@Test
 	fun `Should createProjectProfiles return 207`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val uuid2 = UUID.randomUUID()
-		val profiles = ProjectProfilesWriterDto(userIds = listOf(uuid, uuid2), role = "ROLE")
+		val email = "first@sgdf.fr"
+		val email2 = "second@sgdf.fr"
+		val profiles = ProjectProfilesWriterDto(emails = listOf(email, email2), role = "ROLE")
 
-		whenever(
-			service.createProjectProfiles(
-				any(),
-				any(),
-				any(),
-				any()
-			)
-		).thenReturn(
-			Mono.just(Pair(listOf(uuid2), listOf(uuid)))
+		whenever(service.createProjectProfiles(any(), any(), any())).thenReturn(
+			Mono.just(Pair(listOf(email2), listOf(email)))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
 		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
 			CreatedProjectProfilesReaderDto(
-				listOf(uuid2),
-				listOf(uuid)
+				listOf(email2),
+				listOf(email)
 			)
 		)
 
@@ -443,8 +438,8 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		val body = result.body<CreatedProjectProfilesReaderDto>(MULTI_STATUS)
-		assertEquals(uuid2, body?.createdUserIds?.first())
-		assertEquals(uuid, body?.notCreatedUserIds?.first())
+		assertEquals(email2, body?.createdEmails?.first())
+		assertEquals(email, body?.notCreatedEmails?.first())
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
@@ -452,12 +447,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
-		verify(service).createProjectProfiles(
-			any(),
-			eq(defaultProjectId),
-			eq(profiles.userIds!!),
-			any()
-		)
+		verify(service).createProjectProfiles(any(), eq(defaultProjectId), any())
 	}
 
 	@ParameterizedTest
@@ -468,7 +458,7 @@ class ProjectProfileControllerTest : TestContext() {
 	) {
 		// Act
 		val result = webClient
-			.authenticate()
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profile)
@@ -743,7 +733,7 @@ class ProjectProfileControllerTest : TestContext() {
 	@Test
 	fun `Should createProjectProfiles refuse more than 200 users`() {
 		// Arrange
-		val profiles = ProjectProfilesWriterDto(userIds = List(201) { UUID.randomUUID() }, role = "ROLE")
+		val profiles = ProjectProfilesWriterDto(emails = List(201) { "invited$it@sgdf.fr" }, role = "ROLE")
 
 		// Act
 		val result = webClient
@@ -761,7 +751,7 @@ class ProjectProfileControllerTest : TestContext() {
 	@Test
 	fun `Should createProjectProfiles refuse a role over 50 characters`() {
 		// Arrange
-		val profiles = ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = "R".repeat(51))
+		val profiles = ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = "R".repeat(51))
 
 		// Act
 		val result = webClient
@@ -811,7 +801,7 @@ class ProjectProfileControllerTest : TestContext() {
 	@Test
 	fun `Should createProjectProfiles refuse a role with forbidden characters`() {
 		// Arrange
-		val profiles = ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = "ROLE';--")
+		val profiles = ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = "ROLE';--")
 
 		// Act
 		val result = webClient

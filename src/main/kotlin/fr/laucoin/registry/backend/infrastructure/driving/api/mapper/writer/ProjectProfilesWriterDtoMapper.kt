@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
+import fr.laucoin.registry.backend.domain.extension.StringExt.toNormalizedEmail
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfilesWriterDto
@@ -10,13 +11,13 @@ import org.springframework.stereotype.Component
 @Component
 class ProjectProfilesWriterDtoMapper(private val customDateTimeMapper: CustomDateTimeWriterDtoMapper) {
 	fun toModels(dto: ProjectProfilesWriterDto, projectId: UUID): List<ProjectProfileModel> {
-		return dto.userIds!!.map { userId ->
+		return dto.emails!!.map { it.toNormalizedEmail() }.distinct().map { userEmail ->
 			ProjectProfileModel().apply {
 				role = dto.role
 				startAccess = Optional.ofNullable(dto.startAccess).map(customDateTimeMapper::toModel).orElse(null)
 				endAccess = Optional.ofNullable(dto.endAccess).map(customDateTimeMapper::toModel).orElse(null)
 				this.projectId = projectId
-				user = UserModel().apply { id = userId }
+				user = UserModel().apply { email = userEmail }
 			}
 		}.toList()
 	}
