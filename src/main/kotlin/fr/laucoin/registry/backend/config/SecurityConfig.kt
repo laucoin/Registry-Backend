@@ -1,11 +1,15 @@
 package fr.laucoin.registry.backend.config
 
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CookieBearerTokenHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CsrfTokenHeaderHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.ExportRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.LocaleContextHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.PermissionService
@@ -36,6 +40,7 @@ import org.springframework.security.access.expression.method.DefaultMethodSecuri
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
@@ -74,6 +79,8 @@ class SecurityConfig(
 	private val objectMapper: ObjectMapper,
 	private val csrfTokenService: CsrfTokenService,
 	private val clock: Clock,
+	private val auditService: IAuditService,
+	private val clientContextService: ClientContextService,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.server.management-port}")
@@ -88,6 +95,12 @@ class SecurityConfig(
 	private val authRateLimitWindowSeconds: Long,
 	@param:Value($$"${registry.security.rate-limit.auth.max-tracked-clients}")
 	private val authRateLimitMaxTrackedClients: Long,
+	@param:Value($$"${registry.security.rate-limit.export.capacity}")
+	private val exportRateLimitCapacity: Int,
+	@param:Value($$"${registry.security.rate-limit.export.window-seconds}")
+	private val exportRateLimitWindowSeconds: Long,
+	@param:Value($$"${registry.security.rate-limit.export.max-tracked-users}")
+	private val exportRateLimitMaxTrackedUsers: Long,
 ) {
 
 	@Bean
@@ -134,6 +147,7 @@ class SecurityConfig(
 			.resolveLocaleContext()
 			.configureSecurityHeaders(API_CONTENT_SECURITY_POLICY)
 			.rateLimitAuthentication()
+			.rateLimitExport()
 			.exposeCsrfToken()
 			.configureCsrf()
 			.configureResourceAccess()
@@ -167,6 +181,19 @@ class SecurityConfig(
 			authRateLimitMaxTrackedClients,
 		),
 		FIRST,
+	)
+
+	private fun ServerHttpSecurity.rateLimitExport() = addFilterAfter(
+		ExportRateLimitHandler(
+			auditService,
+			clientContextService,
+			TooManyRequestsResponder(translateService, localeContextResolver, objectMapper),
+			clock,
+			exportRateLimitCapacity,
+			exportRateLimitWindowSeconds,
+			exportRateLimitMaxTrackedUsers,
+		),
+		AUTHENTICATION,
 	)
 
 	private fun ServerHttpSecurity.exposeCsrfToken() = addFilterBefore(CsrfTokenHeaderHandler(csrfTokenService), FIRST)
