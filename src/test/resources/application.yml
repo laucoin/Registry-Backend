@@ -54,6 +54,8 @@ registry:
     username: ${DATASOURCE_USERNAME}
     password: ${DATASOURCE_PASSWORD}
     lock-timeout-ms: ${DATASOURCE_LOCK_TIMEOUT_MS:5000}
+  audit:
+    buffer-size: ${REGISTRY_AUDIT_BUFFER_SIZE:1000}
   concurrency:
     update-timeout: ${REGISTRY_UPDATE_TIMEOUT:10s}
   feature:
