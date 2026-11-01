@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum.HIGH
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -13,7 +14,7 @@ class AlertEntityMapperTest {
 	@Test
 	fun `Should toModel keep the criticality and build the last communication`() {
 		// Arrange
-		val dateTime = ZonedDateTime.now()
+		val dateTime = ZonedDateTime.now(ZoneOffset.UTC)
 		val entity = AlertEntity(
 			criticality = HIGH,
 			lastCommunicationDateTime = dateTime,

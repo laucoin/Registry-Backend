@@ -65,7 +65,7 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<AlertEntity>
 
 	@Query(

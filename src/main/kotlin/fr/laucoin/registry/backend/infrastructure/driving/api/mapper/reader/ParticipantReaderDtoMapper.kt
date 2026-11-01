@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
@@ -13,6 +14,7 @@ class ParticipantReaderDtoMapper(
 	private val typeMapper: ParticipantTypeReaderDtoMapper,
 	private val statusMapper: PresenceStatusReaderDtoMapper,
 	private val groupMapper: GroupWithoutMemberReaderDtoMapper,
+	private val clock: Clock,
 ): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
 	override fun toDto(model: ParticipantModel): ParticipantReaderDto {
 		return ParticipantReaderDto(
@@ -39,5 +41,5 @@ class ParticipantReaderDtoMapper(
 		}
 	}
 
-	private fun isMajor(birthday: LocalDate?): Boolean = birthday.isMajor()
+	private fun isMajor(birthday: LocalDate?): Boolean = birthday.isMajor(clock)
 }

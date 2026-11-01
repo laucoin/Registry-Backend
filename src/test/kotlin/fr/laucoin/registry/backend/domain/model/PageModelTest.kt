@@ -22,7 +22,7 @@ class PageModelTest {
 	@MethodSource
 	fun `Should tell whether another page follows`(page: Int, size: Int, totalElements: Long, expected: Boolean) {
 		// Arrange
-		val model = PageModel<String>(PageableModel(page * size, size), totalElements, emptyList())
+		val model = PageModel<String>(PageableModel(page.toLong() * size, size), totalElements, emptyList())
 
 		// Act
 		val result = model.hasNext

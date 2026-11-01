@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
@@ -19,6 +20,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.PRECONDITION_FAILED
+import org.springframework.http.HttpStatus.REQUEST_TIMEOUT
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
@@ -26,7 +28,7 @@ import reactor.test.StepVerifier
 class ConcurrencyServiceTest {
 	private val rowLockPort: IRowLockPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
-	private val service = ConcurrencyService(rowLockPort, transactionalOperator)
+	private val service = ConcurrencyService(rowLockPort, transactionalOperator, Duration.ofMillis(200))
 	private val id: UUID = UUID.randomUUID()
 	private val edition: Instant = Instant.parse("2026-10-13T10:02:11.123456Z")
 
@@ -101,5 +103,30 @@ class ConcurrencyServiceTest {
 
 		// Assert
 		StepVerifier.create(result).expectError(IllegalStateException::class.java).verify()
+	}
+
+	@Test
+	fun `Should answer a request timeout when the action exceeds the update timeout`() {
+		// Act
+		val result = service.updateIfUnchanged(ACTIVITY, id, null, { Mono.just(model()) }, { Mono.never<String>() })
+
+		// Assert
+		StepVerifier.create(result)
+			.expectErrorSatisfies { assertEquals(REQUEST_TIMEOUT, (it as RegistryException).status) }
+			.verify()
+	}
+
+	@Test
+	fun `Should answer a request timeout when the row lock is not acquired in time`() {
+		// Arrange
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.never())
+
+		// Act
+		val result = service.updateIfUnchanged(ACTIVITY, id, listOf(edition), { Mono.just(model()) }, { Mono.just("done") })
+
+		// Assert
+		StepVerifier.create(result)
+			.expectErrorSatisfies { assertEquals(REQUEST_TIMEOUT, (it as RegistryException).status) }
+			.verify()
 	}
 }

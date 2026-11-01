@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
@@ -109,6 +110,7 @@ class VehicleControllerTest : TestContext() {
 		fun `Should findVehicles throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -132,6 +134,7 @@ class VehicleControllerTest : TestContext() {
 		fun `Should findVehicleMovements throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -256,7 +259,7 @@ class VehicleControllerTest : TestContext() {
 		// Arrange
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = VehicleSearchParamModel(
 			query = query,
 			isVisible = isVisible,
@@ -354,6 +357,29 @@ class VehicleControllerTest : TestContext() {
 		verifyNoInteractions(movementReaderMapper)
 	}
 
+	@Test
+	fun `Should findVehicleById force the visible filter when the user cannot read hidden elements`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.findVehicleById(any(), any(), anyOrNull())).thenReturn(Mono.just(VehicleModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(VehicleReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<VehicleReaderDto>(OK)
+
+		verify(service).findVehicleById(defaultProjectId, uuid, isVisible = true)
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(writerMapper)
+		verifyNoInteractions(movementReaderMapper)
+	}
+
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findVehicleMovements prepare param, call service and finally cast the result`(
@@ -368,7 +394,7 @@ class VehicleControllerTest : TestContext() {
 		val uuid = UUID.randomUUID()
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = MovementSearchParamModel(
 			isVisible = isVisible,
 			type = type,

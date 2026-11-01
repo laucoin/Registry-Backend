@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.extension
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
@@ -19,8 +20,8 @@ import java.util.Objects
  * Limites : Lit uniquement l'heure courante ; ne persiste jamais un statut.
  */
 object AvailabilityElementExt {
-	fun VehicleModel.buildStatus(lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
-		val now = CustomDateTimeModel.now()
+	fun VehicleModel.buildStatus(clock: Clock, lastMovementType: MovementTypeEnum?): PresenceStatusEnum {
+		val now = CustomDateTimeModel.now(clock)
 		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
 		return status(available, lastMovementType)
 	}
@@ -33,26 +34,26 @@ object AvailabilityElementExt {
 		}
 	}
 
-	fun ProjectModel.buildStatus(): AvailabilityStatusEnum {
-		val now = CustomDateTimeModel.now()
+	fun ProjectModel.buildStatus(clock: Clock): AvailabilityStatusEnum {
+		val now = CustomDateTimeModel.now(clock)
 		val available = now.asStartIsAfterOther(begin) && now.asEndIsBeforeOther(end)
 		return availability(available)
 	}
 
-	fun ProjectProfileModel.buildStatus(): AvailabilityStatusEnum {
-		val now = CustomDateTimeModel.now()
+	fun ProjectProfileModel.buildStatus(clock: Clock): AvailabilityStatusEnum {
+		val now = CustomDateTimeModel.now(clock)
 		val available = now.asStartIsAfterOther(startAccess) && now.asEndIsBeforeOther(endAccess)
 		return availability(available)
 	}
 
-	fun GroupModel.buildStatus(): AvailabilityStatusEnum {
-		val now = CustomDateTimeModel.now()
+	fun GroupModel.buildStatus(clock: Clock): AvailabilityStatusEnum {
+		val now = CustomDateTimeModel.now(clock)
 		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
 		return availability(available)
 	}
 
-	fun ActivityModel.buildStatus(): AvailabilityStatusEnum {
-		val now = CustomDateTimeModel.now()
+	fun ActivityModel.buildStatus(clock: Clock): AvailabilityStatusEnum {
+		val now = CustomDateTimeModel.now(clock)
 		val available = now.asStartIsAfterOther(startAvailability) && now.asEndIsBeforeOther(endAvailability)
 		return availability(available)
 	}

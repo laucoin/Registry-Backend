@@ -51,7 +51,7 @@ class ProjectProfileV2Controller(
 ) : IProjectProfileV2Controller {
 	override fun findProjectProfiles(
 		projectId: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isAvailable: Boolean?,

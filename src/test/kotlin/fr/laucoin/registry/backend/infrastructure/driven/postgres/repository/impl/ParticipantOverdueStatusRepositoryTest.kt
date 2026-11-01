@@ -28,6 +28,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -47,7 +48,7 @@ class ParticipantOverdueStatusRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var movementPort: IMovementPort
 
-	private val base: ZonedDateTime = ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)
+	private val base: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
 	private val pageable = PageableModel(0, 200)
 	private var minutes = 0L
 	private val ids = mutableMapOf<String, UUID>()
@@ -155,10 +156,10 @@ class ParticipantOverdueStatusRepositoryTest : TestContext() {
 	private fun createGroup(name: String, start: Long?, end: Long?): UUID {
 		val group = GroupModel().apply {
 			this.name = name
-			startAvailability = start?.let { CustomDateTimeModel(LocalDate.now().plusDays(it)) }
-			endAvailability = end?.let { CustomDateTimeModel(LocalDate.now().plusDays(it)) }
+			startAvailability = start?.let { CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(it)) }
+			endAvailability = end?.let { CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(it)) }
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return groupPort.create(group).block()!!.id!!
 	}
@@ -183,10 +184,10 @@ class ParticipantOverdueStatusRepositoryTest : TestContext() {
 			lastName = name
 			birthday = LocalDate.EPOCH
 			type = REGISTERED
-			endAvailability = ownEnd?.let { CustomDateTimeModel(LocalDate.now().plusDays(it)) }
+			endAvailability = ownEnd?.let { CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(it)) }
 			this.groups = groups.map { GroupModel().apply { id = it } }
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return participantPort.create(participant).block()!!.id!!
 	}
@@ -200,7 +201,7 @@ class ParticipantOverdueStatusRepositoryTest : TestContext() {
 			content =
 				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		movementPort.create(movement).block()
 	}

@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono
 interface IPurgeV2Controller {
 	@Operation(
 		summary = "Purge users",
-		description = "Purge users if necessary",
+		description = "Purge users if necessary. The response lists at most 1000 identifiers, the purge itself is not limited.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/users")
@@ -44,7 +44,7 @@ interface IPurgeV2Controller {
 
 	@Operation(
 		summary = "Purge projects",
-		description = "Purge projects if necessary",
+		description = "Purge projects if necessary. The response lists at most 1000 identifiers, the purge itself is not limited.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/projects")
@@ -58,7 +58,7 @@ interface IPurgeV2Controller {
 
 	@Operation(
 		summary = "Purge projects contents",
-		description = "Purge projects contents (movements, communications and alerts) if necessary",
+		description = "Purge projects contents (movements, communications and alerts) if necessary. Each list holds at most 1000 identifiers, the purge itself is not limited.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/projects/contents")
@@ -72,7 +72,7 @@ interface IPurgeV2Controller {
 
 	@Operation(
 		summary = "Purge projects configurations",
-		description = "Purge projects configurations (vehicles, activities, groups and participants) if necessary",
+		description = "Purge projects configurations (vehicles, activities, groups and participants) if necessary. Each list holds at most 1000 identifiers, the purge itself is not limited.",
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
 	@PostMapping("/projects/configurations")

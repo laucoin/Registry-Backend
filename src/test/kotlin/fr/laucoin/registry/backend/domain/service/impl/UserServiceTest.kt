@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
@@ -61,7 +62,7 @@ class UserServiceTest {
 	private val roleService: IRoleService = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val service = UserService(
-		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, principalCache
+		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, principalCache, Clock.systemUTC()
 	)
 
 	init {

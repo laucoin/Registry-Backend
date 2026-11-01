@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
@@ -52,12 +56,14 @@ class ParticipantService(
 	private val userPort: IUserPort,
 	private val movementPort: IMovementPort,
 	private val groupPort: IGroupPort,
+	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
+	clock: Clock,
 	@param:Value($$"${registry.feature.participant.searched.max-user-result}")
 	private val maxUserResult: Int,
 	@param:Value($$"${registry.feature.participant.searched.max-group-result}")
 	private val maxGroupResult: Int,
-): IParticipantService, GenericService() {
+): IParticipantService, GenericService(clock) {
 	override fun findParticipantsPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -86,7 +92,7 @@ class ParticipantService(
 	override fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel> {
 		return userPort.findWithLimit(
 			maxUserResult,
-			UserSearchParamModel(query, isVisible = true),
+			UserSearchParamModel(query, isVisible = true).apply { memberOfProjectId = projectId },
 		)
 	}
 
@@ -113,6 +119,20 @@ class ParticipantService(
 		currentUser: CurrentUserModel,
 		participant: ParticipantModel
 	): Mono<ParticipantModel> {
+		return lockProjectWhenLinkingUser(participant)
+			.then(Mono.defer { createValidatedParticipant(currentUser, participant) })
+			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun lockProjectWhenLinkingUser(participant: ParticipantModel): Mono<Unit> {
+		return if (participant.user?.id == null) Mono.just(Unit)
+		else rowLockPort.lock(PROJECT, participant.projectId!!)
+	}
+
+	private fun createValidatedParticipant(
+		currentUser: CurrentUserModel,
+		participant: ParticipantModel,
+	): Mono<ParticipantModel> {
 		return projectService.validateDateTimes(
 			participant.projectId!!,
 			participant.startAvailability,
@@ -129,7 +149,7 @@ class ParticipantService(
 					validateGroups(participant.projectId!!, participant, participant.groups.mapNotNull { g -> g.id })
 				} else Mono.just(participant)
 			}
-			.flatMap { port.create(participant.apply { create(currentUser) }) }
+			.flatMap { port.create(participant.apply { create(currentUser, now()) }) }
 	}
 
 	private fun validateNoParticipantForUser(projectId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
@@ -182,12 +202,24 @@ class ParticipantService(
 		id: UUID,
 		participant: ParticipantModel
 	): Mono<ParticipantModel> {
+		return lockProjectWhenLinkingUser(participant)
+			.then(Mono.defer { updateValidatedParticipant(currentUser, projectId, id, participant) })
+			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun updateValidatedParticipant(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		participant: ParticipantModel,
+	): Mono<ParticipantModel> {
 		return projectService.validateDateTimes(
 			participant.projectId!!,
 			participant.startAvailability,
 			participant.endAvailability,
 			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
+			.flatMap { rowLockPort.lock(PARTICIPANT, id) }
 			.flatMap { findParticipantById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(participant, it) }
 			.flatMap { validateUserLink(it, participant) }
@@ -222,7 +254,7 @@ class ParticipantService(
 	}
 
 	private fun Mono<ParticipantModel>.updateParticipant(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser, now()) })
 	}
 
 	override fun disableParticipantById(
@@ -248,6 +280,7 @@ class ParticipantService(
 
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findParticipantById(projectId, id, isVisible = null)
+			.flatMap { rowLockPort.lock(PARTICIPANT, id).thenReturn(it) }
 			.validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
@@ -256,17 +289,8 @@ class ParticipantService(
 	override fun purgeParticipantsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging participants unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
-			.flatMap({
-				if (dryRun) {
-					log.info("[Dry run] participant {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging participant {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Participant {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge participant {}", it, err) }
-				}
-			}, PURGE_DELETE_CONCURRENCY)
+			.purgeEach("participant", dryRun, port::deleteById)
+
 	}
 
 	private fun validateNoMovementConflict(

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -17,7 +18,8 @@ import reactor.core.publisher.Mono
  */
 open class GenericProfileService(
 	private val repository: IProjectProfilePort,
-): GenericService() {
+	clock: Clock,
+): GenericService(clock) {
 	protected fun validateNoProfileConflict(
 		projectId: UUID,
 		userIds: List<UUID>,

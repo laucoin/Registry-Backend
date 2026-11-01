@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.AVAILABILITY_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
@@ -15,6 +16,7 @@ import java.util.Objects
 @Component
 class AvailabilityStatusReaderDtoMapper(
 	private val translateService: ITranslateService,
+	private val clock: Clock,
 ) : GenericDurationReaderDtoMapper(translateService) {
 	fun toDto(model: AvailabilityStatusEnum): LabelDto {
 		return LabelDto(
@@ -41,7 +43,7 @@ class AvailabilityStatusReaderDtoMapper(
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): String {
-		val now = CustomDateTimeModel.now()
+		val now = CustomDateTimeModel.now(clock)
 		val durationPrefix = "${subject.keyPrefix}$DURATION_PREFIX"
 		return when {
 			Objects.nonNull(startAvailability) && AvailabilityStatusEnum.AVAILABLE === model ->

@@ -21,6 +21,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.stream.Stream
@@ -33,7 +34,7 @@ class CurrentUserReaderDtoMapperTest {
 
 	private companion object {
 		private const val TRANSLATED = "TRANSLATED"
-		private val now = ZonedDateTime.now()
+		private val now = ZonedDateTime.now(ZoneOffset.UTC)
 		private val preferenceDto = PreferenceReaderDto()
 
 		private val model = CurrentUserModel(
@@ -48,8 +49,8 @@ class CurrentUserReaderDtoMapperTest {
 			role = "ROLE"
 			id = defaultUserId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		private val dto = CurrentUserReaderDto(
@@ -64,8 +65,8 @@ class CurrentUserReaderDtoMapperTest {
 		).apply {
 			id = defaultUserId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		@JvmStatic

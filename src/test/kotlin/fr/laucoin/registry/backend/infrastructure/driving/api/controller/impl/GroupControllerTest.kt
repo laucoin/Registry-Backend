@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_N
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_START_LATER_THAN_END
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
@@ -121,6 +122,7 @@ class GroupControllerTest : TestContext() {
 		fun `Should findGroups throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -142,6 +144,7 @@ class GroupControllerTest : TestContext() {
 		fun `Should findGroupMembersByGroupId throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -195,7 +198,7 @@ class GroupControllerTest : TestContext() {
 		// Arrange
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = GroupSearchParamModel(
 			query = query,
 			isVisible = isVisible,
@@ -285,7 +288,7 @@ class GroupControllerTest : TestContext() {
 		val uuid = UUID.randomUUID()
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = ParticipantSearchParamModel(
 			query = query,
 			isVisible = isVisible,
@@ -388,6 +391,38 @@ class GroupControllerTest : TestContext() {
 			defaultProjectId,
 			uuid,
 			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null
+		)
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should findGroupById force the visible filter when the user cannot read hidden elements`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.findGroupById(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
+			Mono.just(
+				GroupModel()
+			)
+		)
+		whenever(readerMapper.toDto(any())).thenReturn(GroupReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<GroupReaderDto>(OK)
+
+		verify(service).findGroupById(
+			defaultProjectId,
+			uuid,
+			isVisible = true,
 			memberIsVisible = null,
 			memberIsAvailable = null
 		)

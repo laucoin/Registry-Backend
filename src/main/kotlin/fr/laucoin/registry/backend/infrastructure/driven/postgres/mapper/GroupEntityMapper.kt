@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
@@ -9,13 +10,13 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.Gene
 import org.springframework.stereotype.Component
 
 @Component
-class GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
+class GroupEntityMapper(private val clock: Clock): IEntityMapper<GroupModel, GroupEntity> {
 	override fun toModel(entity: GroupEntity): GroupModel {
 		return GroupModel().apply {
 			name = entity.name
 			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
 			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
-			status = buildStatus()
+			status = buildStatus(clock)
 			membersCount = entity.members
 			insideMembersCount = entity.insideMembers
 			outsideMembersCount = entity.outsideMembers

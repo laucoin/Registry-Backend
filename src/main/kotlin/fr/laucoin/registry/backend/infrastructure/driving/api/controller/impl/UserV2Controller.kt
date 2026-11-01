@@ -29,7 +29,7 @@ class UserV2Controller(
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
 ): IUserV2Controller {
 	override fun findUsers(
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isVisible: Boolean?,

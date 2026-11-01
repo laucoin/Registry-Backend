@@ -75,7 +75,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -101,7 +101,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -125,7 +125,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -167,7 +167,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -207,7 +207,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(

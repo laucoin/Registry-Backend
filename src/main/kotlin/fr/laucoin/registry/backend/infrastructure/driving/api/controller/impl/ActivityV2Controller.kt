@@ -49,7 +49,7 @@ class ActivityV2Controller(
 	override fun findActivities(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isVisible: Boolean?,
@@ -71,15 +71,15 @@ class ActivityV2Controller(
 		return service.findActivitiesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
-	override fun findActivityById(projectId: UUID, id: UUID): Mono<ActivityReaderDto> {
-		return service.findActivityById(projectId, id, isVisible = null).map(readerMapper::toDto)
+	override fun findActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityReaderDto> {
+		return service.findActivityById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_ACTIVITY_D)).map(readerMapper::toDto)
 	}
 
 	override fun findActivityMovements(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		isVisible: Boolean?,
 		type: MovementTypeEnum?,

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
@@ -24,6 +25,7 @@ import reactor.core.publisher.Mono
 class VehicleModelPostgresRepository(
 	private val repository: IVehicleEntityRepository,
 	private val mapper: VehicleEntityMapper,
+	private val clock: Clock,
 ): IVehiclePort {
 	override fun findPage(
 		projectId: UUID,
@@ -43,7 +45,7 @@ class VehicleModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, VehicleEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, VehicleEntity::fullCount, mapper::toModel)
 	}
 
 	override fun countAll(

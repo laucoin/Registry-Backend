@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -287,7 +289,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 			val group = GroupModel().apply {
 				name = "test"
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -310,7 +312,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 				name = "test update"
 				this.projectId = defaultProjectId
 				members = listOf(ParticipantModel().apply { id = defaultParticipantId })
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -338,7 +340,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 				name = "test update"
 				this.projectId = defaultProjectId
 				members = emptyList()
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

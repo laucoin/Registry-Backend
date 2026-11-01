@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -23,6 +24,7 @@ import reactor.core.publisher.Mono
 class CommunicationPostgresRepository(
 	private val repository: ICommunicationEntityRepository,
 	private val mapper: CommunicationEntityMapper,
+	private val clock: Clock,
 ): ICommunicationPort {
 	override fun findByMovementIdsWithLimit(
 		limit: Int,
@@ -55,7 +57,7 @@ class CommunicationPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, CommunicationEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findByAlertIdsWithLimit(
@@ -89,7 +91,7 @@ class CommunicationPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, CommunicationEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, CommunicationEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findAllByIds(

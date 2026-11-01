@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
@@ -52,11 +53,12 @@ class CommunicationService(
 	private val port: ICommunicationPort,
 	private val movementPort: IMovementPort,
 	private val alertPort: IAlertPort,
+	clock: Clock,
 	@param:Value($$"${registry.feature.communication.searched.max-activity-result}")
 	private val maxActivityResult: Int,
 	@param:Value($$"${registry.feature.communication.searched.max-alert-result}")
 	private val maxAlertResult: Int,
-): ICommunicationService, GenericService() {
+): ICommunicationService, GenericService(clock) {
 	override fun findCommunicationById(
 		projectId: UUID,
 		id: UUID,
@@ -107,7 +109,7 @@ class CommunicationService(
 		)
 			.flatMap { validateNoMovementConflict(communication) }
 			.flatMap { validateNoAlertConflict(currentUser, communication) }
-			.flatMap { port.create(communication.apply { create(currentUser) }) }
+			.flatMap { port.create(communication.apply { create(currentUser, now()) }) }
 	}
 
 	override fun updateCommunicationById(
@@ -170,21 +172,11 @@ class CommunicationService(
 	): Flux<UUID> {
 		log.info("Purging orphan communications")
 		return port.findOrphan(movementsToExclude, alertsToExclude)
-			.flatMap {
-				if (dryRun) {
-					log.info("[Dry run] communication {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging communication {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Communication {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge communication{}", it, err) }
-				}
-			}
+			.purgeEach("communication", dryRun, port::deleteById)
 	}
 
 	private fun Mono<CommunicationModel>.updateCommunication(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser, now()) })
 	}
 
 	private fun validateNoMovementConflict(
@@ -228,7 +220,7 @@ class CommunicationService(
 			Mono.just(communicationToReturn)
 		else {
 			if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
-				throw RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION)
+				return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
 			}
 
 			alertPort.findById(communication.projectId!!, communication.alert!!.id!!, isVisible = null)

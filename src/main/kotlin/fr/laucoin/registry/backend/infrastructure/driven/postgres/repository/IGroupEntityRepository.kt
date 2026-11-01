@@ -64,7 +64,7 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<GroupEntity>
 
 	@Query(

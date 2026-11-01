@@ -100,7 +100,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ParticipantEntity>
 
 	@Query(
@@ -156,7 +156,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ParticipantEntity>
 
 	@Query(

@@ -12,6 +12,11 @@ import ch.qos.logback.core.pattern.color.ANSIConstants.RED_FG
 import ch.qos.logback.core.pattern.color.ANSIConstants.YELLOW_FG
 import ch.qos.logback.core.pattern.color.ForegroundCompositeConverterBase
 
+/**
+ * Objectif : Colorie le niveau des logs de la console.
+ * Périmètre : Associe chaque niveau Logback à une couleur ANSI.
+ * Limites : Ne filtre ni ne formate les messages.
+ */
 class LoggerConfig: ForegroundCompositeConverterBase<ILoggingEvent>() {
 	override fun getForegroundColorCode(project: ILoggingEvent): String {
 		return when (project.level) {

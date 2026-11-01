@@ -27,6 +27,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
@@ -121,11 +122,11 @@ class CommunicationModelPostgresRepositoryTest : TestContext() {
 		fun `Should create call repository save`() {
 			// Arrange
 			val communication = CommunicationModel().apply {
-				dateTime = ZonedDateTime.now()
+				dateTime = ZonedDateTime.now(ZoneOffset.UTC)
 				message = "message"
 				movement = MovementModel().apply { id = defaultMovementId }
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -145,11 +146,11 @@ class CommunicationModelPostgresRepositoryTest : TestContext() {
 			// Arrange
 			val activity = CommunicationModel().apply {
 				id = uuid
-				dateTime = ZonedDateTime.now()
+				dateTime = ZonedDateTime.now(ZoneOffset.UTC)
 				message = "message updated"
 				movement = MovementModel().apply { id = defaultMovementId }
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

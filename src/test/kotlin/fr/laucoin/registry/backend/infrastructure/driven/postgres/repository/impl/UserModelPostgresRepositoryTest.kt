@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
@@ -101,6 +103,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		verify(postgresRepository).findWithLimit(
 			query = null,
 			isVisible = null,
+			memberOfProjectId = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -217,7 +220,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 			val user = UserModel().apply {
 				firstName = "test"
 				lastName = "test"
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -239,7 +242,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				firstName = "test update"
 				lastName = "test update"
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

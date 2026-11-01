@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.mockito.kotlin.verifyNoMoreInteractions
 import org.springframework.http.HttpStatus.FORBIDDEN
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
@@ -177,7 +178,7 @@ class MovementServiceTest {
 				MOVEMENT_PARTICIPANTS_NOT_VISIBLE,
 			),
 			Arguments.of(
-				Flux.just(defaultParticipant().apply { birthday = LocalDate.now() }),
+				Flux.just(defaultParticipant().apply { birthday = LocalDate.now(ZoneOffset.UTC) }),
 				UNPROCESSABLE_CONTENT,
 				MOVEMENT_DRIVERS_NOT_MAJOR,
 			),
@@ -679,7 +680,7 @@ class MovementServiceTest {
 	@Test
 	fun `Should createMovement throw on a movement dated in the future`() {
 		// Arrange
-		val movement = defaultMovement().apply { dateTime = ZonedDateTime.now().plusMinutes(5) }
+		val movement = defaultMovement().apply { dateTime = ZonedDateTime.now(ZoneOffset.UTC).plusMinutes(5) }
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -695,7 +696,7 @@ class MovementServiceTest {
 	@Test
 	fun `Should updateMovementById throw on a movement dated in the future`() {
 		// Arrange
-		val movement = defaultMovement().apply { dateTime = ZonedDateTime.now().plusMinutes(5) }
+		val movement = defaultMovement().apply { dateTime = ZonedDateTime.now(ZoneOffset.UTC).plusMinutes(5) }
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -715,7 +716,7 @@ class MovementServiceTest {
 		val movement = defaultMovement().apply {
 			contentType = REGISTERED
 			content = listOf(participantContent)
-			dateTime = ZonedDateTime.now().plusMinutes(1)
+			dateTime = ZonedDateTime.now(ZoneOffset.UTC).plusMinutes(1)
 		}
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
@@ -841,7 +842,8 @@ class MovementServiceTest {
 		assertEquals(expectedCode, result.code)
 
 		verify(activityPort).findById(defaultProjectId, defaultActivityId, isVisible = null)
-		verifyNoInteractions(participantPort)
+		verify(participantPort).lockByIds(any())
+		verifyNoMoreInteractions(participantPort)
 		verifyNoInteractions(port)
 	}
 
@@ -898,7 +900,7 @@ class MovementServiceTest {
 	fun `Should createMovement with last participant movement`() {
 		// Arrange
 		val participantContent = MovementContentModel().apply { participant = defaultParticipant() }
-		val movementDate = ZonedDateTime.now()
+		val movementDate = ZonedDateTime.now(ZoneOffset.UTC)
 		val movement = defaultMovement().apply {
 			dateTime = movementDate
 			contentType = REGISTERED
@@ -923,7 +925,7 @@ class MovementServiceTest {
 	fun `Should createMovement with guest out`() {
 		// Arrange
 		val participantContent = MovementContentModel().apply { participant = defaultParticipant() }
-		val movementDate = ZonedDateTime.now()
+		val movementDate = ZonedDateTime.now(ZoneOffset.UTC)
 		val movement = defaultMovement().apply {
 			dateTime = movementDate
 			contentType = GUEST
@@ -965,7 +967,7 @@ class MovementServiceTest {
 		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 
 		val participantIds = newParticipants.mapNotNull(ParticipantModel::id)
 		verify(participantPort, times(expectedCallNewParticipant))
@@ -993,7 +995,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(expectedCode, result.code)
 
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port, never()).update(any())
 	}
 
@@ -1012,7 +1014,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_UPDATED, result.code)
 
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port, never()).update(any())
 	}
 
@@ -1040,7 +1042,7 @@ class MovementServiceTest {
 			.block()
 
 		// Assert
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 
 		val guestIds = newGuests.mapNotNull(ParticipantModel::id)
 		verify(participantPort, times(expectedCallFindParticipants))
@@ -1077,7 +1079,7 @@ class MovementServiceTest {
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT, result.code)
 
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(participantPort, never()).saveAllGuest(any())
 		verify(port, never()).update(any())
@@ -1088,10 +1090,10 @@ class MovementServiceTest {
 		// Arrange
 		val oldMovement =
 			defaultMovement().apply {
-				type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now().minusDays(10)
+				type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now(ZoneOffset.UTC).minusDays(10)
 			}
 		val updatedMovement =
-			defaultMovement().apply { type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now() }
+			defaultMovement().apply { type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now(ZoneOffset.UTC) }
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
 			isVisible = null,
@@ -1107,7 +1109,7 @@ class MovementServiceTest {
 		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(communicationPort).countAllByMovementId(defaultProjectId, defaultMovementId, expectedCommunicationSearch)
 		verify(port).update(any())
 	}
@@ -1117,10 +1119,10 @@ class MovementServiceTest {
 		// Arrange
 		val oldMovement =
 			defaultMovement().apply {
-				type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now().minusDays(10)
+				type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now(ZoneOffset.UTC).minusDays(10)
 			}
 		val updatedMovement =
-			defaultMovement().apply { type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now() }
+			defaultMovement().apply { type = IN; contentType = REGISTERED; dateTime = ZonedDateTime.now(ZoneOffset.UTC) }
 		val conflictCommunication = 1L
 
 		val expectedCommunicationSearch = CommunicationSearchParamModel(
@@ -1149,7 +1151,7 @@ class MovementServiceTest {
 		assertEquals(MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME, result.code)
 		assertEquals(arrayListOf(conflictCommunication), result.args)
 
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(communicationPort).countAllByMovementId(defaultProjectId, defaultMovementId, expectedCommunicationSearch)
 		verify(port, never()).update(any())
 	}
@@ -1249,7 +1251,7 @@ class MovementServiceTest {
 		service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = true)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = true)
 		verify(port).update(movement.apply { visible = false })
 	}
 
@@ -1268,7 +1270,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_DISABLED, result.code)
 
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = true)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = true)
 		verify(port, never()).update(any())
 	}
 
@@ -1284,7 +1286,7 @@ class MovementServiceTest {
 		service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = false)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = false)
 		verify(port).update(movement.apply { visible = true })
 	}
 
@@ -1303,7 +1305,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_ENABLED, result.code)
 
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = false)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = false)
 		verify(port, never()).update(any())
 	}
 
@@ -1319,7 +1321,7 @@ class MovementServiceTest {
 		service.deleteMovementById(defaultProjectId, defaultMovementId).block()
 
 		// Assert
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port).deleteById(defaultMovementId)
 	}
 
@@ -1338,7 +1340,7 @@ class MovementServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_CANNOT_BE_DELETED, result.code)
 
-		verify(port).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port, never()).deleteById(any())
 	}
 

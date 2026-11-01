@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
@@ -55,8 +57,13 @@ class UserProjectProfileServiceTest {
 	private val roleService: IRoleService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val principalCache: IPrincipalCacheService = mock()
+	private val rowLockPort: IRowLockPort = mock()
+	init {
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+	}
+
 	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, favoritePort, roleService, principalCache, transactionalOperator
+		port, favoritePort, roleService, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC()
 	)
 
 	init {

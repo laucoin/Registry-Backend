@@ -55,7 +55,7 @@ class GroupV2Controller(
 	override fun findGroups(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isVisible: Boolean?,
@@ -81,7 +81,7 @@ class GroupV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isMajor: Boolean?,
@@ -110,11 +110,11 @@ class GroupV2Controller(
 			.map(participantReaderMapper::toDtoPage)
 	}
 
-	override fun findGroupById(projectId: UUID, id: UUID): Mono<GroupReaderDto> {
+	override fun findGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupReaderDto> {
 		return service.findGroupById(
 			projectId,
 			id,
-			isVisible = null,
+			isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_GROUP_D),
 			memberIsVisible = null,
 			memberIsAvailable = null,
 		).map(readerMapper::toDto)

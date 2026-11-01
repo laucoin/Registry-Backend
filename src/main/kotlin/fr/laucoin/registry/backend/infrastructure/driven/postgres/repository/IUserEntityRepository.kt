@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.USER_PROJECT_MEMBER_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.role.RoleFields.ENTITY_ROLE_NAME
@@ -50,17 +51,17 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
 	)
 	fun findAll(query: String?, isVisible: Boolean?, role: String?, sortField: String?,
 		isDescending: Boolean?,
-		limit: Int, offset: Int): Flux<UserEntity>
+		limit: Int, offset: Long): Flux<UserEntity>
 
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE
+        WHERE $NOT_SERVICE_ACCOUNT AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $USER_PROJECT_MEMBER_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
         LIMIT :limit
         """
 	)
-	fun findWithLimit(query: String?, isVisible: Boolean?, limit: Int): Flux<UserEntity>
+	fun findWithLimit(query: String?, isVisible: Boolean?, memberOfProjectId: UUID?, limit: Int): Flux<UserEntity>
 
 	@Query(
 		"""

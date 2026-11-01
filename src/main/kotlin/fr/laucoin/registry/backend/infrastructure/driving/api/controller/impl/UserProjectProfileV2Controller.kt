@@ -32,7 +32,7 @@ class UserProjectProfileV2Controller(
 ) : IUserProjectProfileV2Controller {
 	override fun findUserProjectProfiles(
 		currentUser: CurrentUserModel,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isAvailable: Boolean?,

@@ -1,5 +1,10 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
+import fr.laucoin.registry.backend.domain.model.RegistryException
+import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -22,16 +27,20 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 class PreferencesService(
 	private val port: IPreferencesPort,
 	private val principalCache: IPrincipalCacheService,
+	clock: Clock,
 	@param:Value($$"${registry.information.locale.supported}")
 	private val supportedLocales: List<String>,
-): IPreferencesService, GenericService() {
+): IPreferencesService, GenericService(clock) {
 	override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
 		return port.findByUserId(currentUser.id!!, isVisible = null)
 			.switchIfEmpty {
 				val preferences = PreferencesModel(userId = currentUser.id)
-				preferences.create(currentUser)
+				preferences.create(currentUser, now())
 				port.save(preferences)
 					.flatMap { port.findByUserId(currentUser.id!!, isVisible = null) }
+					.onErrorResume(DataIntegrityViolationException::class.java) {
+						port.findByUserId(currentUser.id!!, isVisible = null)
+					}
 			}
 	}
 
@@ -51,10 +60,12 @@ class PreferencesService(
 		currentUser: CurrentUserModel,
 		language: String
 	): Mono<PreferencesModel> {
-		val language = supportedLocales.firstOrNull { s -> s.startsWith(language) }
+		val supportedLanguage = supportedLocales.firstOrNull { it.startsWith(language) }
+			?: return Mono.error(RegistryException(BAD_REQUEST, PARAMETER_FORMAT_INVALID))
+
 		return findByUser(currentUser).flatMap {
-			if (it.language !== language) {
-				it.language = language
+			if (it.language != supportedLanguage) {
+				it.language = supportedLanguage
 				save(currentUser, it)
 			} else Mono.just(it)
 		}
@@ -73,7 +84,7 @@ class PreferencesService(
 	}
 
 	private fun save(currentUser: CurrentUserModel, preferences: PreferencesModel): Mono<PreferencesModel> {
-		return port.save(preferences.apply { update(currentUser) })
+		return port.save(preferences.apply { update(currentUser, now()) })
 			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 }

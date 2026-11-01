@@ -55,7 +55,7 @@ class ParticipantV2Controller(
 	override fun findParticipants(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isMajor: Boolean?,
@@ -94,8 +94,8 @@ class ParticipantV2Controller(
 		return service.findBirthdays(projectId).map(readerMapper::toDto)
 	}
 
-	override fun findParticipantById(projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
-		return service.findParticipantById(projectId, id, isVisible = null).map(readerMapper::toDto)
+	override fun findParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
+		return service.findParticipantById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_PARTICIPANT_D)).map(readerMapper::toDto)
 	}
 
 	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
@@ -113,7 +113,7 @@ class ParticipantV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		isVisible: Boolean?,
 		hasActivity: Boolean?,

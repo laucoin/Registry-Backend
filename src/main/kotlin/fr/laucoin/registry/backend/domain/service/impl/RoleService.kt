@@ -50,8 +50,6 @@ class RoleService(
 
 	override fun getLevelByUserRole(role: String?): Int? = userRoles[role]?.first
 
-	override fun getLevelByProjectRole(role: String): Int = projectRoles[role]?.first ?: 0
-
 	override fun getLevel0RoleFromProjectRoles(): String =
 		projectRoles.entries.firstOrNull { it.value.first == 0 }?.key ?: error("No level 0 project role is defined")
 

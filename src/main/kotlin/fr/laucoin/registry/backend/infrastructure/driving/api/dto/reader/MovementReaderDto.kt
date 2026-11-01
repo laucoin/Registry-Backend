@@ -1,11 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader
 
+import fr.laucoin.registry.backend.domain.constant.DateTimeConst.EPOCH_UTC
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import java.time.ZonedDateTime
 
 data class MovementReaderDto(
-	var dateTime: ZonedDateTime = ZonedDateTime.now(),
+	var dateTime: ZonedDateTime = EPOCH_UTC,
 	var type: LabelDto? = null,
 	var lastCommunicationDateTime: ZonedDateTime? = null,
 	var reason: MovementReasonsReaderDto? = null,

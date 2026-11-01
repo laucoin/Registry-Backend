@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.ZonedDateTime
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -35,6 +36,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
@@ -77,7 +79,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 	fun `Should findPage filter on adulthood`(isMajor: Boolean) {
 		// Arrange
 		val pageable = PageableModel(0, 200)
-		val eighteenYearsAgo = LocalDate.now().minusYears(18)
+		val eighteenYearsAgo = LocalDate.now(ZoneOffset.UTC).minusYears(18)
 		val everyone =
 			repository.findPage(defaultProjectId, pageable, ParticipantSearchParamModel(query = null, at = null))
 				.block()!!.content
@@ -101,7 +103,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		// Act & Assert
 		assertTrue(postgresRepository.findUnusedSince(LocalDate.EPOCH).collectList().block()!!.isEmpty())
 		assertTrue(
-			postgresRepository.findUnusedSince(LocalDate.now().plusYears(1)).collectList().block()!!.isNotEmpty()
+			postgresRepository.findUnusedSince(LocalDate.now(ZoneOffset.UTC).plusYears(1)).collectList().block()!!.isNotEmpty()
 		)
 	}
 
@@ -385,18 +387,18 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			val bornToday = ParticipantModel().apply {
 				firstName = "birthday"
 				lastName = "match"
-				birthday = LocalDate.now().minusYears(30)
+				birthday = LocalDate.now(ZoneOffset.UTC).minusYears(30)
 				type = REGISTERED
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 			val bornAnotherDay = ParticipantModel().apply {
 				firstName = "birthday"
 				lastName = "no-match"
-				birthday = LocalDate.now().minusYears(30).minusDays(1)
+				birthday = LocalDate.now(ZoneOffset.UTC).minusYears(30).minusDays(1)
 				type = REGISTERED
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -448,7 +450,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -474,7 +476,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				type = REGISTERED
 				groups = listOf(GroupModel().apply { id = defaultGroupId })
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -500,7 +502,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 				birthday = LocalDate.EPOCH
 				type = REGISTERED
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

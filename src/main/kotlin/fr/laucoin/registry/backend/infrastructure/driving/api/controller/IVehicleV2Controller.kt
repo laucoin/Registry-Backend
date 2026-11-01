@@ -1,6 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_DEFAULT
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MIN
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_DEFAULT
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MIN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
@@ -63,11 +70,8 @@ interface IVehicleV2Controller {
 	fun findVehicles(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
+		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
 		@Parameter(description = "Text matched against the vehicle license plate, brand and model")
 		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
@@ -91,6 +95,7 @@ interface IVehicleV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_R')")
 	@GetMapping("/{id}")
 	fun findVehicleById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<VehicleReaderDto>
@@ -105,11 +110,8 @@ interface IVehicleV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = "0") @Valid @Min(0, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) page: Int,
-		@RequestParam(defaultValue = "20") @Valid @Min(1, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(
-			200,
-			message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-		) size: Int,
+		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
+		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
 		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
 		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")

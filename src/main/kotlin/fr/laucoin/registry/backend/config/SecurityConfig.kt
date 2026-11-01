@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.config
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler
@@ -72,6 +73,7 @@ class SecurityConfig(
 	private val translateService: ITranslateService,
 	private val objectMapper: ObjectMapper,
 	private val csrfTokenService: CsrfTokenService,
+	private val clock: Clock,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.server.management-port}")
@@ -159,6 +161,7 @@ class SecurityConfig(
 			translateService,
 			localeContextResolver,
 			objectMapper,
+			clock,
 			authRateLimitCapacity,
 			authRateLimitWindowSeconds,
 			authRateLimitMaxTrackedClients,

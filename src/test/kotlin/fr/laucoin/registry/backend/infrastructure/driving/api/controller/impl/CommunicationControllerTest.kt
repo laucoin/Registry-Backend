@@ -50,6 +50,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
@@ -82,7 +83,7 @@ class CommunicationControllerTest : TestContext() {
 			),
 			Arguments.of(
 				CommunicationWriterDto(
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					alertId = null,
 					movementId = null,
 				),
@@ -90,7 +91,7 @@ class CommunicationControllerTest : TestContext() {
 			),
 			Arguments.of(
 				CommunicationWriterDto(
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					message = "Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message.",
 					alertId = null,
 					movementId = defaultMovementId,
@@ -126,11 +127,36 @@ class CommunicationControllerTest : TestContext() {
 	}
 
 	@Test
+	fun `Should findCommunicationById force the visible filter when the user cannot read hidden elements`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.findCommunicationById(any(), any(), anyOrNull())).thenReturn(Mono.just(CommunicationModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_R),
+				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
+			)
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<CommunicationReaderDto>(OK)
+
+		verify(service).findCommunicationById(defaultProjectId, uuid, isVisible = true)
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
 	fun `Should createCommunication return 201`() {
 		// Arrange
 		val createdId = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
 
 		whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto().apply { id = createdId })
@@ -185,7 +211,7 @@ class CommunicationControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
@@ -222,7 +248,7 @@ class CommunicationControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
@@ -265,7 +291,7 @@ class CommunicationControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
