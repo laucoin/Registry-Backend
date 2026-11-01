@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUs
 import fr.laucoin.registry.backend.test.TestContext
 import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -294,6 +295,22 @@ class UserModelPostgresRepositoryTest: TestContext() {
 
 		@Test
 		@Order(4)
+		fun `Should findUserIdsOlderThanLastLogin select a user never logged in from its creation date`() {
+			// Arrange
+			val future = LocalDate.now().plusDays(1)
+			val past = LocalDate.now().minusDays(1)
+
+			// Act
+			val beforeFuture = repository.findUserIdsOlderThanLastLogin(future).collectList().block()!!
+			val beforePast = repository.findUserIdsOlderThanLastLogin(past).collectList().block()!!
+
+			// Assert
+			assertTrue(beforeFuture.contains(uuid))
+			assertFalse(beforePast.contains(uuid))
+		}
+
+		@Test
+		@Order(5)
 		fun `Should deleteById call repository deleteById`() {
 			// Act
 			repository.deleteById(uuid).block()
