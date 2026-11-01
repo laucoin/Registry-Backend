@@ -30,9 +30,11 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.ParticipantExportModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.service.IExportService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -65,6 +67,8 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpHeaders.CACHE_CONTROL
+import org.springframework.http.HttpHeaders.CONTENT_DISPOSITION
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.NO_CONTENT
@@ -77,6 +81,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.time.OffsetTime
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -100,6 +105,9 @@ class ParticipantControllerTest : TestContext() {
 
 	@MockitoBean
 	private lateinit var writerMapper: ParticipantWriterDtoMapper
+
+	@MockitoBean
+	private lateinit var exportService: IExportService
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
@@ -913,5 +921,24 @@ class ParticipantControllerTest : TestContext() {
 		result.body<PageModel<*>>(OK)
 
 		verify(service).findParticipantsPage(defaultProjectId, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should exportParticipantById return 200 as an attachment`() {
+		// Arrange
+		val id = UUID.randomUUID()
+		val export = ParticipantExportModel(ZonedDateTime.now(ZoneOffset.UTC), "Camp", ParticipantModel(), emptyList())
+		whenever(exportService.exportParticipant(any(), eq(defaultProjectId), eq(id))).thenReturn(Mono.just(export))
+
+		// Act
+		val result = webClient.authenticate().get()
+			.uri(uriBuilder("$BASE_URL/{id}/export", listOf(defaultProjectId, id), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isOk
+			.expectHeader().valueEquals(CACHE_CONTROL, "no-store")
+			.expectHeader().valueEquals(CONTENT_DISPOSITION, "attachment; filename=\"participant-$id.json\"")
+			.expectBody().jsonPath("$.subjectType").isEqualTo("PARTICIPANT")
 	}
 }

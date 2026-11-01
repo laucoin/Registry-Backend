@@ -31,8 +31,8 @@ class ContractAuthorizationTest {
 	fun `Should every endpoint of a contract interface carry an authorization rule except the public ones`() {
 		// Arrange
 		val contracts = ClassFileImporter()
-			.importPackages(IExportV2Controller::class.java.packageName)
-			.filter { it.isInterface && it.simpleName.endsWith("V2Controller") && it.packageName == IExportV2Controller::class.java.packageName }
+			.importPackages(IUserV2Controller::class.java.packageName)
+			.filter { it.isInterface && it.simpleName.endsWith("V2Controller") && it.packageName == IUserV2Controller::class.java.packageName }
 
 		// Act
 		val unprotected = contracts

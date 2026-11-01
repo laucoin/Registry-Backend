@@ -23,6 +23,7 @@ import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.USER_RO
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRoleWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -35,6 +36,7 @@ import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.util.UUID
 import org.springframework.http.HttpStatus.NO_CONTENT
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -86,6 +88,25 @@ interface IUserV2Controller {
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
 	@GetMapping("/{id}")
 	fun findUserById(@PathVariable id: UUID): Mono<UserReaderDto>
+
+	@Operation(
+		summary = "Export Current User data",
+		description = "Export the personal data of the Current User, including every Participant linked to them",
+	)
+	@PreAuthorize("isAuthenticated()")
+	@GetMapping("/current/export")
+	fun exportCurrentUser(@AuthenticationPrincipal currentUser: CurrentUserModel): Mono<ResponseEntity<UserExportReaderDto>>
+
+	@Operation(
+		summary = "Export User data",
+		description = "Export the personal data of a User, including every Participant linked to them",
+	)
+	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
+	@GetMapping("/{id}/export")
+	fun exportUserById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable id: UUID,
+	): Mono<ResponseEntity<UserExportReaderDto>>
 
 	@Operation(
 		summary = "Get assignable Roles",
