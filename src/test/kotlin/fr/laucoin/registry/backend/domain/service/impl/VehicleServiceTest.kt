@@ -1,5 +1,17 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import reactor.test.StepVerifier
+import org.mockito.kotlin.verifyNoInteractions
+import kotlin.test.assertNull
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
+import fr.laucoin.registry.backend.domain.model.TimelineRangeModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.OutingModel
+import fr.laucoin.registry.backend.domain.model.MovementEventModel
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
 import org.springframework.transaction.reactive.TransactionalOperator
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -65,6 +77,84 @@ class VehicleServiceTest {
 
 		// Assert
 		verify(port).findPage(defaultProjectId, pageable, params)
+	}
+
+	@Test
+	fun `Should findVehicleTimeline return the outings, the time out and the usage rate over the availability window`() {
+		// Arrange
+		val departure = ZonedDateTime.of(2026, 7, 2, 9, 0, 0, 0, ZoneOffset.UTC)
+		val vehicle = defaultVehicle().apply {
+			startAvailability = CustomDateTimeModel(LocalDate.of(2026, 7, 1))
+			endAvailability = CustomDateTimeModel(LocalDate.of(2026, 7, 2))
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
+		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
+		whenever(movementPort.findEventsByVehicleId(any(), any())).thenReturn(
+			Flux.just(MovementEventModel(departure, OUT), MovementEventModel(departure.plusHours(3), IN))
+		)
+
+		// Act
+		val timeline = service.findVehicleTimeline(defaultProjectId, defaultVehicleId).block()!!
+
+		// Assert
+		assertEquals(listOf(OutingModel(departure, departure.plusHours(3))), timeline.actual)
+		assertEquals(3 * 3600L, timeline.outSeconds)
+		assertEquals(3.0 * 3600 / (48 * 3600 - 1), timeline.usageRate!!, 0.001)
+		assertEquals(1, timeline.planned.size)
+	}
+
+	@Test
+	fun `Should findVehicleTimeline fall back on the project dates when the vehicle has no availability window`() {
+		// Arrange
+		val departure = ZonedDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC)
+		val project = ProjectModel(
+			begin = CustomDateTimeModel(LocalDate.of(2026, 7, 1)),
+			end = CustomDateTimeModel(LocalDate.of(2026, 7, 1)),
+		)
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
+		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(project))
+		whenever(movementPort.findEventsByVehicleId(any(), any())).thenReturn(
+			Flux.just(MovementEventModel(departure, OUT), MovementEventModel(departure.plusHours(12), IN))
+		)
+
+		// Act
+		val timeline = service.findVehicleTimeline(defaultProjectId, defaultVehicleId).block()!!
+
+		// Assert
+		assertEquals(emptyList<TimelineRangeModel>(), timeline.planned)
+		assertEquals(0.5, timeline.usageRate!!, 0.001)
+	}
+
+	@Test
+	fun `Should findVehicleTimeline only give the time out when no window can be determined`() {
+		// Arrange
+		val departure = ZonedDateTime.of(2026, 7, 1, 8, 0, 0, 0, ZoneOffset.UTC)
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
+		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
+		whenever(movementPort.findEventsByVehicleId(any(), any())).thenReturn(
+			Flux.just(MovementEventModel(departure, OUT), MovementEventModel(departure.plusHours(2), IN))
+		)
+
+		// Act
+		val timeline = service.findVehicleTimeline(defaultProjectId, defaultVehicleId).block()!!
+
+		// Assert
+		assertEquals(2 * 3600L, timeline.outSeconds)
+		assertNull(timeline.usageRate)
+	}
+
+	@Test
+	fun `Should findVehicleTimeline throw when the vehicle does not exist`() {
+		// Arrange
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
+
+		// Act
+		val result = service.findVehicleTimeline(defaultProjectId, defaultVehicleId)
+
+		// Assert
+		StepVerifier.create(result).expectError(RegistryException::class.java).verify()
+		verifyNoInteractions(movementPort)
 	}
 
 	@Test

@@ -25,6 +25,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.VehicleWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -99,6 +100,18 @@ interface IVehicleV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<VehicleReaderDto>
+
+	@Operation(
+		summary = "Find Vehicle timeline",
+		description = "Planned presence (the availability window, empty when none is set; a missing bound is open), actual outings of the Vehicle, the time spent out in seconds and the usage rate. An outing goes from an OUT movement to the next IN one and is flagged ongoing, ending now, when the Vehicle has not come back. The usage rate is the time out over the availability window, a missing bound being taken from the Project dates; it is null when no window can be determined, and the time out is then counted over all the outings",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_VEHICLE_HISTORY_R')")
+	@GetMapping("/{id}/timeline")
+	fun findVehicleTimeline(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable projectId: UUID,
+		@PathVariable id: UUID,
+	): Mono<VehicleTimelineReaderDto>
 
 	@Operation(
 		summary = "Find Vehicle Movements",

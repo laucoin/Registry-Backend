@@ -5,15 +5,23 @@ import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.springframework.transaction.reactive.TransactionalOperator
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.extension.OutingExt.outSeconds
+import fr.laucoin.registry.backend.domain.extension.OutingExt.toOutings
+import fr.laucoin.registry.backend.domain.extension.OutingExt.usageRate
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.OutingModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.TimelineRangeModel
+import fr.laucoin.registry.backend.domain.model.TimelineWindowModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
+import fr.laucoin.registry.backend.domain.model.VehicleTimelineModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -52,6 +60,38 @@ class VehicleService(
 	override fun findVehicleById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel> {
 		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
+	}
+
+	override fun findVehicleTimeline(projectId: UUID, id: UUID): Mono<VehicleTimelineModel> {
+		return findVehicleById(projectId, id, isVisible = null)
+			.zipWith(projectService.findProjectById(projectId, isVisible = null))
+			.flatMap { toTimeline(it.t1, it.t2) }
+	}
+
+	private fun toTimeline(vehicle: VehicleModel, project: ProjectModel): Mono<VehicleTimelineModel> {
+		return movementPort.findEventsByVehicleId(projectId = vehicle.projectId!!, vehicleId = vehicle.id!!)
+			.collectList()
+			.map { it.toOutings(now()) }
+			.map { buildTimeline(vehicle, it, vehicle.usageWindow(project)) }
+	}
+
+	private fun buildTimeline(
+		vehicle: VehicleModel,
+		outings: List<OutingModel>,
+		window: TimelineWindowModel?,
+	): VehicleTimelineModel {
+		return VehicleTimelineModel(
+			planned = plannedRanges(vehicle),
+			actual = outings,
+			outSeconds = outings.outSeconds(window),
+			usageRate = outings.usageRate(window),
+		)
+	}
+
+	private fun plannedRanges(vehicle: VehicleModel): List<TimelineRangeModel> {
+		if (vehicle.startAvailability == null && vehicle.endAvailability == null) return emptyList()
+
+		return listOf(TimelineRangeModel(vehicle.startAvailability, vehicle.endAvailability))
 	}
 
 	override fun findVehicleMovementsPage(

@@ -1,5 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import org.springframework.http.HttpStatus.FORBIDDEN
+import org.junit.jupiter.params.provider.ValueSource
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleTimelineReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleTimelineReaderDto
+import fr.laucoin.registry.backend.domain.model.VehicleTimelineModel
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
@@ -79,6 +85,9 @@ class VehicleControllerTest : TestContext() {
 
 	@MockitoBean
 	private lateinit var readerMapper: VehicleReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var timelineReaderMapper: VehicleTimelineReaderDtoMapper
 
 	@MockitoBean
 	private lateinit var movementReaderMapper: MovementReaderDtoMapper
@@ -331,6 +340,43 @@ class VehicleControllerTest : TestContext() {
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementReaderMapper)
 		verifyNoInteractions(writerMapper)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findVehicleTimeline return 200`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(service.findVehicleTimeline(any(), any())).thenReturn(Mono.just(VehicleTimelineModel()))
+		whenever(timelineReaderMapper.toDto(any())).thenReturn(VehicleTimelineReaderDto(emptyList(), emptyList(), 0, null))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_VEHICLE_HISTORY_R), buildAuthority(REGISTRY_PROJECT_OPTION_VEHICLE))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}/timeline", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<VehicleTimelineReaderDto>(OK)
+
+		verify(service).findVehicleTimeline(eq(defaultProjectId), eq(uuid))
+		verify(timelineReaderMapper).toDto(any())
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = [REGISTRY_PROJECT_VEHICLE_HISTORY_R, REGISTRY_PROJECT_OPTION_VEHICLE])
+	fun `Should findVehicleTimeline throw due to missing permission or option`(authority: String) {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(authority))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}/timeline", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+
 		verifyNoInteractions(service)
 	}
 
