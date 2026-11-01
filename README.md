@@ -148,6 +148,7 @@ non voulue.
 |----------------------------------|---------|------------------------------------------------------------------------------------------|
 | `REGISTRY_DOCUMENTATION_ENABLED` | `false` | Swagger UI et les documents OpenAPI sur le port de management. `true` uniquement pour le développement |
 | `REGISTRY_OBSERVABILITY_ENABLED` | `true`  | Sondes de santé et endpoint Prometheus sur le port de management                         |
+| `REGISTRY_PROFILE_INVITE_BY_EMAIL_ENABLED` | `false` | Invitation à un projet par email : un email inconnu crée un utilisateur pré-créé, rattaché à sa première connexion (`email_verified` requis côté IDP) |
 
 #### Lancer l'application en mode dev
 

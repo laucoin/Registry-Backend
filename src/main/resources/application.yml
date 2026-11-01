@@ -64,6 +64,8 @@ registry:
     observability:
       enabled: ${REGISTRY_OBSERVABILITY_ENABLED:true}
     profile:
+      invite-by-email:
+        enabled: ${REGISTRY_PROFILE_INVITE_BY_EMAIL_ENABLED:false}
       searched:
         max-user-result: 10
     participant:

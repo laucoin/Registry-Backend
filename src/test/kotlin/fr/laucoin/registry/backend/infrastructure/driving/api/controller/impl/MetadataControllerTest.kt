@@ -3,11 +3,14 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
+import fr.laucoin.registry.backend.domain.service.IFeatureService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertCriticalityMetadataReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.FeaturesReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertCriticalityMetadataReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.FeaturesReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectOptionsReaderDtoMapper
 import reactor.core.publisher.Flux
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AvailabilityStatusReaderDtoMapper
@@ -50,6 +53,12 @@ class MetadataControllerTest: TestContext() {
 
 	@MockitoBean
 	private lateinit var projectOptionsReaderMapper: ProjectOptionsReaderDtoMapper
+
+	@MockitoBean
+	private lateinit var featureService: IFeatureService
+
+	@MockitoBean
+	private lateinit var featuresReaderMapper: FeaturesReaderDtoMapper
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
@@ -171,6 +180,23 @@ class MetadataControllerTest: TestContext() {
 		result.body<List<*>>(OK)
 		verify(projectService).availableProjectOptions()
 		verify(projectOptionsReaderMapper).toDto(any())
+	}
+
+	@Test
+	fun `Should getFeatures return 200 without authentication`() {
+		// Arrange
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
+		whenever(featuresReaderMapper.toDto(true)).thenReturn(FeaturesReaderDto(inviteByEmail = true))
+
+		// Act
+		val result = webClient
+			.get()
+			.uri(uriBuilder("$BASE_URL/features", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<FeaturesReaderDto>(OK)
+		verify(featuresReaderMapper).toDto(true)
 	}
 
 	@Test
