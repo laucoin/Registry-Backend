@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import java.time.LocalDate
@@ -29,6 +30,8 @@ interface IParticipantService {
 	fun findBirthdays(projectId: UUID): Flux<ParticipantModel>
 
 	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ParticipantModel>
+	fun findParticipantTimeline(projectId: UUID, id: UUID): Mono<ParticipantTimelineModel>
+
 	fun findParticipantById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel>
 	fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel>
 	fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel>

@@ -21,6 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWi
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
@@ -28,6 +29,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Grou
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantTimelineReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantWriterDtoMapper
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -53,6 +55,7 @@ class ParticipantV2Controller(
 	private val service: IParticipantService,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ParticipantReaderDtoMapper,
+	private val timelineReaderMapper: ParticipantTimelineReaderDtoMapper,
 	private val groupReaderMapper: GroupWithoutMemberReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
@@ -116,6 +119,14 @@ class ParticipantV2Controller(
 		query: String?
 	): Flux<GroupWithoutMemberReaderDto> {
 		return service.searchGroupsByText(projectId, query).map(groupReaderMapper::toDto)
+	}
+
+	override fun findParticipantTimeline(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+	): Mono<ParticipantTimelineReaderDto> {
+		return service.findParticipantTimeline(projectId, id).map(timelineReaderMapper::toDto)
 	}
 
 	override fun findParticipantMovements(

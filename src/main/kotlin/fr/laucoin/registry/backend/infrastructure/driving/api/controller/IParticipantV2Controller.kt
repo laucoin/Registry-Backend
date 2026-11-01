@@ -29,6 +29,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Movemen
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -151,6 +152,18 @@ interface IParticipantV2Controller {
 		@Parameter(description = "Text matched against the group name (accent-insensitive substring)")
 		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?
 	): Flux<GroupWithoutMemberReaderDto>
+
+	@Operation(
+		summary = "Find Participant timeline",
+		description = "Planned presence (the availability window, empty when none is set; a missing bound is open) and actual outings of the Participant. An outing goes from an OUT movement to the next IN one and is flagged ongoing, ending now, when the Participant has not come back. A definitive departure is not an outing. Guests have no outings",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R')")
+	@GetMapping("/{id}/timeline")
+	fun findParticipantTimeline(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable projectId: UUID,
+		@PathVariable id: UUID,
+	): Mono<ParticipantTimelineReaderDto>
 
 	@Operation(
 		summary = "Find Participant Movements",
