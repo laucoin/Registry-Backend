@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectConfigurationPurgeModel
 import fr.laucoin.registry.backend.domain.model.ProjectContentPurgeModel
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IAlertService
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import fr.laucoin.registry.backend.domain.service.IMovementService
@@ -22,7 +23,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Objectif : Implémente les balayages de rétention des utilisateurs, projets, contenus de projet et configurations de projet.
+ * Objectif : Implémente les balayages de rétention des utilisateurs, projets, contenus de projet, configurations de projet et événements d'audit.
  * Périmètre : Porte la résolution du seuil et l'ordre de suppression entre ressources dépendantes.
  * Limites : Délègue la suppression effective aux services des ressources ; ni planification, ni autorisation.
  */
@@ -37,6 +38,7 @@ class PurgeService(
 	private val vehicleService: IVehicleService,
 	private val participantService: IParticipantService,
 	private val groupService: IGroupService,
+	private val auditService: IAuditService,
 	private val clock: Clock,
 	private val transactionalOperator: TransactionalOperator,
 	@param:Value($$"${registry.feature.purge.users.months-threshold}")
@@ -47,6 +49,8 @@ class PurgeService(
 	private val contentMonthsThreshold: Long,
 	@param:Value($$"${registry.feature.purge.projects.configuration.months-threshold}")
 	private val configurationMonthsThreshold: Long,
+	@param:Value($$"${registry.feature.purge.audit.months-threshold}")
+	private val auditMonthsThreshold: Long,
 ) : IPurgeService {
 	override fun purgeUsers(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
 		return userService.purgeUsersIfNecessary(resolveThreshold(userMonthsThreshold, dateThreshold), dryRun)
@@ -99,6 +103,10 @@ class PurgeService(
 		return groupService.purgeEmptyGroups(participants, dryRun)
 			.collectList()
 			.map { ProjectConfigurationPurgeModel(vehicles, participants, activities, it) }
+	}
+
+	override fun purgeAudits(dateThreshold: LocalDate?, dryRun: Boolean): Mono<Long> {
+		return auditService.purgeAuditsIfNecessary(resolveThreshold(auditMonthsThreshold, dateThreshold), dryRun)
 	}
 
 	private fun resolveThreshold(monthsThreshold: Long, dateThreshold: LocalDate?): LocalDate {
