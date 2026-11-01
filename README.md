@@ -122,6 +122,7 @@ non voulue.
 | `REGISTRY_MOVEMENT_FUTURE_TOLERANCE` | `2m` | Décalage d'horloge toléré entre un client et le serveur lorsqu'un mouvement est daté légèrement dans le futur ; une date plus éloignée est rejetée |
 | `REGISTRY_CODEC_MAX_IN_MEMORY_SIZE` | `512KB` | Taille maximale d'un corps de requête mis en mémoire tampon ; les corps plus volumineux sont rejetés |
 | `REGISTRY_UPDATE_TIMEOUT` | `10s` | Durée maximale d'une mise à jour protégée par `If-Match` ; au-delà, la transaction est annulée et la requête échoue avec un `408` |
+| `REGISTRY_AUDIT_BUFFER_SIZE` | `1000` | Taille de la file en mémoire des événements d'audit écrits de façon asynchrone ; une file pleine rejette (et journalise) l'événement, un arrêt brutal perd les événements en attente |
 | `REGISTRY_PRINCIPAL_CACHE_TTL_SECONDS` | `60` | Durée de vie, en secondes, du principal (utilisateur et autorités) mis en cache après la validation du JWT ; un changement de droits est visible au plus tard à l'expiration, ou immédiatement s'il passe par l'API |
 
 > [!NOTE]
