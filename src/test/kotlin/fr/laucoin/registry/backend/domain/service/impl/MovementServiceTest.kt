@@ -1007,6 +1007,7 @@ class MovementServiceTest {
 
 		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port, never()).update(any())
+		verify(historyPort, never()).archiveMovement(any())
 	}
 
 	@ParameterizedTest
@@ -1026,6 +1027,7 @@ class MovementServiceTest {
 
 		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port, never()).update(any())
+		verify(historyPort, never()).archiveMovement(any())
 	}
 
 	@ParameterizedTest

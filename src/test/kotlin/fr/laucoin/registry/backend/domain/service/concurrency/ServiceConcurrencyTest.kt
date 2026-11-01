@@ -4,13 +4,20 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTI
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.model.AlertModel
+import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.IActivityService
+import fr.laucoin.registry.backend.domain.service.IAlertService
+import fr.laucoin.registry.backend.domain.service.ICommunicationService
+import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IUserService
@@ -26,6 +33,9 @@ import reactor.core.publisher.Sinks
 import reactor.core.scheduler.Schedulers
 import java.time.Duration
 import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
 
@@ -44,6 +54,15 @@ class ServiceConcurrencyTest : TestContext() {
 
 	@Autowired
 	private lateinit var activityService: IActivityService
+
+	@Autowired
+	private lateinit var alertService: IAlertService
+
+	@Autowired
+	private lateinit var communicationService: ICommunicationService
+
+	@Autowired
+	private lateinit var movementService: IMovementService
 
 	@Autowired
 	private lateinit var databaseClient: DatabaseClient
@@ -159,6 +178,59 @@ class ServiceConcurrencyTest : TestContext() {
 		assertEquals(1L, count("SELECT COUNT(*) FROM tb_movement WHERE id = :id", movementId))
 	}
 
+	@Test
+	fun `Should two alert updates concurrently archive two distinct versions`() {
+		// Arrange
+		val projectId = insertProject()
+		val alertId = insertAlert(projectId)
+		val editor = administrator(insertUser("USER"))
+		val update = { alertService.updateAlertById(editor, projectId, alertId, alertUpdate(projectId)) }
+
+		// Act
+		val outcomes = concurrently(update(), update())
+
+		// Assert
+		assertEquals(listOf(true, true), outcomes.map { it.isSuccess })
+		assertEquals(2L, count("SELECT COUNT(DISTINCT version) FROM tb_alert_history WHERE alert_id = :id", alertId))
+	}
+
+	@Test
+	fun `Should two communication updates concurrently archive two distinct versions`() {
+		// Arrange
+		val projectId = insertProject()
+		val communicationId = insertCommunication(projectId, insertAlert(projectId))
+		val editor = administrator(insertUser("USER"))
+		val update = {
+			communicationService.updateCommunicationById(editor, projectId, communicationId, communicationUpdate(projectId))
+		}
+
+		// Act
+		val outcomes = concurrently(update(), update())
+
+		// Assert
+		assertEquals(listOf(true, true), outcomes.map { it.isSuccess })
+		val sql = "SELECT COUNT(DISTINCT version) FROM tb_communication_history WHERE communication_id = :id"
+		assertEquals(2L, count(sql, communicationId))
+	}
+
+	@Test
+	fun `Should two movement updates concurrently archive two distinct versions`() {
+		// Arrange
+		val projectId = insertProject()
+		val movementId = insertMovement(projectId)
+		val editor = administrator(insertUser("USER"))
+		val update = {
+			movementService.updateMovementById(editor, projectId, movementId, movementUpdate(projectId), emptyList())
+		}
+
+		// Act
+		val outcomes = concurrently(update(), update())
+
+		// Assert
+		assertEquals(listOf(true, true), outcomes.map { it.isSuccess })
+		assertEquals(2L, count("SELECT COUNT(DISTINCT version) FROM tb_movement_history WHERE movement_id = :id", movementId))
+	}
+
 	private fun <T : Any> concurrently(vararg actions: Mono<T>): List<Result<T>> {
 		val futures = actions.map { action ->
 			action.map { Result.success(it) }
@@ -206,6 +278,37 @@ class ServiceConcurrencyTest : TestContext() {
 		return id
 	}
 
+	private fun alertUpdate(projectId: UUID) = AlertModel(title = "Updated", dateTime = LOG_DATE_TIME)
+		.apply { this.projectId = projectId }
+
+	private fun communicationUpdate(projectId: UUID) = CommunicationModel(dateTime = LOG_DATE_TIME, message = "Updated")
+		.apply { this.projectId = projectId }
+
+	private fun movementUpdate(projectId: UUID) = MovementModel(dateTime = LOG_DATE_TIME, type = IN)
+		.apply { this.projectId = projectId }
+
+	private fun insertAlert(projectId: UUID): UUID {
+		val id = UUID.randomUUID()
+		databaseClient.sql("INSERT INTO tb_alert(id, date_time, title, status, project_id) VALUES (:id, :dateTime, 'Alert', 'IN_PROGRESS', :project)")
+			.bind("id", id).bind("dateTime", LOG_OFFSET_DATE_TIME).bind("project", projectId).fetch().rowsUpdated().block()
+		return id
+	}
+
+	private fun insertCommunication(projectId: UUID, alertId: UUID): UUID {
+		val id = UUID.randomUUID()
+		databaseClient.sql("INSERT INTO tb_communication(id, date_time, alert_id, message, project_id) VALUES (:id, :dateTime, :alert, 'Message', :project)")
+			.bind("id", id).bind("dateTime", LOG_OFFSET_DATE_TIME).bind("alert", alertId).bind("project", projectId)
+			.fetch().rowsUpdated().block()
+		return id
+	}
+
+	private fun insertMovement(projectId: UUID): UUID {
+		val id = UUID.randomUUID()
+		databaseClient.sql("INSERT INTO tb_movement(id, date_time, type, project_id) VALUES (:id, :dateTime, 'IN', :project)")
+			.bind("id", id).bind("dateTime", LOG_OFFSET_DATE_TIME).bind("project", projectId).fetch().rowsUpdated().block()
+		return id
+	}
+
 	private fun countVisibleAdministrators(): Long = databaseClient.sql(
 		"SELECT COUNT(*) AS total FROM tb_user WHERE role = 'USER_ADMINISTRATOR' AND visible IS TRUE AND type <> 'SERVICE_ACCOUNT'"
 	).map { row -> row.get("total", java.lang.Long::class.java)!!.toLong() }.one().block()!!
@@ -216,5 +319,7 @@ class ServiceConcurrencyTest : TestContext() {
 	private companion object {
 		val TIMEOUT: Duration = Duration.ofSeconds(30)
 		const val PENDING_DELETION_MILLIS = 500L
+		val LOG_OFFSET_DATE_TIME: OffsetDateTime = OffsetDateTime.of(2020, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC)
+		val LOG_DATE_TIME: ZonedDateTime = LOG_OFFSET_DATE_TIME.toZonedDateTime()
 	}
 }

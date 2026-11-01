@@ -436,6 +436,44 @@ class CommunicationServiceTest {
 	}
 
 	@Test
+	fun `Should updateCommunicationById not lock nor archive when the date is out of the project range`() {
+		// Arrange
+		val error = RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
+		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.error(error))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, defaultCommunication()).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE, result.code)
+		verify(rowLockPort, never()).lock(any(), any())
+		verify(historyPort, never()).archiveCommunication(any())
+		verify(port, never()).update(any())
+	}
+
+	@Test
+	fun `Should updateCommunicationById not archive when the movement is not an out movement`() {
+		// Arrange
+		val communication = defaultCommunication().apply { dateTime = now; movement = defaultMovement() }
+		val inMovement = defaultMovement().apply { type = IN; contentType = REGISTERED }
+		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
+		whenever(movementPort.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(inMovement))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(COMMUNICATION_MOVEMENT_TYPE_NOT_OUT, result.code)
+		verify(historyPort, never()).archiveCommunication(any())
+		verify(port, never()).update(any())
+	}
+
+	@Test
 	fun `Should disableCommunicationById call existing communication and call port update`() {
 		// Arrange
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
