@@ -17,6 +17,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.MOVEMENT
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
@@ -50,8 +51,10 @@ import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IGroupPort
+import fr.laucoin.registry.backend.domain.port.IMovementHistoryPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IMovementService
@@ -88,6 +91,8 @@ import java.util.UUID
 class MovementService(
 	private val projectService: IProjectService,
 	private val port: IMovementPort,
+	private val historyPort: IMovementHistoryPort,
+	private val rowLockPort: IRowLockPort,
 	private val participantPort: IParticipantPort,
 	private val vehiclePort: IVehiclePort,
 	private val activityPort: IActivityPort,
@@ -455,6 +460,7 @@ class MovementService(
 	): Mono<MovementModel> {
 		val previousParticipantIds = oldMovement.participantIds()
 		return lockParticipants((previousParticipantIds + movement.participantIds()).distinct())
+			.then(rowLockPort.lock(MOVEMENT, oldMovement.id!!))
 			.then(Mono.fromCallable {
 				oldMovement.apply {
 					dateTime = movement.dateTime
@@ -463,8 +469,13 @@ class MovementService(
 					content = movement.content
 				}
 			})
+			.archiveCurrentState()
 			.updateMovement(currentUser)
 			.refreshParticipantsEffectiveDates(previousParticipantIds)
+	}
+
+	private fun Mono<MovementModel>.archiveCurrentState(): Mono<MovementModel> = flatMap {
+		historyPort.archiveMovement(it.id!!).thenReturn(it)
 	}
 
 	private fun validateParticipantsIfAny(
