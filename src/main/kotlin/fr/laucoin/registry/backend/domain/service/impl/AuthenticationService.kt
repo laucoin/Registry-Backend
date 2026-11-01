@@ -19,9 +19,9 @@ import reactor.core.publisher.Mono
 @Service
 class AuthenticationService(
 	private val port: IAuthenticationPort,
-	@param:Value($$"${external.idp.allowed-redirect-uris}")
+	@Value($$"${external.idp.allowed-redirect-uris}")
 	configuredRedirectUris: List<String>,
-	@param:Value($$"${external.idp.allowed-logout-redirect-uris}")
+	@Value($$"${external.idp.allowed-logout-redirect-uris}")
 	configuredLogoutRedirectUris: List<String>,
 ) : IAuthenticationService, LoggerService() {
 	private val allowedRedirectUris: List<String> = configuredRedirectUris.filter { it.isNotBlank() }
@@ -34,9 +34,9 @@ class AuthenticationService(
 		warnOnSuspiciousEntries("external.idp.allowed-logout-redirect-uris", allowedLogoutRedirectUris)
 	}
 
-	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
+	override fun getLoginUri(redirectUri: String, state: String?): AuthenticationUriModel {
 		if (redirectUri !in allowedRedirectUris) throw notAllowed()
-		return port.getLoginUri(redirectUri)
+		return port.getLoginUri(redirectUri, state)
 	}
 
 	override fun getLogoutUri(

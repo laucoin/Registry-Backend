@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZ
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -83,7 +84,7 @@ class SecurityControllerTest : TestContext() {
 	fun `Should getLoginUri return 200`() {
 		// Arrange
 		val redirectUri = "redirectUri"
-		whenever(authenticationService.getLoginUri(any())).thenReturn(AuthenticationUriModel("uri"))
+		whenever(authenticationService.getLoginUri(any(), anyOrNull())).thenReturn(AuthenticationUriModel("uri"))
 
 		// Act
 		val result = webClient
@@ -93,7 +94,7 @@ class SecurityControllerTest : TestContext() {
 
 		// Assert
 		result.body<AuthenticationUriModel>(OK)
-		verify(authenticationService).getLoginUri(redirectUri)
+		verify(authenticationService).getLoginUri(redirectUri, null)
 	}
 
 	@ParameterizedTest
@@ -282,6 +283,48 @@ class SecurityControllerTest : TestContext() {
 	}
 
 	@Test
+	fun `Should getLoginUri forward the state to the service`() {
+		// Arrange
+		whenever(authenticationService.getLoginUri(any(), anyOrNull())).thenReturn(AuthenticationUriModel("uri"))
+
+		// Act
+		val result = webClient
+			.get()
+			.uri(uriBuilder("$BASE_URL/login/uri", emptyList(), listOf("redirectUri" to "redirectUri", "state" to "abc-123._~")))
+			.exchange()
+
+		// Assert
+		result.body<AuthenticationUriModel>(OK)
+		verify(authenticationService).getLoginUri("redirectUri", "abc-123._~")
+	}
+
+	@Test
+	fun `Should getLoginUri refuse a state over 256 characters`() {
+		// Act
+		val result = webClient
+			.get()
+			.uri(uriBuilder("$BASE_URL/login/uri", emptyList(), listOf("redirectUri" to "redirectUri", "state" to "a".repeat(257))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(authenticationService)
+	}
+
+	@Test
+	fun `Should getLoginUri refuse a state with forbidden characters`() {
+		// Act
+		val result = webClient
+			.get()
+			.uri(uriBuilder("$BASE_URL/login/uri", emptyList(), listOf("redirectUri" to "redirectUri", "state" to "a b&c")))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(authenticationService)
+	}
+
+	@Test
 	fun `Should getLogoutUri refuse a redirect uri over 2048 characters`() {
 		// Act
 		val result = webClient
@@ -298,7 +341,7 @@ class SecurityControllerTest : TestContext() {
 	fun `Should getLoginUri accept a redirect uri of exactly 2048 characters`() {
 		// Arrange
 		val redirectUri = "a".repeat(2048)
-		whenever(authenticationService.getLoginUri(any())).thenReturn(AuthenticationUriModel("uri"))
+		whenever(authenticationService.getLoginUri(any(), anyOrNull())).thenReturn(AuthenticationUriModel("uri"))
 
 		// Act
 		val result = webClient
@@ -308,7 +351,7 @@ class SecurityControllerTest : TestContext() {
 
 		// Assert
 		result.body<AuthenticationUriModel>(OK)
-		verify(authenticationService).getLoginUri(redirectUri)
+		verify(authenticationService).getLoginUri(redirectUri, null)
 	}
 
 	@ParameterizedTest
@@ -371,7 +414,7 @@ class SecurityControllerTest : TestContext() {
 	@Test
 	fun `Should getLoginUri return 400 when the redirect uri is not allowed`() {
 		// Arrange
-		whenever(authenticationService.getLoginUri(any())).thenAnswer { throw RegistryException(BAD_REQUEST, REDIRECT_URI_NOT_ALLOWED) }
+		whenever(authenticationService.getLoginUri(any(), anyOrNull())).thenAnswer { throw RegistryException(BAD_REQUEST, REDIRECT_URI_NOT_ALLOWED) }
 
 		// Act
 		val result = webClient

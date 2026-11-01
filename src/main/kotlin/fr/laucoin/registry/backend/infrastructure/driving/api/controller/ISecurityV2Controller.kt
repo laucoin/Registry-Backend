@@ -1,10 +1,14 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuthenticationUriReaderDto
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.AUTHENTICATION_STATE_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.STATE_PATTERN
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
+import jakarta.validation.constraints.Pattern
 import org.springframework.security.access.prepost.PreAuthorize
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.AUTHENTICATION_REDIRECT_URI_MAX
-import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AuthenticationInfoWriterDto
@@ -36,7 +40,10 @@ interface ISecurityV2Controller {
 		description = "Build and return the OAuth2 provider authentication URI",
 	)
 	@GetMapping("/login/uri")
-	fun getLoginUri(@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) @Size(max = AUTHENTICATION_REDIRECT_URI_MAX, message = PARAMETER_TOO_LONG) redirectUri: String?): AuthenticationUriModel
+	fun getLoginUri(
+		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) @Size(max = AUTHENTICATION_REDIRECT_URI_MAX, message = PARAMETER_TOO_LONG) redirectUri: String?,
+		@RequestParam(required = false) @Valid @Size(max = AUTHENTICATION_STATE_MAX, message = PARAMETER_TOO_LONG) @Pattern(regexp = STATE_PATTERN, message = PARAMETER_FORMAT_INVALID) state: String?,
+	): AuthenticationUriReaderDto
 
 	@Operation(
 		summary = "OAuth2 logout URI",
@@ -46,7 +53,7 @@ interface ISecurityV2Controller {
 	fun getLogoutUri(
 		@RequestParam @Valid @NotBlank(message = REDIRECT_URI_BLANK) @Size(max = AUTHENTICATION_REDIRECT_URI_MAX, message = PARAMETER_TOO_LONG) redirectUri: String?,
 		@Parameter(hidden = true) exchange: ServerWebExchange,
-	): Mono<AuthenticationUriModel>
+	): Mono<AuthenticationUriReaderDto>
 
 	@Operation(
 		summary = "Fetch token from code",

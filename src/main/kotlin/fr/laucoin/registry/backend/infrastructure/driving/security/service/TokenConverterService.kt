@@ -45,6 +45,8 @@ class TokenConverterService(
 	private val firstNameKey: String,
 	@param:Value($$"${registry.security.oauth2.claims.last-name}")
 	private val lastNameKey: String,
+	@param:Value($$"${registry.security.oauth2.claims.email-verified}")
+	private val emailVerifiedKey: String,
 ): Converter<Jwt, Mono<AbstractAuthenticationToken>>, LoggerService() {
 
 	override fun convert(jwt: Jwt): Mono<AbstractAuthenticationToken> {
@@ -57,20 +59,21 @@ class TokenConverterService(
 		val email: String = jwt.getClaimAsString(emailKey)!!
 		val firstName: String? = jwt.getClaimAsString(firstNameKey)
 		val lastName: String? = jwt.getClaimAsString(lastNameKey)
+		val emailVerified: Boolean = jwt.getClaimAsBoolean(emailVerifiedKey) == true
 
-		return principalCache.get(oidcId) { resolveCurrentUser(oidcId, email, firstName, lastName) }
+		return principalCache.get(oidcId) { resolveCurrentUser(oidcId, email, emailVerified, firstName, lastName) }
 			.map { UsernamePasswordAuthenticationToken(it, null, it.authorities) }
 	}
 
 	// Pas de cache en cas d'échec : l'AsyncCache de Caffeine supprime une entrée dont le future se termine
 	// en exception, donc un utilisateur bloqué échoue toujours à neuf depuis la base de données.
 	private fun resolveCurrentUser(
-		oidcId: UUID, email: String, firstName: String?, lastName: String?
+		oidcId: UUID, email: String, emailVerified: Boolean, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> =
 		userService.findUserByOidcId(oidcId, isVisible = null)
 			.throwOnBlockedUser()
 			.updateUserIfPersonalDataChanged(email, firstName, lastName)
-			.createNewUserOnNotFound(oidcId, email, firstName, lastName)
+			.createNewUserOnNotFound(oidcId, email, emailVerified, firstName, lastName)
 			.buildAuthorities()
 
 	private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { it, handle ->
@@ -88,19 +91,24 @@ class TokenConverterService(
 	}
 
 	private fun Mono<CurrentUserModel>.createNewUserOnNotFound(
-		oidcId: UUID, email: String, firstName: String?, lastName: String?
+		oidcId: UUID, email: String, emailVerified: Boolean, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> = switchIfEmpty {
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
 		userService.findUserByEmail(email, isVisible = null)
 			.collectList()
-			.flatMap { matches -> provisionFromEmailMatches(matches, oidcId, email, firstName, lastName) }
+			.flatMap { matches -> provisionFromEmailMatches(matches, oidcId, email, emailVerified, firstName, lastName) }
 			.onErrorMap(DataIntegrityViolationException::class.java) {
 				JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email))
 			}
 	}
 
 	private fun provisionFromEmailMatches(
-		matches: List<CurrentUserModel>, oidcId: UUID, email: String, firstName: String?, lastName: String?
+		matches: List<CurrentUserModel>,
+		oidcId: UUID,
+		email: String,
+		emailVerified: Boolean,
+		firstName: String?,
+		lastName: String?,
 	): Mono<CurrentUserModel> {
 		return when {
 			matches.isEmpty() -> {
@@ -108,13 +116,13 @@ class TokenConverterService(
 				userService.createUser(oidcId, email, firstName, lastName)
 			}
 
-			matches.size == 1 -> {
+			matches.size == 1 && emailVerified && matches.first().oidcId == null -> {
 				log.info("Linking existing user with the given email to OIDC ID \"{}\"", oidcId)
 				userService.linkUserToOidcId(matches.first(), oidcId)
 			}
 
 			else -> {
-				log.warn("Multiple users found with the given email, cannot link OIDC ID \"{}\"", oidcId)
+				log.warn("Cannot link OIDC ID \"{}\": ambiguous, already linked or unverified email", oidcId)
 				Mono.error(JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email)))
 			}
 		}
