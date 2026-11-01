@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.model
 
-import java.time.Clock
 import com.fasterxml.jackson.annotation.JsonIgnore
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime

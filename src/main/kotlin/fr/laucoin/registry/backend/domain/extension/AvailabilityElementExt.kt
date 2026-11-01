@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.extension
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
@@ -12,6 +11,7 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
+import java.time.Clock
 import java.util.Objects
 
 /**

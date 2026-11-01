@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.model
 
-import java.time.ZonedDateTime
 import kotlin.math.ceil
+import java.time.ZonedDateTime
 
 data class PageModel<T>(
 	var page: Int,

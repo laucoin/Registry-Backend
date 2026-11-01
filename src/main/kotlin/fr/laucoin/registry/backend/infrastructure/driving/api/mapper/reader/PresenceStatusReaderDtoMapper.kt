@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_STATUS_DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
@@ -13,6 +12,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import org.springframework.stereotype.Component
+import java.time.Clock
 import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.Objects

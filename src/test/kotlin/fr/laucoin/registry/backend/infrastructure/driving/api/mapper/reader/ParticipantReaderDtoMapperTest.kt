@@ -1,11 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
+import java.time.Clock
 import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime

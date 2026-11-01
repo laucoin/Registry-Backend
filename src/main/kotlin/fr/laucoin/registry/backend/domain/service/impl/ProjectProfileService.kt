@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
@@ -25,6 +24,7 @@ import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import java.time.Clock
 import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value

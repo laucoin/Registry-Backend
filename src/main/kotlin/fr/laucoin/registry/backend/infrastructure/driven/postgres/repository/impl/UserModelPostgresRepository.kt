@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -12,6 +11,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUserEntityRepository
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service

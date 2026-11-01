@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.NumericRangeModel
@@ -8,6 +7,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
+import java.time.Clock
 import java.util.Objects
 import java.util.Optional
 import kotlin.time.Duration

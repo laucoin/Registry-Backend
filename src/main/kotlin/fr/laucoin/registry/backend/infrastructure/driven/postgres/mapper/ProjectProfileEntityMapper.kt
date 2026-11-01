@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
@@ -10,6 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
+import java.time.Clock
 import java.util.Objects
 import java.util.Optional
 import org.springframework.stereotype.Component
