@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -32,6 +31,7 @@ import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.Clock
 import java.time.LocalDate
 import java.util.Objects
 import java.util.UUID
@@ -290,7 +290,6 @@ class ParticipantService(
 		log.info("Purging participants unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
 			.purgeEach("participant", dryRun, port::deleteById)
-
 	}
 
 	private fun validateNoMovementConflict(

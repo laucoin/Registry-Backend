@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import org.springframework.dao.DataIntegrityViolationException
@@ -17,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
+import java.time.Clock
 
 /**
  * Objectif : Gère les préférences de l'utilisateur courant.

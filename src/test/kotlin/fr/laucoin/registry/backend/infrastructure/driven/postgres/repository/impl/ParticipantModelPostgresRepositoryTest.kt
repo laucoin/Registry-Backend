@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import java.time.ZonedDateTime
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -38,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.ZoneOffset
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals

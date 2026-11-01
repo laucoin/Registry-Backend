@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
@@ -9,6 +8,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ALERT
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectQueries
+import java.time.Clock
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

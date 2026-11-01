@@ -1,7 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import java.time.ZonedDateTime
-import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
@@ -12,6 +10,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUs
 import fr.laucoin.registry.backend.test.TestContext
 import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

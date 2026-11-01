@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -20,6 +19,7 @@ import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
@@ -122,7 +122,6 @@ class VehicleService(
 		log.info("Purging vehicles unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
 			.purgeEach("vehicle", dryRun, port::deleteById)
-
 	}
 
 	private fun Mono<VehicleModel>.updateVehicle(currentUser: CurrentUserModel) = flatMap {

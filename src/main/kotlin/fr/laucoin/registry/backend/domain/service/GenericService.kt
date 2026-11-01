@@ -1,7 +1,5 @@
 package fr.laucoin.registry.backend.domain.service
 
-import java.time.ZonedDateTime
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -11,6 +9,8 @@ import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import org.springframework.http.HttpStatus.FORBIDDEN
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Clock
+import java.time.ZonedDateTime
 import java.util.UUID
 
 /**
@@ -20,7 +20,6 @@ import java.util.UUID
  */
 open class GenericService(protected val clock: Clock) : LoggerService() {
 	fun now(): ZonedDateTime = ZonedDateTime.now(clock)
-
 
 	fun <T : GenericModel> Mono<T>.updateVisibility(visibility: Boolean): Mono<T> {
 		return this.map { it.apply { visible = visibility } }

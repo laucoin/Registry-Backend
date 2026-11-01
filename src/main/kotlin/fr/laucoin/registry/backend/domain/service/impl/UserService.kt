@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
@@ -31,8 +30,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Clock
 import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 
@@ -103,7 +102,7 @@ class UserService(
 			firstName = firstName,
 			lastName = lastName,
 			role = roleService.getDefaultUserRole(),
-			lastLogin = ZonedDateTime.now(clock)
+			lastLogin = now()
 		)
 		user.create(serviceAccount, now())
 
@@ -142,7 +141,7 @@ class UserService(
 		return port.findByOidcId(oidcId, isVisible = null)
 			.filter { isNotServiceAccount(it) }
 			.flatMap {
-				it.lastLogin = ZonedDateTime.now(clock)
+				it.lastLogin = now()
 				updateUser(serviceAccount, it)
 			}
 			.then()
@@ -151,7 +150,7 @@ class UserService(
 	override fun linkUserToOidcId(user: CurrentUserModel, oidcId: UUID): Mono<CurrentUserModel> {
 		log.info("Linking existing user \"{}\" to OIDC ID \"{}\"", user.id, oidcId)
 		user.oidcId = oidcId
-		user.lastLogin = ZonedDateTime.now(clock)
+		user.lastLogin = now()
 
 		return updateUser(serviceAccount, user).map { user }
 	}

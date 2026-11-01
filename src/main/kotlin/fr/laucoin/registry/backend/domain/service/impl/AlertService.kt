@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ALERT
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
@@ -26,6 +25,7 @@ import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
@@ -219,7 +219,6 @@ class AlertService(
 		log.info("Purging alerts older than {} and uncommented since {}", dateThreshold, dateThreshold)
 		return port.findOlderThanAndUncommentedSince(dateThreshold)
 			.purgeEach("alert", dryRun, port::deleteById)
-
 	}
 
 	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
