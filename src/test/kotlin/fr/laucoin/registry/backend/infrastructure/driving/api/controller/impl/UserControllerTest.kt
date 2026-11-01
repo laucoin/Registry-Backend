@@ -37,6 +37,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -420,7 +421,7 @@ class UserControllerTest: TestContext() {
 	@Test
 	fun `Should exportCurrentUser return 200 as an attachment`() {
 		// Arrange
-		whenever(exportService.exportUser(any(), any())).thenReturn(Mono.just(userExport))
+		whenever(exportService.exportUser(any(), any(), any())).thenReturn(Mono.just(userExport))
 
 		// Act
 		val result = webClient.authenticate().get()
@@ -439,16 +440,17 @@ class UserControllerTest: TestContext() {
 	fun `Should exportUserById return 200 for a User administrator`() {
 		// Arrange
 		val id = UUID.randomUUID()
-		whenever(exportService.exportUser(any(), eq(id))).thenReturn(Mono.just(userExport))
+		whenever(exportService.exportUser(any(), eq(id), any())).thenReturn(Mono.just(userExport))
 
 		// Act
 		val result = webClient.authenticate(REGISTRY_USER_R).get()
 			.uri(uriBuilder("$BASE_URL/{id}/export", listOf(id), emptyList()))
+			.header("User-Agent", "JUnit/1.0")
 			.exchange()
 
 		// Assert
 		result.expectStatus().isOk
-		verify(exportService).exportUser(any(), eq(id))
+		verify(exportService).exportUser(any(), eq(id), argThat { userAgent == "JUnit/1.0" })
 	}
 
 	@Test

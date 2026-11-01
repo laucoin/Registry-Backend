@@ -16,8 +16,10 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserRea
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRoleWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import java.util.UUID
 import org.springframework.http.ResponseEntity
+import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -34,6 +36,7 @@ class UserV2Controller(
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
 	private val exportService: IExportService,
 	private val exportMapper: ExportReaderDtoMapper,
+	private val clientContextService: ClientContextService,
 ): IUserV2Controller {
 	override fun findUsers(
 		page: Long,
@@ -53,12 +56,19 @@ class UserV2Controller(
 		return service.findUserById(id, isVisible = null).map(readerMapper::toDto)
 	}
 
-	override fun exportCurrentUser(currentUser: CurrentUserModel): Mono<ResponseEntity<UserExportReaderDto>> {
-		return exportUserById(currentUser, currentUser.id!!)
+	override fun exportCurrentUser(
+		currentUser: CurrentUserModel,
+		request: ServerHttpRequest,
+	): Mono<ResponseEntity<UserExportReaderDto>> {
+		return exportUserById(currentUser, currentUser.id!!, request)
 	}
 
-	override fun exportUserById(currentUser: CurrentUserModel, id: UUID): Mono<ResponseEntity<UserExportReaderDto>> {
-		return exportService.exportUser(currentUser, id)
+	override fun exportUserById(
+		currentUser: CurrentUserModel,
+		id: UUID,
+		request: ServerHttpRequest,
+	): Mono<ResponseEntity<UserExportReaderDto>> {
+		return exportService.exportUser(currentUser, id, clientContextService.resolve(request))
 			.map(exportMapper::toDto)
 			.map { it.asAttachment("user-$id.json") }
 	}

@@ -3,6 +3,11 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_EXPORT
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.EXPORT
+import fr.laucoin.registry.backend.domain.enumeration.AuditOutcomeEnum
+import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
+import fr.laucoin.registry.backend.domain.model.AuditModel
+import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -18,10 +23,12 @@ import fr.laucoin.registry.backend.domain.port.IPreferencesPort
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IExportService
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset.UTC
+import java.time.ZonedDateTime
 import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -30,6 +37,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -45,11 +53,13 @@ class ExportServiceTest {
 	private val participantPort: IParticipantPort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val projectPort: IProjectPort = mock()
+	private val auditService: IAuditService = mock()
 	private val clock = Clock.fixed(Instant.parse("2026-01-01T10:00:00Z"), UTC)
 	private val service: IExportService = ExportService(
-		userPort, preferencesPort, profilePort, participantPort, movementPort, projectPort, clock,
+		userPort, preferencesPort, profilePort, participantPort, movementPort, projectPort, auditService, clock,
 	)
 
+	private val client = ClientContextModel("203.0.113.7", "JUnit")
 	private val userId = UUID.randomUUID()
 	private val projectId = UUID.randomUUID()
 	private val participantId = UUID.randomUUID()
@@ -69,6 +79,16 @@ class ExportServiceTest {
 		projectId = this@ExportServiceTest.projectId
 	}
 
+	private fun participantAudit(actorId: UUID?, outcome: AuditOutcomeEnum) = AuditModel(
+		EXPORT, AuditResourceTypeEnum.PARTICIPANT, participantId, projectId, actorId, outcome, client,
+		ZonedDateTime.parse("2026-01-01T10:00:00Z"),
+	)
+
+	private fun userAudit(actorId: UUID?) = AuditModel(
+		EXPORT, AuditResourceTypeEnum.USER, userId, null, actorId, AuditOutcomeEnum.SUCCESS, client,
+		ZonedDateTime.parse("2026-01-01T10:00:00Z"),
+	)
+
 	private fun stubParticipantDependencies() {
 		whenever(projectPort.findById(eq(projectId), anyOrNull())).thenReturn(Mono.just(ProjectModel(name = "Camp")))
 		whenever(movementPort.findPageByParticipantId(eq(projectId), eq(participantId), any(), any()))
@@ -83,12 +103,13 @@ class ExportServiceTest {
 		stubParticipantDependencies()
 
 		// Act
-		val result = service.exportParticipant(admin, projectId, participantId)
+		val result = service.exportParticipant(admin, projectId, participantId, client)
 
 		// Assert
 		StepVerifier.create(result)
 			.expectNextMatches { it.projectName == "Camp" && it.movements.size == 1 && it.participant.lastName == "Doe" }
 			.verifyComplete()
+		verify(auditService).record(participantAudit(admin.id, AuditOutcomeEnum.SUCCESS))
 	}
 
 	@Test
@@ -100,7 +121,7 @@ class ExportServiceTest {
 		stubParticipantDependencies()
 
 		// Act
-		val result = service.exportParticipant(self, projectId, participantId)
+		val result = service.exportParticipant(self, projectId, participantId, client)
 
 		// Assert
 		StepVerifier.create(result).expectNextCount(1).verifyComplete()
@@ -114,12 +135,13 @@ class ExportServiceTest {
 			.thenReturn(Mono.just(participant(userId)))
 
 		// Act
-		val result = service.exportParticipant(other, projectId, participantId)
+		val result = service.exportParticipant(other, projectId, participantId, client)
 
 		// Assert
 		StepVerifier.create(result)
 			.expectErrorMatches { it is RegistryException && it.status == FORBIDDEN && it.code == NOT_ENOUGH_PERMISSION }
 			.verify()
+		verify(auditService).record(participantAudit(other.id, AuditOutcomeEnum.FORBIDDEN))
 	}
 
 	@Test
@@ -128,7 +150,7 @@ class ExportServiceTest {
 		whenever(participantPort.findById(eq(projectId), eq(participantId), anyOrNull())).thenReturn(Mono.just(participant()))
 
 		// Act
-		val result = service.exportParticipant(currentUser(), projectId, participantId)
+		val result = service.exportParticipant(currentUser(), projectId, participantId, client)
 
 		// Assert
 		StepVerifier.create(result).expectError(RegistryException::class.java).verify()
@@ -140,12 +162,13 @@ class ExportServiceTest {
 		whenever(participantPort.findById(eq(projectId), eq(participantId), anyOrNull())).thenReturn(Mono.empty())
 
 		// Act
-		val result = service.exportParticipant(currentUser(), projectId, participantId)
+		val result = service.exportParticipant(currentUser(), projectId, participantId, client)
 
 		// Assert
 		StepVerifier.create(result)
 			.expectErrorMatches { it is RegistryException && it.status == NOT_FOUND && it.code == NOT_FOUND_WITH_GIVEN_IDENTIFIER }
 			.verify()
+		verifyNoInteractions(auditService)
 	}
 
 	@Test
@@ -160,9 +183,10 @@ class ExportServiceTest {
 		whenever(participantPort.findById(eq(projectId), eq(participantId), anyOrNull()))
 			.thenReturn(Mono.just(participant(userId)))
 		stubParticipantDependencies()
+		val current = currentUser()
 
 		// Act
-		val result = service.exportUser(currentUser(), userId)
+		val result = service.exportUser(current, userId, client)
 
 		// Assert
 		StepVerifier.create(result)
@@ -171,6 +195,7 @@ class ExportServiceTest {
 					it.projectProfiles.size == 1 && it.participants.size == 1
 			}
 			.verifyComplete()
+		verify(auditService).record(userAudit(current.id))
 	}
 
 	@Test
@@ -187,7 +212,7 @@ class ExportServiceTest {
 			)
 
 		// Act
-		val result = service.exportUser(currentUser(), userId)
+		val result = service.exportUser(currentUser(), userId, client)
 
 		// Assert
 		StepVerifier.create(result)
@@ -202,11 +227,12 @@ class ExportServiceTest {
 		whenever(userPort.findById(eq(userId), anyOrNull())).thenReturn(Mono.empty())
 
 		// Act
-		val result = service.exportUser(currentUser(), userId)
+		val result = service.exportUser(currentUser(), userId, client)
 
 		// Assert
 		StepVerifier.create(result)
 			.expectErrorMatches { it is RegistryException && it.status == NOT_FOUND }
 			.verify()
+		verifyNoInteractions(auditService)
 	}
 }
