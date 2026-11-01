@@ -53,7 +53,8 @@ object ValidationLimitsConst {
 	const val PROJECT_OPTIONS_MAX = 20
 
 	const val PROJECT_PROFILE_ROLE_MAX = 50
-	const val PROJECT_PROFILE_USER_IDS_MAX = 200
+	const val PROJECT_PROFILE_EMAILS_MAX = 200
+	const val PROJECT_PROFILE_EMAIL_MAX = 320
 
 	const val USER_ROLE_MAX = 50
 
