@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_T
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
@@ -24,6 +25,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
@@ -31,10 +33,12 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.IAlertService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertStatisticsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertStatisticsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
@@ -63,6 +67,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.CREATED
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.http.HttpStatus.PRECONDITION_FAILED
@@ -85,6 +90,9 @@ class AlertControllerTest : TestContext() {
 	private lateinit var readerMapper: AlertReaderDtoMapper
 
 	@MockitoBean
+	private lateinit var statisticsReaderMapper: AlertStatisticsReaderDtoMapper
+
+	@MockitoBean
 	private lateinit var communicationReaderMapper: CommunicationReaderDtoMapper
 
 	@MockitoBean
@@ -98,6 +106,14 @@ class AlertControllerTest : TestContext() {
 
 	private companion object {
 		private const val BASE_URL = "/api/v2/projects/{projectId}/alerts"
+
+		@JvmStatic
+		fun `Should findAlertStatistics throw due to missing permission or option`(): Stream<Arguments> {
+			return Stream.of(
+				Arguments.of(REGISTRY_PROJECT_ALERT_R),
+				Arguments.of(REGISTRY_PROJECT_OPTION_ALERT),
+			)
+		}
 
 		@JvmStatic
 		fun `Should findAlerts prepare param, call service and finally cast the result`(): Stream<Arguments> {
@@ -436,6 +452,42 @@ class AlertControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_TYPE_MISMATCH)
+
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findAlertStatistics return 200`() {
+		// Arrange
+		whenever(service.findAlertStatistics(any())).thenReturn(Mono.just(AlertStatisticsModel()))
+		whenever(statisticsReaderMapper.toDto(any())).thenReturn(AlertStatisticsReaderDto(0, 0, null, null))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ALERT_R), buildAuthority(REGISTRY_PROJECT_OPTION_ALERT))
+			.get()
+			.uri(uriBuilder("$BASE_URL/statistics", listOf(defaultProjectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<AlertStatisticsReaderDto>(OK)
+
+		verify(service).findAlertStatistics(eq(defaultProjectId))
+		verify(statisticsReaderMapper).toDto(any())
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findAlertStatistics throw due to missing permission or option`(authority: String) {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(authority))
+			.get()
+			.uri(uriBuilder("$BASE_URL/statistics", listOf(defaultProjectId), emptyList()))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
 
 		verifyNoInteractions(service)
 	}

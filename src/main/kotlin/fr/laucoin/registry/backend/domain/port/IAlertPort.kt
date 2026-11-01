@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.port
 
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import java.time.LocalDate
@@ -23,6 +24,7 @@ interface IAlertPort {
 	): Mono<PageModel<AlertModel>>
 
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: AlertSearchParamModel): Flux<AlertModel>
+	fun findStatistics(projectId: UUID): Mono<AlertStatisticsModel>
 	fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: AlertModel): Mono<AlertModel>
 	fun update(element: AlertModel): Mono<AlertModel>
