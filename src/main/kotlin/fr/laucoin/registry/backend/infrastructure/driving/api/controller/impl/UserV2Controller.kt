@@ -5,7 +5,11 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import fr.laucoin.registry.backend.domain.service.IExportService
 import fr.laucoin.registry.backend.domain.service.IUserService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserExportReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
@@ -13,6 +17,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRol
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
 import java.util.UUID
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -27,6 +32,8 @@ class UserV2Controller(
 	private val service: IUserService,
 	private val readerMapper: UserReaderDtoMapper,
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
+	private val exportService: IExportService,
+	private val exportMapper: ExportReaderDtoMapper,
 ): IUserV2Controller {
 	override fun findUsers(
 		page: Long,
@@ -44,6 +51,16 @@ class UserV2Controller(
 
 	override fun findUserById(id: UUID): Mono<UserReaderDto> {
 		return service.findUserById(id, isVisible = null).map(readerMapper::toDto)
+	}
+
+	override fun exportCurrentUser(currentUser: CurrentUserModel): Mono<ResponseEntity<UserExportReaderDto>> {
+		return exportUserById(currentUser, currentUser.id!!)
+	}
+
+	override fun exportUserById(currentUser: CurrentUserModel, id: UUID): Mono<ResponseEntity<UserExportReaderDto>> {
+		return exportService.exportUser(currentUser, id)
+			.map(exportMapper::toDto)
+			.map { it.asAttachment("user-$id.json") }
 	}
 
 	override fun getAssignableUserRoles(currentUser: CurrentUserModel): Flux<LabelDto> {

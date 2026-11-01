@@ -27,6 +27,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -228,6 +229,19 @@ interface IParticipantV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ParticipantReaderDto>
+
+	@Operation(
+		summary = "Export Participant data",
+		description = "Export the personal data of a Participant, limited to its Project. " +
+			"Allowed for the linked User or for a Project administrator",
+	)
+	@PreAuthorize("isAuthenticated()")
+	@GetMapping("/{id}/export")
+	fun exportParticipantById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable projectId: UUID,
+		@PathVariable id: UUID,
+	): Mono<ResponseEntity<ParticipantExportReaderDto>>
 
 	@Operation(
 		summary = "Delete Participant",

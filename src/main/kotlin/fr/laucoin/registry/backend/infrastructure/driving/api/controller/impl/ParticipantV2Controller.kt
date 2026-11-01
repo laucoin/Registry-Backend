@@ -11,7 +11,11 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.service.IExportService
 import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IParticipantV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -51,6 +55,8 @@ class ParticipantV2Controller(
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
 	private val writerMapper: ParticipantWriterDtoMapper,
+	private val exportService: IExportService,
+	private val exportMapper: ExportReaderDtoMapper,
 ): IParticipantV2Controller {
 	override fun findParticipants(
 		currentUser: CurrentUserModel,
@@ -181,6 +187,16 @@ class ParticipantV2Controller(
 		id: UUID,
 	): Mono<ParticipantReaderDto> {
 		return service.enableParticipantById(currentUser, projectId, id).map(readerMapper::toDto)
+	}
+
+	override fun exportParticipantById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+	): Mono<ResponseEntity<ParticipantExportReaderDto>> {
+		return exportService.exportParticipant(currentUser, projectId, id)
+			.map(exportMapper::toDto)
+			.map { it.asAttachment("participant-$id.json") }
 	}
 
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
