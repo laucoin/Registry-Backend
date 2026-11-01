@@ -110,6 +110,27 @@ class UserModelPostgresRepositoryTest: TestContext() {
 	}
 
 	@Test
+	fun `Should findByEmails match the stored emails ignoring their case`() {
+		// Arrange
+		val emails = listOf("administrator@sgdf.fr", "unknown@sgdf.fr")
+
+		// Act
+		val result = repository.findByEmails(emails, null).collectList().block()
+
+		// Assert
+		assertEquals(listOf("administrator@sgdf.fr"), result!!.map { it.email })
+	}
+
+	@Test
+	fun `Should findByEmail ignore the case of the email`() {
+		// Act
+		val result = repository.findByEmail("ADMINISTRATOR@SGDF.FR", null).collectList().block()
+
+		// Assert
+		assertEquals(1, result!!.size)
+	}
+
+	@Test
 	fun `Should findById call repository findById`() {
 		// Act
 		val result = repository.findById(currentUser().id!!, isVisible = null).block()
@@ -257,6 +278,22 @@ class UserModelPostgresRepositoryTest: TestContext() {
 
 		@Test
 		@Order(3)
+		fun `Should findPage and findWithLimit exclude the users not linked to the IDP`() {
+			// Arrange
+			val linkedUsers = 5L
+
+			// Act
+			val page = repository.findPage(PageableModel(0, 200), UserSearchParamModel()).block()!!
+			val limited = repository.findWithLimit(200, UserSearchParamModel()).collectList().block()!!
+
+			// Assert
+			assertEquals(linkedUsers, page.totalElements)
+			assertTrue(page.content.none { it.id == uuid })
+			assertTrue(limited.none { it.id == uuid })
+		}
+
+		@Test
+		@Order(4)
 		fun `Should deleteById call repository deleteById`() {
 			// Act
 			repository.deleteById(uuid).block()
