@@ -37,6 +37,7 @@ import jakarta.validation.constraints.Size
 import java.util.UUID
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.ResponseEntity
+import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -95,7 +96,10 @@ interface IUserV2Controller {
 	)
 	@PreAuthorize("isAuthenticated()")
 	@GetMapping("/current/export")
-	fun exportCurrentUser(@AuthenticationPrincipal currentUser: CurrentUserModel): Mono<ResponseEntity<UserExportReaderDto>>
+	fun exportCurrentUser(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		request: ServerHttpRequest,
+	): Mono<ResponseEntity<UserExportReaderDto>>
 
 	@Operation(
 		summary = "Export User data",
@@ -106,6 +110,7 @@ interface IUserV2Controller {
 	fun exportUserById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable id: UUID,
+		request: ServerHttpRequest,
 	): Mono<ResponseEntity<UserExportReaderDto>>
 
 	@Operation(

@@ -32,8 +32,10 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.Part
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.TimeZone
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import java.util.UUID
 import org.springframework.http.ResponseEntity
+import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
@@ -57,6 +59,7 @@ class ParticipantV2Controller(
 	private val writerMapper: ParticipantWriterDtoMapper,
 	private val exportService: IExportService,
 	private val exportMapper: ExportReaderDtoMapper,
+	private val clientContextService: ClientContextService,
 ): IParticipantV2Controller {
 	override fun findParticipants(
 		currentUser: CurrentUserModel,
@@ -193,8 +196,9 @@ class ParticipantV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
+		request: ServerHttpRequest,
 	): Mono<ResponseEntity<ParticipantExportReaderDto>> {
-		return exportService.exportParticipant(currentUser, projectId, id)
+		return exportService.exportParticipant(currentUser, projectId, id, clientContextService.resolve(request))
 			.map(exportMapper::toDto)
 			.map { it.asAttachment("participant-$id.json") }
 	}
