@@ -27,6 +27,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityStatisticsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -112,6 +113,18 @@ interface IActivityV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ActivityReaderDto>
+
+	@Operation(
+		summary = "Find Activity statistics",
+		description = "Statistics of the visible OUT movements of the Activity: the number of distinct participants who took part, the number of participants of the Project (visible registered ones) and their rate (null when the Project has none), the time spent out in seconds counting each movement from its departure to the last return of its participants, and the man time (the sum of the time each participant spent out). A participant who has not come back is counted until now",
+	)
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ACTIVITY') && hasPermission(#projectId, '$REGISTRY_PROJECT_ACTIVITY_HISTORY_R')")
+	@GetMapping("/{id}/statistics")
+	fun findActivityStatistics(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
+		@PathVariable projectId: UUID,
+		@PathVariable id: UUID,
+	): Mono<ActivityStatisticsReaderDto>
 
 	@Operation(
 		summary = "Find Activity Movements",

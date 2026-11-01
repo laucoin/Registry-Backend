@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.port
 
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
 import fr.laucoin.registry.backend.domain.model.MovementEventModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
@@ -50,6 +51,7 @@ interface IMovementPort {
 
 	fun findEventsByParticipantId(projectId: UUID, participantId: UUID): Flux<MovementEventModel>
 	fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventModel>
+	fun findStatisticsByActivityId(projectId: UUID, activityId: UUID): Mono<ActivityStatisticsModel>
 	fun findPageByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,

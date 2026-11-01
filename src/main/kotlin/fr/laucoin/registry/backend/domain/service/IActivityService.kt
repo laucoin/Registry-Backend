@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service
 
 import fr.laucoin.registry.backend.domain.model.ActivityModel
+import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -23,6 +24,8 @@ interface IActivityService {
 		pageable: PageableModel,
 		searchParams: ActivitySearchParamModel,
 	): Mono<PageModel<ActivityModel>>
+
+	fun findActivityStatistics(projectId: UUID, id: UUID): Mono<ActivityStatisticsModel>
 
 	fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel>
 

@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.ActivityStatisticsEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEventEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_ACTIVITY_NAME
@@ -21,6 +22,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.ACTIVITY_STATISTICS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.ACTIVITY_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.ACTIVITY_MOVEMENT_AVAILABILITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.ACTIVITY_MOVEMENT_TEXT_SEARCH_CLAUSE
@@ -154,6 +156,9 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         """
 	)
 	fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventEntity>
+
+	@Query(ACTIVITY_STATISTICS)
+	fun findStatisticsByActivityId(projectId: UUID, activityId: UUID): Mono<ActivityStatisticsEntity>
 
 	@Query(
 		"""

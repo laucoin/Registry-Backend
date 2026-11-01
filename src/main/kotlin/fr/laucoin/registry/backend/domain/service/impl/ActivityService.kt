@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTI
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.ActivityModel
+import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -51,6 +52,11 @@ class ActivityService(
 
 	override fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel> {
 		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
+	}
+
+	override fun findActivityStatistics(projectId: UUID, id: UUID): Mono<ActivityStatisticsModel> {
+		return findActivityById(projectId, id, isVisible = null)
+			.flatMap { movementPort.findStatisticsByActivityId(projectId, id) }
 	}
 
 	override fun findActivityMovementsPage(
