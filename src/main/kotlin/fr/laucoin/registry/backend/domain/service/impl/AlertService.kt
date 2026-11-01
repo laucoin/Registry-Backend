@@ -20,6 +20,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
+import fr.laucoin.registry.backend.domain.port.IAlertHistoryPort
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -43,6 +44,7 @@ import reactor.core.publisher.Mono
 class AlertService(
 	private val projectService: IProjectService,
 	private val port: IAlertPort,
+	private val historyPort: IAlertHistoryPort,
 	private val communicationPort: ICommunicationPort,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
@@ -122,13 +124,9 @@ class AlertService(
 		alert: AlertModel
 	): Mono<AlertModel> {
 		return validateAlertDateWithProjectDates(alert)
+			.flatMap { rowLockPort.lock(ALERT, id) }
 			.flatMap { findAlertById(projectId, id, isVisible = null) }
-			.handle { it, handle ->
-				if (it.status !== IN_PROGRESS) {
-					log.warn("Only {} alert can be update", IN_PROGRESS)
-					handle.error(RegistryException(UNPROCESSABLE_CONTENT, ALERT_STATUS_IS_NOT_UPDATABLE))
-				} else handle.next(it)
-			}
+			.validateIsInProgress()
 			.validateAlertDateWithLinkedCommunications(alert)
 			.map {
 				it.apply {
@@ -136,7 +134,20 @@ class AlertService(
 					this.dateTime = alert.dateTime
 				}
 			}
+			.archiveCurrentState()
 			.updateAlert(currentUser)
+			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun Mono<AlertModel>.validateIsInProgress(): Mono<AlertModel> = handle { it, handle ->
+		if (it.status !== IN_PROGRESS) {
+			log.warn("Only {} alert can be update", IN_PROGRESS)
+			handle.error(RegistryException(UNPROCESSABLE_CONTENT, ALERT_STATUS_IS_NOT_UPDATABLE))
+		} else handle.next(it)
+	}
+
+	private fun Mono<AlertModel>.archiveCurrentState(): Mono<AlertModel> = flatMap {
+		historyPort.archiveAlert(it.id!!).thenReturn(it)
 	}
 
 	override fun updateAlertStatusById(
