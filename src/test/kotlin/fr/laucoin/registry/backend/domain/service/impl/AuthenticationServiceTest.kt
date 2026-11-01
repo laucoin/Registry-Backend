@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.mockito.kotlin.anyOrNull
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REDIRECT_URI_NOT_ALLOWED
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -35,10 +36,10 @@ class AuthenticationServiceTest {
 	@Test
 	fun `Should getLoginUri delegate an allowed redirect uri`() {
 		// Arrange
-		whenever(port.getLoginUri(LOGIN_URI)).thenReturn(AuthenticationUriModel("uri"))
+		whenever(port.getLoginUri(LOGIN_URI, null)).thenReturn(AuthenticationUriModel("uri"))
 
 		// Act
-		val result = service.getLoginUri(LOGIN_URI)
+		val result = service.getLoginUri(LOGIN_URI, null)
 
 		// Assert
 		assertEquals("uri", result.uri)
@@ -53,7 +54,7 @@ class AuthenticationServiceTest {
 	)
 	fun `Should getLoginUri refuse every redirect uri that is not an exact allowed value`(redirectUri: String) {
 		// Act
-		val error = assertThrows(RegistryException::class.java) { service.getLoginUri(redirectUri) }
+		val error = assertThrows(RegistryException::class.java) { service.getLoginUri(redirectUri, null) }
 
 		// Assert
 		assertEquals(BAD_REQUEST, error.status)
@@ -162,11 +163,11 @@ class AuthenticationServiceTest {
 			configuredRedirectUris = listOf("$LOGIN_URI/", " ", "https://registry.test/*"),
 			configuredLogoutRedirectUris = listOf(LOGOUT_URI),
 		)
-		whenever(port.getLoginUri(any())).thenReturn(AuthenticationUriModel("uri"))
+		whenever(port.getLoginUri(any(), anyOrNull())).thenReturn(AuthenticationUriModel("uri"))
 
 		// Act
-		val allowed = strictService.getLoginUri("$LOGIN_URI/")
-		val refused = assertThrows(RegistryException::class.java) { strictService.getLoginUri("https://registry.test/x") }
+		val allowed = strictService.getLoginUri("$LOGIN_URI/", null)
+		val refused = assertThrows(RegistryException::class.java) { strictService.getLoginUri("https://registry.test/x", null) }
 
 		// Assert
 		assertEquals("uri", allowed.uri)

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import org.mockito.kotlin.anyOrNull
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
@@ -17,7 +18,7 @@ import org.springframework.boot.convert.ApplicationConversionService
 
 class AuthenticationServicePropertyBindingTest {
 	private val port: IAuthenticationPort = mock<IAuthenticationPort>().also {
-		whenever(it.getLoginUri(any())).thenReturn(AuthenticationUriModel("uri"))
+		whenever(it.getLoginUri(any(), anyOrNull())).thenReturn(AuthenticationUriModel("uri"))
 	}
 
 	private fun runner(loginUris: String, logoutUris: String) = ApplicationContextRunner()
@@ -39,8 +40,8 @@ class AuthenticationServicePropertyBindingTest {
 			val service = context.getBean(IAuthenticationService::class.java)
 
 			// Assert
-			assertEquals("uri", service.getLoginUri("https://a.test/cb").uri)
-			assertEquals("uri", service.getLoginUri("https://b.test/cb").uri)
+			assertEquals("uri", service.getLoginUri("https://a.test/cb", null).uri)
+			assertEquals("uri", service.getLoginUri("https://b.test/cb", null).uri)
 		}
 	}
 
@@ -54,8 +55,8 @@ class AuthenticationServicePropertyBindingTest {
 			val service = context.getBean(IAuthenticationService::class.java)
 
 			// Assert
-			assertEquals("uri", service.getLoginUri("https://a.test/cb").uri)
-			assertThrows(RegistryException::class.java) { service.getLoginUri("https://b.test/cb") }
+			assertEquals("uri", service.getLoginUri("https://a.test/cb", null).uri)
+			assertThrows(RegistryException::class.java) { service.getLoginUri("https://b.test/cb", null) }
 		}
 	}
 
@@ -92,7 +93,7 @@ class AuthenticationServicePropertyBindingTest {
 		// Act
 		runner.run { context ->
 			// Assert
-			assertEquals("uri", context.getBean(IAuthenticationService::class.java).getLoginUri("https://a.test/cb").uri)
+			assertEquals("uri", context.getBean(IAuthenticationService::class.java).getLoginUri("https://a.test/cb", null).uri)
 		}
 	}
 
