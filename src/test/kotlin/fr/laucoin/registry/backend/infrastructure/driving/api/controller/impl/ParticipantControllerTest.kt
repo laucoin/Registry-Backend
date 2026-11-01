@@ -61,6 +61,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -933,6 +934,7 @@ class ParticipantControllerTest : TestContext() {
 		// Act
 		val result = webClient.authenticate().get()
 			.uri(uriBuilder("$BASE_URL/{id}/export", listOf(defaultProjectId, id), emptyList()))
+			.header("User-Agent", "JUnit/1.0")
 			.exchange()
 
 		// Assert
@@ -940,5 +942,6 @@ class ParticipantControllerTest : TestContext() {
 			.expectHeader().valueEquals(CACHE_CONTROL, "no-store")
 			.expectHeader().valueEquals(CONTENT_DISPOSITION, "attachment; filename=\"participant-$id.json\"")
 			.expectBody().jsonPath("$.subjectType").isEqualTo("PARTICIPANT")
+		verify(exportService).exportParticipant(any(), eq(defaultProjectId), eq(id), argThat { userAgent == "JUnit/1.0" })
 	}
 }

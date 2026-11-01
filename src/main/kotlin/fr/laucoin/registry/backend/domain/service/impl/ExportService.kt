@@ -2,10 +2,10 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_EXPORT
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.EXPORT
 import fr.laucoin.registry.backend.domain.enumeration.AuditOutcomeEnum
 import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -97,7 +97,12 @@ class ExportService(
 		currentUser.hasAuthority(projectId, REGISTRY_PROJECT_PARTICIPANT_EXPORT) ||
 			(participant.user?.id != null && participant.user?.id == currentUser.id)
 
-	private fun forbidden(currentUser: CurrentUserModel, projectId: UUID, id: UUID, client: ClientContextModel): RegistryException {
+	private fun forbidden(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		client: ClientContextModel,
+	): RegistryException {
 		log.warn("User {} is not allowed to export the participant {}", currentUser.id, id)
 		audit(currentUser, client, AuditResourceTypeEnum.PARTICIPANT, id, projectId, AuditOutcomeEnum.FORBIDDEN)
 		return RegistryException(FORBIDDEN, NOT_ENOUGH_PERMISSION)

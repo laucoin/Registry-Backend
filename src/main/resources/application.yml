@@ -123,6 +123,10 @@ registry:
         capacity: ${REGISTRY_AUTH_RATE_LIMIT_CAPACITY:10}
         window-seconds: ${REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
         max-tracked-clients: ${REGISTRY_AUTH_RATE_LIMIT_MAX_TRACKED_CLIENTS:10000}
+      export:
+        capacity: ${REGISTRY_EXPORT_RATE_LIMIT_CAPACITY:5}
+        window-seconds: ${REGISTRY_EXPORT_RATE_LIMIT_WINDOW_SECONDS:3600}
+        max-tracked-users: ${REGISTRY_EXPORT_RATE_LIMIT_MAX_TRACKED_USERS:10000}
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
