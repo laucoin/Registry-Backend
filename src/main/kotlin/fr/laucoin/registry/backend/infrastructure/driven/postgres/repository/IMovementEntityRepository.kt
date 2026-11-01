@@ -146,6 +146,17 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 
 	@Query(
 		"""
+        SELECT t.$MOVEMENT_DATE_TIME, t.$MOVEMENT_TYPE, t.$MOVEMENT_REASON
+        FROM $MOVEMENT_CONTENT_TABLE mct
+        INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+        WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_VEHICLE_ID = :vehicleId AND t.$VISIBLE = TRUE
+        ORDER BY t.$MOVEMENT_DATE_TIME, t.$CREATED_AT, t.$ID
+        """
+	)
+	fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventEntity>
+
+	@Query(
+		"""
         SELECT COUNT(t.$ID)
         FROM $MOVEMENT_CONTENT_TABLE mct
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
