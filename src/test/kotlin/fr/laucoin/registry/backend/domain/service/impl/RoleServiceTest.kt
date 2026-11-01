@@ -8,10 +8,10 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.RoleModel
 import fr.laucoin.registry.backend.domain.port.IRolePort
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import java.util.stream.Stream
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,6 +25,7 @@ import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.test.util.ReflectionTestUtils.setField
 import reactor.core.publisher.Flux
+import java.util.stream.Stream
 
 class RoleServiceTest {
 	private val port: IRolePort = mock()
@@ -61,15 +62,6 @@ class RoleServiceTest {
 		)
 
 		@JvmStatic
-		fun `Should getLevelByProjectRole return this right level`(): Stream<Arguments> = Stream.of(
-			Arguments.of(WRONG_ROLE, 0),
-			Arguments.of(ROLE_0, 0),
-			Arguments.of(ROLE_1_1, 1),
-			Arguments.of(ROLE_1_2, 1),
-			Arguments.of(ROLE_2, 2),
-		)
-
-		@JvmStatic
 		fun `Should getAuthoritiesByUserRole return a list of associated authorities`(): Stream<Arguments> = Stream.of(
 			Arguments.of(WRONG_ROLE, emptyList<String>()),
 			Arguments.of(ROLE_0, listOf(PERMISSION_0, REGISTRY_PROJECT_R)),
@@ -82,11 +74,27 @@ class RoleServiceTest {
 		fun `Should getAuthoritiesByProjectRole return a list of associated authorities`(): Stream<Arguments> =
 			Stream.of(
 				Arguments.of(WRONG_ROLE, emptyList<String>(), false),
-				Arguments.of(ROLE_0, listOf("${projectId}_$PERMISSION_0", "${projectId}_$REGISTRY_PROJECT_R"), true),
-				Arguments.of(ROLE_1_1, listOf("${projectId}_$PERMISSION_1", "${projectId}_$REGISTRY_PROJECT_R"), true),
-				Arguments.of(ROLE_1_2, listOf("${projectId}_$PERMISSION_1", "${projectId}_$REGISTRY_PROJECT_R"), true),
-				Arguments.of(ROLE_2, listOf("${projectId}_$PERMISSION_2", "${projectId}_${REGISTRY_PROJECT_R}"), true),
-				Arguments.of(ROLE_0, listOf("${projectId}_$REGISTRY_PROJECT_R"), false),
+				Arguments.of(
+					ROLE_0,
+					listOf("${defaultProjectId}_$PERMISSION_0", "${defaultProjectId}_$REGISTRY_PROJECT_R"),
+					true
+				),
+				Arguments.of(
+					ROLE_1_1,
+					listOf("${defaultProjectId}_$PERMISSION_1", "${defaultProjectId}_$REGISTRY_PROJECT_R"),
+					true
+				),
+				Arguments.of(
+					ROLE_1_2,
+					listOf("${defaultProjectId}_$PERMISSION_1", "${defaultProjectId}_$REGISTRY_PROJECT_R"),
+					true
+				),
+				Arguments.of(
+					ROLE_2,
+					listOf("${defaultProjectId}_$PERMISSION_2", "${defaultProjectId}_${REGISTRY_PROJECT_R}"),
+					true
+				),
+				Arguments.of(ROLE_0, listOf("${defaultProjectId}_$REGISTRY_PROJECT_R"), false),
 				Arguments.of(ROLE_1_1, emptyList<String>(), false),
 				Arguments.of(ROLE_1_2, emptyList<String>(), false),
 				Arguments.of(ROLE_2, emptyList<String>(), false),
@@ -127,6 +135,33 @@ class RoleServiceTest {
 		verify(port).findProjectRoles()
 	}
 
+	@Test
+	fun `Should onApplicationEvent load the roles from the port`() {
+		// Arrange
+		val event: ContextRefreshedEvent = mock()
+		whenever(port.findUserRoles()).thenReturn(Flux.just(RoleModel("USER_$ROLE_1_1", 1, listOf(PERMISSION_1))))
+		whenever(port.findProjectRoles()).thenReturn(Flux.just(RoleModel("PROJECT_$ROLE_0", 0, listOf(PERMISSION_0))))
+
+		// Act
+		service.onApplicationEvent(event)
+
+		// Assert
+		assertEquals(1, service.getLevelByUserRole("USER_$ROLE_1_1"))
+		assertEquals("PROJECT_$ROLE_0", service.getLevel0RoleFromProjectRoles())
+	}
+
+	@Test
+	fun `Should getLevel0RoleFromProjectRoles fail when no level 0 role is defined`() {
+		// Arrange
+		setField(service, "projectRoles", mapOf(ROLE_1_1 to Pair(1, listOf(PERMISSION_1))))
+
+		// Act
+		val action = { service.getLevel0RoleFromProjectRoles(); Unit }
+
+		// Assert
+		assertThrows(IllegalStateException::class.java, action)
+	}
+
 	@ParameterizedTest
 	@MethodSource
 	fun `Should getLevelByUserRole return this right level`(
@@ -138,22 +173,6 @@ class RoleServiceTest {
 
 		// Act
 		val result = service.getLevelByUserRole(role)
-
-		// Assert
-		assertEquals(expected, result)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should getLevelByProjectRole return this right level`(
-		role: String,
-		expected: Int?,
-	) {
-		// Arrange
-		setField(service, "projectRoles", roles)
-
-		// Act
-		val result = service.getLevelByProjectRole(role)
 
 		// Assert
 		assertEquals(expected, result)
@@ -219,7 +238,7 @@ class RoleServiceTest {
 		setField(service, "projectRoles", roles)
 
 		// Act
-		val result = service.getAuthoritiesByProjectRole(role, projectId, visibility)
+		val result = service.getAuthoritiesByProjectRole(role, defaultProjectId, visibility)
 
 		// Assert
 		assertEquals(expectedAuthorities, result)
@@ -231,12 +250,12 @@ class RoleServiceTest {
 		val options = listOf(VEHICLE, ACTIVITY)
 
 		// Act
-		val result = service.getOptionAuthoritiesByProject(projectId, options)
+		val result = service.getOptionAuthoritiesByProject(defaultProjectId, options)
 
 		// Assert
 		assertEquals(2, result.size)
-		assertEquals("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${VEHICLE}", result.first())
-		assertEquals("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${ACTIVITY}", result.last())
+		assertEquals("${defaultProjectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${VEHICLE}", result.first())
+		assertEquals("${defaultProjectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${ACTIVITY}", result.last())
 	}
 
 	@Test
@@ -245,8 +264,8 @@ class RoleServiceTest {
 		val authorities: MutableList<GrantedAuthority> = mutableListOf(
 			SimpleGrantedAuthority(ROLE_0),
 			SimpleGrantedAuthority(WRONG_ROLE),
-			SimpleGrantedAuthority("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${VEHICLE}"),
-			SimpleGrantedAuthority("${projectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${ACTIVITY}"),
+			SimpleGrantedAuthority("${defaultProjectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${VEHICLE}"),
+			SimpleGrantedAuthority("${defaultProjectId}_${REGISTRY_PROJECT_OPTION_PREFIX}${ACTIVITY}"),
 		)
 		val currentUser: CurrentUserModel = mock()
 
@@ -257,7 +276,7 @@ class RoleServiceTest {
 
 		// Assert
 		assertEquals(1, result.size)
-		assertEquals(projectId, result.first())
+		assertEquals(defaultProjectId, result.first())
 	}
 
 	@ParameterizedTest

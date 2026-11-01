@@ -7,16 +7,23 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
+import fr.laucoin.registry.backend.domain.model.RoleModel
 import fr.laucoin.registry.backend.domain.port.IRolePort
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.Objects
 import java.util.UUID
 
+/**
+ * Objectif : Détient en mémoire les rôles et leurs permissions.
+ * Périmètre : Charge les tables de rôles au démarrage et résout les niveaux, les rôles attribuables et les autorités.
+ * Limites : Les rôles sont des données chargées une fois ; un changement nécessite un redémarrage.
+ */
 @Service
 class RoleService(
 	private val port: IRolePort,
@@ -25,22 +32,26 @@ class RoleService(
 ) : ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
 	private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
-	private val userRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
-	private val projectRoles: HashMap<String, Pair<Int, List<String>>> = hashMapOf()
+	@Volatile
+	private var userRoles: Map<String, Pair<Int, List<String>>> = emptyMap()
 
-	// Blocking is deliberate here: this runs once on the context-refresh thread
+	@Volatile
+	private var projectRoles: Map<String, Pair<Int, List<String>>> = emptyMap()
+
+	// Le blocage est voulu ici : cela s'exécute une seule fois sur le thread de rafraîchissement du contexte
 	override fun onApplicationEvent(event: ContextRefreshedEvent) {
-		Mono.`when`(
-			port.findUserRoles().doOnNext { userRoles[it.role] = Pair(it.level, it.permissions) },
-			port.findProjectRoles().doOnNext { projectRoles[it.role] = Pair(it.level, it.permissions) },
-		).block()
+		Mono.zip(loadRoles(port.findUserRoles()), loadRoles(port.findProjectRoles()))
+			.doOnNext { userRoles = it.t1; projectRoles = it.t2 }
+			.block()
 	}
+
+	private fun loadRoles(roles: Flux<RoleModel>): Mono<Map<String, Pair<Int, List<String>>>> =
+		roles.collectMap({ it.role }, { Pair(it.level, it.permissions) })
 
 	override fun getLevelByUserRole(role: String?): Int? = userRoles[role]?.first
 
-	override fun getLevelByProjectRole(role: String): Int = projectRoles[role]?.first ?: 0
-
-	override fun getLevel0RoleFromProjectRoles(): String = projectRoles.filter { it.value.first == 0 }.keys.first()
+	override fun getLevel0RoleFromProjectRoles(): String =
+		projectRoles.entries.firstOrNull { it.value.first == 0 }?.key ?: error("No level 0 project role is defined")
 
 	override fun getDefaultUserRole(): String? {
 		val roles = userRoles.filter { it.key == defaultUserRole }.keys
@@ -97,7 +108,7 @@ class RoleService(
 		return findAssignableRoles(profile.role, projectRoles)
 	}
 
-	private fun findAssignableRoles(role: String?, roles: HashMap<String, Pair<Int, List<String>>>): List<String> {
+	private fun findAssignableRoles(role: String?, roles: Map<String, Pair<Int, List<String>>>): List<String> {
 		val roleLevel: Int? = roles[role]?.first
 		if (Objects.isNull(roleLevel)) {
 			return emptyList()

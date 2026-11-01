@@ -1,8 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import com.nimbusds.jose.shaded.gson.Gson
-import com.nimbusds.jose.shaded.gson.reflect.TypeToken
-import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.UserModel
@@ -15,15 +12,13 @@ import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 import org.springframework.stereotype.Component
+import tools.jackson.databind.ObjectMapper
 
 @Component
 class ParticipantEntityMapper(
-	private val gson: Gson,
+	private val objectMapper: ObjectMapper,
 	private val userMapper: UserEntityMapper,
 ): IEntityMapper<ParticipantModel, ParticipantEntity> {
-	private val groupListType = object: TypeToken<List<GroupModel>>() {}.type
-	private val uuidListType = object: TypeToken<List<UUID>>() {}.type
-
 	override fun toModel(entity: ParticipantEntity): ParticipantModel {
 		return ParticipantModel().apply {
 			firstName = entity.firstName
@@ -34,25 +29,25 @@ class ParticipantEntityMapper(
 			availableGroups = groups.filter { buildPresentGroupIds(entity.availableGroups).contains(it.id) }
 			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
 			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
-			status = buildStatus(entity.lastMovementType)
+			status = entity.status
 			lastMovement = entity.lastMovementDateTime
+			effectiveArrival = entity.effectiveArrival
+			effectiveDeparture = entity.effectiveDeparture
 			user = mapUser(entity)
-			purged = entity.purged
 		}.fillWithProjectAndEntity(entity)
 	}
 
 	private fun extractGroups(groups: String?): List<GroupModel> {
-		return Optional.ofNullable(groups).map { g ->
-			val groupList = gson.fromJson<List<GroupModel>?>(g, groupListType) ?: emptyList()
-			groupList.filter { Objects.nonNull(it.id) }
-		}.orElse(emptyList())
+		if (groups.isNullOrBlank()) return emptyList()
+		return objectMapper.readTree(groups)
+			.mapNotNull { node -> node.path("id").asString(null)?.let { toGroup(UUID.fromString(it), node.path("name").asString(null)) } }
 	}
 
+	private fun toGroup(id: UUID, name: String?): GroupModel = GroupModel(name = name).apply { this.id = id }
+
 	private fun buildPresentGroupIds(availableGroups: String?): List<UUID> {
-		return Optional.ofNullable(availableGroups).map { g ->
-			val groupIds = gson.fromJson<List<UUID>?>(g, uuidListType) ?: emptyList()
-			groupIds.filter { Objects.nonNull(it) }
-		}.orElse(emptyList())
+		if (availableGroups.isNullOrBlank()) return emptyList()
+		return objectMapper.readTree(availableGroups).mapNotNull { it.asString(null)?.let(UUID::fromString) }
 	}
 
 	private fun mapUser(entity: ParticipantEntity): UserModel? {
@@ -77,7 +72,6 @@ class ParticipantEntityMapper(
 			endAvailabilityDate = model.endAvailability?.date
 			endAvailabilityTime = model.endAvailability?.time
 			userId = model.user?.id
-			purged = model.purged
 		}.fillWithProjectAndModel(model)
 	}
 }

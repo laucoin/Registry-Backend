@@ -3,19 +3,19 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.ACTIVITY
 import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
 class ActivityReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 ): IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
 	override fun toDto(model: ActivityModel): ActivityReaderDto {
 		return ActivityReaderDto(
 			name = model.name,
 			status = Optional.ofNullable(model.status)
-				.map { availabilityStatusMapper.toDto(it, model.startAvailability, model.endAvailability) }
+				.map { availabilityStatusMapper.toDto(it, ACTIVITY, model.startAvailability, model.endAvailability) }
 				.orElse(null),
 			description = model.description,
 			duration = Optional.ofNullable(model.duration).map {
@@ -29,7 +29,6 @@ class ActivityReaderDtoMapper(
 			endAvailability = model.endAvailability,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

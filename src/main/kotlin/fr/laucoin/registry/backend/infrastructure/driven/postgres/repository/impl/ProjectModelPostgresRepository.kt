@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ProjectEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IProjectEntityRepository
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -16,22 +17,33 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Adaptateur Postgres du port du projet.
+ * Périmètre : Délègue au repository d'entités et mappe les entités vers les modèles du domaine.
+ * Limites : Ne porte aucune règle métier.
+ */
 @Service
 class ProjectModelPostgresRepository(
 	private val repository: IProjectEntityRepository,
 	private val mapper: ProjectEntityMapper,
+	private val clock: Clock,
 ): IProjectPort {
 	override fun findPage(
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
 		return repository.findAll(
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
+			searchParams.at,
+			searchParams.isFavorite,
+			searchParams.userId,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPage(
@@ -40,17 +52,22 @@ class ProjectModelPostgresRepository(
 		searchParams: ProjectSearchParamModel
 	): Mono<PageModel<ProjectModel>> {
 		if (projectIds.isEmpty()) {
-			return Mono.just(PageModel(pageable, 0, emptyList()))
+			return Mono.just(PageModel(pageable, 0, emptyList(), ZonedDateTime.now(clock)))
 		}
 
 		return repository.findAllInProjectIds(
 			projectIds,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.dateTimeSearched,
+			searchParams.query,
+			searchParams.isVisible,
+			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
+			searchParams.at,
+			searchParams.isFavorite,
+			searchParams.userId,
+			searchParams.sort?.field,
+			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 
 	override fun validDateTime(id: UUID, begin: ZonedDateTime?, end: ZonedDateTime?): Mono<Boolean> {
@@ -62,8 +79,8 @@ class ProjectModelPostgresRepository(
 		return repository.findProjectsEligibleForPurge(dateThreshold)
 	}
 
-	override fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel> {
-		return repository.findById(id, visibilitySearched)
+	override fun findById(id: UUID, isVisible: Boolean?): Mono<ProjectModel> {
+		return repository.findById(id, isVisible)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}
@@ -77,10 +94,22 @@ class ProjectModelPostgresRepository(
 	}
 
 	private fun save(element: ProjectModel): Mono<ProjectModel> {
-		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+		return repository.save(mapper.toEntity(element))
+			.flatMap(::reloadWithCounts)
+			.map(mapper::toModel)
+	}
+
+	private fun reloadWithCounts(saved: ProjectEntity): Mono<ProjectEntity> {
+		return Mono.justOrEmpty(saved.id)
+			.flatMap { repository.findById(it, null) }
+			.switchIfEmpty(Mono.error(IllegalStateException("Project ${saved.id} not found after save")))
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {
 		return repository.deleteById(id).thenReturn(Unit)
+	}
+
+	private companion object {
+		val NO_PROJECT_ID = listOf(UUID(0, 0))
 	}
 }

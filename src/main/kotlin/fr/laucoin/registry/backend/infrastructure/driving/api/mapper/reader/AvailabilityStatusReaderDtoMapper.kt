@@ -1,21 +1,22 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.AVAILABILITY_STATUS_DURATION_PREFIX
+import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.AVAILABILITY_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import org.springframework.stereotype.Component
-import java.time.Duration
-import java.time.LocalTime
+import java.time.Clock
 import java.util.Objects
 
 @Component
 class AvailabilityStatusReaderDtoMapper(
 	private val translateService: ITranslateService,
+	private val clock: Clock,
 ) : GenericDurationReaderDtoMapper(translateService) {
 	fun toDto(model: AvailabilityStatusEnum): LabelDto {
 		return LabelDto(
@@ -26,63 +27,35 @@ class AvailabilityStatusReaderDtoMapper(
 
 	fun toDto(
 		model: AvailabilityStatusEnum,
+		subject: AvailabilitySubjectEnum,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): LabelDto {
 		return LabelDto(
 			model.name,
-			extractLabelDuration(model, startAvailability, endAvailability),
+			extractLabelDuration(model, subject, startAvailability, endAvailability),
 		)
 	}
 
 	private fun extractLabelDuration(
 		model: AvailabilityStatusEnum,
+		subject: AvailabilitySubjectEnum,
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): String {
-		val now = CustomDateTimeModel.now()
+		val now = CustomDateTimeModel.now(clock)
+		val durationPrefix = "${subject.keyPrefix}$DURATION_PREFIX"
 		return when {
-			Objects.nonNull(startAvailability) && AvailabilityStatusEnum.AVAILABLE === model -> {
-				val interval = Duration.between(
-					startAvailability?.toZonedDateTime(
-						LocalTime.MIN, now.zone()!!
-					), now.toZonedDateTime()
-				)
+			Objects.nonNull(startAvailability) && AvailabilityStatusEnum.AVAILABLE === model ->
+				durationMessage("$durationPrefix$model", sinceStart(now, startAvailability))
 
-				translateService.getMessage(
-					code = "$AVAILABILITY_STATUS_DURATION_PREFIX$model",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
+			startAvailability.asStartIsAfterOther(now) ->
+				durationMessage("${durationPrefix}NOT_YET", untilStart(now, startAvailability))
 
-			Objects.nonNull(startAvailability) && now.asStartIsAfterOther(startAvailability) -> {
-				val interval = Duration.between(
-					now.toZonedDateTime(),
-					startAvailability?.toZonedDateTime(
-						LocalTime.MIN, now.zone()!!
-					)
-				)
+			endAvailability.asEndIsBeforeOther(now) ->
+				durationMessage("${durationPrefix}NO_MORE", sinceEnd(now, endAvailability))
 
-				translateService.getMessage(
-					code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NOT_YET",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
-
-			Objects.nonNull(endAvailability) && now.asEndIsBeforeOther(endAvailability) -> {
-				val interval = Duration.between(
-					endAvailability?.toZonedDateTime(
-						LocalTime.MAX, now.zone()!!
-					), now.toZonedDateTime()
-				)
-
-				translateService.getMessage(
-					code = "${AVAILABILITY_STATUS_DURATION_PREFIX}NO_MORE",
-					args = arrayOf(formatDuration(interval)),
-				)
-			}
-
-			else -> translateService.getMessage(code = "$AVAILABILITY_STATUS_PREFIX$model")
+			else -> translateService.getMessage(code = "${subject.keyPrefix}$model")
 		}
 	}
 }

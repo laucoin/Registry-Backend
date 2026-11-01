@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
+import java.time.Clock
 import java.time.LocalDate
 import java.util.Optional
 import org.springframework.stereotype.Component
@@ -12,8 +13,8 @@ class ParticipantReaderDtoMapper(
 	private val partialUserMapper: PartialUserReaderDtoMapper,
 	private val typeMapper: ParticipantTypeReaderDtoMapper,
 	private val statusMapper: PresenceStatusReaderDtoMapper,
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val groupMapper: GroupWithoutMemberReaderDtoMapper,
+	private val clock: Clock,
 ): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
 	override fun toDto(model: ParticipantModel): ParticipantReaderDto {
 		return ParticipantReaderDto(
@@ -29,16 +30,16 @@ class ParticipantReaderDtoMapper(
 				.orElse(null),
 			startAvailability = model.startAvailability,
 			endAvailability = model.endAvailability,
+			effectiveArrival = model.effectiveArrival,
+			effectiveDeparture = model.effectiveDeparture,
 			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
-			purged = model.purged,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition
 		}
 	}
 
-	private fun isMajor(birthday: LocalDate?): Boolean = birthday.isMajor()
+	private fun isMajor(birthday: LocalDate?): Boolean = birthday.isMajor(clock)
 }

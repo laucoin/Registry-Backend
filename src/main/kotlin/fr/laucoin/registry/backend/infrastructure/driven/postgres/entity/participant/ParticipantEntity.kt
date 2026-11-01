@@ -1,20 +1,21 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant
 
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericProjectEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_AVAILABLE_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_ARRIVAL
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_STATUS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_USER_EMAIL
@@ -46,8 +47,8 @@ data class ParticipantEntity(
 	@Column(PARTICIPANT_AVAILABLE_GROUPS)
 	var availableGroups: String? = "[]",
 	@ReadOnlyProperty
-	@Column(PARTICIPANT_LAST_MOVEMENT_TYPE)
-	var lastMovementType: MovementTypeEnum? = null,
+	@Column(PARTICIPANT_STATUS)
+	var status: PresenceStatusEnum? = null,
 	@ReadOnlyProperty
 	@Column(PARTICIPANT_LAST_MOVEMENT_DATE_TIME)
 	var lastMovementDateTime: ZonedDateTime? = null,
@@ -59,6 +60,12 @@ data class ParticipantEntity(
 	var endAvailabilityDate: LocalDate? = null,
 	@Column(PARTICIPANT_END_AVAILABILITY_TIME)
 	var endAvailabilityTime: OffsetTime? = null,
+	@ReadOnlyProperty
+	@Column(PARTICIPANT_EFFECTIVE_ARRIVAL)
+	var effectiveArrival: ZonedDateTime? = null,
+	@ReadOnlyProperty
+	@Column(PARTICIPANT_EFFECTIVE_DEPARTURE)
+	var effectiveDeparture: ZonedDateTime? = null,
 	@Column(PARTICIPANT_USER_ID)
 	var userId: UUID? = null,
 	@ReadOnlyProperty
@@ -70,6 +77,4 @@ data class ParticipantEntity(
 	@ReadOnlyProperty
 	@Column(PARTICIPANT_USER_EMAIL)
 	var userEmail: String? = null,
-	@Column(PARTICIPANT_PURGED)
-	var purged: Boolean? = null,
 ): GenericProjectEntity()

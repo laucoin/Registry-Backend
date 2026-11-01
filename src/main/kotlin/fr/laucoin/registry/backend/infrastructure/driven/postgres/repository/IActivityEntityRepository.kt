@@ -4,6 +4,9 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activit
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_AVAILABILITY_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_DURATION_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_PARTICIPANTS_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.SELECT_ACTIVITY_SEARCH
@@ -19,7 +22,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -30,62 +32,75 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Repository d'entités réactif de la table de l'activité.
+ * Périmètre : Porte les requêtes SQL paramétrées de l'activité (filtres, tri, pagination, verrous).
+ * Limites : Utilisé uniquement par l'adaptateur Postgres ; renvoie des entités, jamais des modèles du domaine.
+ */
 @Repository
 interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
-        ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
+        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE AND $ACTIVITY_DURATION_CLAUSE AND $ACTIVITY_PARTICIPANTS_CLAUSE
+        ORDER BY $ACTIVITY_SORT similarity_score DESC, t.$ACTIVITY_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		at: ZonedDateTime?,
+		minDuration: String?,
+		maxDuration: String?,
+		participants: Int?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ActivityEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID IN (:ids) AND $VISIBLE_CLAUSE
         """
 	)
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityEntity>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ActivityEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ACTIVITY_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
+        WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE AND $ACTIVITY_DURATION_CLAUSE AND $ACTIVITY_PARTICIPANTS_CLAUSE
         ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
         LIMIT :limit
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		at: ZonedDateTime?,
+		minDuration: String?,
+		maxDuration: String?,
+		participants: Int?,
 		limit: Int,
 	): Flux<ActivityEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityEntity>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityEntity>
 
 	@Query(
 		"""

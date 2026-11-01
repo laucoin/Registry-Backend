@@ -3,12 +3,13 @@ package fr.laucoin.registry.backend.test
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.userId
-import fr.laucoin.registry.backend.test.ModelExt.userOidcId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserOidcId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
@@ -31,13 +32,19 @@ object WebTestClientExt {
 
 
 	private val user = UserModel(
-		oidcId = userOidcId,
+		oidcId = defaultUserOidcId,
 		firstName = FIRST_NAME,
 		lastName = LAST_NAME,
 		email = "$FIRST_NAME.$LAST_NAME@test.com"
-	).apply { id = userId }
+	).apply { id = defaultUserId }
 
-	fun buildAuthority(authority: String): String = "${projectId}_$authority"
+	fun buildAuthority(authority: String): String = "${defaultProjectId}_$authority"
+
+	/** Permissions de suppression de chaque élément de projet : elles permettent aussi de lister et de réactiver les éléments masqués. */
+	fun hiddenElementsAuthorities(): Array<String> = listOf(
+		"REGISTRY_PROJECT_D", "REGISTRY_PROJECT_PARTICIPANT_D", "REGISTRY_PROJECT_GROUP_D", "REGISTRY_PROJECT_MOVEMENT_D",
+		"REGISTRY_PROJECT_VEHICLE_D", "REGISTRY_PROJECT_ACTIVITY_D", "REGISTRY_PROJECT_COMMUNICATION_D", "REGISTRY_PROJECT_ALERT_D",
+	).map(::buildAuthority).toTypedArray()
 
 	fun WebTestClient.authenticate(vararg authorities: String): WebTestClient {
 		val currentUser = currentUser(*authorities)
@@ -88,12 +95,14 @@ object WebTestClientExt {
 	}
 
 	fun ResponseSpec.assertError(expectedStatus: HttpStatus, expectedCode: String): ResponseSpec {
+		expectHeader().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON)
 		val error = body<Map<*, *>>(expectedStatus)
-		assertEquals(expectedStatus.value(), error?.get(ErrorDto::statusCode.name))
-		assertEquals(expectedStatus.name, error?.get(ErrorDto::statusName.name))
+		assertEquals(expectedStatus.value(), error?.get(ErrorDto::status.name))
 		assertEquals(expectedCode, error?.get(ErrorDto::code.name))
+		assertEquals("about:blank", error?.get(ErrorDto::type.name))
 		assertNotNull(error?.get(ErrorDto::title.name))
-		assertNotNull(error[ErrorDto::message.name])
+		assertNotNull(error?.get(ErrorDto::detail.name))
+		assertNotNull(error?.get(ErrorDto::instance.name))
 		return this
 	}
 }

@@ -20,12 +20,9 @@ import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
@@ -33,6 +30,7 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.Clock
 import java.util.Objects
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -44,60 +42,58 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
+/**
+ * Objectif : Gère les communications rattachées à une alerte.
+ * Périmètre : Création et lecture des communications et de leurs liens avec les alertes.
+ * Limites : Ne porte pas les règles de statut des alertes ; elles relèvent de AlertService.
+ */
 @Service
 class CommunicationService(
 	private val projectService: IProjectService,
 	private val port: ICommunicationPort,
 	private val movementPort: IMovementPort,
 	private val alertPort: IAlertPort,
+	clock: Clock,
 	@param:Value($$"${registry.feature.communication.searched.max-activity-result}")
 	private val maxActivityResult: Int,
 	@param:Value($$"${registry.feature.communication.searched.max-alert-result}")
 	private val maxAlertResult: Int,
-): ICommunicationService, GenericService() {
-	override fun findCommunicationPage(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel
-	): Mono<PageModel<CommunicationModel>> {
-		return port.findPage(projectId, pageable, searchParams)
-	}
-
+): ICommunicationService, GenericService(clock) {
 	override fun findCommunicationById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<CommunicationModel> {
-		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
+		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
 	}
 
 	override fun searchOutMovementWithActivityByText(
 		projectId: UUID,
-		textSearched: String?
+		query: String?
 	): Flux<MovementModel> {
 		return movementPort.findActivityWithLimit(
 			maxActivityResult,
 			projectId,
 			ActivitySearchParamModel(
-				textSearched = textSearched,
-				visibilitySearched = true,
-				availabilitySearched = true,
-				dateTimeSearched = null,
+				query = query,
+				isVisible = true,
+				isAvailable = true,
+				at = null,
 			)
 		)
 	}
 
 	override fun searchAlertByText(
 		projectId: UUID,
-		textSearched: String?
+		query: String?
 	): Flux<AlertModel> {
 		return alertPort.findWithLimit(
 			maxAlertResult,
 			projectId,
 			AlertSearchParamModel(
-				textSearched,
-				visibilitySearched = true,
-				statusSearched = AlertStatusEnum.IN_PROGRESS,
+				query,
+				isVisible = true,
+				status = AlertStatusEnum.IN_PROGRESS,
 			)
 		)
 	}
@@ -107,13 +103,13 @@ class CommunicationService(
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
 		return projectService.validateDateTime(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
 			.flatMap { validateNoMovementConflict(communication) }
 			.flatMap { validateNoAlertConflict(currentUser, communication) }
-			.flatMap { port.create(communication.apply { create(currentUser) }) }
+			.flatMap { port.create(communication.apply { create(currentUser, now()) }) }
 	}
 
 	override fun updateCommunicationById(
@@ -123,11 +119,11 @@ class CommunicationService(
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
 		return projectService.validateDateTime(
-			communication.project!!.id!!,
+			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findCommunicationById(projectId, id, visibilitySearched = null) }
+			.flatMap { findCommunicationById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(communication, it) }
 			.flatMap { validateNoAlertConflict(currentUser, communication, it) }
 			.map {
@@ -145,7 +141,7 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<CommunicationModel> {
-		return findCommunicationById(projectId, id, visibilitySearched = true)
+		return findCommunicationById(projectId, id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateCommunication(currentUser)
 	}
@@ -155,7 +151,7 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<CommunicationModel> {
-		return findCommunicationById(projectId, id, visibilitySearched = false)
+		return findCommunicationById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateCommunication(currentUser)
 	}
@@ -165,7 +161,7 @@ class CommunicationService(
 		projectId: UUID,
 		id: UUID
 	): Mono<Unit> {
-		return findCommunicationById(projectId, id, visibilitySearched = null)
+		return findCommunicationById(projectId, id, isVisible = null)
 			.flatMap { port.deleteById(it.id!!) }
 	}
 
@@ -176,21 +172,11 @@ class CommunicationService(
 	): Flux<UUID> {
 		log.info("Purging orphan communications")
 		return port.findOrphan(movementsToExclude, alertsToExclude)
-			.flatMap {
-				if (dryRun) {
-					log.info("[Dry run] communication {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging communication {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Communication {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge communication{}", it, err) }
-				}
-			}
+			.purgeEach("communication", dryRun, port::deleteById)
 	}
 
 	private fun Mono<CommunicationModel>.updateCommunication(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser, now()) })
 	}
 
 	private fun validateNoMovementConflict(
@@ -200,52 +186,28 @@ class CommunicationService(
 		val communicationToReturn = oldCommunication ?: communication
 		return if (Objects.isNull(communication.movement) || communication.movement!!.id == oldCommunication?.movement?.id)
 			Mono.just(communicationToReturn)
-		else movementPort.findById(
-			communication.project!!.id!!,
-			communication.movement!!.id!!,
-			visibilitySearched = null
-		)
+		else movementPort.findById(communication.projectId!!, communication.movement!!.id!!, isVisible = null)
 			.switchIfEmpty {
-				Mono.error(
-					RegistryException(
-						NOT_FOUND,
-						COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT
-					)
-				)
+				Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
 			}
-			.handle { it, handle ->
-				when {
-					it.isNotVisible() -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							COMMUNICATION_MOVEMENT_NOT_VISIBLE,
-						)
-					)
-
-					it.dateTime.isAfter(communication.dateTime) -> handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION,
-						)
-					)
-
-					it.contentType !== REGISTERED -> handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED,
-						)
-					)
-
-					it.type !== OUT -> handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							COMMUNICATION_MOVEMENT_TYPE_NOT_OUT,
-						)
-					)
-
-					else -> handle.next(communicationToReturn)
-				}
+			.handle { movement, handle ->
+				val error = movementConflict(movement, communication)
+				if (error != null) handle.error(error) else handle.next(communicationToReturn)
 			}
+	}
+
+	private fun movementConflict(movement: MovementModel, communication: CommunicationModel): RegistryException? = when {
+		movement.isNotVisible() -> RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_VISIBLE)
+
+		movement.dateTime.isAfter(communication.dateTime) ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION)
+
+		movement.contentType !== REGISTERED ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED)
+
+		movement.type !== OUT -> RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_TYPE_NOT_OUT)
+
+		else -> null
 	}
 
 	private fun validateNoAlertConflict(
@@ -257,52 +219,30 @@ class CommunicationService(
 		return if (Objects.isNull(communication.alert) || communication.alert!!.id == oldCommunication?.alert?.id)
 			Mono.just(communicationToReturn)
 		else {
-			if (!currentUser.hasAuthority(communication.project!!.id!!, REGISTRY_PROJECT_OPTION_ALERT)) {
-				throw RegistryException(
-					status = FORBIDDEN,
-					code = NOT_ENOUGH_PERMISSION,
-				)
+			if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
+				return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
 			}
 
-			alertPort.findById(
-				communication.project!!.id!!,
-				communication.alert!!.id!!,
-				visibilitySearched = null
-			)
+			alertPort.findById(communication.projectId!!, communication.alert!!.id!!, isVisible = null)
 				.switchIfEmpty {
-					Mono.error(
-						RegistryException(
-							NOT_FOUND,
-							COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
-						)
-					)
+					Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
 				}
-				.handle { it, handle ->
-					when {
-						it.isNotVisible() -> handle.error(
-							RegistryException(
-								NOT_FOUND,
-								COMMUNICATION_ALERT_NOT_VISIBLE,
-							)
-						)
-
-						it.dateTime.isAfter(communication.dateTime) -> handle.error(
-							RegistryException(
-								UNPROCESSABLE_CONTENT,
-								COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION,
-							)
-						)
-
-						it.status !== AlertStatusEnum.IN_PROGRESS -> handle.error(
-							RegistryException(
-								UNPROCESSABLE_CONTENT,
-								COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION,
-							)
-						)
-
-						else -> handle.next(communicationToReturn)
-					}
+				.handle { alert, handle ->
+					val error = alertConflict(alert, communication)
+					if (error != null) handle.error(error) else handle.next(communicationToReturn)
 				}
 		}
+	}
+
+	private fun alertConflict(alert: AlertModel, communication: CommunicationModel): RegistryException? = when {
+		alert.isNotVisible() -> RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_VISIBLE)
+
+		alert.dateTime.isAfter(communication.dateTime) ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION)
+
+		alert.status !== AlertStatusEnum.IN_PROGRESS ->
+			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION)
+
+		else -> null
 	}
 }

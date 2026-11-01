@@ -20,7 +20,6 @@ data class CurrentUserModel(
 		role = user.role
 		birthday = user.birthday
 		lastLogin = user.lastLogin
-		purged = user.purged
 		visible = user.visible
 		creation = user.creation
 		lastEdition = user.lastEdition
@@ -29,6 +28,16 @@ data class CurrentUserModel(
 	fun promote(newAuthorities: List<String>) = newAuthorities.forEach { authorities.add(SimpleGrantedAuthority(it)) }
 
 	fun hasAuthority(authority: String): Boolean = authorities.any { it.authority == authority }
+
+	/** Ids des projets sur lesquels l'utilisateur détient [permission]. */
+	fun projectIdsWith(permission: String): List<UUID> = authorities
+		.mapNotNull { it.authority }
+		.filter { it.endsWith("_$permission") }
+		.mapNotNull { runCatching { UUID.fromString(it.removeSuffix("_$permission")) }.getOrNull() }
+
+	/** Les éléments masqués sont réservés aux appelants détenant [permission] sur [projectId] : les autres n'obtiennent que les éléments visibles. */
+	fun visibilityFor(requested: Boolean?, projectId: UUID, permission: String): Boolean? =
+		if (hasAuthority("${projectId}_$permission")) requested else true
 
 	fun hasAuthority(projectId: UUID, authority: String): Boolean =
 		authorities.any { it.authority == "${projectId}_$authority" }

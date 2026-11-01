@@ -2,12 +2,12 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.GROUP
 import java.util.Optional
 import org.springframework.stereotype.Component
 
 @Component
 class GroupReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val participantMapper: ParticipantReaderDtoMapper,
 ): IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
@@ -17,9 +17,8 @@ class GroupReaderDtoMapper(
 		).apply {
 			id = model.id
 			status = Optional.ofNullable(model.status)
-				.map { availabilityStatusMapper.toDto(it, model.startAvailability, model.endAvailability) }
+				.map { availabilityStatusMapper.toDto(it, GROUP, model.startAvailability, model.endAvailability) }
 				.orElse(null)
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
 			name = model.name
 			startAvailability = model.startAvailability
 			endAvailability = model.endAvailability

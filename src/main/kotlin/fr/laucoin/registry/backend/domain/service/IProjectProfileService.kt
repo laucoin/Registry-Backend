@@ -10,6 +10,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Contrat de cas d'usage du profil de projet.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du profil de projet.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
 interface IProjectProfileService {
 	fun findProjectProfilesPage(
 		projectId: UUID,
@@ -17,8 +22,8 @@ interface IProjectProfileService {
 		searchParams: ProjectProfileSearchParamModel,
 	): Mono<PageModel<ProjectProfileModel>>
 
-	fun findProjectProfileById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ProjectProfileModel>
-	fun searchUsers(textSearched: String?): Flux<UserModel>
+	fun findProjectProfileById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileModel>
+	fun searchUsers(query: String?): Flux<UserModel>
 	fun getAssignableProjectRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<String>
 	fun createProjectProfiles(
 		currentUser: CurrentUserModel,

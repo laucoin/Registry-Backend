@@ -9,8 +9,13 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Port driven donnant au domaine l'accès à la persistance de l'alerte.
+ * Périmètre : Déclare les lectures, recherches et écritures de l'alerte dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
+ */
 interface IAlertPort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

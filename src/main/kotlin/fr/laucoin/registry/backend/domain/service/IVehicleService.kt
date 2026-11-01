@@ -12,6 +12,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Contrat de cas d'usage du véhicule.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du véhicule.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
 interface IVehicleService {
 	fun findVehiclesPage(
 		projectId: UUID,
@@ -19,7 +24,7 @@ interface IVehicleService {
 		searchParams: VehicleSearchParamModel,
 	): Mono<PageModel<VehicleModel>>
 
-	fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+	fun findVehicleById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel>
 
 	fun findVehicleMovementsPage(
 		projectId: UUID,

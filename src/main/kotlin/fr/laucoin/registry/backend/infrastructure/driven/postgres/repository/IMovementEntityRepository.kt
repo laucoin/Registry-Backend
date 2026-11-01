@@ -25,8 +25,11 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.LAST_PARTICIPANT_MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.MOVEMENT_ACTIVITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.MOVEMENT_LINKED_ACTIVITY_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.MOVEMENT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.MOVEMENT_TYPE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.SELECT_ACTIVITY_MOVEMENT_SEARCH
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.SELECT_LAST_COMMUNICATION
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.SELECT_LINKED_ACTIVITY
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementQueries.WITH_CURRENT_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
@@ -35,7 +38,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -46,86 +48,84 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Repository d'entités réactif de la table du mouvement.
+ * Périmètre : Porte les requêtes SQL paramétrées du mouvement (filtres, tri, pagination, verrous).
+ * Limites : Utilisé uniquement par l'adaptateur Postgres ; renvoie des entités, jamais des modèles du domaine.
+ */
 @Repository
 interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $MOVEMENT_TABLE t $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
-        ORDER BY t.$MOVEMENT_DATE_TIME DESC
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_LINKED_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		activityId: UUID?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
 		"""
         WITH $WITH_CURRENT_MOVEMENT
-        SELECT DISTINCT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $MOVEMENT_TABLE t $CURRENT_MOVEMENT_JOIN $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
-        ORDER BY t.$MOVEMENT_DATE_TIME DESC
+        SELECT *, COUNT(*) OVER() AS $FULL_COUNT FROM (
+            SELECT DISTINCT t.*, $SELECT_LAST_COMMUNICATION, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+            FROM $MOVEMENT_TABLE t $CURRENT_MOVEMENT_JOIN $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+            WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_LINKED_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
+        ) t
+        ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findCurrent(
 		projectId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		activityId: UUID?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
 		"""
-        WITH $WITH_CURRENT_MOVEMENT
-        SELECT COUNT(DISTINCT t.$ID)
-        FROM $MOVEMENT_TABLE t $CURRENT_MOVEMENT_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
-        """
-	)
-	fun countCurrent(
-		projectId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?
-	): Mono<Long>
-
-	@Query(
-		"""
-        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $MOVEMENT_CONTENT_TABLE mct
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID = :participantId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
-        ORDER BY t.$MOVEMENT_DATE_TIME DESC
+        ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAllByParticipantId(
 		projectId: UUID,
 		participantId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -139,33 +139,35 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 	fun countAllByParticipantId(
 		projectId: UUID,
 		participantId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?
 	): Mono<Long>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $MOVEMENT_CONTENT_TABLE mct
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_VEHICLE_ID = :vehicleId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
-        ORDER BY t.$MOVEMENT_DATE_TIME DESC
+        ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAllByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -179,31 +181,33 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 	fun countAllByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,
-		visibilitySearched: Boolean?,
-		linkedToActivity: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?
+		isVisible: Boolean?,
+		hasActivity: Boolean?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?
 	): Mono<Long>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $MOVEMENT_TABLE t $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$MOVEMENT_ACTIVITY_ID = :activityId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
-        ORDER BY t.$MOVEMENT_DATE_TIME DESC
+        ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findAllByActivityId(
 		projectId: UUID,
 		activityId: UUID,
-		visibilitySearched: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		isVisible: Boolean?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -216,15 +220,15 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 	fun countAllByActivityId(
 		projectId: UUID,
 		activityId: UUID,
-		visibilitySearched: Boolean?,
-		typeSearched: List<MovementTypeEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?
+		isVisible: Boolean?,
+		type: List<MovementTypeEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?
 	): Mono<Long>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ACTIVITY_MOVEMENT_SEARCH, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ACTIVITY_MOVEMENT_SEARCH, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $MOVEMENT_TABLE t $LAST_PARTICIPANT_MOVEMENT_JOIN $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $ACTIVITY_MOVEMENT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_MOVEMENT_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_MOVEMENT_DATES_RANGE_CLAUSE
         GROUP BY $GROUP_BY_MOVEMENT
@@ -234,21 +238,21 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 	)
 	fun findByActivityWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		at: ZonedDateTime?,
 		limit: Int,
 	): Flux<MovementEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_ACTIVITY, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $MOVEMENT_TABLE t $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
 	)
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementEntity>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementEntity>
 
 	@Query(
 		"""

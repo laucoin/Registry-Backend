@@ -1,16 +1,15 @@
 package fr.laucoin.registry.backend.config
 
-import com.nimbusds.jose.shaded.gson.Gson
-import fr.laucoin.registry.backend.domain.handler.AuthenticationRateLimitHandler
-import fr.laucoin.registry.backend.domain.handler.AuthorizationErrorHandler
-import fr.laucoin.registry.backend.domain.handler.CookieBearerTokenHandler
-import fr.laucoin.registry.backend.domain.handler.CsrfTokenHeaderHandler
-import fr.laucoin.registry.backend.domain.handler.LocaleContextHandler
 import fr.laucoin.registry.backend.domain.service.ITranslateService
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
-import fr.laucoin.registry.backend.domain.service.impl.PermissionService
-import fr.laucoin.registry.backend.domain.service.impl.TokenConverterService
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CookieBearerTokenHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CsrfTokenHeaderHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.LocaleContextHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.PermissionService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.TokenConverterService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -22,6 +21,9 @@ import org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS
 import org.springframework.http.HttpHeaders.AUTHORIZATION
 import org.springframework.http.HttpHeaders.CACHE_CONTROL
 import org.springframework.http.HttpHeaders.CONTENT_TYPE
+import org.springframework.http.HttpHeaders.ETAG
+import org.springframework.http.HttpHeaders.IF_MATCH
+import org.springframework.http.HttpHeaders.LOCATION
 import org.springframework.http.HttpMethod.DELETE
 import org.springframework.http.HttpMethod.GET
 import org.springframework.http.HttpMethod.HEAD
@@ -38,16 +40,27 @@ import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FI
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
+import org.springframework.security.web.server.header.ContentSecurityPolicyServerHttpHeadersWriter.CONTENT_SECURITY_POLICY
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.i18n.LocaleContextResolver
+import reactor.core.publisher.Mono
+import java.net.URI
+import java.time.Clock
 import java.time.Duration
+import tools.jackson.databind.ObjectMapper
 
 
+/**
+ * Objectif : Définit les chaînes de filtres de sécurité, la politique CORS et les en-têtes de sécurité.
+ * Périmètre : Porte l'authentification, le CSRF, la limitation de débit, les en-têtes de réponse et la liste des endpoints publics.
+ * Limites : Ne porte aucune autorisation métier ; la sécurité par méthode sur les contrats décide endpoint par endpoint.
+ */
 @Configuration
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
@@ -58,16 +71,23 @@ class SecurityConfig(
 	private val localeContextResolver: LocaleContextResolver,
 	private val cookieBearerTokenHandler: CookieBearerTokenHandler,
 	private val translateService: ITranslateService,
-	private val gson: Gson,
+	private val objectMapper: ObjectMapper,
 	private val csrfTokenService: CsrfTokenService,
+	private val clock: Clock,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
 	@param:Value($$"${registry.server.management-port}")
 	private val managementPort: Int,
+	@param:Value($$"${registry.server.port}")
+	private val apiPort: Int,
+	@param:Value($$"${external.idp.token-uri}")
+	private val idpTokenUri: String,
 	@param:Value($$"${registry.security.rate-limit.auth.capacity}")
 	private val authRateLimitCapacity: Int,
 	@param:Value($$"${registry.security.rate-limit.auth.window-seconds}")
 	private val authRateLimitWindowSeconds: Long,
+	@param:Value($$"${registry.security.rate-limit.auth.max-tracked-clients}")
+	private val authRateLimitMaxTrackedClients: Long,
 ) {
 
 	@Bean
@@ -76,14 +96,29 @@ class SecurityConfig(
 		return http
 			.securityMatcher(documentationMatcher())
 			.authorizeExchange { it.anyExchange().permitAll() }
-			.configureSecurityHeaders(DOCUMENTATION_CONTENT_SECURITY_POLICY)
-			// codeql[java/spring-disabled-csrf-protection]: this chain only serves static Swagger/OpenAPI
-			// docs (GET-only, permitAll, no state-changing request ever reaches it) — CSRF is not
-			// applicable here, the same reasoning that already exempts safe HTTP methods on the main chain.
+			.configureSecurityHeaders(null)
+			.documentationContentSecurityPolicy()
+			// codeql[java/spring-disabled-csrf-protection] : cette chaîne ne sert que la documentation Swagger/OpenAPI
+			// statique (GET uniquement, permitAll, aucune requête modifiant l'état ne l'atteint) — le CSRF ne
+			// s'applique pas ici, selon le même raisonnement que celui qui exempte déjà les méthodes HTTP sûres sur la chaîne principale.
 			.csrf { it.disable() }
 			.formLogin { it.disable() }
 			.logout { it.disable() }
 			.build()
+	}
+
+	private fun ServerHttpSecurity.documentationContentSecurityPolicy() = headers { headerSpec ->
+		headerSpec.writer { exchange ->
+			exchange.response.headers.set(CONTENT_SECURITY_POLICY, documentationContentSecurityPolicy(exchange))
+			Mono.empty()
+		}
+	}
+
+	private fun documentationContentSecurityPolicy(exchange: ServerWebExchange): String {
+		val idpOrigin = URI(idpTokenUri).let { "${it.scheme}://${it.authority}" }
+		val apiOrigin = exchange.request.headers.host?.hostName
+			?.let { apiOrigin(exchange.request.uri.scheme, it, apiPort) }
+		return documentationContentSecurityPolicy(idpOrigin, apiOrigin)
 	}
 
 	private fun documentationMatcher() = ServerWebExchangeMatcher { exchange ->
@@ -111,8 +146,8 @@ class SecurityConfig(
 
 	private fun ServerHttpSecurity.resolveLocaleContext() = addFilterBefore(localeContextHandler, FIRST)
 
-	private fun ServerHttpSecurity.configureSecurityHeaders(contentSecurityPolicy: String) = headers { headerSpec ->
-		headerSpec.contentSecurityPolicy { it.policyDirectives(contentSecurityPolicy) }
+	private fun ServerHttpSecurity.configureSecurityHeaders(contentSecurityPolicy: String?) = headers { headerSpec ->
+		if (contentSecurityPolicy != null) headerSpec.contentSecurityPolicy { it.policyDirectives(contentSecurityPolicy) }
 		headerSpec.permissionsPolicy { it.policy(PERMISSIONS_POLICY) }
 		headerSpec.hsts {
 			it.maxAge(Duration.ofDays(365))
@@ -125,9 +160,11 @@ class SecurityConfig(
 		AuthenticationRateLimitHandler(
 			translateService,
 			localeContextResolver,
-			gson,
+			objectMapper,
+			clock,
 			authRateLimitCapacity,
 			authRateLimitWindowSeconds,
+			authRateLimitMaxTrackedClients,
 		),
 		FIRST,
 	)
@@ -149,7 +186,7 @@ class SecurityConfig(
 		if (!isSafeMethod && !hasBearerAuth && !isExemptPath) MatchResult.match() else MatchResult.notMatch()
 	}
 
-	private companion object {
+	internal companion object {
 		val pathMatcher = AntPathMatcher()
 		val CSRF_SAFE_METHODS = setOf(GET, HEAD, OPTIONS, TRACE)
 
@@ -157,9 +194,40 @@ class SecurityConfig(
 
 		val DOCUMENTATION_PATHS = listOf("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
 
-		const val API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'"
+		private val HOST_NAME_PATTERN = Regex("[A-Za-z0-9.\\-\\[\\]:]+")
 
-		const val DOCUMENTATION_CONTENT_SECURITY_POLICY = "default-src 'self'; frame-ancestors 'none'"
+		internal fun apiOrigin(scheme: String, hostName: String, apiPort: Int): String? {
+			return if (HOST_NAME_PATTERN.matches(hostName)) "$scheme://$hostName:$apiPort" else null
+		}
+
+		internal fun documentationContentSecurityPolicy(idpOrigin: String, apiOrigin: String?): String {
+			val connectSources = listOfNotNull("'self'", idpOrigin, apiOrigin).joinToString(" ")
+			return "default-src 'self'; connect-src $connectSources; frame-ancestors 'none'"
+		}
+
+		val CORS_ALLOWED_METHODS = listOf(
+			HEAD.name(),
+			GET.name(),
+			POST.name(),
+			PUT.name(),
+			DELETE.name(),
+			PATCH.name(),
+			OPTIONS.name(),
+		)
+
+		val CORS_ALLOWED_HEADERS = listOf(
+			AUTHORIZATION,
+			CACHE_CONTROL,
+			CONTENT_TYPE,
+			ACCEPT_LANGUAGE,
+			ACCESS_CONTROL_ALLOW_ORIGIN,
+			ACCESS_CONTROL_ALLOW_HEADERS,
+			ACCESS_CONTROL_EXPOSE_HEADERS,
+			IF_MATCH,
+			HEADER_NAME,
+		)
+
+		const val API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'"
 
 		const val PERMISSIONS_POLICY =
 			"geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"
@@ -169,6 +237,8 @@ class SecurityConfig(
 		it.matchers(managementPortMatcher()).permitAll()
 		it.pathMatchers(GET, "/api/*/authentication/login/uri", "/api/*/authentication/logout/uri").permitAll()
 		it.pathMatchers(POST, "/api/*/authentication/token", "/api/*/authentication/token/refresh").permitAll()
+		// Libellés statiques non sensibles (enums) : publics pour éviter la résolution de l'authentification et des autorités à chaque appel
+		it.pathMatchers(GET, "/api/*/metadata/**").permitAll()
 		it.anyExchange().authenticated()
 	}
 
@@ -204,27 +274,10 @@ class SecurityConfig(
 	fun corsConfigurationSource(): CorsConfigurationSource {
 		val configuration = CorsConfiguration()
 		configuration.allowedOrigins = corsUrls
-		configuration.allowedMethods = listOf(
-			HEAD.name(),
-			GET.name(),
-			POST.name(),
-			PUT.name(),
-			DELETE.name(),
-			PATCH.name(),
-			OPTIONS.name(),
-		)
+		configuration.allowedMethods = CORS_ALLOWED_METHODS
 		configuration.allowCredentials = true
-		configuration.allowedHeaders = listOf(
-			AUTHORIZATION,
-			CACHE_CONTROL,
-			CONTENT_TYPE,
-			ACCEPT_LANGUAGE,
-			ACCESS_CONTROL_ALLOW_ORIGIN,
-			ACCESS_CONTROL_ALLOW_HEADERS,
-			ACCESS_CONTROL_EXPOSE_HEADERS,
-			HEADER_NAME,
-		)
-		configuration.exposedHeaders = listOf(HEADER_NAME)
+		configuration.allowedHeaders = CORS_ALLOWED_HEADERS
+		configuration.exposedHeaders = listOf(HEADER_NAME, ETAG, LOCATION)
 		val source = UrlBasedCorsConfigurationSource()
 		source.registerCorsConfiguration("/**", configuration)
 		return source

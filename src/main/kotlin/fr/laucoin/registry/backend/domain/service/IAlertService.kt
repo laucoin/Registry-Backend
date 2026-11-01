@@ -13,14 +13,21 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Contrat de cas d'usage de l'alerte.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos de l'alerte.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
 interface IAlertService {
 	fun findAlertsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel,
 	): Mono<PageModel<AlertModel>>
 
-	fun findAlertById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertModel>
+	fun findAlertById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertModel>
+	fun findAlertForUser(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel>
 
 	fun findAlertCommunicationsPage(
 		projectId: UUID,

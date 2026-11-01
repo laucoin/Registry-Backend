@@ -1,20 +1,33 @@
 package fr.laucoin.registry.backend.domain.model
 
 import java.time.ZonedDateTime
+import java.util.UUID
 
 data class GroupSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-	var presenceSearched: Boolean? = null,
-	var dateTimeSearched: ZonedDateTime? = null,
+	var isVisible: Boolean? = null,
+	var isPresent: Boolean? = null,
+	var at: ZonedDateTime? = null,
+	var memberUserId: UUID? = null,
+	var hasOnSiteMembers: Boolean? = null,
+	var sort: SortModel? = null,
 ) {
-	var textSearched: String? = null
+	var query: String? = null
 
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-		presenceSearched: Boolean? = null,
-		dateTimeSearched: ZonedDateTime? = null,
-	): this(visibilitySearched, presenceSearched, dateTimeSearched) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		query: String? = null,
+		isVisible: Boolean? = null,
+		isPresent: Boolean? = null,
+		at: ZonedDateTime? = null,
+		memberUserId: UUID? = null,
+		hasOnSiteMembers: Boolean? = null,
+		sort: SortModel? = null,
+	): this(isVisible, isPresent, at, memberUserId, hasOnSiteMembers, sort = sort) {
+		this.query = if (query.isNullOrBlank()) null else query
+	}
+
+	companion object {
+		val SORT_FIELDS = setOf(
+			"name", "startAvailability", "endAvailability",
+		)
 	}
 }

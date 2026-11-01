@@ -23,30 +23,23 @@ import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IProjectService
-import fr.laucoin.registry.backend.test.ModelExt.alertId
-import fr.laucoin.registry.backend.test.ModelExt.commonAlert
-import fr.laucoin.registry.backend.test.ModelExt.commonCommunication
-import fr.laucoin.registry.backend.test.ModelExt.commonMovement
-import fr.laucoin.registry.backend.test.ModelExt.communicationId
-import fr.laucoin.registry.backend.test.ModelExt.movementId
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultAlert
+import fr.laucoin.registry.backend.test.ModelExt.defaultAlertId
+import fr.laucoin.registry.backend.test.ModelExt.defaultCommunication
+import fr.laucoin.registry.backend.test.ModelExt.defaultCommunicationId
+import fr.laucoin.registry.backend.test.ModelExt.defaultMovement
+import fr.laucoin.registry.backend.test.ModelExt.defaultMovementId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.time.ZonedDateTime
-import java.util.Objects
-import java.util.UUID
-import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -69,6 +62,12 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Clock
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.Objects
+import java.util.UUID
+import java.util.stream.Stream
 
 class CommunicationServiceTest {
 	private val port: ICommunicationPort = mock()
@@ -76,45 +75,45 @@ class CommunicationServiceTest {
 	private val movementPort: IMovementPort = mock()
 	private val alertPort: IAlertPort = mock()
 	private val service: ICommunicationService = CommunicationService(
-		projectService, port, movementPort, alertPort, MAX_ACTIVITIES, MAX_ALERTS
+		projectService, port, movementPort, alertPort, Clock.systemUTC(), MAX_ACTIVITIES, MAX_ALERTS
 	)
 
 	private companion object {
 		private const val MAX_ACTIVITIES = 1
 		private const val MAX_ALERTS = 2
-		private val past = ZonedDateTime.now().minusDays(10L)
-		private val now = ZonedDateTime.now()
+		private val past = ZonedDateTime.now(ZoneOffset.UTC).minusDays(10L)
+		private val now = ZonedDateTime.now(ZoneOffset.UTC)
 
 		@JvmStatic
 		fun `Should createCommunication check date and call port create`(): Stream<Arguments> {
-			val comMovement = commonMovement().apply {
+			val comMovement = defaultMovement().apply {
 				type = OUT
 				contentType = REGISTERED
 				dateTime = now
 			}
 
-			val comAlert = commonAlert().apply {
+			val comAlert = defaultAlert().apply {
 				dateTime = now
 				status = IN_PROGRESS
 			}
 
 			return Stream.of(
 				Arguments.of(
-					commonCommunication().apply { dateTime = now; movement = comMovement },
+					defaultCommunication().apply { dateTime = now; movement = comMovement },
 					comMovement,
 					null,
 					1,
 					0,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = now },
+					defaultCommunication().apply { dateTime = now },
 					null,
 					null,
 					0,
 					0,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = now; alert = comAlert },
+					defaultCommunication().apply { dateTime = now; alert = comAlert },
 					null,
 					comAlert,
 					0,
@@ -127,32 +126,32 @@ class CommunicationServiceTest {
 		fun `Should createCommunication throw not eligible movement link`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(
-					commonCommunication().apply { dateTime = past; movement = commonMovement() },
+					defaultCommunication().apply { dateTime = past; movement = defaultMovement() },
 					null,
 					NOT_FOUND,
 					COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = past; movement = commonMovement() },
-					commonMovement().apply { dateTime = past; visible = false },
+					defaultCommunication().apply { dateTime = past; movement = defaultMovement() },
+					defaultMovement().apply { dateTime = past; visible = false },
 					NOT_FOUND,
 					COMMUNICATION_MOVEMENT_NOT_VISIBLE,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = past; movement = commonMovement() },
-					commonMovement().apply { dateTime = now },
+					defaultCommunication().apply { dateTime = past; movement = defaultMovement() },
+					defaultMovement().apply { dateTime = now },
 					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = now; movement = commonMovement() },
-					commonMovement().apply { dateTime = past; contentType = GUEST },
+					defaultCommunication().apply { dateTime = now; movement = defaultMovement() },
+					defaultMovement().apply { dateTime = past; contentType = GUEST },
 					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = now; movement = commonMovement() },
-					commonMovement().apply { dateTime = past; type = IN },
+					defaultCommunication().apply { dateTime = now; movement = defaultMovement() },
+					defaultMovement().apply { dateTime = past; type = IN },
 					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_MOVEMENT_TYPE_NOT_OUT,
 				),
@@ -161,11 +160,11 @@ class CommunicationServiceTest {
 
 		@JvmStatic
 		fun `Should createCommunication throw not eligible alert link`(): Stream<Arguments> {
-			val currentUserWithRight = currentUser(projectId.toString() + "_" + REGISTRY_PROJECT_OPTION_ALERT)
+			val currentUserWithRight = currentUser(defaultProjectId.toString() + "_" + REGISTRY_PROJECT_OPTION_ALERT)
 			val currentUserWithoutRight = currentUser()
 			return Stream.of(
 				Arguments.of(
-					commonCommunication().apply { dateTime = past; alert = commonAlert() },
+					defaultCommunication().apply { dateTime = past; alert = defaultAlert() },
 					currentUserWithRight,
 					null,
 					1,
@@ -173,31 +172,31 @@ class CommunicationServiceTest {
 					COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = past; alert = commonAlert() },
+					defaultCommunication().apply { dateTime = past; alert = defaultAlert() },
 					currentUserWithRight,
-					commonAlert().apply { dateTime = past; visible = false },
+					defaultAlert().apply { dateTime = past; visible = false },
 					1,
 					NOT_FOUND,
 					COMMUNICATION_ALERT_NOT_VISIBLE,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = past; alert = commonAlert() },
+					defaultCommunication().apply { dateTime = past; alert = defaultAlert() },
 					currentUserWithRight,
-					commonAlert().apply { dateTime = now },
+					defaultAlert().apply { dateTime = now },
 					1,
 					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = now; alert = commonAlert() },
+					defaultCommunication().apply { dateTime = now; alert = defaultAlert() },
 					currentUserWithRight,
-					commonAlert().apply { dateTime = now; status = CANCELED },
+					defaultAlert().apply { dateTime = now; status = CANCELED },
 					1,
 					UNPROCESSABLE_CONTENT,
 					COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION,
 				),
 				Arguments.of(
-					commonCommunication().apply { dateTime = now; alert = commonAlert() },
+					defaultCommunication().apply { dateTime = now; alert = defaultAlert() },
 					currentUserWithoutRight,
 					null,
 					0,
@@ -209,33 +208,17 @@ class CommunicationServiceTest {
 	}
 
 	@Test
-	fun `Should findCommunicationsPage call port findPage`() {
-		// Arrange
-		val pageable = PageableModel(0, 10)
-		val params = CommunicationSearchParamModel()
-
-		whenever(port.findPage(any(), any(), any()))
-			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
-
-		// Act
-		service.findCommunicationPage(projectId, pageable, params).block()
-
-		// Assert
-		verify(port).findPage(projectId, pageable, params)
-	}
-
-	@Test
 	fun `Should findCommunicationById call port findById`() {
 		// Arrange
 		val onlyVisible = true
 
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonCommunication()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
 
 		// Act
-		service.findCommunicationById(projectId, communicationId, onlyVisible).block()
+		service.findCommunicationById(defaultProjectId, defaultCommunicationId, onlyVisible).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, onlyVisible)
+		verify(port).findById(defaultProjectId, defaultCommunicationId, onlyVisible)
 	}
 
 	@Test
@@ -247,55 +230,55 @@ class CommunicationServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.findCommunicationById(projectId, communicationId, onlyVisible).block()
+			service.findCommunicationById(defaultProjectId, defaultCommunicationId, onlyVisible).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(NOT_FOUND_WITH_GIVEN_IDENTIFIER, result.message)
 		assertEquals(1, result.args?.size)
-		assertEquals(communicationId.toString(), result.args?.first())
+		assertEquals(defaultCommunicationId.toString(), result.args?.first())
 
-		verify(port).findById(projectId, communicationId, onlyVisible)
+		verify(port).findById(defaultProjectId, defaultCommunicationId, onlyVisible)
 	}
 
 	@Test
 	fun `Should searchOutMovementWithActivityByText call port findActivityWithLimit`() {
 		// Arrange
-		val textSearched = "search"
+		val query = "search"
 		val search = ActivitySearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = true,
-			availabilitySearched = true,
-			dateTimeSearched = null,
+			query = query,
+			isVisible = true,
+			isAvailable = true,
+			at = null,
 		)
 
-		whenever(movementPort.findActivityWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonMovement()))
+		whenever(movementPort.findActivityWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultMovement()))
 
 		// Act
-		service.searchOutMovementWithActivityByText(projectId, textSearched).collectList().block()
+		service.searchOutMovementWithActivityByText(defaultProjectId, query).collectList().block()
 
 		// Assert
-		verify(movementPort).findActivityWithLimit(MAX_ACTIVITIES, projectId, search)
+		verify(movementPort).findActivityWithLimit(MAX_ACTIVITIES, defaultProjectId, search)
 	}
 
 	@Test
 	fun `Should searchAlertByText call port findWithLimit`() {
 		// Arrange
-		val textSearched = "search"
+		val query = "search"
 		val search = AlertSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = true,
-			statusSearched = IN_PROGRESS,
+			query = query,
+			isVisible = true,
+			status = IN_PROGRESS,
 		)
 
-		whenever(alertPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(commonAlert()))
+		whenever(alertPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultAlert()))
 
 		// Act
-		service.searchAlertByText(projectId, textSearched).collectList().block()
+		service.searchAlertByText(defaultProjectId, query).collectList().block()
 
 		// Assert
-		verify(alertPort).findWithLimit(MAX_ALERTS, projectId, search)
+		verify(alertPort).findWithLimit(MAX_ALERTS, defaultProjectId, search)
 	}
 
 	@ParameterizedTest
@@ -308,7 +291,7 @@ class CommunicationServiceTest {
 		callToAlert: Int,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
+		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(movementPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(if (Objects.nonNull(movement)) Mono.just(movement!!) else Mono.empty())
 		whenever(alertPort.findById(any(), anyOrNull(), anyOrNull()))
@@ -317,16 +300,16 @@ class CommunicationServiceTest {
 
 		// Act
 		service.createCommunication(
-			currentUser(projectId.toString() + "_" + REGISTRY_PROJECT_OPTION_ALERT),
+			currentUser(defaultProjectId.toString() + "_" + REGISTRY_PROJECT_OPTION_ALERT),
 			communication
 		).block()
 
 		// Assert
 		verify(projectService).validateDateTime(
-			eq(projectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
+			eq(defaultProjectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
-		verify(movementPort, times(callToMovement)).findById(projectId, movementId, visibilitySearched = null)
-		verify(alertPort, times(callToAlert)).findById(projectId, alertId, visibilitySearched = null)
+		verify(movementPort, times(callToMovement)).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		verify(alertPort, times(callToAlert)).findById(defaultProjectId, defaultAlertId, isVisible = null)
 		verify(port).create(communication)
 	}
 
@@ -339,7 +322,7 @@ class CommunicationServiceTest {
 		errorMessage: String,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
+		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(movementPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(if (Objects.isNull(movement)) Mono.empty() else Mono.just(movement!!))
 		whenever(port.create(any())).thenReturn(Mono.just(communication))
@@ -354,9 +337,9 @@ class CommunicationServiceTest {
 		assertEquals(errorMessage, result.message)
 
 		verify(projectService).validateDateTime(
-			eq(projectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
+			eq(defaultProjectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
-		verify(movementPort).findById(eq(projectId), any(), eq(null))
+		verify(movementPort).findById(eq(defaultProjectId), any(), eq(null))
 		verifyNoInteractions(port)
 	}
 
@@ -371,7 +354,7 @@ class CommunicationServiceTest {
 		errorMessage: String,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
+		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(alertPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(if (Objects.nonNull(alert)) Mono.just(alert!!) else Mono.empty())
 		whenever(port.create(any())).thenReturn(Mono.just(communication))
@@ -385,10 +368,10 @@ class CommunicationServiceTest {
 		assertEquals(status, result.status)
 		assertEquals(errorMessage, result.message)
 		verify(projectService).validateDateTime(
-			eq(projectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
+			eq(defaultProjectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
 		verify(alertPort, times(callAlertPort)).findById(
-			eq(projectId), any(), eq(null),
+			eq(defaultProjectId), any(), eq(null),
 		)
 		verifyNoInteractions(port)
 	}
@@ -396,69 +379,69 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should updateCommunicationById check date, check existing communication, call port updateCommunication`() {
 		// Arrange
-		val now = ZonedDateTime.now()
-		val communication = commonCommunication().apply { dateTime = now; movement = commonMovement() }
+		val now = ZonedDateTime.now(ZoneOffset.UTC)
+		val communication = defaultCommunication().apply { dateTime = now; movement = defaultMovement() }
 
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(projectId))
+		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(communication))
 		whenever(movementPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(MovementModel().apply { visible = true }))
 		whenever(port.update(any())).thenReturn(Mono.just(communication))
 
 		// Act
-		service.updateCommunicationById(currentUser(), projectId, communicationId, communication).block()
+		service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
 
 		// Assert
 		verify(projectService).validateDateTime(
-			projectId, CustomDateTimeModel(now), COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
+			defaultProjectId, CustomDateTimeModel(now), COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 		)
-		verify(port).findById(projectId, communicationId, visibilitySearched = null)
-		verify(movementPort, never()).findById(projectId, movementId, visibilitySearched = null)
+		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = null)
+		verify(movementPort, never()).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(port).update(communication)
 	}
 
 	@Test
 	fun `Should disableCommunicationById call existing communication and call port update`() {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonCommunication()))
-		whenever(port.update(any())).thenReturn(Mono.just(commonCommunication()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
+		whenever(port.update(any())).thenReturn(Mono.just(defaultCommunication()))
 
 		// Act
-		service.disableCommunicationById(currentUser(), projectId, communicationId).block()
+		service.disableCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = true)
-		verify(port).update(commonCommunication().apply { visible = false })
+		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = true)
+		verify(port).update(defaultCommunication().apply { visible = false })
 	}
 
 	@Test
 	fun `Should enableCommunicationById call existing communication and call port update`() {
 		// Arrange
-		val communication = commonCommunication().apply { visible = false }
+		val communication = defaultCommunication().apply { visible = false }
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(communication))
 		whenever(port.update(any())).thenReturn(Mono.just(communication))
 
 		// Act
-		service.enableCommunicationById(currentUser(), projectId, communicationId).block()
+		service.enableCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = false)
-		verify(port).update(commonCommunication())
+		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = false)
+		verify(port).update(defaultCommunication())
 	}
 
 	@Test
 	fun `Should deleteCommunicationById call existing communication, check no movement, and call port deleteById`() {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(commonCommunication()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.deleteCommunicationById(currentUser(), projectId, communicationId).block()
+		service.deleteCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId).block()
 
 		// Assert
-		verify(port).findById(projectId, communicationId, visibilitySearched = null)
-		verify(port).deleteById(communicationId)
+		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = null)
+		verify(port).deleteById(defaultCommunicationId)
 	}
 
 	@Test

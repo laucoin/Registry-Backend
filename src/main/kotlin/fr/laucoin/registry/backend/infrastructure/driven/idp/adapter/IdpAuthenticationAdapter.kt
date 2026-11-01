@@ -11,6 +11,9 @@ import fr.laucoin.registry.backend.domain.service.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.driven.idp.entity.IdpTokenEntity
 import fr.laucoin.registry.backend.infrastructure.driven.idp.mapper.AuthenticationTokenEntityMapper
 import io.netty.channel.ChannelOption
+import java.net.URLEncoder
+import java.time.Duration
+import kotlin.text.Charsets.UTF_8
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FAILED_DEPENDENCY
 import org.springframework.http.HttpStatus.UNAUTHORIZED
@@ -22,8 +25,12 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.resources.ConnectionProvider
-import java.time.Duration
 
+/**
+ * Objectif : Dialogue avec le fournisseur d'identité externe.
+ * Périmètre : Construit les URI de connexion et de déconnexion, échange, rafraîchit et révoque les tokens.
+ * Limites : Ne stocke rien ; les listes autorisées d'URI de redirection sont vérifiées par le service.
+ */
 @Service
 class IdpAuthenticationAdapter(
 	private val mapper: AuthenticationTokenEntityMapper,
@@ -39,11 +46,11 @@ class IdpAuthenticationAdapter(
 	private val clientId: String,
 	@param:Value($$"${external.idp.client-secret}")
 	private val clientSecret: String,
-	@param:Value($$"${external.idp.connect-timeout-millis}")
+	@Value($$"${external.idp.connect-timeout-millis}")
 	connectTimeoutMillis: Int,
-	@param:Value($$"${external.idp.response-timeout-millis}")
+	@Value($$"${external.idp.response-timeout-millis}")
 	responseTimeoutMillis: Long,
-	@param:Value($$"${external.idp.max-connections}")
+	@Value($$"${external.idp.max-connections}")
 	maxConnections: Int,
 ) : IAuthenticationPort, LoggerService() {
 	private val http: WebClient = buildHttpClient(connectTimeoutMillis, responseTimeoutMillis, maxConnections)
@@ -72,9 +79,10 @@ class IdpAuthenticationAdapter(
 		}
 	}
 
-	override fun getLoginUri(redirectUri: String): AuthenticationUriModel {
+	override fun getLoginUri(redirectUri: String, state: String?): AuthenticationUriModel {
+		val stateParameter = state?.let { "&state=${it.urlEncoded()}" }.orEmpty()
 		return AuthenticationUriModel(
-			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=$redirectUri"
+			uri = "$authorizationUri?response_type=$RESPONSE_TYPE&client_id=$clientId&redirect_uri=${redirectUri.urlEncoded()}$stateParameter"
 		)
 	}
 
@@ -83,11 +91,18 @@ class IdpAuthenticationAdapter(
 		accessToken: String?,
 		refreshToken: String?
 	): Mono<AuthenticationUriModel> {
+		return revokeTokens(accessToken, refreshToken)
+			.thenReturn(AuthenticationUriModel(uri = "$endSessionUri?redirect_uri=${redirectUri.urlEncoded()}"))
+	}
+
+	private fun revokeTokens(accessToken: String?, refreshToken: String?): Mono<Void> {
 		return Mono.`when`(
 			revokeToken(accessToken, "access_token"),
 			revokeToken(refreshToken, "refresh_token"),
-		).thenReturn(AuthenticationUriModel(uri = "$endSessionUri?redirect_uri=$redirectUri"))
+		)
 	}
+
+	private fun String.urlEncoded(): String = URLEncoder.encode(this, UTF_8)
 
 	private fun revokeToken(token: String?, tokenTypeHint: String): Mono<Void> {
 		if (token.isNullOrBlank()) return Mono.empty()

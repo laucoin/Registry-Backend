@@ -7,9 +7,10 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
 import org.springframework.stereotype.Component
+import java.time.Clock
 
 @Component
-class VehicleEntityMapper: IEntityMapper<VehicleModel, VehicleEntity> {
+class VehicleEntityMapper(private val clock: Clock): IEntityMapper<VehicleModel, VehicleEntity> {
 	override fun toModel(entity: VehicleEntity): VehicleModel {
 		return VehicleModel().apply {
 			licensePlate = entity.licensePlate
@@ -17,7 +18,7 @@ class VehicleEntityMapper: IEntityMapper<VehicleModel, VehicleEntity> {
 			model = entity.model
 			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
 			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
-			status = buildStatus(entity.lastMovementType)
+			status = buildStatus(clock, entity.lastMovementType)
 			lastMovement = entity.lastMovementDateTime
 		}.fillWithProjectAndEntity(entity)
 	}

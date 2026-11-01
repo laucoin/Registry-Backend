@@ -14,6 +14,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Contrat de cas d'usage du participant.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du participant.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
 interface IParticipantService {
 	fun findParticipantsPage(
 		projectId: UUID,
@@ -23,12 +28,13 @@ interface IParticipantService {
 
 	fun findBirthdays(projectId: UUID): Flux<ParticipantModel>
 
-	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ParticipantModel>
-	fun findParticipantById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ParticipantModel>
-	fun searchUsersByText(projectId: UUID, textSearched: String?): Flux<UserModel>
-	fun searchGroupsByText(projectId: UUID, textSearched: String?): Flux<GroupModel>
+	fun findParticipantsByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ParticipantModel>
+	fun findParticipantById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel>
+	fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel>
+	fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel>
 
 	fun findParticipantMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
 		pageable: PageableModel,

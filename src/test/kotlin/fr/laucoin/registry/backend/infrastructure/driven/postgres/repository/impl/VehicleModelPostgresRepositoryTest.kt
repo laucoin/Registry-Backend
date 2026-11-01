@@ -1,20 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.VehicleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IVehicleEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.projectId
-import fr.laucoin.registry.backend.test.ModelExt.vehicleId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultVehicleId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -33,8 +28,15 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-class VehicleModelPostgresRepositoryTest: TestContext() {
+class VehicleModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IVehicleEntityRepository
 
@@ -67,25 +69,86 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		val params = VehicleSearchParamModel()
 
 		// Act
-		val result = repository.findPage(projectId, pageable, params).block()
+		val result = repository.findPage(defaultProjectId, pageable, params).block()
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(15, result.totalElements)
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			defaultProjectId,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			at = null,
+			brand = null,
+			model = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage keep only the vehicles of the brand and model whatever the case`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val reference =
+			repository.findPage(defaultProjectId, pageable, VehicleSearchParamModel()).block()!!.content.first()
+		val params = VehicleSearchParamModel(
+			query = null,
+			isVisible = null,
+			status = null,
+			at = null,
+			brand = reference.brand?.uppercase(),
+			model = reference.model?.lowercase(),
+		)
+
+		// Act
+		val result = repository.findPage(defaultProjectId, pageable, params).block()!!
+
+		// Assert
+		assertTrue(result.content.isNotEmpty())
+		assertTrue(result.content.all {
+			it.brand.equals(reference.brand, true) && it.model.equals(
+				reference.model,
+				true
+			)
+		})
+	}
+
+	@Test
+	fun `Should findPage match the brand whatever its accents`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val reference =
+			repository.findPage(defaultProjectId, pageable, VehicleSearchParamModel(query = null, at = null))
+				.block()!!.content
+				.first { vehicle ->
+					vehicle.brand != null && vehicle.brand!!.lowercase()
+						.any { it in "aeiou" } && vehicle.brand!!.none { it in "àâäéèêëîïôöùûüÀÂÄÉÈÊËÎÏÔÖÙÛÜ" }
+				}
+		val brand = reference.brand!!
+		val vowel = brand.indexOfFirst { it.lowercaseChar() in "aeiou" }
+		val accented = brand.replaceRange(
+			vowel,
+			vowel + 1,
+			mapOf('a' to "à", 'e' to "é", 'i' to "î", 'o' to "ô", 'u' to "ù")[brand[vowel].lowercaseChar()]!!
+		)
+
+		// Act
+		val result = repository.findPage(
+			defaultProjectId, pageable, VehicleSearchParamModel(query = null, at = null, brand = accented),
+		).block()!!
+
+		// Assert
+		assertTrue(result.content.any { it.id == reference.id })
+		assertTrue(result.content.all { it.brand.equals(reference.brand, true) })
 	}
 
 	@ParameterizedTest
@@ -95,14 +158,14 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(defaultProjectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
-			projectId,
+			defaultProjectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -114,18 +177,20 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		val params = VehicleSearchParamModel()
 
 		// Act
-		val result = repository.findWithLimit(size, projectId, params).collectList().block()
+		val result = repository.findWithLimit(size, defaultProjectId, params).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			availabilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			defaultProjectId,
+			query = null,
+			isVisible = null,
+			isAvailable = null,
+			isPresent = null,
+			at = null,
+			brand = null,
+			model = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -134,14 +199,14 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(projectId, vehicleId, visibilitySearched = null).block()
+		val result = repository.findById(defaultProjectId, defaultVehicleId, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
-			projectId,
-			vehicleId,
-			visibilitySearched = null,
+			defaultProjectId,
+			defaultVehicleId,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -152,14 +217,14 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(projectId, uuid, visibilitySearched = null).block()
+		val result = repository.findById(defaultProjectId, uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
-			projectId,
+			defaultProjectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -178,8 +243,8 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 				licensePlate = "AB-123-CD"
 				brand = "test"
 				model = "test"
-				project = ProjectModel().apply { id = projectId }
-				create(currentUser())
+				this.projectId = defaultProjectId
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -202,8 +267,8 @@ class VehicleModelPostgresRepositoryTest: TestContext() {
 				licensePlate = "AB-123-CD"
 				brand = "test update"
 				model = "test update"
-				project = ProjectModel().apply { id = projectId }
-				create(currentUser())
+				this.projectId = defaultProjectId
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

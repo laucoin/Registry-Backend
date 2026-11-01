@@ -1,54 +1,44 @@
 ---
 mode: agent
-description: Write or extend tests for the Registry backend (Kotlin, JUnit5, Reactor, Testcontainers)
+name: test
+description: Write, extend or fix tests for the Registry backend (Kotlin, JUnit5, StepVerifier, mockito-kotlin, Testcontainers, WebTestClient). Use only when the user asks to add, write, complete or fix tests, or right before a commit when new code lacks coverage. Never write tests automatically after an edit.
 ---
 
 # Write tests — Registry Backend
 
-Write or extend tests for the code I point you at, following this project's conventions.
+Write or extend tests for the code pointed at, following these conventions.
 
-## Stack & tooling
+## Stack
 
-- **JUnit5** (`useJUnitPlatform`), tests run in parallel forks.
-- **mockito-kotlin** — `mock()`, `whenever(...).thenReturn(...)`, `verify(...)`.
-- **reactor-test** — `StepVerifier` for `Mono`/`Flux` assertions.
-- **Testcontainers + WebTestClient** for integration, via the shared `TestContext`.
-- **ArchUnit** for architecture rules (`test/HexagonalArchitectureTest.kt`).
-- Run with `./gradlew test`; keep coverage green (`./gradlew build` runs `koverVerify`).
+JUnit 5, `mockito-kotlin` (`mock()`, `whenever`, `verify`), reactor-test `StepVerifier`, Testcontainers +
+`WebTestClient` via the shared `TestContext`, ArchUnit (`HexagonalArchitectureTest`). Run `./gradlew test`; the full
+gate is `./gradlew build` (includes `koverVerify`).
 
-## Conventions to follow
+## Conventions
 
-- Mirror the package of the class under test under `src/test/kotlin/...`; name the file `<Class>Test.kt`.
-- **Indent with tabs.**
-- **Unit tests (default for `domain/service`, `validator`, `extension`)**: construct the class directly, `mock()` its ports, no Spring context. Example shape (see `domain/service/impl/RoleServiceTest.kt`):
+- Mirror the package of the class under test under `src/test/kotlin/...`; file `<Class>Test.kt`. Tabs for indentation.
+- **AAA pattern, strictly.** Every test contains exactly these comments, with no additional detail:
 
   ```kotlin
-  class RoleServiceTest {
-      private val port: IRolePort = mock()
-      private val service = RoleService(port, "ROLE_2")
-
-      @Test
-      fun `Should return the level for a known role`() {
-          whenever(port.findAll()).thenReturn(Flux.fromIterable(roles))
-          // act + assert
-      }
-  }
+  // Arrange
+  // Act
+  // Assert
   ```
 
-- **Reactive assertions** — verify with `StepVerifier`:
-
-  ```kotlin
-  StepVerifier.create(service.doThing(input))
-      .expectNext(expected)
-      .verifyComplete()
-  ```
-
-- **Parameterized cases** — `@ParameterizedTest` + `@MethodSource`, with a `@JvmStatic` provider in a `companion object` returning `Stream<Arguments>`. Descriptive backtick test names (`fun \`Should ... \`()`).
-- **Integration tests** — extend/use `TestContext` (`@SpringBootTest(RANDOM_PORT)` + Testcontainers Postgres + `WebTestClient`). Use helpers in `test/` (`WebTestClientExt`, `ModelExt`, `TestContext`, `TestContainerDatabase`). Seed data via SQL under `src/test/resources/db/migrations`.
-- Use existing test helpers/extensions rather than re-inventing setup.
+- Methods ≤ 25 lines, tests included. Descriptive backtick names: ``fun `Should ... when ...`()``.
+- **Unit tests** (services, validators, extensions): construct the class directly, `mock()` its ports, no Spring
+  context. Reactive results are verified with `StepVerifier.create(...).expectNext(...).verifyComplete()`.
+- **Parameterized cases:** `@ParameterizedTest` + `@MethodSource` with a `@JvmStatic` provider returning
+  `Stream<Arguments>`.
+- **Repositories:** Testcontainers PostgreSQL. **Endpoints:** `WebTestClient` for contract and `@PreAuthorize`
+  authorization (allow and deny cases).
+- Reuse the shared helpers and fixtures (`WebTestClientExt`, `ModelExt`, `TestContext`, `TestContainerDatabase`);
+  seed data via SQL under `src/test/resources/db/migrations`. Fixtures are excluded from coverage.
 
 ## Deliverable
 
-- Cover the happy path, edge cases, empty/`switchIfEmpty` branches, and error/authorization paths.
-- Add cases to an existing `*Test.kt` when one already exists for the class; otherwise create it.
-- Run `./gradlew test` and report the result. Do not weaken assertions or coverage thresholds to make a build pass.
+- Cover the happy path, edge cases, empty/`switchIfEmpty` branches, error branches, validation bounds and
+  authorization allow/deny.
+- Add cases to an existing `*Test.kt` when one exists for the class.
+- Run `./gradlew test` and report the result. Never weaken assertions or coverage thresholds to pass; thresholds only
+  go up.

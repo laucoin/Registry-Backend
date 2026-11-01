@@ -18,12 +18,15 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.ROLE_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.DATES_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_PROJECT_SORT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_ROLE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.JOIN_USER
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.LINKED_USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_STATUS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_USABLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_USER_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.SELECT_LINKED_USER
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.SELECT_PROJECT_PROFILE_USER_SEARCH
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileRoleCountEntity
@@ -35,7 +38,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.role.Ro
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.role.RoleFields.ROLE_LEVEL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_OIDC_ID
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_PURGED
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
@@ -53,46 +55,57 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Repository d'entités réactif de la table du profil de projet.
+ * Périmètre : Porte les requêtes SQL paramétrées du profil de projet (filtres, tri, pagination, verrous).
+ * Limites : Utilisé uniquement par l'adaptateur Postgres ; renvoie des entités, jamais des modèles du domaine.
+ */
 @Repository
 interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfileEntity, UUID> {
 	@Query(
 		"""
         SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE t.$PROJECT_PROFILE_USER_ID = :userId AND $PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
-        ORDER BY $LINKED_PROJECT_TABLE.$PROJECT_NAME
+        WHERE t.$PROJECT_PROFILE_USER_ID = :userId AND $PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE AND $PROJECT_PROFILE_ROLE_CLAUSE
+        ORDER BY $PROJECT_PROFILE_PROJECT_SORT $LINKED_PROJECT_TABLE.$PROJECT_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findByUserId(
 		userId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
+		at: ZonedDateTime?,
+		role: String?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ProjectProfileEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_PROJECT_PROFILE_USER_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_PROJECT_PROFILE_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE t.$LINKED_PROJECT_ID = :projectId AND $PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
-        ORDER BY similarity_score DESC, $LINKED_USER_TABLE.$USER_LAST_NAME
+        WHERE t.$LINKED_PROJECT_ID = :projectId AND $PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE AND $PROJECT_PROFILE_ROLE_CLAUSE
+        ORDER BY $PROJECT_PROFILE_USER_SORT similarity_score DESC, $LINKED_USER_TABLE.$USER_LAST_NAME, t.$ID
         LIMIT :limit OFFSET :offset
         """
 	)
 	fun findByProjectId(
 		projectId: UUID,
-		textSearched: String?,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
-		dateTimeSearched: ZonedDateTime?,
+		query: String?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
+		at: ZonedDateTime?,
+		role: String?,
+		sortField: String?,
+		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ProjectProfileEntity>
 
 	@Query(
@@ -106,9 +119,9 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		projectId: UUID,
 		userIds: List<UUID>,
 		profileIdToExclude: UUID?,
-		statusSearched: List<ProfileStatusEnum>,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
+		status: List<ProfileStatusEnum>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime?,
 	): Flux<UUID>
 
 	@Query(
@@ -120,10 +133,25 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 	)
 	fun findAllRolesByUserId(
 		userId: UUID,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
 	): Flux<ProjectProfileRoleEntity>
+
+	@Query(
+		"""
+        SELECT t.*
+        FROM $PROJECT_PROFILE_TABLE t
+        WHERE t.$PROJECT_PROFILE_USER_ID = :userId AND t.$LINKED_PROJECT_ID IN (:projectIds) AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE
+        """
+	)
+	fun findByUserIdAndProjectIds(
+		userId: UUID,
+		projectIds: List<UUID>,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
+	): Flux<ProjectProfileEntity>
 
 	@Query(
 		"""
@@ -147,9 +175,9 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 	fun findProjectProfileByProjectAndUserId(
 		projectId: UUID,
 		userId: UUID,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
-		statusSearched: List<ProfileStatusEnum>,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
+		status: List<ProfileStatusEnum>,
 	): Mono<ProjectProfileEntity>
 
 	@Query(
@@ -159,8 +187,8 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
             FROM $PROJECT_PROFILE_TABLE t
             INNER JOIN $PROJECT_ROLE_TABLE tpr ON t.$PROJECT_PROFILE_ROLE = tpr.$ENTITY_ROLE_NAME AND tpr.$ROLE_LEVEL = 0
             WHERE t.$PROJECT_PROFILE_STATUS = 'ACCEPTED'
-            AND (:visibilitySearched IS NULL OR t.$VISIBLE = :visibilitySearched)
-            AND (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CURRENT_DATE OR (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME))
+            AND (:isVisible IS NULL OR t.$VISIBLE = :isVisible)
+            AND (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CAST(:#{now} AS DATE) OR (COALESCE(t.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(t.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CAST(:#{now} AS TIMETZ)))
             AND t.$PROJECT_PROFILE_END_ACCESS_DATE IS NULL AND t.$PROJECT_PROFILE_END_ACCESS_TIME IS NULL
             AND t.$PROJECT_PROFILE_USER_ID = :userId
         )
@@ -168,21 +196,38 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
         FROM $PROJECT_PROFILE_TABLE tpp
         INNER JOIN $PROJECT_ROLE_TABLE tpr ON tpp.$PROJECT_PROFILE_ROLE = tpr.$ENTITY_ROLE_NAME AND tpr.$ROLE_LEVEL = 0
         INNER JOIN $PROJECT_TABLE tp ON tpp.$LINKED_PROJECT_ID = tp.$ID
-        INNER JOIN $USER_TABLE tu ON tpp.$PROJECT_PROFILE_USER_ID = tu.$ID AND tu.$USER_PURGED IS FALSE AND (:visibilitySearched IS NULL OR tu.$VISIBLE = :visibilitySearched)
+        INNER JOIN $USER_TABLE tu ON tpp.$PROJECT_PROFILE_USER_ID = tu.$ID AND (:isVisible IS NULL OR tu.$VISIBLE = :isVisible)
         INNER JOIN user_profile_project up ON up.$LINKED_PROJECT_ID = tp.$ID
-        AND tpp.$PROJECT_PROFILE_STATUS = 'ACCEPTED' AND (:visibilitySearched IS NULL OR tpp.$VISIBLE = :visibilitySearched) AND (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CURRENT_DATE OR (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME))
+        AND tpp.$PROJECT_PROFILE_STATUS = 'ACCEPTED' AND (:isVisible IS NULL OR tpp.$VISIBLE = :isVisible) AND (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) < CAST(:#{now} AS DATE) OR (COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_DATE, '-infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(tpp.$PROJECT_PROFILE_START_ACCESS_TIME, '00:00:00.000000'::TIME) <= CAST(:#{now} AS TIMETZ)))
         AND tpp.$PROJECT_PROFILE_END_ACCESS_DATE IS NULL AND tpp.$PROJECT_PROFILE_END_ACCESS_TIME IS NULL
         GROUP BY tpp.$LINKED_PROJECT_ID, tp.$PROJECT_NAME
         """
 	)
 	fun findLevel0ProjectProfileRoleByUserId(
 		userId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileRoleCountEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.$ID
+        FROM $PROJECT_PROFILE_TABLE t
+        INNER JOIN $PROJECT_ROLE_TABLE tpr ON t.$PROJECT_PROFILE_ROLE = tpr.$ENTITY_ROLE_NAME AND tpr.$ROLE_LEVEL = 0
+        WHERE t.$LINKED_PROJECT_ID IN (
+            SELECT up.$LINKED_PROJECT_ID
+            FROM $PROJECT_PROFILE_TABLE up
+            INNER JOIN $PROJECT_ROLE_TABLE upr ON up.$PROJECT_PROFILE_ROLE = upr.$ENTITY_ROLE_NAME AND upr.$ROLE_LEVEL = 0
+            WHERE up.$PROJECT_PROFILE_USER_ID = :userId
+        )
+        ORDER BY t.$ID
+        FOR UPDATE OF t
+        """
+	)
+	fun lockLevel0ProjectProfilesByUserId(userId: UUID): Flux<UUID>
+
+	@Query(
+		"""
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         INNER JOIN $PROJECT_ROLE_TABLE ON t.$PROJECT_PROFILE_ROLE = $PROJECT_ROLE_TABLE.$ENTITY_ROLE_NAME
         WHERE $VISIBLE_CLAUSE
@@ -192,7 +237,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 	)
 	fun findLevel0ProjectProfileRoleByProjectId(
 		projectId: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Flux<ProjectProfileEntity>
 
 	@Query(
@@ -205,12 +250,12 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 	fun findByUserIdAndId(
 		userId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 	): Mono<ProjectProfileEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_USER, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_LINKED_USER, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$LINKED_PROJECT_ID = :projectId AND t.$ID = :id AND $VISIBLE_CLAUSE
         """
@@ -218,6 +263,6 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 	fun findByProjectIdAndId(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 	): Mono<ProjectProfileEntity>
 }

@@ -1,0 +1,52 @@
+package fr.laucoin.registry.backend.infrastructure.driving.security.service
+
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_IMPLEMENTED_YET
+import fr.laucoin.registry.backend.domain.model.RegistryException
+import java.io.Serializable
+import java.util.Objects
+import java.util.UUID
+import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
+import org.springframework.security.access.PermissionEvaluator
+import org.springframework.security.core.Authentication
+
+/**
+ * Objectif : Évalue les permissions portées par un projet de `hasPermission`.
+ * Périmètre : Fait correspondre les autorités `{projectId}_{PERMISSION}` de l'appelant.
+ * Limites : Seule la forme objet est supportée ; la forme id et type échoue.
+ */
+class PermissionService: PermissionEvaluator {
+	private val log = LoggerFactory.getLogger(this::class.java)
+
+	override fun hasPermission(authentication: Authentication, targetDomainObject: Any?, permission: Any): Boolean {
+		val idAsString = when (targetDomainObject) {
+			is UUID -> targetDomainObject.toString()
+			is String -> targetDomainObject
+			else -> return false
+		}
+
+		return hasPrivilege(authentication, idAsString, permission)
+	}
+
+	override fun hasPermission(
+		authentication: Authentication,
+		targetId: Serializable,
+		targetType: String,
+		permission: Any
+	): Boolean {
+		val exception = RegistryException(
+			status = NOT_IMPLEMENTED,
+			code = NOT_IMPLEMENTED_YET,
+		)
+		log.error(
+			"Prefer to use `hasPermission(authentication: Authentication, targetDomainObject: Any?, permission: Any)`",
+			exception,
+		)
+		throw exception
+	}
+
+	private fun hasPrivilege(authentication: Authentication?, targetId: String, permission: Any?): Boolean {
+		val invalidData = Objects.isNull(authentication) || targetId.isBlank() || permission !is String
+		return !invalidData && authentication!!.authorities.any { it.authority == "${targetId}_$permission" }
+	}
+}

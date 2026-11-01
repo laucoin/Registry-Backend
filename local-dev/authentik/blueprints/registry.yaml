@@ -4,9 +4,9 @@
 #     authorization_code login (sub_mode user_uuid -> the JWT `sub` is the user UUID, which
 #     TokenConverterService links to tb_user.oidc_id);
 #   - a public OAuth2 provider + application at slug `registry-swagger` for Swagger UI's
-#     implicit-flow "Authorize" button (SwaggerConfig.kt), redirecting back to the management
+#     authorization-code + PKCE "Authorize" button (SwaggerConfig.kt), redirecting back to the management
 #     port (see README: SERVER_MANAGEMENT_PORT);
-#   - the six seed users from src/main/resources/db/seed/R__seed_dev_users.sql (same emails
+#   - the six seed users from src/main/resources/db/seed/R__seed_dev_dataset.sql (same emails
 #     and given/family names), all sharing the AU_PASS password. Their Authentik UUIDs
 #     are random (authentik_core.user.uuid is not settable); the backend links them to the
 #     seeded, email-only accounts on first login (oidc_id is filled in then).
@@ -86,8 +86,8 @@ entries:
   # ------------------------------------------------------------------------- Swagger UI (public)
   # Swagger runs in the browser and holds no secret, so it cannot be the backend's confidential
   # client: the provider would refuse it at the token endpoint for failing to authenticate.
-  # SwaggerConfig.kt configures the OAuth2 implicit flow, so this provider is public/implicit
-  # rather than the authorization_code + PKCE shape a browser client would otherwise use.
+  # SwaggerConfig.kt configures the OAuth2 authorization code flow with PKCE. The implicit flow
+  # is not usable here: Authentik rejects the plain `response_type=token` Swagger UI sends.
   - model: authentik_providers_oauth2.oauth2provider
     id: registry-swagger-provider
     identifiers:
@@ -96,7 +96,7 @@ entries:
       client_type: public
       client_id: !Context registry_swagger_client_id
       grant_types:
-        - implicit
+        - authorization_code
       sub_mode: user_uuid
       authentication_flow: !Find [ authentik_flows.flow, [ slug, default-authentication-flow ] ]
       authorization_flow: !Find [ authentik_flows.flow, [ slug, default-provider-authorization-implicit-consent ] ]
@@ -122,12 +122,12 @@ entries:
       provider: !KeyOf registry-swagger-provider
 
   # ------------------------------------------------------------------------ test personas
-  # Match src/main/resources/db/seed/R__seed_dev_users.sql (loaded under the `local` profile).
+  # Match src/main/resources/db/seed/R__seed_dev_dataset.sql (loaded under the `local` profile).
   # All active in Authentik; the "blocked" semantics live in the backend seed
   # (blocked-user is visible=false there), so logging in as blocked-user links the account
   # and is then rejected by the backend.
   - model: authentik_core.user
-    id: registry-user-administrator
+    id: 865f44e7-1fe0-4ce4-87e5-8159f581894d
     identifiers:
       username: administrator
     attrs:
@@ -141,7 +141,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-coordinator
+    id: b82d96d3-02e5-4ea5-89fc-a1a50092d8d4
     identifiers:
       username: coordinator
     attrs:
@@ -155,21 +155,21 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-participant
+    id: 37b3186b-4839-472f-a67a-9bd4e8beae4b
     identifiers:
       username: participant
     attrs:
-      name: Charles PINA
+      name: Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V
       attributes:
-        given_name: Charles
-        family_name: PINA
-      email: participant@sgdf.fr
+        given_name: Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte
+        family_name: DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V
+      email: participant.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.fr
       password: !Env [ AU_PASS, "dev123" ]
       is_active: true
       path: users
 
   - model: authentik_core.user
-    id: registry-user-blocked-user
+    id: 3f311520-d686-4a3e-88aa-8b9e58a56f88
     identifiers:
       username: blocked-user
     attrs:
@@ -183,7 +183,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-blocked-profile
+    id: ba3ea096-fc25-4e5a-ad3e-71a741358116
     identifiers:
       username: blocked-profile
     attrs:
@@ -192,20 +192,6 @@ entries:
         given_name: Emil
         family_name: BRADFORD
       email: blocked-profile@sgdf.fr
-      password: !Env [ AU_PASS, "dev123" ]
-      is_active: true
-      path: users
-
-  - model: authentik_core.user
-    id: registry-user-unverified
-    identifiers:
-      username: unverified
-    attrs:
-      name: Nina VOGEL
-      attributes:
-        given_name: Nina
-        family_name: VOGEL
-      email: unverified@sgdf.fr
       password: !Env [ AU_PASS, "dev123" ]
       is_active: true
       path: users

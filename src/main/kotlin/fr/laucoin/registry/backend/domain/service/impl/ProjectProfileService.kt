@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
@@ -22,14 +24,21 @@ import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import java.time.Clock
 import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
+import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Gère les profils (rôles) des utilisateurs au sein d'un projet.
+ * Périmètre : Statut des profils, changements de rôle et garde-fous du dernier administrateur.
+ * Limites : Ne gère pas les vues de profils de l'utilisateur courant ; voir UserProjectProfileService.
+ */
 @Service
 class ProjectProfileService(
 	private val profileService: IUserProjectProfileService,
@@ -37,9 +46,12 @@ class ProjectProfileService(
 	private val roleService: IRoleService,
 	private val userPort: IUserPort,
 	private val principalCache: IPrincipalCacheService,
+	private val rowLockPort: IRowLockPort,
+	private val transactionalOperator: TransactionalOperator,
+	clock: Clock,
 	@param:Value($$"${registry.feature.profile.searched.max-user-result}")
 	private val maxUserResult: Int,
-): IProjectProfileService, GenericProfileService(port) {
+): IProjectProfileService, GenericProfileService(port, clock) {
 	override fun findProjectProfilesPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -52,16 +64,16 @@ class ProjectProfileService(
 	override fun findProjectProfileById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<ProjectProfileModel> {
-		return port.findById(projectId, id, visibilitySearched)
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
-	override fun searchUsers(textSearched: String?): Flux<UserModel> {
+	override fun searchUsers(query: String?): Flux<UserModel> {
 		return userPort.findWithLimit(
 			maxUserResult,
-			UserSearchParamModel(textSearched, visibilitySearched = true)
+			UserSearchParamModel(query, isVisible = true)
 		)
 	}
 
@@ -70,9 +82,9 @@ class ProjectProfileService(
 			projectId,
 			currentUser.id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			),
 		)
 			.notFoundIfEmpty(Pair(projectId, currentUser.id!!))
@@ -86,16 +98,11 @@ class ProjectProfileService(
 		userIds: List<UUID>,
 		profiles: List<ProjectProfileModel>
 	): Mono<Pair<List<UUID>, List<UUID>>> {
-		return validateNoProfileConflict(
-			projectId,
-			userIds,
-			profileId = null,
-			profiles.first().startAccess?.toZonedDateTime(OffsetTime.MIN),
-			profiles.first().endAccess?.toZonedDateTime(OffsetTime.MAX)
-		)
+		return rowLockPort.lock(PROJECT, projectId)
+			.then(Mono.defer { validateNoCreationConflict(projectId, userIds, profiles.first()) })
 			.map { allowedUsers ->
 				profiles.filter { allowedUsers.contains(it.user!!.id) }
-					.map { it.apply { create(currentUser) } }
+					.map { it.apply { create(currentUser, now()) } }
 			}
 			.flatMapMany { port.saveAll(it) }
 			.collectList()
@@ -103,6 +110,21 @@ class ProjectProfileService(
 				val savedUserId = it.mapNotNull { profile -> profile.user!!.id }
 				Pair(savedUserId, userIds.minus(savedUserId.toSet()))
 			}
+			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateNoCreationConflict(
+		projectId: UUID,
+		userIds: List<UUID>,
+		profile: ProjectProfileModel,
+	): Mono<List<UUID>> {
+		return validateNoProfileConflict(
+			projectId,
+			userIds,
+			profileId = null,
+			profile.startAccess?.toZonedDateTime(OffsetTime.MIN),
+			profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
+		)
 	}
 
 	override fun updateProjectProfileById(
@@ -111,13 +133,14 @@ class ProjectProfileService(
 		id: UUID,
 		profile: ProjectProfileModel
 	): Mono<ProjectProfileModel> {
-		return findProjectProfileById(projectId, id, visibilitySearched = null)
+		return rowLockPort.lock(PROJECT, projectId)
+			.then(Mono.defer { findProjectProfileById(projectId, id, isVisible = null) })
 			.flatMap {
 				validateNoProfileConflict(
 					projectId,
 					listOf(it.user!!.id!!),
 					it.id,
-					profile.endAccess?.toZonedDateTime(OffsetTime.MIN),
+					profile.startAccess?.toZonedDateTime(OffsetTime.MIN),
 					profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
 				).map { _ -> it }
 			}
@@ -131,6 +154,8 @@ class ProjectProfileService(
 				}
 			}
 			.updateProjectProfile(currentUser)
+			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(it.user?.oidcId) }
 	}
 
 	override fun blockProjectProfileById(
@@ -138,10 +163,12 @@ class ProjectProfileService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ProjectProfileModel> {
-		return findProjectProfileById(projectId, id, visibilitySearched = true)
+		return findProjectProfileById(projectId, id, isVisible = true)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR)
 			.updateVisibility(visibility = false)
 			.updateProjectProfile(currentUser)
+			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(it.user?.oidcId) }
 	}
 
 	override fun unblockProjectProfileById(
@@ -149,19 +176,20 @@ class ProjectProfileService(
 		projectId: UUID,
 		id: UUID
 	): Mono<ProjectProfileModel> {
-		return findProjectProfileById(projectId, id, visibilitySearched = false)
+		return findProjectProfileById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateProjectProfile(currentUser)
 	}
 
 	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findProjectProfileById(projectId, id, visibilitySearched = null)
+		return findProjectProfileById(projectId, id, isVisible = null)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR)
 			.flatMap { port.deleteById(id).doOnSuccess { _ -> principalCache.invalidate(it.user?.oidcId) } }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
-		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.project!!.id!!, it, error)
+		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.projectId!!, it, error)
 	}
 
 	private fun Mono<ProjectProfileModel>.validateRole(
@@ -171,44 +199,43 @@ class ProjectProfileService(
 			projectId,
 			currentUser.id!!,
 			ProjectProfileSearchParamModel(
-				visibilitySearched = true,
-				availabilitySearched = true,
-				statusSearched = listOf(ACCEPTED),
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
 			)
 		)
 			.handle { it, handle ->
-				val eligibleRoles = roleService.getAssignableProjectRoles(it)
-				if (!eligibleRoles.contains(profileToUpdate.role)) {
-					log.warn(
-						"User \"{}\" cannot update project profile with a role higher up the breast.",
-						currentUser.id,
-					)
-					handle.error(
-						RegistryException(
-							FORBIDDEN,
-							PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER,
-							arrayListOf(profileToUpdate.role)
-						)
-					)
-				} else if (!eligibleRoles.contains(profile.role)) {
-					log.warn(
-						"User \"{}\" tried to update project profile with a role higher up the breast.",
-						currentUser.id,
-					)
-					handle.error(
-						RegistryException(
-							FORBIDDEN,
-							PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER,
-							arrayListOf(profile.role)
-						)
-					)
-				} else handle.next(profileToUpdate)
+				val error = roleError(currentUser, roleService.getAssignableProjectRoles(it), profileToUpdate, profile)
+				if (error != null) handle.error(error) else handle.next(profileToUpdate)
 			}
+	}
+
+	private fun roleError(
+		currentUser: CurrentUserModel,
+		eligibleRoles: List<String>,
+		profileToUpdate: ProjectProfileModel,
+		profile: ProjectProfileModel,
+	): RegistryException? = when {
+		!eligibleRoles.contains(profileToUpdate.role) -> {
+			log.warn("User \"{}\" cannot update project profile with a role higher up the breast.", currentUser.id)
+			RegistryException(
+				FORBIDDEN,
+				PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER,
+				arrayListOf(profileToUpdate.role),
+			)
+		}
+
+		!eligibleRoles.contains(profile.role) -> {
+			log.warn("User \"{}\" tried to update project profile with a role higher up the breast.", currentUser.id)
+			RegistryException(FORBIDDEN, PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER, arrayListOf(profile.role))
+		}
+
+		else -> null
 	}
 
 	private fun Mono<ProjectProfileModel>.updateProjectProfile(currentUser: CurrentUserModel) = flatMap { profile ->
 		val oidcId = profile.user?.oidcId
-		port.update(profile.apply { update(currentUser) })
+		port.update(profile.apply { update(currentUser, now()) })
 			.doOnNext { principalCache.invalidate(oidcId) }
 	}
 }

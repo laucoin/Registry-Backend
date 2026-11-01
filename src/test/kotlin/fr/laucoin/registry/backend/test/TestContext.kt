@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.test
 
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService
-import fr.laucoin.registry.backend.domain.service.impl.CsrfTokenService.Companion.HEADER_NAME
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
@@ -28,10 +28,10 @@ import org.springframework.test.web.reactive.server.WebTestClient
 class TestContext {
 
 	/**
-	 * Spring Boot 4 dropped the auto-configuration that applied [springSecurity] to the mock
-	 * [org.springframework.test.web.reactive.server.WebTestClient]. Without it, `mutateWith(mockUser(...))`
-	 * has no effect and secured endpoints answer 401. Registering the [MockServerConfigurer] bean restores it,
-	 * since `WebTestClientAutoConfiguration` still applies every such bean when binding to the application context.
+	 * Spring Boot 4 a supprimé l'auto-configuration qui appliquait [springSecurity] au mock
+	 * [org.springframework.test.web.reactive.server.WebTestClient]. Sans elle, `mutateWith(mockUser(...))`
+	 * n'a aucun effet et les endpoints sécurisés répondent 401. Enregistrer le bean [MockServerConfigurer] la rétablit,
+	 * puisque `WebTestClientAutoConfiguration` applique encore chaque bean de ce type lors du rattachement au contexte applicatif.
 	 */
 	@TestConfiguration
 	class WebTestClientSecurityConfiguration {
@@ -39,11 +39,11 @@ class TestContext {
 		fun springSecurityMockServerConfigurer(): MockServerConfigurer = springSecurity()
 
 		/**
-		 * `.authenticate()` (mockUser) bypasses the bearer-token layer entirely, so tests never carry
-		 * a real access token — CsrfTokenService.computeToken deterministically resolves that to
-		 * `HMAC(secret, "")`, the same value StatelessCsrfTokenRepository.loadToken computes for any
-		 * such request. Precomputing it once here and defaulting every webClient call to it keeps the
-		 * whole suite passing without each test needing to know about CSRF at all.
+		 * `.authenticate()` (mockUser) contourne entièrement la couche bearer-token, donc les tests ne portent jamais
+		 * de vrai token d'accès — CsrfTokenService.computeToken le résout de façon déterministe en
+		 * `HMAC(secret, "")`, la même valeur que StatelessCsrfTokenRepository.loadToken calcule pour toute
+		 * requête de ce type. La précalculer ici une fois et l'utiliser par défaut dans chaque appel webClient permet de
+		 * faire passer toute la suite sans que chaque test ait à connaître le CSRF.
 		 */
 		@Bean
 		fun csrfHeaderWebTestClientBuilderCustomizer(csrfTokenService: CsrfTokenService): WebTestClientBuilderCustomizer {

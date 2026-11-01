@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
+import org.springframework.transaction.reactive.TransactionalOperator
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -16,6 +19,7 @@ import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IVehicleService
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
@@ -23,12 +27,20 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Gère les véhicules d'un projet.
+ * Périmètre : CRUD des véhicules, disponibilité et historique.
+ * Limites : N'enregistre pas les mouvements ; ils relèvent de MovementService.
+ */
 @Service
 class VehicleService(
 	private val port: IVehiclePort,
 	private val projectService: IProjectService,
 	private val movementPort: IMovementPort,
-): IVehicleService, GenericService() {
+	private val rowLockPort: IRowLockPort,
+	private val transactionalOperator: TransactionalOperator,
+	clock: Clock,
+): IVehicleService, GenericService(clock) {
 	override fun findVehiclesPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -37,8 +49,8 @@ class VehicleService(
 		return port.findPage(projectId, pageable, searchParams)
 	}
 
-	override fun findVehicleById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {
-		return port.findById(projectId, id, visibilitySearched)
+	override fun findVehicleById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel> {
+		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
 	}
 
@@ -53,12 +65,12 @@ class VehicleService(
 
 	override fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel> {
 		return projectService.validateDateTimes(
-			vehicle.project!!.id!!,
+			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { port.create(vehicle.apply { create(currentUser) }) }
+			.flatMap { port.create(vehicle.apply { create(currentUser, now()) }) }
 	}
 
 	override fun updateVehicleById(
@@ -68,12 +80,12 @@ class VehicleService(
 		vehicle: VehicleModel
 	): Mono<VehicleModel> {
 		return projectService.validateDateTimes(
-			vehicle.project!!.id!!,
+			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findVehicleById(projectId, id, visibilitySearched = null) }
+			.flatMap { findVehicleById(projectId, id, isVisible = null) }
 			.map {
 				it.apply {
 					licensePlate = vehicle.licensePlate
@@ -87,46 +99,38 @@ class VehicleService(
 	}
 
 	override fun disableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel> {
-		return findVehicleById(projectId, id, visibilitySearched = true)
+		return findVehicleById(projectId, id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateVehicle(currentUser)
 	}
 
 	override fun enableVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleModel> {
-		return findVehicleById(projectId, id, visibilitySearched = false)
+		return findVehicleById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateVehicle(currentUser)
 	}
 
 	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findVehicleById(projectId, id, visibilitySearched = null)
+		return findVehicleById(projectId, id, isVisible = null)
+			.flatMap { rowLockPort.lock(VEHICLE, id).thenReturn(it) }
 			.validateHasNoMovementLinked(VEHICLE_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun purgeVehiclesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging vehicles unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
-			.flatMap({
-				if (dryRun) {
-					log.info("[Dry run] vehicle {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging vehicle {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Vehicle {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge vehicle {}", it, err) }
-				}
-			}, PURGE_DELETE_CONCURRENCY)
+			.purgeEach("vehicle", dryRun, port::deleteById)
 	}
 
 	private fun Mono<VehicleModel>.updateVehicle(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser, now()) })
 	}
 
 	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { vehicleToUpdate ->
 		movementPort.countAllByVehicleId(
-			vehicleToUpdate.project!!.id!!,
+			vehicleToUpdate.projectId!!,
 			vehicleToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->

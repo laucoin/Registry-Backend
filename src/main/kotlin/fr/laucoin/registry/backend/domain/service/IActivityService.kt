@@ -12,6 +12,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Contrat de cas d'usage de l'activité.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos de l'activité.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
 interface IActivityService {
 	fun findActivitiesPage(
 		projectId: UUID,
@@ -19,7 +24,7 @@ interface IActivityService {
 		searchParams: ActivitySearchParamModel,
 	): Mono<PageModel<ActivityModel>>
 
-	fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel>
+	fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel>
 
 	fun findActivityMovementsPage(
 		projectId: UUID,

@@ -11,8 +11,13 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Port driven donnant au domaine l'accès à la persistance du mouvement.
+ * Périmètre : Déclare les lectures, recherches et écritures du mouvement dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
+ */
 interface IMovementPort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,

@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import org.springframework.dao.ConcurrencyFailureException
+import io.r2dbc.spi.R2dbcException
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UNKNOWN_ERROR
@@ -12,7 +15,9 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IRegist
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
 import java.util.Locale
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.ResponseEntity
@@ -27,11 +32,21 @@ import org.springframework.web.server.ServerWebInputException
 import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Transforme les exceptions en réponses d'erreur localisées.
+ * Périmètre : Mappe les erreurs métier, de validation et de concurrence vers un statut, un code et un message traduit.
+ * Limites : N'expose jamais de messages internes ni de stack traces.
+ */
 @RestControllerAdvice
 class RegistryControllerAdvice(
 	private val translateService: ITranslateService,
 	private val localeContextResolver: LocaleContextResolver,
 ) : IRegistryControllerAdvice, LoggerService() {
+	private companion object {
+		const val MAX_CAUSE_DEPTH = 10
+		val CONCURRENCY_SQL_STATES = setOf("55P03", "40P01", "40001")
+	}
+
 	override fun handleRegistryException(
 		exception: RegistryException,
 		exchange: ServerWebExchange,
@@ -60,7 +75,6 @@ class RegistryControllerAdvice(
 			exchange,
 			status = BAD_REQUEST,
 			code = PARAMETER_TYPE_MISMATCH,
-			args = arrayOf(exception.cause).filterNotNull().toTypedArray(),
 		)
 	}
 
@@ -97,7 +111,16 @@ class RegistryControllerAdvice(
 	}
 
 	override fun handleException(exception: Exception, exchange: ServerWebExchange): Mono<ResponseEntity<ErrorDto>> {
+		if (isConcurrencyConflict(exception)) {
+			return buildError(exchange, status = CONFLICT, code = CONCURRENT_UPDATE_CONFLICT, exception = exception)
+		}
 		return buildError(exchange, status = INTERNAL_SERVER_ERROR, code = "500", exception = exception)
+	}
+
+	private fun isConcurrencyConflict(exception: Throwable): Boolean {
+		return generateSequence(exception) { it.cause }.take(MAX_CAUSE_DEPTH).any {
+			it is ConcurrencyFailureException || (it is R2dbcException && it.sqlState in CONCURRENCY_SQL_STATES)
+		}
 	}
 
 	private fun buildError(
@@ -122,7 +145,13 @@ class RegistryControllerAdvice(
 			locale = locale,
 		)
 
-		val body = ErrorDto(status.value(), status.name, code, title, message)
-		return Mono.just(ResponseEntity.status(status).body(body))
+		val body = ErrorDto(
+			title = title,
+			status = status.value(),
+			detail = message,
+			instance = exchange.request.path.value(),
+			code = code,
+		)
+		return Mono.just(ResponseEntity.status(status).contentType(APPLICATION_PROBLEM_JSON).body(body))
 	}
 }

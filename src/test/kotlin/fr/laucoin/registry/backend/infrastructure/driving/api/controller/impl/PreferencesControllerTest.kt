@@ -1,18 +1,23 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum.FAST
+import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
 import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
 import fr.laucoin.registry.backend.test.TestContext
+import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -26,42 +31,88 @@ class PreferencesControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/users/preferences"
+		private const val BASE_URL = "/api/v2/users/preferences"
 	}
 
 	@Test
-	fun `Should updateSelectedProjectProfile return 200`() {
+	fun `Should updateTheme return 200`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		whenever(service.updateUserPreferenceSelectedProjectProfileById(any(), any())).thenReturn(Mono.empty())
+		whenever(service.updateTheme(any(), any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder("$BASE_URL/profile/select", emptyList(), listOf(Pair("profileId", uuid))))
+			.uri(uriBuilder("$BASE_URL/theme", emptyList(), listOf(Pair("theme", DARK))))
 			.exchange()
 
 		// Assert
-		result.body<PreferencesModel>(OK)
-		verify(service).updateUserPreferenceSelectedProjectProfileById(any(), eq(uuid))
+		result.body<PreferenceReaderDto>(OK)
+		verify(service).updateTheme(any(), eq(DARK))
 	}
 
 	@Test
-	fun `Should updateSelectedProjectProfileWithProjectId return 200`() {
+	fun `Should updateLanguage return 200`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		whenever(service.updateUserPreferenceSelectedProjectProfileByProjectId(any(), any())).thenReturn(Mono.empty())
+		whenever(service.updateLanguage(any(), any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate()
 			.post()
-			.uri(uriBuilder("$BASE_URL/projects/{projectId}/profile/select", listOf(uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/language", emptyList(), listOf(Pair("language", "fr-FR"))))
 			.exchange()
 
 		// Assert
-		result.body<PreferencesModel>(OK)
-		verify(service).updateUserPreferenceSelectedProjectProfileByProjectId(any(), eq(uuid))
+		result.body<PreferenceReaderDto>(OK)
+		verify(service).updateLanguage(any(), eq("fr-FR"))
+	}
+
+	@Test
+	fun `Should updateLanguage refuse a language over 10 characters`() {
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/language", emptyList(), listOf(Pair("language", "a".repeat(11)))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateLanguage accept a language of exactly 10 characters`() {
+		// Arrange
+		whenever(service.updateLanguage(any(), any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/language", emptyList(), listOf(Pair("language", "a".repeat(10)))))
+			.exchange()
+
+		// Assert
+		result.body<PreferenceReaderDto>(OK)
+		verify(service).updateLanguage(any(), eq("a".repeat(10)))
+	}
+
+	@Test
+	fun `Should updateRefreshMode return 200`() {
+		// Arrange
+		whenever(service.updateRefreshMode(any(), any())).thenReturn(Mono.empty())
+
+		// Act
+		val result = webClient
+			.authenticate()
+			.post()
+			.uri(uriBuilder("$BASE_URL/refresh-mode", emptyList(), listOf(Pair("mode", "FAST"))))
+			.exchange()
+
+		// Assert
+		result.body<PreferenceReaderDto>(OK)
+		verify(service).updateRefreshMode(any(), eq(FAST))
 	}
 }

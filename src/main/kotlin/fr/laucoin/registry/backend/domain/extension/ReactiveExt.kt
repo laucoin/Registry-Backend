@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus.NOT_FOUND
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
+import java.time.Clock
+import java.time.ZonedDateTime
 
 object ReactiveExt {
 	fun <T : Any> Mono<T>.notFoundIfEmpty(identifier: Any): Mono<T> {
@@ -27,11 +29,12 @@ object ReactiveExt {
 
 	fun <E : Any, T> Flux<E>.toPageModel(
 		pageable: PageableModel,
+		clock: Clock,
 		fullCount: (E) -> Long?,
 		toModel: (E) -> T,
 	): Mono<PageModel<T>> {
 		return collectList().map { entities ->
-			PageModel(pageable, entities.firstOrNull()?.let(fullCount) ?: 0L, entities.map(toModel))
+			PageModel(pageable, entities.firstOrNull()?.let(fullCount) ?: 0L, entities.map(toModel), ZonedDateTime.now(clock))
 		}
 	}
 }

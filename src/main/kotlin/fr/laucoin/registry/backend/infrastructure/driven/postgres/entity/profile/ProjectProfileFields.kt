@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_LOGIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_OIDC_ID
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_PURGED
 
 object ProjectProfileFields {
 	const val PROJECT_PROFILE_TABLE = "tb_project_profile"
@@ -18,7 +17,6 @@ object ProjectProfileFields {
 	const val PROJECT_PROFILE_USER_LAST_NAME = "$USER_PREFIX$USER_LAST_NAME"
 	const val PROJECT_PROFILE_USER_EMAIL = "$USER_PREFIX$USER_EMAIL"
 	const val PROJECT_PROFILE_USER_LAST_LOGIN = "$USER_PREFIX$USER_LAST_LOGIN"
-	const val PROJECT_PROFILE_USER_PURGED = "$USER_PREFIX$USER_PURGED"
 
 	const val PROJECT_PROFILE_ROLE = "role"
 	const val PROJECT_PROFILE_STATUS = "status"

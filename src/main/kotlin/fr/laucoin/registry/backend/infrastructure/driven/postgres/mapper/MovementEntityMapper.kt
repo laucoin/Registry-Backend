@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import fr.laucoin.registry.backend.domain.constant.DateTimeConst.EPOCH_UTC
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
@@ -11,7 +12,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activit
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
-import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.Optional
 import org.springframework.stereotype.Component
@@ -22,9 +22,10 @@ class MovementEntityMapper(
 ): IEntityMapper<MovementModel, MovementEntity> {
 	override fun toModel(entity: MovementEntity): MovementModel {
 		return MovementModel(contentType = determineContentType(entity)).apply {
-			dateTime = entity.dateTime ?: ZonedDateTime.now()
+			dateTime = entity.dateTime ?: EPOCH_UTC
 			type = entity.type
 			reason = entity.reason
+			lastCommunicationDateTime = entity.lastCommunicationDateTime
 			activity = mapActivity(entity)
 		}.fillWithProjectAndEntity(entity)
 	}

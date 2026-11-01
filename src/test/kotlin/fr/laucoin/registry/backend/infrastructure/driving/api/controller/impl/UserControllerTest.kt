@@ -1,8 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
@@ -14,6 +17,7 @@ import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRoleWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
 import fr.laucoin.registry.backend.test.TestContext
@@ -21,7 +25,6 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.util.Objects
 import java.util.UUID
 import java.util.stream.Stream
 import org.junit.jupiter.api.Test
@@ -36,6 +39,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -57,7 +61,7 @@ class UserControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/users"
+		private const val BASE_URL = "/api/v2/users"
 
 		@JvmStatic
 		fun `Should findUsers return 200`(): Stream<Arguments> = Stream.of(
@@ -73,6 +77,7 @@ class UserControllerTest: TestContext() {
 		fun `Should findUsers throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -89,21 +94,21 @@ class UserControllerTest: TestContext() {
 	@MethodSource
 	fun `Should findUsers return 200`(
 		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		visibilitySearched: Boolean?
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isVisible: Boolean?
 	) {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = UserSearchParamModel(
-			textSearched = textSearched,
-			visibilitySearched = visibilitySearched,
+			query = query,
+			isVisible = isVisible,
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(UserModel()))
-		whenever(service.findUsersPage(any(), any())).thenReturn(Mono.just(page))
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(UserModel()))
+		whenever(service.findUsersPage(any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(UserReaderDto())),
 		)
@@ -117,10 +122,10 @@ class UserControllerTest: TestContext() {
 					BASE_URL,
 					emptyList(),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("visibilitySearched", visibilitySearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isVisible", isVisible),
 					),
 				)
 			)
@@ -138,8 +143,8 @@ class UserControllerTest: TestContext() {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findUsers throw due to wrong params`(
-		pageNumber: Int?,
-		pageSize: Int?,
+		page: Int?,
+		size: Int?,
 		expectedMessage: String,
 	) {
 		// Act
@@ -151,8 +156,8 @@ class UserControllerTest: TestContext() {
 					BASE_URL,
 					emptyList(),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
+						Pair("page", page),
+						Pair("size", size),
 					),
 				)
 			)
@@ -185,7 +190,7 @@ class UserControllerTest: TestContext() {
 		result.body<UserReaderDto>(OK)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).findUserById(uuid, visibilitySearched = null)
+		verify(service).findUserById(uuid, isVisible = null)
 	}
 
 	@Test
@@ -216,7 +221,6 @@ class UserControllerTest: TestContext() {
 	) {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val queryParams = if (Objects.nonNull(role)) listOf(Pair("role", role)) else emptyList()
 		whenever(service.updateUserRoleById(any(), any(), anyOrNull())).thenReturn(Mono.just(UserModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
 
@@ -224,7 +228,8 @@ class UserControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(REGISTRY_USER_U)
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(uuid), queryParams))
+			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(uuid), emptyList()))
+			.bodyValue(UserRoleWriterDto(role))
 			.exchange()
 
 		// Assert
@@ -245,7 +250,7 @@ class UserControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(REGISTRY_USER_U)
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/block", listOf(uuid), emptyList()))
 			.exchange()
 
@@ -267,7 +272,7 @@ class UserControllerTest: TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(REGISTRY_USER_U)
-			.patch()
+			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(uuid), emptyList()))
 			.exchange()
 
@@ -280,50 +285,27 @@ class UserControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should impersonateUserById return 200`() {
+	fun `Should deleteCurrentUser return 204`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		whenever(service.impersonateUserById(any(), eq(uuid))).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
-
-		// Act
-		val result = webClient
-			.authenticate(REGISTRY_USER_D)
-			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}/impersonate", listOf(uuid), emptyList()))
-			.exchange()
-
-		// Assert
-		result.body<UserReaderDto>(OK)
-
-		verify(readerMapper).toDto(any())
-		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), eq(uuid))
-	}
-
-	@Test
-	fun `Should impersonateCurrentUser return 200`() {
-		// Arrange
-		whenever(service.impersonateUserById(any(), any())).thenReturn(Mono.just(UserModel()))
-		whenever(readerMapper.toDto(any())).thenReturn(UserReaderDto())
+		whenever(service.deleteCurrentUser(any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate()
-			.patch()
-			.uri(uriBuilder("$BASE_URL/impersonate", emptyList(), emptyList()))
+			.delete()
+			.uri(uriBuilder("$BASE_URL/current", emptyList(), emptyList()))
 			.exchange()
 
 		// Assert
-		result.body<UserReaderDto>(OK)
+		result.body<Void>(NO_CONTENT)
 
-		verify(readerMapper).toDto(any())
+		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(userRoleReaderMapper)
-		verify(service).impersonateUserById(any(), any())
+		verify(service).deleteCurrentUser(any())
 	}
 
 	@Test
-	fun `Should deleteUserById return 200`() {
+	fun `Should deleteUserById return 204`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		whenever(service.deleteUserById(any(), eq(uuid))).thenReturn(Mono.empty())
@@ -336,10 +318,91 @@ class UserControllerTest: TestContext() {
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).deleteUserById(any(), eq(uuid))
+	}
+
+	@Test
+	fun `Should findUsers forward the role filter to the service`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(UserModel()))
+		whenever(service.findUsersPage(any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(UserReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_R)
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("role", "ROLE_USER"))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(service).findUsersPage(pageable, UserSearchParamModel(query = null, role = "ROLE_USER"))
+	}
+
+	@Test
+	fun `Should findUsers refuse a role filter over 50 characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_R)
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("role", "R".repeat(51)))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateUserRole refuse a role over 50 characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_U)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(UUID.randomUUID()), emptyList()))
+			.bodyValue(UserRoleWriterDto("R".repeat(51)))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should findUsers refuse a role filter with forbidden characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_R)
+			.get()
+			.uri(uriBuilder(BASE_URL, emptyList(), listOf(Pair("role", "ROLE';--"))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateUserRole refuse a role with forbidden characters`() {
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_U)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(UUID.randomUUID()), emptyList()))
+			.bodyValue(UserRoleWriterDto("ROLE';--"))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(service)
 	}
 }

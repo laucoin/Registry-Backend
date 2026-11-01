@@ -4,21 +4,16 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupEntityRepository
-import fr.laucoin.registry.backend.test.ModelExt.groupId
-import fr.laucoin.registry.backend.test.ModelExt.participantId
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
+import fr.laucoin.registry.backend.test.ModelExt.defaultParticipantId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -38,8 +33,15 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
-class GroupModelPostgresRepositoryTest: TestContext() {
+class GroupModelPostgresRepositoryTest : TestContext() {
 	@MockitoSpyBean
 	private lateinit var postgresRepository: IGroupEntityRepository
 
@@ -74,7 +76,7 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		fun `Should findContent call contentRepository findAllByGroupIds`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(
-					listOf(groupId),
+					listOf(defaultGroupId),
 					1,
 				),
 				Arguments.of(
@@ -92,20 +94,24 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		val params = GroupSearchParamModel()
 
 		// Act
-		val result = repository.findPage(projectId, pageable, params).block()
+		val result = repository.findPage(defaultProjectId, pageable, params).block()
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(20, result.totalElements)
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			defaultProjectId,
+			query = null,
+			isVisible = null,
+			isPresent = null,
+			at = null,
+			memberUserId = null,
+			hasOnSiteMembers = null,
+			sortField = null,
+			isDescending = null,
 			pageable.limit,
 			pageable.offset,
 		)
@@ -119,18 +125,32 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		expectedContentRepositoryCall: Int,
 	) {
 		// Act
-		val visibilitySearched = null
-		val availabilitySearched = null
-		repository.findContent(projectId, ids, visibilitySearched, availabilitySearched).collectList().block()
+		val isVisible = null
+		val isAvailable = null
+		repository.findContent(defaultProjectId, ids, isVisible, isAvailable).collectList().block()
 
 		// Assert
 		verify(contentPostgresRepository, times(expectedContentRepositoryCall)).findAllByGroupIds(
-			projectId,
+			defaultProjectId,
 			ids,
-			visibilitySearched,
-			availabilitySearched,
+			isVisible,
+			isAvailable,
 		)
 		verify(contentMapper, atLeast(expectedContentRepositoryCall)).toModel(any())
+	}
+
+	@ParameterizedTest
+	@MethodSource("Should findAllByIds call repository findAllByIds")
+	fun `Should lockByIds call repository lockByIds only when ids are given`(
+		ids: List<UUID>,
+		expectedDatabaseCall: Int,
+	) {
+		// Act
+		val result = repository.lockByIds(ids).collectList().block()
+
+		// Assert
+		assertNotNull(result)
+		verify(postgresRepository, times(expectedDatabaseCall)).lockByIds(ids)
 	}
 
 	@ParameterizedTest
@@ -140,16 +160,38 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		expectedDatabaseCall: Int,
 	) {
 		// Act
-		val result = repository.findAllByIds(projectId, ids, visibilitySearched = null).collectList().block()
+		val result = repository.findAllByIds(defaultProjectId, ids, isVisible = null).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository, times(expectedDatabaseCall)).findAllByIds(
-			projectId,
+			defaultProjectId,
 			ids,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
+	}
+
+	@Test
+	fun `Should findSummaryById return the group with its last edition and without its members`() {
+		// Act
+		val result = repository.findSummaryById(defaultProjectId, defaultGroupId).block()
+
+		// Assert
+		assertNotNull(result)
+		assertEquals(defaultGroupId, result.id)
+		assertNotNull(result.lastEdition)
+		assertTrue(result.members.isEmpty())
+		verify(postgresRepository).findSummaryById(defaultProjectId, defaultGroupId)
+	}
+
+	@Test
+	fun `Should findSummaryById return nothing for a group of another project`() {
+		// Act
+		val result = repository.findSummaryById(UUID.randomUUID(), defaultGroupId).block()
+
+		// Assert
+		assertNull(result)
 	}
 
 	@Test
@@ -159,17 +201,17 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		val params = GroupSearchParamModel()
 
 		// Act
-		val result = repository.findWithLimit(size, projectId, params).collectList().block()
+		val result = repository.findWithLimit(size, defaultProjectId, params).collectList().block()
 
 		// Assert
 		assertNotNull(result)
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
-			projectId,
-			textSearched = null,
-			visibilitySearched = null,
-			presenceSearched = null,
-			dateTimeSearched = null,
+			defaultProjectId,
+			query = null,
+			isVisible = null,
+			isPresent = null,
+			at = null,
 			size,
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
@@ -180,25 +222,25 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		// Act
 		val result =
 			repository.findByIdWithContent(
-				projectId,
-				groupId,
-				visibilitySearched = null,
-				memberVisibilitySearched = null,
-				memberAvailabilitySearched = null
+				defaultProjectId,
+				defaultGroupId,
+				isVisible = null,
+				memberIsVisible = null,
+				memberIsAvailable = null
 			).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
-			projectId,
-			groupId,
-			visibilitySearched = null,
+			defaultProjectId,
+			defaultGroupId,
+			isVisible = null,
 		)
 		verify(contentPostgresRepository).findAllByGroupIds(
-			projectId,
-			listOf(groupId),
-			visibilitySearched = null,
-			availabilitySearched = null,
+			defaultProjectId,
+			listOf(defaultGroupId),
+			isVisible = null,
+			isAvailable = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -211,25 +253,25 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 		// Act
 		val result =
 			repository.findByIdWithContent(
-				projectId,
+				defaultProjectId,
 				uuid,
-				visibilitySearched = null,
-				memberVisibilitySearched = null,
-				memberAvailabilitySearched = null
+				isVisible = null,
+				memberIsVisible = null,
+				memberIsAvailable = null
 			).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
-			projectId,
+			defaultProjectId,
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(contentPostgresRepository).findAllByGroupIds(
-			projectId,
+			defaultProjectId,
 			listOf(uuid),
-			visibilitySearched = null,
-			availabilitySearched = null,
+			isVisible = null,
+			isAvailable = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -246,8 +288,8 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			// Arrange
 			val group = GroupModel().apply {
 				name = "test"
-				project = ProjectModel().apply { id = projectId }
-				create(currentUser())
+				this.projectId = defaultProjectId
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -268,9 +310,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			val group = GroupModel().apply {
 				id = uuid
 				name = "test update"
-				project = ProjectModel().apply { id = projectId }
-				members = listOf(ParticipantModel().apply { id = participantId })
-				create(currentUser())
+				this.projectId = defaultProjectId
+				members = listOf(ParticipantModel().apply { id = defaultParticipantId })
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -278,12 +320,12 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+			verify(postgresRepository).findById(defaultProjectId, uuid, isVisible = null)
 			verify(contentPostgresRepository).findAllByGroupIds(
-				projectId,
+				defaultProjectId,
 				listOf(uuid),
-				visibilitySearched = null,
-				availabilitySearched = null
+				isVisible = null,
+				isAvailable = null
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
@@ -296,9 +338,9 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 			val group = GroupModel().apply {
 				id = uuid
 				name = "test update"
-				project = ProjectModel().apply { id = projectId }
+				this.projectId = defaultProjectId
 				members = emptyList()
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -306,12 +348,12 @@ class GroupModelPostgresRepositoryTest: TestContext() {
 
 			// Assert
 			verify(postgresRepository).save(any())
-			verify(postgresRepository).findById(projectId, uuid, visibilitySearched = null)
+			verify(postgresRepository).findById(defaultProjectId, uuid, isVisible = null)
 			verify(contentPostgresRepository).findAllByGroupIds(
-				projectId,
+				defaultProjectId,
 				listOf(uuid),
-				visibilitySearched = null,
-				availabilitySearched = null
+				isVisible = null,
+				isAvailable = null
 			)
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())

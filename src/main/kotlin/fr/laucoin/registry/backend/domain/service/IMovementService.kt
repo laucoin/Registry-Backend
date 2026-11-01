@@ -11,6 +11,7 @@ import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PlannedMovementModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
@@ -23,14 +24,21 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 
+/**
+ * Objectif : Contrat de cas d'usage du mouvement.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du mouvement.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
 interface IMovementService {
 	fun findMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>>
 
 	fun findCurrentMovementsPage(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
@@ -46,23 +54,23 @@ interface IMovementService {
 		movementIds: List<UUID>,
 	): Flux<Pair<UUID, List<MovementContentModel>>>
 
-	fun findMovementById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+	fun findMovementById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel>
 	fun searchParticipantsAndGroupsByText(
 		projectId: UUID,
-		typeSearched: ParticipantTypeEnum,
-		textSearched: String?
+		type: ParticipantTypeEnum,
+		query: String?
 	): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>>
 
-	fun searchVehiclesByText(projectId: UUID, textSearched: String?): Flux<VehicleModel>
+	fun searchVehiclesByText(projectId: UUID, query: String?): Flux<VehicleModel>
 	fun searchReasonsByText(
-		contentTypeSearched: ParticipantTypeEnum,
-		typeSearched: MovementTypeEnum,
+		contentType: ParticipantTypeEnum,
+		type: MovementTypeEnum,
 	): Flux<MovementReasonEnum>
 
 	fun searchActivitiesByText(
 		projectId: UUID,
-		contentTypeSearched: ParticipantTypeEnum,
-		textSearched: String?
+		contentType: ParticipantTypeEnum,
+		query: String?
 	): Flux<ActivityModel>
 
 	fun findMovementCommunicationsPage(
@@ -71,6 +79,8 @@ interface IMovementService {
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel,
 	): Mono<PageModel<CommunicationModel>>
+
+	fun findPlannedMovements(projectId: UUID, type: MovementTypeEnum, date: LocalDate?): Flux<PlannedMovementModel>
 
 	fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel>
 

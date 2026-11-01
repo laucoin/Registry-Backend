@@ -8,9 +8,14 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import java.util.UUID
 import reactor.core.publisher.Mono
+import java.util.UUID
 
+/**
+ * Objectif : Contrat de cas d'usage du profil de projet de l'utilisateur.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du profil de projet de l'utilisateur.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
 interface IUserProjectProfileService {
 	fun findProjectProfilesPage(
 		userId: UUID,
@@ -18,7 +23,10 @@ interface IUserProjectProfileService {
 		searchParams: ProjectProfileSearchParamModel,
 	): Mono<PageModel<ProjectProfileModel>>
 
-	fun <T: GenericModel> validateNotLastProjectRoleLevel0(
+	fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
+
+
+	fun <T : GenericModel> validateNotLastProjectRoleLevel0(
 		userId: UUID,
 		projectId: UUID?,
 		result: T,

@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ACTIVITY
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
+import org.springframework.transaction.reactive.TransactionalOperator
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
@@ -16,6 +19,7 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
@@ -23,12 +27,20 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Construit le fil d'activité d'un projet à partir de ses mouvements, groupes et participants.
+ * Périmètre : Lit et agrège les entrées d'activité via les ports.
+ * Limites : N'écrit aucune donnée et ne vérifie pas les permissions (fait sur le contrat).
+ */
 @Service
 class ActivityService(
 	private val projectService: IProjectService,
 	private val port: IActivityPort,
 	private val movementPort: IMovementPort,
-): IActivityService, GenericService() {
+	private val rowLockPort: IRowLockPort,
+	private val transactionalOperator: TransactionalOperator,
+	clock: Clock,
+): IActivityService, GenericService(clock) {
 	override fun findActivitiesPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -37,8 +49,8 @@ class ActivityService(
 		return port.findPage(projectId, pageable, searchParams)
 	}
 
-	override fun findActivityById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
-		return port.findById(projectId, id, visibilitySearched).notFoundIfEmpty(id)
+	override fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel> {
+		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
 	}
 
 	override fun findActivityMovementsPage(
@@ -52,11 +64,11 @@ class ActivityService(
 
 	override fun createActivity(currentUser: CurrentUserModel, activity: ActivityModel): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
-		).flatMap { port.create(activity.apply { create(currentUser) }) }
+		).flatMap { port.create(activity.apply { create(currentUser, now()) }) }
 	}
 
 	override fun updateActivityById(
@@ -66,12 +78,12 @@ class ActivityService(
 		activity: ActivityModel
 	): Mono<ActivityModel> {
 		return projectService.validateDateTimes(
-			activity.project!!.id!!,
+			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { findActivityById(projectId, id, visibilitySearched = null) }
+			.flatMap { findActivityById(projectId, id, isVisible = null) }
 			.map {
 				it.apply {
 					name = activity.name
@@ -86,46 +98,38 @@ class ActivityService(
 	}
 
 	override fun disableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel> {
-		return findActivityById(projectId, id, visibilitySearched = true)
+		return findActivityById(projectId, id, isVisible = true)
 			.updateVisibility(visibility = false)
 			.updateActivity(currentUser)
 	}
 
 	override fun enableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel> {
-		return findActivityById(projectId, id, visibilitySearched = false)
+		return findActivityById(projectId, id, isVisible = false)
 			.updateVisibility(visibility = true)
 			.updateActivity(currentUser)
 	}
 
 	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return findActivityById(projectId, id, visibilitySearched = null)
+		return findActivityById(projectId, id, isVisible = null)
+			.flatMap { rowLockPort.lock(ACTIVITY, id).thenReturn(it) }
 			.validateHasNoMovementLinked(ACTIVITY_DELETE_HAS_MOVEMENT)
 			.flatMap { port.deleteById(it.id!!) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun purgeActivitiesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging activities unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
-			.flatMap({
-				if (dryRun) {
-					log.info("[Dry run] activity {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging activity {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Activity {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge activity {}", it, err) }
-				}
-			}, PURGE_DELETE_CONCURRENCY)
+			.purgeEach("activity", dryRun, port::deleteById)
 	}
 
 	private fun Mono<ActivityModel>.updateActivity(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser, now()) })
 	}
 
 	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->
 		movementPort.countAllByActivityId(
-			activityToUpdate.project!!.id!!,
+			activityToUpdate.projectId!!,
 			activityToUpdate.id!!,
 			MovementSearchParamModel(),
 		).handle { it, handle ->

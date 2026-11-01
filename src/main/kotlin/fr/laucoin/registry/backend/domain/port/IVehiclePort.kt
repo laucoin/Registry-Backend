@@ -9,8 +9,13 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Port driven donnant au domaine l'accès à la persistance du véhicule.
+ * Périmètre : Déclare les lectures, recherches et écritures du véhicule dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
+ */
 interface IVehiclePort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -18,7 +23,7 @@ interface IVehiclePort {
 	): Mono<PageModel<VehicleModel>>
 
 	fun countAll(projectId: UUID, searchParams: VehicleSearchParamModel): Mono<Long>
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleModel>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<VehicleModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: VehicleSearchParamModel): Flux<VehicleModel>
 	fun findUnusedSince(dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: VehicleModel): Mono<VehicleModel>

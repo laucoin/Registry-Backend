@@ -30,7 +30,13 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_TABLE
 
+/**
+ * Objectif : Fournit les fragments SQL partagés par les repositories.
+ * Périmètre : Porte les jointures d'audit, les clauses de visibilité et de projet et le seuil de recherche textuelle (similarité de mots d'au moins 0,3).
+ * Limites : Fragments uniquement ; les paramètres sont toujours liés, jamais concaténés. Le seuil est une constante SQL, pas une clé de configuration.
+ */
 object GenericQueries {
+	const val TEXT_SEARCH_MIN_SCORE = "0.3"
 	private const val CREATOR_TABLE = "create_tb"
 	const val SELECT_CREATOR = """
         $CREATOR_TABLE.$USER_FIRST_NAME AS $CREATOR_FIRST_NAME,
@@ -62,7 +68,10 @@ object GenericQueries {
 	const val PROJECT_JOIN =
 		"INNER JOIN $PROJECT_TABLE $LINKED_PROJECT_TABLE ON t.$LINKED_PROJECT_ID = $LINKED_PROJECT_TABLE.$ID AND $LINKED_PROJECT_TABLE.$VISIBLE IS TRUE"
 
-	const val VISIBLE_CLAUSE = "(:visibilitySearched IS NULL OR t.$VISIBLE = :visibilitySearched)"
+	const val VISIBLE_CLAUSE = "(:isVisible IS NULL OR t.$VISIBLE = :isVisible)"
+
+	/** Les éléments masqués n'apparaissent que pour les ids que l'appelant a le droit de réactiver. */
+	const val HIDDEN_READABLE_CLAUSE = "(t.$VISIBLE IS TRUE OR t.$ID IN (:hiddenReadableIds))"
 
 	const val PROJECT_CLAUSE = "(t.$LINKED_PROJECT_ID = :projectId)"
 }

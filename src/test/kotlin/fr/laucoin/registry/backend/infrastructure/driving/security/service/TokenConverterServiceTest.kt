@@ -1,0 +1,302 @@
+package fr.laucoin.registry.backend.infrastructure.driving.security.service
+
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.JwtConversionException
+import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
+import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
+import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
+import fr.laucoin.registry.backend.domain.service.IRoleService
+import fr.laucoin.registry.backend.domain.service.IUserService
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserOidcId
+import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
+import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatus.CONFLICT
+import java.util.UUID
+import org.springframework.http.HttpStatus.LOCKED
+import org.springframework.http.HttpStatus.UNAUTHORIZED
+import org.springframework.security.oauth2.jwt.Jwt
+import reactor.core.Exceptions
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+
+
+class TokenConverterServiceTest {
+	private val roleService: IRoleService = mock()
+	private val userService: IUserService = mock()
+	private val profilePort: IProjectProfilePort = mock()
+	private val principalCache: IPrincipalCacheService = mock()
+	private val service = TokenConverterService(
+		userService, profilePort, roleService, principalCache, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY, EMAIL_VERIFIED_KEY
+	)
+
+	private val jwt = mock<Jwt>()
+	private val claims: Map<String, Any> = mapOf(
+		USER_ID_KEY to defaultUserOidcId.toString(),
+		EMAIL_KEY to currentUser().email!!,
+		FIRST_NAME_KEY to currentUser().firstName!!,
+		LAST_NAME_KEY to currentUser().lastName!!,
+	)
+
+	private companion object {
+		private const val USER_ID_KEY = "sub"
+		private const val EMAIL_KEY = "email"
+		private const val FIRST_NAME_KEY = "given_name"
+		private const val LAST_NAME_KEY = "family_name"
+		private const val EMAIL_VERIFIED_KEY = "email_verified"
+		private const val USER_ROLE = "USER_ROLE"
+		private const val PROJECT_ROLE = "PROJECT_ROLE"
+
+		@JvmStatic
+		fun `Should convert throw JwtConversionException when jwt does not have email or user id`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(true, false),
+				Arguments.of(false, true),
+				Arguments.of(false, false),
+			)
+
+		@JvmStatic
+		fun `Should convert throw JwtConversionException when user is not visible`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(false, LOCKED, AUTH_BLOCKED_ACCOUNT),
+			)
+
+		@JvmStatic
+		fun `Should convert return Authentication`(): Stream<Arguments> = Stream.of(
+			Arguments.of(currentUser().apply { role = USER_ROLE }, currentUser(), false, null, 0, 1),
+			Arguments.of(null, currentUser(), false, emptyList<ProjectOptionEnum>(), 1, 0),
+			Arguments.of(currentUser().apply { role = USER_ROLE }, currentUser(), true, null, 0, 1),
+			Arguments.of(currentUser().apply { role = USER_ROLE }, currentUser(), true, listOf(VEHICLE), 0, 1),
+		)
+	}
+
+	@BeforeEach
+	fun setup() {
+		whenever(jwt.claims).thenReturn(claims)
+		whenever(jwt.getClaimAsString(any())).thenCallRealMethod()
+
+		whenever(principalCache.get(any(), any())).thenAnswer { invocation ->
+			@Suppress("UNCHECKED_CAST")
+			(invocation.arguments[1] as () -> Mono<CurrentUserModel>).invoke()
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should convert throw JwtConversionException when jwt does not have email or user id`(
+		hasUserId: Boolean,
+		hasEmail: Boolean,
+	) {
+		// Arrange
+		whenever(jwt.hasClaim(USER_ID_KEY)).thenReturn(hasUserId)
+		whenever(jwt.hasClaim(EMAIL_KEY)).thenReturn(hasEmail)
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.convert(jwt).block()
+		}) as JwtConversionException
+
+		// Assert
+		assertEquals(UNAUTHORIZED, result.status)
+		assertEquals(AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN, result.message)
+
+		verifyNoInteractions(roleService)
+		verifyNoInteractions(userService)
+		verifyNoInteractions(profilePort)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should convert throw JwtConversionException when user is not visible`(
+		userVisible: Boolean,
+		expectedStatus: HttpStatus,
+		expectedMessage: String,
+	) {
+		// Arrange
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+
+		val currentUser = currentUser().apply { visible = userVisible }
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.convert(jwt).block()
+		}) as JwtConversionException
+
+		// Assert
+		assertEquals(expectedStatus, result.status)
+		assertEquals(expectedMessage, result.message)
+
+		verifyNoInteractions(roleService)
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verifyNoInteractions(profilePort)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should convert return Authentication`(
+		oidcDatabaseUser: CurrentUserModel?,
+		currentUser: CurrentUserModel,
+		projectIsVisible: Boolean,
+		projectOptions: List<ProjectOptionEnum>?,
+		expectedUserCreation: Int,
+		expectedUserUpdate: Int,
+	) {
+		// Arrange
+		val projectRole = ProjectProfileRoleModel(defaultProjectId, projectOptions, projectIsVisible, PROJECT_ROLE)
+
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.justOrEmpty(oidcDatabaseUser))
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
+			.thenReturn(Mono.just(currentUser().apply { role = USER_ROLE }))
+
+		whenever(userService.updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull()))
+			.thenReturn(Mono.just(currentUser().apply { role = USER_ROLE }))
+
+		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.just(projectRole))
+		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
+		whenever(roleService.getAuthoritiesByProjectRole(any(), any(), anyOrNull())).thenReturn(emptyList())
+
+		// Act
+		service.convert(jwt).block()
+
+		// Assert
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userService, times(expectedUserCreation))
+			.createUser(defaultUserOidcId, currentUser.email!!, currentUser.firstName, currentUser.lastName)
+
+		verify(userService, times(expectedUserUpdate)).updateUserIfPersonalDataChanged(
+			any(), eq(currentUser.email!!), eq(currentUser.firstName), eq(currentUser.lastName)
+		)
+
+		verify(profilePort).findProjectProfilesRolesByUserId(defaultUserId)
+		verify(roleService).getAuthoritiesByUserRole(USER_ROLE)
+		verify(roleService).getAuthoritiesByProjectRole(eq(PROJECT_ROLE), eq(defaultProjectId), anyOrNull())
+	}
+
+	@Test
+	fun `Should throw when multiple users already exist with the email`() {
+		// Arrange
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull()))
+			.thenReturn(Flux.just(CurrentUserModel(), CurrentUserModel()))
+
+		// Act
+		val result = assertThrows(JwtConversionException::class.java) {
+			service.convert(jwt).block()
+		}
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
+
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).linkUserToOidcId(any(), any())
+		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+		verifyNoInteractions(profilePort)
+		verifyNoInteractions(roleService)
+	}
+
+	@Test
+	fun `Should convert link an existing user found by email to the new OIDC ID`() {
+		// Arrange
+		val existingUser = currentUser().apply { role = USER_ROLE; oidcId = null }
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(true)
+		whenever(userService.linkUserToOidcId(any(), any())).thenReturn(Mono.just(existingUser))
+
+		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.empty())
+		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
+
+		// Act
+		service.convert(jwt).block()
+
+		// Assert
+		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userService).linkUserToOidcId(existingUser, defaultUserOidcId)
+		verify(userService, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
+		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+	}
+
+	@Test
+	fun `Should convert refuse to link an existing user when the email is not verified`() {
+		// Arrange
+		val existingUser = currentUser().apply { role = USER_ROLE }
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(false)
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+
+		// Act
+		val error = assertThrows(JwtConversionException::class.java) { service.convert(jwt).block() }
+
+		// Assert
+		assertEquals(CONFLICT, error.status)
+		verify(userService, never()).linkUserToOidcId(any(), any())
+	}
+
+	@Test
+	fun `Should convert refuse to link an existing user already bound to another OIDC ID`() {
+		// Arrange
+		val existingUser = currentUser().apply { role = USER_ROLE; oidcId = UUID.randomUUID() }
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(true)
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+
+		// Act
+		val error = assertThrows(JwtConversionException::class.java) { service.convert(jwt).block() }
+
+		// Assert
+		assertEquals(CONFLICT, error.status)
+		verify(userService, never()).linkUserToOidcId(any(), any())
+	}
+
+	@Test
+	fun `Should convert map a duplicate email race to a clean conflict error`() {
+		// Arrange
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(userService.createUser(any(), any(), anyOrNull(), anyOrNull()))
+			.thenReturn(Mono.error(DataIntegrityViolationException("duplicate key value violates unique constraint")))
+
+		// Act
+		val result = assertThrows(JwtConversionException::class.java) {
+			service.convert(jwt).block()
+		}
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
+	}
+}

@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.PROFILE
 import java.util.Objects
 import java.util.Optional
 import org.springframework.stereotype.Component
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Component
 @Component
 class ProjectProfileReaderDtoMapper(
 	private val translateService: ITranslateService,
-	private val projectMapper: ProjectReaderDtoMapper,
 	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
 	private val partialUserMapper: PartialUserReaderDtoMapper,
 ): IGenericReaderDtoMapper<ProjectProfileModel, ProjectProfileReaderDto> {
@@ -28,14 +28,14 @@ class ProjectProfileReaderDtoMapper(
 				)
 			}.orElse(null),
 			availabilityStatus = Optional.ofNullable(model.availabilityStatus)
-				.map { availabilityStatusMapper.toDto(it, model.startAccess, model.endAccess) }
+				.map { availabilityStatusMapper.toDto(it, PROFILE, model.startAccess, model.endAccess) }
 				.orElse(null),
 			status = buildStatus(model),
 			startAccess = model.startAccess,
 			endAccess = model.endAccess,
 		).apply {
 			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
+			projectId = model.projectId
 			visible = model.visible
 			creation = model.creation
 			lastEdition = model.lastEdition

@@ -59,10 +59,24 @@ class IdpAuthenticationAdapterTest {
 			"${mockWebServer.url("/oauth2/authorize")}?response_type=code&client_id=clientId&redirect_uri=redirectUri"
 
 		// Act
-		val result = adapter.getLoginUri(redirectUri)
+		val result = adapter.getLoginUri(redirectUri, null)
 
 		// Assert
 		assertNotNull(result)
+		assertEquals(expected, result.uri)
+	}
+
+	@Test
+	fun `Should getLoginUri append the encoded state when one is provided`() {
+		// Arrange
+		val state = "a b&c=d"
+		val expected = "${mockWebServer.url("/oauth2/authorize")}" +
+			"?response_type=code&client_id=clientId&redirect_uri=redirectUri&state=a+b%26c%3Dd"
+
+		// Act
+		val result = adapter.getLoginUri("redirectUri", state)
+
+		// Assert
 		assertEquals(expected, result.uri)
 	}
 
@@ -269,5 +283,31 @@ class IdpAuthenticationAdapterTest {
 		assertNotNull(result)
 		assertEquals(FAILED_DEPENDENCY, result.status)
 		assertEquals(AUTH_PROVIDER_FAILED, result.message)
+	}
+
+	@Test
+	fun `Should getLoginUri encode the redirect uri so it cannot add parameters`() {
+		// Arrange
+		val redirectUri = "https://app.test/cb?x=1&prompt=none"
+		val expected = "${mockWebServer.url("/oauth2/authorize")}?response_type=code&client_id=clientId&redirect_uri=https%3A%2F%2Fapp.test%2Fcb%3Fx%3D1%26prompt%3Dnone"
+
+		// Act
+		val result = adapter.getLoginUri(redirectUri, null)
+
+		// Assert
+		assertEquals(expected, result.uri)
+	}
+
+	@Test
+	fun `Should getLogoutUri encode the redirect uri so it cannot add parameters`() {
+		// Arrange
+		val redirectUri = "https://app.test/bye&id_token_hint=forged"
+		val expected = "${mockWebServer.url("/oauth2/logout")}?redirect_uri=https%3A%2F%2Fapp.test%2Fbye%26id_token_hint%3Dforged"
+
+		// Act
+		val result = adapter.getLogoutUri(redirectUri, accessToken = null, refreshToken = null).block()
+
+		// Assert
+		assertEquals(expected, result!!.uri)
 	}
 }

@@ -10,6 +10,9 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activit
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATOR_EMAIL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATOR_FIRST_NAME
@@ -21,13 +24,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_DATE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_END_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_NAME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_OPTIONS
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_DATE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_START_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
@@ -60,16 +57,17 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_CONTENT_VEHICLE_MODEL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_LAST_COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_REASON
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TYPE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_FIRST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_PURGED
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_START_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
@@ -78,7 +76,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_LICENSE_PLATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_MODEL
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_TABLE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LINKED_PROJECT_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.TEXT_SEARCH_MIN_SCORE
 
 object MovementQueries {
 	const val SELECT_CONTENT = """
@@ -94,12 +92,15 @@ object MovementQueries {
 	const val CONTENT_JOIN = """
         INNER JOIN $PARTICIPANT_TABLE
             ON t.$MOVEMENT_CONTENT_PARTICIPANT_ID = $PARTICIPANT_TABLE.$ID
-            AND $PARTICIPANT_TABLE.$PARTICIPANT_PURGED IS FALSE
         LEFT JOIN $VEHICLE_TABLE
             ON t.$MOVEMENT_CONTENT_VEHICLE_ID = $VEHICLE_TABLE.$ID
     """
 
 	private const val LINKED_ACTIVITY_TABLE = "activity_tb"
+	const val SELECT_LAST_COMMUNICATION = """
+        (SELECT MAX(tc.$COMMUNICATION_DATE_TIME) FROM $COMMUNICATION_TABLE tc WHERE tc.$COMMUNICATION_MOVEMENT_ID = t.$ID) AS $MOVEMENT_LAST_COMMUNICATION_DATE_TIME
+    """
+
 	const val SELECT_LINKED_ACTIVITY = """
         $LINKED_ACTIVITY_TABLE.$ID AS $MOVEMENT_ACTIVITY_ID,
         $LINKED_ACTIVITY_TABLE.$ACTIVITY_NAME AS $MOVEMENT_ACTIVITY_NAME,
@@ -117,17 +118,20 @@ object MovementQueries {
 
 	const val MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE = """
         (
-            COALESCE(:startDateTimeSearched, '-infinity'::TIMESTAMP) <= t.$MOVEMENT_DATE_TIME AND
-            COALESCE(:endDateTimeSearched, '+infinity'::TIMESTAMP) >= t.$MOVEMENT_DATE_TIME
+            COALESCE(:from, '-infinity'::TIMESTAMP) <= t.$MOVEMENT_DATE_TIME AND
+            COALESCE(:to, '+infinity'::TIMESTAMP) >= t.$MOVEMENT_DATE_TIME
         )
     """
 
 	const val MOVEMENT_TYPE_CLAUSE = """
-        (t.$MOVEMENT_TYPE IN (:typeSearched))
+        (t.$MOVEMENT_TYPE IN (:type))
     """
 
+	const val MOVEMENT_LINKED_ACTIVITY_CLAUSE =
+		"(CAST(:activityId AS UUID) IS NULL OR t.$MOVEMENT_ACTIVITY_ID = CAST(:activityId AS UUID))"
+
 	const val MOVEMENT_ACTIVITY_CLAUSE = """
-        (:linkedToActivity IS NULL OR :linkedToActivity = (t.$MOVEMENT_ACTIVITY_ID IS NOT NULL))
+        (:hasActivity IS NULL OR :hasActivity = (t.$MOVEMENT_ACTIVITY_ID IS NOT NULL))
     """
 
 	private const val PARTICIPANT_PREFIX = "participant_"
@@ -143,15 +147,14 @@ object MovementQueries {
 
 	const val SELECT_ACTIVITY_MOVEMENT_SEARCH = """
         CASE
-            WHEN :textSearched IS NULL THEN 1
-            ELSE similarity($LINKED_ACTIVITY_TABLE.search_text, :textSearched)
+            WHEN :query IS NULL THEN 1
+            ELSE word_similarity(:query, $LINKED_ACTIVITY_TABLE.search_text)
         END AS similarity_score
     """
 
 	const val GROUP_BY_MOVEMENT = """
-         t.$ID, t.$MOVEMENT_DATE_TIME, t.$MOVEMENT_TYPE, t.$MOVEMENT_ACTIVITY_ID, t.$MOVEMENT_REASON, $LINKED_ACTIVITY_TABLE.search_text,
-         $LINKED_PROJECT_TABLE.$ID, $LINKED_PROJECT_NAME, $LINKED_PROJECT_START_DATE, $LINKED_PROJECT_START_TIME, $LINKED_PROJECT_END_DATE,
-         $LINKED_PROJECT_END_TIME, $LINKED_PROJECT_OPTIONS, $LINKED_ACTIVITY_TABLE.$ID, $MOVEMENT_ACTIVITY_NAME,
+         t.$ID, t.$MOVEMENT_DATE_TIME, t.$MOVEMENT_TYPE, t.$MOVEMENT_ACTIVITY_ID, t.$MOVEMENT_REASON, $LINKED_ACTIVITY_TABLE.search_text, 
+         $LINKED_ACTIVITY_TABLE.$ID, $MOVEMENT_ACTIVITY_NAME,
          $MOVEMENT_ACTIVITY_DESCRIPTION, $MOVEMENT_ACTIVITY_DURATION, $MOVEMENT_ACTIVITY_MIN_ALLOWED_PARTICIPANTS,
          $MOVEMENT_ACTIVITY_MAX_ALLOWED_PARTICIPANTS, $MOVEMENT_ACTIVITY_START_AVAILABILITY_DATE,
          $MOVEMENT_ACTIVITY_START_AVAILABILITY_TIME, $MOVEMENT_ACTIVITY_END_AVAILABILITY_DATE, $MOVEMENT_ACTIVITY_END_AVAILABILITY_TIME,
@@ -160,18 +163,16 @@ object MovementQueries {
     """
 
 	const val ACTIVITY_MOVEMENT_TEXT_SEARCH_CLAUSE =
-		"($MOVEMENT_ACTIVITY_ID IS NOT NULL AND (:textSearched IS NULL OR similarity($LINKED_ACTIVITY_TABLE.search_text, :textSearched) > 0))"
+		"($MOVEMENT_ACTIVITY_ID IS NOT NULL AND (:query IS NULL OR word_similarity(:query, $LINKED_ACTIVITY_TABLE.search_text) >= $TEXT_SEARCH_MIN_SCORE))"
 
 	const val ACTIVITY_MOVEMENT_AVAILABILITY_CLAUSE = """
         (
-            :availabilitySearched IS NULL OR :availabilitySearched = (
+            :isAvailable IS NULL OR :isAvailable = (
                 (
-                    COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                 )
             )
         )
@@ -179,32 +180,26 @@ object MovementQueries {
 
 	const val DATE_IN_ACTIVITY_MOVEMENT_DATES_RANGE_CLAUSE = """
         (
-            :dateTimeSearched IS NULL OR (
+            :at IS NULL OR (
                 (
-                    COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) < CAST(:dateTimeSearched AS DATE)
-                    OR (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIME) <= CAST(:dateTimeSearched AS TIME))
+                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:at AS TIMESTAMPTZ)
                 ) AND
                 (
-                    COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) > CAST(:dateTimeSearched AS DATE)
-                    OR (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) = CAST(:dateTimeSearched AS DATE) AND COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CAST(:dateTimeSearched AS TIME))
+                    (COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE($LINKED_ACTIVITY_TABLE.$ACTIVITY_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:at AS TIMESTAMPTZ)
                 )
             )
         )
     """
 
 	const val WITH_CURRENT_MOVEMENT = """
-        last_participant_movement AS (
-            SELECT t.$ID, t.$MOVEMENT_TYPE, plm.$MOVEMENT_CONTENT_PARTICIPANT_ID
+        last_participant_movement AS MATERIALIZED (
+            SELECT DISTINCT ON ($MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID) t.$ID, t.$MOVEMENT_TYPE, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
             FROM $MOVEMENT_TABLE t
-            INNER JOIN (
-                SELECT MAX(t.$MOVEMENT_DATE_TIME) as last_participant_movement_date_time, $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
-                FROM $MOVEMENT_TABLE t
-                INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
-                WHERE t.$VISIBLE IS TRUE
-                GROUP BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID
-            ) AS plm ON plm.last_participant_movement_date_time = t.date_time
+            INNER JOIN $MOVEMENT_CONTENT_TABLE ON $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+            WHERE t.$VISIBLE IS TRUE AND t.$LINKED_PROJECT_ID = :projectId
+            ORDER BY $MOVEMENT_CONTENT_TABLE.$MOVEMENT_CONTENT_PARTICIPANT_ID, t.$MOVEMENT_DATE_TIME DESC, t.$ID
         ),
-        filtered_groups AS (
+        filtered_groups AS MATERIALIZED (
             SELECT t.$ID as $GROUP_CONTENT_PARTICIPANT_ID,
             JSON_AGG(
                 JSON_BUILD_OBJECT(
@@ -234,11 +229,9 @@ object MovementQueries {
             LEFT JOIN $GROUP_TABLE group_presence ON group_presence.$ID = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID AND group_presence.$VISIBLE IS TRUE
                 AND (
                     (
-                        COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) < CURRENT_DATE
-                        OR (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.start_availability_time, '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                        (COALESCE(group_presence.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(group_presence.start_availability_time, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                     ) AND (
-                        COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) > CURRENT_DATE
-                        OR (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) = CURRENT_DATE AND COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                        (COALESCE(group_presence.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(group_presence.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{now} AS TIMESTAMPTZ)
                     )
                 )
             WHERE t.$LINKED_PROJECT_ID = :projectId
@@ -249,18 +242,25 @@ object MovementQueries {
             FROM $PARTICIPANT_TABLE t
             LEFT JOIN last_participant_movement ON last_participant_movement.$MOVEMENT_CONTENT_PARTICIPANT_ID = t.$ID
             LEFT JOIN filtered_groups fg ON t.$ID = fg.$GROUP_CONTENT_PARTICIPANT_ID
-            WHERE t.$VISIBLE IS TRUE AND t.$PARTICIPANT_PURGED IS FALSE AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
+            WHERE t.$VISIBLE IS TRUE AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL AND t.$LINKED_PROJECT_ID = :projectId AND last_participant_movement.$MOVEMENT_TYPE = (CASE WHEN t.$PARTICIPANT_TYPE = 'REGISTERED' THEN 'OUT' ELSE 'IN' END) AND (
                 (
-                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CURRENT_TIME)
+                    COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) < CAST(:#{now} AS DATE)
+                    OR (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, CAST(fg.min_start_availability AS DATE), '+infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, CAST(fg.min_start_availability AS TIME), '00:00:00.000000'::TIME) <= CAST(:#{now} AS TIMETZ))
                 ) AND
                 (
-                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CURRENT_DATE
-                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CURRENT_DATE AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CURRENT_TIME)
+                    COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) > CAST(:#{now} AS DATE)
+                    OR (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, CAST(fg.max_end_availability AS DATE), '-infinity'::DATE) = CAST(:#{now} AS DATE) AND COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, CAST(fg.max_end_availability AS TIME), '23:59:59.999999'::TIME) >= CAST(:#{now} AS TIMETZ))
                 )
             )
         )
     """
 
 	const val CURRENT_MOVEMENT_JOIN = "INNER JOIN current_movement ON current_movement.$ID = t.$ID"
+
+	const val MOVEMENT_SORT = """
+        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_DATE_TIME END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_DATE_TIME END DESC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'type' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END ASC NULLS LAST,
+        CASE WHEN CAST(:sortField AS TEXT) = 'type' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END DESC NULLS LAST,
+    """
 }

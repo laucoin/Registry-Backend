@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.security.OAuthFlow
 import io.swagger.v3.oas.models.security.OAuthFlows
+import io.swagger.v3.oas.models.security.Scopes
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2
@@ -33,6 +34,11 @@ import java.util.*
         )
     )
 )
+/**
+ * Objectif : Configure le document OpenAPI et ses groupes.
+ * Périmètre : Déclare le schéma OAuth2 authorization code et les groupes d'API par ressource.
+ * Limites : Ne sert la documentation que lorsque la fonctionnalité de documentation est activée.
+ */
 class SwaggerConfig(
     @param:Value($$"${registry.security.oauth2.authorization-uri:}")
     private val configAuthUrl: String?,
@@ -49,26 +55,28 @@ class SwaggerConfig(
     fun openApi(): OpenAPI {
         val openAPI = OpenAPI()
         if (Objects.nonNull(configAuthUrl) && Objects.nonNull(configTokenUrl)) {
-            openAPI.components(
-                Components()
-                    .addSecuritySchemes(
-                        CLIENT_NAME,
-                        SecurityScheme()
-                            .type(OAUTH2)
-                            .flows(
-                                OAuthFlows()
-                                    .implicit(
-                                        OAuthFlow().apply {
-                                            authorizationUrl = configAuthUrl
-                                            refreshUrl = configTokenUrl
-                                            tokenUrl = configTokenUrl
-                                        }
-                                    )
-                            )
-                    )
-            ).security(listOf(SecurityRequirement().addList(CLIENT_NAME)))
+            openAPI.components(Components().addSecuritySchemes(CLIENT_NAME, oauth2Scheme()))
+                .security(listOf(SecurityRequirement().addList(CLIENT_NAME)))
         }
         return openAPI
+    }
+
+    private fun oauth2Scheme(): SecurityScheme {
+        return SecurityScheme()
+            .type(OAUTH2)
+            .flows(OAuthFlows().authorizationCode(authorizationCodeFlow()))
+    }
+
+    private fun authorizationCodeFlow(): OAuthFlow {
+        return OAuthFlow().apply {
+            authorizationUrl = configAuthUrl
+            refreshUrl = configTokenUrl
+            tokenUrl = configTokenUrl
+            scopes = Scopes()
+                .addString("openid", "OpenID")
+                .addString("profile", "Profile")
+                .addString("email", "Email")
+        }
     }
 
     @Bean
