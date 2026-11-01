@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.domain.service
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -25,6 +26,8 @@ interface IAlertService {
 		pageable: PageableModel,
 		searchParams: AlertSearchParamModel,
 	): Mono<PageModel<AlertModel>>
+
+	fun findAlertStatistics(projectId: UUID): Mono<AlertStatisticsModel>
 
 	fun findAlertById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<AlertModel>
 	fun findAlertForUser(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel>

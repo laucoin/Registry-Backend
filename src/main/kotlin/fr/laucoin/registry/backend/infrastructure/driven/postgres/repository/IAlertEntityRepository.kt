@@ -3,23 +3,27 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertStatisticsEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_CRITICALITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_DATE_IN_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_LAST_COMMUNICATION_JOIN
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_RESOLUTION_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_STATUS_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_CRITICALITY
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_LAST_COMMUNICATION
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_SEARCH
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_STATISTICS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_CLAUSE
@@ -102,6 +106,15 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 		reinforcedAfterHours: Long,
 		highAfterHours: Long,
 	): Mono<AlertEntity>
+
+	@Query(
+		"""
+        SELECT $SELECT_ALERT_STATISTICS
+        FROM $ALERT_TABLE t $ALERT_RESOLUTION_JOIN
+        WHERE $PROJECT_CLAUSE AND t.$VISIBLE = TRUE
+        """
+	)
+	fun findStatistics(projectId: UUID): Mono<AlertStatisticsEntity>
 
 	@Query(
 		"""

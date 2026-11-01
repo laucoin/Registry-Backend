@@ -2,12 +2,14 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.AlertEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.AlertStatisticsEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IAlertEntityRepository
 import java.time.Clock
 import java.time.LocalDate
@@ -26,6 +28,7 @@ import reactor.core.publisher.Mono
 class AlertModelPostgresRepository(
 	private val repository: IAlertEntityRepository,
 	private val mapper: AlertEntityMapper,
+	private val statisticsMapper: AlertStatisticsEntityMapper,
 	@param:Value($$"${registry.feature.alert.criticality.reinforced-after-hours}")
 	private val reinforcedAfterHours: Long,
 	@param:Value($$"${registry.feature.alert.criticality.high-after-hours}")
@@ -68,6 +71,10 @@ class AlertModelPostgresRepository(
 			searchParams.to,
 			limit,
 		).map(mapper::toModel)
+	}
+
+	override fun findStatistics(projectId: UUID): Mono<AlertStatisticsModel> {
+		return repository.findStatistics(projectId).map(statisticsMapper::toModel)
 	}
 
 	override fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID> {
