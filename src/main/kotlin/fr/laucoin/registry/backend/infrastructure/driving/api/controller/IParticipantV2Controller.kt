@@ -46,6 +46,7 @@ import org.springframework.format.annotation.DateTimeFormat.ISO.DATE
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.ResponseEntity
+import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -241,6 +242,7 @@ interface IParticipantV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
+		request: ServerHttpRequest,
 	): Mono<ResponseEntity<ParticipantExportReaderDto>>
 
 	@Operation(

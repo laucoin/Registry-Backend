@@ -3,6 +3,11 @@ package fr.laucoin.registry.backend.domain.service.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_EXPORT
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.EXPORT
+import fr.laucoin.registry.backend.domain.enumeration.AuditOutcomeEnum
+import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
+import fr.laucoin.registry.backend.domain.model.AuditModel
+import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -21,6 +26,7 @@ import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.IExportService
 import java.time.Clock
 import java.time.ZonedDateTime
@@ -33,7 +39,7 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Construit les exports de données personnelles RGPD (utilisateur et participant) pour les droits d'accès et de portabilité.
- * Périmètre : Règles d'autorisation de l'export et assemblage des modèles d'export.
+ * Périmètre : Règles d'autorisation de l'export, assemblage des modèles d'export et trace d'audit de chaque demande (réussie ou refusée).
  * Limites : Ne charge jamais de données de tiers (autres participants, autres auteurs, messages en texte libre) ; ne modifie aucune donnée.
  */
 @Service
@@ -44,13 +50,18 @@ class ExportService(
 	private val participantPort: IParticipantPort,
 	private val movementPort: IMovementPort,
 	private val projectPort: IProjectPort,
+	private val auditService: IAuditService,
 	clock: Clock,
 ): IExportService, GenericService(clock) {
 	companion object {
 		private const val EXPORT_PAGE_SIZE = 200
 	}
 
-	override fun exportUser(currentUser: CurrentUserModel, userId: UUID): Mono<UserExportModel> {
+	override fun exportUser(
+		currentUser: CurrentUserModel,
+		userId: UUID,
+		client: ClientContextModel,
+	): Mono<UserExportModel> {
 		log.info("User {} exports the data of the user {}", currentUser.id, userId)
 		val generatedAt = ZonedDateTime.now(clock)
 
@@ -64,28 +75,43 @@ class ExportService(
 					findAllParticipantExports(userId, generatedAt).collectList(),
 				).map { UserExportModel(generatedAt, user, it.t1.orElse(null), it.t2, it.t3) }
 			}
+			.doOnNext { audit(currentUser, client, AuditResourceTypeEnum.USER, userId, null, AuditOutcomeEnum.SUCCESS) }
 	}
 
 	override fun exportParticipant(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		id: UUID
+		id: UUID,
+		client: ClientContextModel,
 	): Mono<ParticipantExportModel> {
 		return participantPort.findById(projectId, id, isVisible = null)
 			.notFoundIfEmpty(id)
 			.filter { canExportParticipant(currentUser, projectId, it) }
-			.switchIfEmpty(Mono.error { forbidden(currentUser, id) })
+			.switchIfEmpty(Mono.error { forbidden(currentUser, projectId, id, client) })
 			.doOnNext { log.info("User {} exports the data of the participant {}", currentUser.id, id) }
 			.flatMap { buildParticipantExport(it, ZonedDateTime.now(clock)) }
+			.doOnNext { audit(currentUser, client, AuditResourceTypeEnum.PARTICIPANT, id, projectId, AuditOutcomeEnum.SUCCESS) }
 	}
 
 	private fun canExportParticipant(currentUser: CurrentUserModel, projectId: UUID, participant: ParticipantModel) =
 		currentUser.hasAuthority(projectId, REGISTRY_PROJECT_PARTICIPANT_EXPORT) ||
 			(participant.user?.id != null && participant.user?.id == currentUser.id)
 
-	private fun forbidden(currentUser: CurrentUserModel, id: UUID): RegistryException {
+	private fun forbidden(currentUser: CurrentUserModel, projectId: UUID, id: UUID, client: ClientContextModel): RegistryException {
 		log.warn("User {} is not allowed to export the participant {}", currentUser.id, id)
+		audit(currentUser, client, AuditResourceTypeEnum.PARTICIPANT, id, projectId, AuditOutcomeEnum.FORBIDDEN)
 		return RegistryException(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+	}
+
+	private fun audit(
+		currentUser: CurrentUserModel,
+		client: ClientContextModel,
+		resourceType: AuditResourceTypeEnum,
+		resourceId: UUID,
+		projectId: UUID?,
+		outcome: AuditOutcomeEnum,
+	) {
+		auditService.record(AuditModel(EXPORT, resourceType, resourceId, projectId, currentUser.id, outcome, client, now()))
 	}
 
 	private fun findAllParticipantExports(userId: UUID, generatedAt: ZonedDateTime) =

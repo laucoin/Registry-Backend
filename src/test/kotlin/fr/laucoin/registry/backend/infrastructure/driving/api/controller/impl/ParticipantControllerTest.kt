@@ -928,7 +928,7 @@ class ParticipantControllerTest : TestContext() {
 		// Arrange
 		val id = UUID.randomUUID()
 		val export = ParticipantExportModel(ZonedDateTime.now(ZoneOffset.UTC), "Camp", ParticipantModel(), emptyList())
-		whenever(exportService.exportParticipant(any(), eq(defaultProjectId), eq(id))).thenReturn(Mono.just(export))
+		whenever(exportService.exportParticipant(any(), eq(defaultProjectId), eq(id), any())).thenReturn(Mono.just(export))
 
 		// Act
 		val result = webClient.authenticate().get()
