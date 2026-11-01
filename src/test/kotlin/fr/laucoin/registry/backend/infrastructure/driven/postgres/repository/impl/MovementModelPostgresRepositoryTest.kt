@@ -40,6 +40,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
@@ -359,7 +360,7 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 	@TestInstance(PER_CLASS)
 	@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 	inner class WritingTests {
-		private val movementDateTime: ZonedDateTime = ZonedDateTime.now()
+		private val movementDateTime: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC)
 		private lateinit var uuid: UUID
 
 		@Test
@@ -370,7 +371,7 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 				dateTime = movementDateTime
 				type = IN
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -396,7 +397,7 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 				content = listOf(MovementContentModel().apply {
 					participant = ParticipantModel().apply { id = defaultParticipantId }
 				})
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -421,7 +422,7 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 				type = IN
 				this.projectId = defaultProjectId
 				content = emptyList()
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

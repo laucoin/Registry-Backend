@@ -103,7 +103,7 @@ class UserProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = ProjectProfileSearchParamModel(
 			query = query,
 			isAvailable = isAvailable,

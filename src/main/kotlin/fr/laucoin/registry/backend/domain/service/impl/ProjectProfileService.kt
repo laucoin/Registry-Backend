@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
@@ -43,10 +46,12 @@ class ProjectProfileService(
 	private val roleService: IRoleService,
 	private val userPort: IUserPort,
 	private val principalCache: IPrincipalCacheService,
+	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
+	clock: Clock,
 	@param:Value($$"${registry.feature.profile.searched.max-user-result}")
 	private val maxUserResult: Int,
-): IProjectProfileService, GenericProfileService(port) {
+): IProjectProfileService, GenericProfileService(port, clock) {
 	override fun findProjectProfilesPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -93,16 +98,11 @@ class ProjectProfileService(
 		userIds: List<UUID>,
 		profiles: List<ProjectProfileModel>
 	): Mono<Pair<List<UUID>, List<UUID>>> {
-		return validateNoProfileConflict(
-			projectId,
-			userIds,
-			profileId = null,
-			profiles.first().startAccess?.toZonedDateTime(OffsetTime.MIN),
-			profiles.first().endAccess?.toZonedDateTime(OffsetTime.MAX)
-		)
+		return rowLockPort.lock(PROJECT, projectId)
+			.then(Mono.defer { validateNoCreationConflict(projectId, userIds, profiles.first()) })
 			.map { allowedUsers ->
 				profiles.filter { allowedUsers.contains(it.user!!.id) }
-					.map { it.apply { create(currentUser) } }
+					.map { it.apply { create(currentUser, now()) } }
 			}
 			.flatMapMany { port.saveAll(it) }
 			.collectList()
@@ -110,6 +110,21 @@ class ProjectProfileService(
 				val savedUserId = it.mapNotNull { profile -> profile.user!!.id }
 				Pair(savedUserId, userIds.minus(savedUserId.toSet()))
 			}
+			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateNoCreationConflict(
+		projectId: UUID,
+		userIds: List<UUID>,
+		profile: ProjectProfileModel,
+	): Mono<List<UUID>> {
+		return validateNoProfileConflict(
+			projectId,
+			userIds,
+			profileId = null,
+			profile.startAccess?.toZonedDateTime(OffsetTime.MIN),
+			profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
+		)
 	}
 
 	override fun updateProjectProfileById(
@@ -118,13 +133,14 @@ class ProjectProfileService(
 		id: UUID,
 		profile: ProjectProfileModel
 	): Mono<ProjectProfileModel> {
-		return findProjectProfileById(projectId, id, isVisible = null)
+		return rowLockPort.lock(PROJECT, projectId)
+			.then(Mono.defer { findProjectProfileById(projectId, id, isVisible = null) })
 			.flatMap {
 				validateNoProfileConflict(
 					projectId,
 					listOf(it.user!!.id!!),
 					it.id,
-					profile.endAccess?.toZonedDateTime(OffsetTime.MIN),
+					profile.startAccess?.toZonedDateTime(OffsetTime.MIN),
 					profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
 				).map { _ -> it }
 			}
@@ -139,6 +155,7 @@ class ProjectProfileService(
 			}
 			.updateProjectProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(it.user?.oidcId) }
 	}
 
 	override fun blockProjectProfileById(
@@ -151,6 +168,7 @@ class ProjectProfileService(
 			.updateVisibility(visibility = false)
 			.updateProjectProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
+			.doOnNext { principalCache.invalidate(it.user?.oidcId) }
 	}
 
 	override fun unblockProjectProfileById(
@@ -217,7 +235,7 @@ class ProjectProfileService(
 
 	private fun Mono<ProjectProfileModel>.updateProjectProfile(currentUser: CurrentUserModel) = flatMap { profile ->
 		val oidcId = profile.user?.oidcId
-		port.update(profile.apply { update(currentUser) })
+		port.update(profile.apply { update(currentUser, now()) })
 			.doOnNext { principalCache.invalidate(oidcId) }
 	}
 }

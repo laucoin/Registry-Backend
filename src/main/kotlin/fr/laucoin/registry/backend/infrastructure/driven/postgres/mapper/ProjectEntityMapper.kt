@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ProjectCountsModel
@@ -11,13 +12,13 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.Gene
 import org.springframework.stereotype.Component
 
 @Component
-class ProjectEntityMapper: IEntityMapper<ProjectModel, ProjectEntity> {
+class ProjectEntityMapper(private val clock: Clock): IEntityMapper<ProjectModel, ProjectEntity> {
 	override fun toModel(entity: ProjectEntity): ProjectModel {
 		return ProjectModel().apply {
 			name = entity.name
 			begin = mapCustomDateTime(entity.beginDate, entity.beginTime)
 			end = mapCustomDateTime(entity.endDate, entity.endTime)
-			status = buildStatus()
+			status = buildStatus(clock)
 			options = entity.options
 			counts = toCounts(entity)
 		}.fillWithEntity(entity)

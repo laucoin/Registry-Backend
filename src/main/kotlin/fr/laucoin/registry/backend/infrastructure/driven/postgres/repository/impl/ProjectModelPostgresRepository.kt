@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -25,6 +26,7 @@ import reactor.core.publisher.Mono
 class ProjectModelPostgresRepository(
 	private val repository: IProjectEntityRepository,
 	private val mapper: ProjectEntityMapper,
+	private val clock: Clock,
 ): IProjectPort {
 	override fun findPage(
 		pageable: PageableModel,
@@ -41,7 +43,7 @@ class ProjectModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findPage(
@@ -50,7 +52,7 @@ class ProjectModelPostgresRepository(
 		searchParams: ProjectSearchParamModel
 	): Mono<PageModel<ProjectModel>> {
 		if (projectIds.isEmpty()) {
-			return Mono.just(PageModel(pageable, 0, emptyList()))
+			return Mono.just(PageModel(pageable, 0, emptyList(), ZonedDateTime.now(clock)))
 		}
 
 		return repository.findAllInProjectIds(
@@ -65,7 +67,7 @@ class ProjectModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ProjectEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 
 	override fun validDateTime(id: UUID, begin: ZonedDateTime?, end: ZonedDateTime?): Mono<Boolean> {

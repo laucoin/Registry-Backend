@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_STATUS_DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PRESENCE_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
@@ -19,6 +20,7 @@ import java.util.Objects
 @Component
 class PresenceStatusReaderDtoMapper(
 	private val translateService: ITranslateService,
+	private val clock: Clock,
 ) : GenericDurationReaderDtoMapper(translateService) {
 	fun toDto(model: PresenceStatusEnum): LabelDto {
 		return LabelDto(
@@ -45,7 +47,7 @@ class PresenceStatusReaderDtoMapper(
 		startAvailability: CustomDateTimeModel?,
 		endAvailability: CustomDateTimeModel?,
 	): String {
-		val now = CustomDateTimeModel.now()
+		val now = CustomDateTimeModel.now(clock)
 		return when {
 			model == OVERDUE -> translateService.getMessage(code = "$PRESENCE_STATUS_PREFIX$model")
 

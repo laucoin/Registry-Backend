@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -31,6 +32,7 @@ class GroupModelPostgresRepository(
 	private val transactionalOperator: TransactionalOperator,
 	private val mapper: GroupEntityMapper,
 	private val contentMapper: GroupContentEntityMapper,
+	private val clock: Clock,
 ): IGroupPort {
 	override fun findPage(
 		projectId: UUID,
@@ -49,7 +51,7 @@ class GroupModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, GroupEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, GroupEntity::fullCount, mapper::toModel)
 			.flatMap { withOnSiteCounts(projectId, it) }
 	}
 

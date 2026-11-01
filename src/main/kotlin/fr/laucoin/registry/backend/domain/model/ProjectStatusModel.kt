@@ -1,12 +1,11 @@
 package fr.laucoin.registry.backend.domain.model
 
 import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
 
 data class ProjectStatusModel(
 	val registered: ParticipantStatusModel,
 	val guests: Long,
-	val lastRefresh: ZonedDateTime = now()
+	val lastRefresh: ZonedDateTime? = null
 ) {
 	data class ParticipantStatusModel(
 		var presentMinors: Long,

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import java.time.Clock
 import com.fasterxml.jackson.annotation.JsonIgnore
 import java.time.LocalDate
 import java.time.LocalTime
@@ -25,8 +26,8 @@ data class CustomDateTimeModel(
 		val EPOCH = CustomDateTimeModel(LocalDate.EPOCH)
 
 		@JsonIgnore
-		fun now(): CustomDateTimeModel {
-			return CustomDateTimeModel(ZonedDateTime.now(ZoneId.of("UTC")))
+		fun now(clock: Clock): CustomDateTimeModel {
+			return CustomDateTimeModel(ZonedDateTime.now(clock.withZone(ZoneOffset.UTC)))
 		}
 	}
 

@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum.REINF
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -20,7 +21,7 @@ class AlertReaderDtoMapperTest {
 	@Test
 	fun `Should toDto expose the criticality and the last communication`() {
 		// Arrange
-		val dateTime = ZonedDateTime.now()
+		val dateTime = ZonedDateTime.now(ZoneOffset.UTC)
 		val model = AlertModel(
 			criticality = REINFORCED,
 			lastCommunication = CommunicationModel(dateTime, "message"),

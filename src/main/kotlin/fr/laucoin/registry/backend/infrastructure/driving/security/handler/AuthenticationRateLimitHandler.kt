@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
+import java.time.Clock
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
@@ -31,6 +32,7 @@ class AuthenticationRateLimitHandler(
 	private val translateService: ITranslateService,
 	private val localeContextResolver: LocaleContextResolver,
 	private val objectMapper: ObjectMapper,
+	private val clock: Clock,
 	private val capacity: Int,
 	private val windowSeconds: Long,
 	maxTrackedClients: Long,
@@ -51,7 +53,7 @@ class AuthenticationRateLimitHandler(
 
 		val clientId = request.remoteAddress?.address?.hostAddress ?: return chain.filter(exchange)
 		val allowed = counters.get("$clientId|$matchedPath") {
-			SlidingWindowCounter(capacity, Duration.ofSeconds(windowSeconds))
+			SlidingWindowCounter(clock, capacity, Duration.ofSeconds(windowSeconds))
 		}.tryConsume()
 
 		return if (allowed) chain.filter(exchange) else tooManyRequests(exchange)
@@ -81,13 +83,13 @@ class AuthenticationRateLimitHandler(
 		return response.writeWith(Mono.just(response.bufferFactory().wrap(objectMapper.writeValueAsBytes(error))))
 	}
 
-	private class SlidingWindowCounter(private val capacity: Int, private val window: Duration) {
-		private val state = AtomicReference(WindowState(Instant.now(), 0))
+	private class SlidingWindowCounter(private val clock: Clock, private val capacity: Int, private val window: Duration) {
+		private val state = AtomicReference(WindowState(clock.instant(), 0))
 
 		fun tryConsume(): Boolean {
 			while (true) {
 				val current = state.get()
-				val now = Instant.now()
+				val now = clock.instant()
 				val next = if (Duration.between(current.start, now) >= window) {
 					WindowState(now, 1)
 				} else {

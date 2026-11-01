@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ALERT
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DELETE_HAS_COMMUNICATION
@@ -40,8 +44,10 @@ class AlertService(
 	private val projectService: IProjectService,
 	private val port: IAlertPort,
 	private val communicationPort: ICommunicationPort,
+	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
-): IAlertService, GenericService() {
+	clock: Clock,
+): IAlertService, GenericService(clock) {
 	override fun findAlertsPage(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
@@ -53,7 +59,8 @@ class AlertService(
 	}
 
 	override fun findAlertForUser(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertModel> {
-		return findAlertById(projectId, id, isVisible = null).map { restrictToReadableFields(currentUser, it) }
+		return findAlertById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_ALERT_D))
+			.map { restrictToReadableFields(currentUser, it) }
 	}
 
 	private fun restrictToReadableFields(currentUser: CurrentUserModel, alert: AlertModel): AlertModel {
@@ -173,7 +180,7 @@ class AlertService(
 		}
 
 	private fun Mono<AlertModel>.updateAlert(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) }).map { updated -> restrictToReadableFields(currentUser, updated) }
+		port.update(it.apply { update(currentUser, now()) }).map { updated -> restrictToReadableFields(currentUser, updated) }
 	}
 
 	override fun disableAlertById(
@@ -202,24 +209,17 @@ class AlertService(
 		id: UUID
 	): Mono<Unit> {
 		return findAlertById(projectId, id, isVisible = null)
+			.flatMap { rowLockPort.lock(ALERT, id).thenReturn(it) }
 			.validateHasNoCommunicationLinked(ALERT_DELETE_HAS_COMMUNICATION)
 			.flatMap { port.deleteById(it.id!!) }
+			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun purgeAlertsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging alerts older than {} and uncommented since {}", dateThreshold, dateThreshold)
 		return port.findOlderThanAndUncommentedSince(dateThreshold)
-			.flatMap({
-				if (dryRun) {
-					log.info("[Dry run] alert {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging alert {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Alert {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge alert {}", it, err) }
-				}
-			}, PURGE_DELETE_CONCURRENCY)
+			.purgeEach("alert", dryRun, port::deleteById)
+
 	}
 
 	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
@@ -62,6 +63,7 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
@@ -73,14 +75,14 @@ class CommunicationServiceTest {
 	private val movementPort: IMovementPort = mock()
 	private val alertPort: IAlertPort = mock()
 	private val service: ICommunicationService = CommunicationService(
-		projectService, port, movementPort, alertPort, MAX_ACTIVITIES, MAX_ALERTS
+		projectService, port, movementPort, alertPort, Clock.systemUTC(), MAX_ACTIVITIES, MAX_ALERTS
 	)
 
 	private companion object {
 		private const val MAX_ACTIVITIES = 1
 		private const val MAX_ALERTS = 2
-		private val past = ZonedDateTime.now().minusDays(10L)
-		private val now = ZonedDateTime.now()
+		private val past = ZonedDateTime.now(ZoneOffset.UTC).minusDays(10L)
+		private val now = ZonedDateTime.now(ZoneOffset.UTC)
 
 		@JvmStatic
 		fun `Should createCommunication check date and call port create`(): Stream<Arguments> {
@@ -377,7 +379,7 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should updateCommunicationById check date, check existing communication, call port updateCommunication`() {
 		// Arrange
-		val now = ZonedDateTime.now()
+		val now = ZonedDateTime.now(ZoneOffset.UTC)
 		val communication = defaultCommunication().apply { dateTime = now; movement = defaultMovement() }
 
 		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))

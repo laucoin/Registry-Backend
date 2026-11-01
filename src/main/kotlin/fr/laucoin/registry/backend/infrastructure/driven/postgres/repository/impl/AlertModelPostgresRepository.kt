@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -29,6 +30,7 @@ class AlertModelPostgresRepository(
 	private val reinforcedAfterHours: Long,
 	@param:Value($$"${registry.feature.alert.criticality.high-after-hours}")
 	private val highAfterHours: Long,
+	private val clock: Clock,
 ): IAlertPort {
 	override fun findPage(
 		projectId: UUID,
@@ -49,7 +51,7 @@ class AlertModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, AlertEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, AlertEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findWithLimit(

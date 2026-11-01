@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component
 @Component
 class ProjectProfileEntityMapper(
 	private val userMapper: UserEntityMapper,
+	private val clock: Clock,
 ): IEntityMapper<ProjectProfileModel, ProjectProfileEntity> {
 	override fun toModel(entity: ProjectProfileEntity): ProjectProfileModel {
 		return ProjectProfileModel().apply {
@@ -25,7 +27,7 @@ class ProjectProfileEntityMapper(
 			startAccess = mapCustomDateTime(entity.startAccessDate, entity.startAccessTime)
 			endAccess = mapCustomDateTime(entity.endAccessDate, entity.endAccessTime)
 			status = entity.status
-			availabilityStatus = buildStatus()
+			availabilityStatus = buildStatus(clock)
 		}.fillWithProjectAndEntity(entity)
 	}
 

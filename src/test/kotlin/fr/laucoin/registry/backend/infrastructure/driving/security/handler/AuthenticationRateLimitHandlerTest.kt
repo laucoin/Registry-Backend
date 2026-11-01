@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
+import java.time.Instant
+import java.time.Duration
+import fr.laucoin.registry.backend.test.MutableClock
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
@@ -47,8 +51,8 @@ class AuthenticationRateLimitHandlerTest {
 		whenever(localeContextResolver.resolveLocaleContext(any())).thenReturn(SimpleLocaleContext(Locale.ENGLISH))
 	}
 
-	private fun filter(capacity: Int = 2, windowSeconds: Long = 60): AuthenticationRateLimitHandler =
-		AuthenticationRateLimitHandler(translateService, localeContextResolver, objectMapper, capacity, windowSeconds, MAX_TRACKED_CLIENTS)
+	private fun filter(capacity: Int = 2, windowSeconds: Long = 60, clock: Clock = Clock.systemUTC()): AuthenticationRateLimitHandler =
+		AuthenticationRateLimitHandler(translateService, localeContextResolver, objectMapper, clock, capacity, windowSeconds, MAX_TRACKED_CLIENTS)
 
 	private fun exchange(
 		path: String,
@@ -154,6 +158,23 @@ class AuthenticationRateLimitHandlerTest {
 		// Act
 		limiter.filter(exchange, chain).block()
 		Thread.sleep(1100)
+		limiter.filter(exchange, chain).block()
+
+		// Assert
+		assertEquals(2, chainCalls.get())
+	}
+
+	@Test
+	fun `Should filter accept requests again once the window has elapsed on the injected clock`() {
+		// Arrange
+		val clock = MutableClock(Instant.parse("2030-01-01T00:00:00Z"))
+		val limiter = filter(capacity = 1, windowSeconds = 60, clock = clock)
+		val exchange = exchange("/api/v2/authentication/token", POST)
+		limiter.filter(exchange, chain).block()
+		limiter.filter(exchange, chain).block()
+
+		// Act
+		clock.advance(Duration.ofSeconds(61))
 		limiter.filter(exchange, chain).block()
 
 		// Assert

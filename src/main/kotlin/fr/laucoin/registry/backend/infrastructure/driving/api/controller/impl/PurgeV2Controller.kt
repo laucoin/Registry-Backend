@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
 import fr.laucoin.registry.backend.domain.service.IPurgeService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPurgeV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
@@ -23,12 +24,16 @@ class PurgeV2Controller(
 	private val contentMapper: ProjectContentPurgeReaderDtoMapper,
 	private val configurationMapper: ProjectConfigurationPurgeReaderDtoMapper,
 ) : IPurgeV2Controller {
+	private fun Flux<UUID>.cappedForReport(): Flux<UUID> {
+		return collectList().flatMapMany { Flux.fromIterable(it.take(PURGE_REPORTED_IDS_MAX)) }
+	}
+
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
-		return service.purgeUsers(dateThreshold, dryRun)
+		return service.purgeUsers(dateThreshold, dryRun).cappedForReport()
 	}
 
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
-		return service.purgeProjects(dateThreshold, dryRun)
+		return service.purgeProjects(dateThreshold, dryRun).cappedForReport()
 	}
 
 	override fun purgeProjectsContentsIfNecessary(

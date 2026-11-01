@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
@@ -168,6 +169,7 @@ class MovementControllerTest : TestContext() {
 		fun `Should findMovements throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -262,7 +264,7 @@ class MovementControllerTest : TestContext() {
 		// Arrange
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = MovementSearchParamModel(
 			isVisible = isVisible,
 			type = type,
@@ -445,6 +447,36 @@ class MovementControllerTest : TestContext() {
 		result.body<MovementReaderDto>(OK)
 
 		verify(service).findMovementById(defaultProjectId, uuid, isVisible = null)
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(movementTypeReaderMapper)
+		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)
+		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should findMovementById force the visible filter when the user cannot read hidden elements`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(
+			service.findMovementById(
+				any(),
+				any(),
+				anyOrNull()
+			)
+		).thenReturn(Mono.just(MovementModel(contentType = REGISTERED)))
+		whenever(readerMapper.toDto(any())).thenReturn(MovementReaderDto(contentType = REGISTERED))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<MovementReaderDto>(OK)
+
+		verify(service).findMovementById(defaultProjectId, uuid, isVisible = true)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(movementTypeReaderMapper)
 		verifyNoInteractions(movementParticipantsAndGroupsReaderMapper)

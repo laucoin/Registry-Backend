@@ -85,7 +85,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ProjectEntity>
 
 	@Query(
@@ -107,7 +107,7 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ProjectEntity>
 
 	@Query(

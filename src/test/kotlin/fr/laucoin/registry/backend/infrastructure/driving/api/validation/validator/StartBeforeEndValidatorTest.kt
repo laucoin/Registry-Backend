@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.NO_PARAMETER_FOUND
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import jakarta.validation.ConstraintValidatorContext
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.stream.Stream
@@ -22,13 +23,13 @@ class StartBeforeEndValidatorTest {
 	private val dateValidator = StartBeforeEndValidator()
 
 	private companion object {
-		private val yesterdayDateTime: ZonedDateTime = ZonedDateTime.now().minusDays(1)
-		private val nowDateTime: ZonedDateTime = ZonedDateTime.now()
-		private val tomorrowDateTime: ZonedDateTime = ZonedDateTime.now().plusDays(1)
+		private val yesterdayDateTime: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC).minusDays(1)
+		private val nowDateTime: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC)
+		private val tomorrowDateTime: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC).plusDays(1)
 
-		private val yesterdayDate: LocalDate = LocalDate.now().minusDays(1)
-		private val nowDate: LocalDate = LocalDate.now()
-		private val tomorrowDate: LocalDate = LocalDate.now().plusDays(1)
+		private val yesterdayDate: LocalDate = LocalDate.now(ZoneOffset.UTC).minusDays(1)
+		private val nowDate: LocalDate = LocalDate.now(ZoneOffset.UTC)
+		private val tomorrowDate: LocalDate = LocalDate.now(ZoneOffset.UTC).plusDays(1)
 
 		@JvmStatic
 		fun `Should isValid throw for no-existing specified field`(): Stream<Arguments> = Stream.of(
@@ -112,7 +113,7 @@ class StartBeforeEndValidatorTest {
 	) {
 		// Arrange
 		val context: ConstraintValidatorContext = mock()
-		val data = ClassWithDate(startZonedDateTime = ZonedDateTime.now(), endZonedDateTime = ZonedDateTime.now())
+		val data = ClassWithDate(startZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC), endZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC))
 		dateValidator.initialize(StartBeforeEnd(startField = startField, endField = endField, message = "TEST_MESSAGE"))
 
 		// Act
@@ -129,7 +130,7 @@ class StartBeforeEndValidatorTest {
 	fun `Should isValid throw for different field type`() {
 		// Arrange
 		val context: ConstraintValidatorContext = mock()
-		val data = ClassWithDate(startZonedDateTime = ZonedDateTime.now(), endLocalDate = LocalDate.now())
+		val data = ClassWithDate(startZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC), endLocalDate = LocalDate.now(ZoneOffset.UTC))
 		dateValidator.initialize(
 			StartBeforeEnd(
 				startField = "startZonedDateTime",

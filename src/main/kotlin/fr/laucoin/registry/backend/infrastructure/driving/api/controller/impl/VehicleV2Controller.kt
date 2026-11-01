@@ -45,7 +45,7 @@ class VehicleV2Controller(
 	override fun findVehicles(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isVisible: Boolean?,
@@ -65,15 +65,15 @@ class VehicleV2Controller(
 		return service.findVehiclesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
-	override fun findVehicleById(projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
-		return service.findVehicleById(projectId, id, isVisible = null).map(readerMapper::toDto)
+	override fun findVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
+		return service.findVehicleById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_VEHICLE_D)).map(readerMapper::toDto)
 	}
 
 	override fun findVehicleMovements(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		isVisible: Boolean?,
 		hasActivity: Boolean?,

@@ -1,8 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user
 
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_LANGUAGE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_REFRESH_MODE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.preference.PreferenceFields.PREFERENCE_THEME
@@ -37,6 +40,13 @@ object UserQueries {
             WHEN :query IS NULL THEN 1
             ELSE word_similarity(:query, t.search_text)
         END AS similarity_score
+    """
+
+	const val USER_PROJECT_MEMBER_CLAUSE = """
+        (CAST(:memberOfProjectId AS UUID) IS NULL OR EXISTS (
+            SELECT 1 FROM $PROJECT_PROFILE_TABLE member
+            WHERE member.$PROJECT_PROFILE_USER_ID = t.$ID AND member.$LINKED_PROJECT_ID = CAST(:memberOfProjectId AS UUID)
+        ))
     """
 
 	const val USER_TEXT_SEARCH_CLAUSE = "(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"

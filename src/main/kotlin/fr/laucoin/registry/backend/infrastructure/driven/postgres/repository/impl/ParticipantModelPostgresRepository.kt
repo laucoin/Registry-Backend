@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -33,6 +34,7 @@ class ParticipantModelPostgresRepository(
 	private val transactionalOperator: TransactionalOperator,
 	private val mapper: ParticipantEntityMapper,
 	private val groupContentMapper: GroupContentEntityMapper,
+	private val clock: Clock,
 ): IParticipantPort {
 	override fun findPage(
 		projectId: UUID,
@@ -57,7 +59,7 @@ class ParticipantModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findBirthdays(projectId: UUID, isVisible: Boolean?): Flux<ParticipantModel> {
@@ -111,7 +113,7 @@ class ParticipantModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, ParticipantEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ParticipantModel> {

@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectStatusReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleStatusReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectStatusReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleStatusReaderDtoMapper
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -13,8 +17,6 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
-import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import fr.laucoin.registry.backend.domain.service.IMovementService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
@@ -71,12 +73,14 @@ class MovementV2Controller(
 	private val writerMapper: ParticipantMovementWriterDtoMapper,
 	private val guestMovementWriterMapper: GuestMovementWriterDtoMapper,
 	private val guestWriterMapper: GuestWriterDtoMapper,
+	private val projectStatusMapper: ProjectStatusReaderDtoMapper,
+	private val vehicleStatusMapper: VehicleStatusReaderDtoMapper,
 ): IMovementV2Controller {
 
 	override fun findMovements(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		isCurrent: Boolean,
 		hasActivity: Boolean?,
@@ -140,8 +144,8 @@ class MovementV2Controller(
 		return Pair(pair.first, pair.second.map(readerContentMapper::toDto))
 	}
 
-	override fun findMovementById(projectId: UUID, id: UUID): Mono<MovementReaderDto> {
-		return service.findMovementById(projectId, id, isVisible = null).map(readerMapper::toDto)
+	override fun findMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementReaderDto> {
+		return service.findMovementById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_MOVEMENT_D)).map(readerMapper::toDto)
 	}
 
 	override fun searchReasonsAndActivities(
@@ -191,7 +195,7 @@ class MovementV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isVisible: Boolean?,
@@ -210,12 +214,12 @@ class MovementV2Controller(
 			.map(communicationReaderMapper::toDtoPage)
 	}
 
-	override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel> {
-		return service.findParticipantsStatus(projectId)
+	override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusReaderDto> {
+		return service.findParticipantsStatus(projectId).map(projectStatusMapper::toDto)
 	}
 
-	override fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusModel> {
-		return service.findVehiclesStatus(projectId)
+	override fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusReaderDto> {
+		return service.findVehiclesStatus(projectId).map(vehicleStatusMapper::toDto)
 	}
 
 	override fun createMovement(

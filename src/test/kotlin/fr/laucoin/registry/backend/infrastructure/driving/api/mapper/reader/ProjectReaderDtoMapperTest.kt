@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_NAME_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -40,8 +42,8 @@ class ProjectReaderDtoMapperTest {
 						options = listOf(VEHICLE)
 						counts = ProjectCountsModel(participants = 4, groups = 3, acceptedProfiles = 2, vehicles = 1)
 						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					1,
 				),
@@ -53,8 +55,8 @@ class ProjectReaderDtoMapperTest {
 						end = CustomDateTimeModel.MAX
 						options = null
 						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					0,
 				),

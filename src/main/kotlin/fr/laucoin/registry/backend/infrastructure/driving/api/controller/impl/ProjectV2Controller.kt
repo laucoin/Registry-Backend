@@ -36,7 +36,7 @@ class ProjectV2Controller(
 ): IProjectV2Controller {
 	override fun findProjects(
 		currentUser: CurrentUserModel,
-		page: Int,
+		page: Long,
 		size: Int,
 		query: String?,
 		isVisible: Boolean?,

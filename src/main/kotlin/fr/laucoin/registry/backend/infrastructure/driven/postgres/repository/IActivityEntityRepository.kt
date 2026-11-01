@@ -60,7 +60,7 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
 		sortField: String?,
 		isDescending: Boolean?,
 		limit: Int,
-		offset: Int,
+		offset: Long,
 	): Flux<ActivityEntity>
 
 	@Query(

@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import org.mockito.kotlin.argThat
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.mockito.kotlin.verifyNoInteractions
 import org.springframework.http.HttpStatus.FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
@@ -67,8 +71,13 @@ class ParticipantServiceTest {
 	private val movementPort: IMovementPort = mock()
 	private val groupPort: IGroupPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
+	private val rowLockPort: IRowLockPort = mock()
+	init {
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+	}
+
 	private val service: IParticipantService = ParticipantService(
-		projectService, port, userPort, movementPort, groupPort, transactionalOperator, MAX_USERS, MAX_GROUPS
+		projectService, port, userPort, movementPort, groupPort, rowLockPort, transactionalOperator, Clock.systemUTC(), MAX_USERS, MAX_GROUPS
 	)
 
 	@BeforeEach
@@ -274,7 +283,7 @@ class ParticipantServiceTest {
 		service.searchUsersByText(defaultProjectId, query).blockFirst()
 
 		// Assert
-		verify(userPort).findWithLimit(MAX_USERS, expectedSearch)
+		verify(userPort).findWithLimit(eq(MAX_USERS), argThat { this == expectedSearch && memberOfProjectId == defaultProjectId })
 	}
 
 	@Test
@@ -563,6 +572,7 @@ class ParticipantServiceTest {
 		// Assert
 		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = null)
 		verify(movementPort).countAllByParticipantId(defaultProjectId, defaultParticipantId, MovementSearchParamModel())
+verify(rowLockPort).lock(PARTICIPANT, defaultParticipantId)
 		verify(port).deleteById(defaultParticipantId)
 	}
 

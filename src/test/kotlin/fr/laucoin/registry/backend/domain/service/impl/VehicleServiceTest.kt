@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
+import org.springframework.transaction.reactive.TransactionalOperator
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
@@ -38,7 +42,14 @@ class VehicleServiceTest {
 	private val port: IVehiclePort = mock()
 	private val projectService: IProjectService = mock()
 	private val movementPort: IMovementPort = mock()
-	private val service: IVehicleService = VehicleService(port, projectService, movementPort)
+	private val rowLockPort: IRowLockPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
+	init {
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Any>(0) }
+	}
+
+	private val service: IVehicleService = VehicleService(port, projectService, movementPort, rowLockPort, transactionalOperator, Clock.systemUTC())
 
 	@Test
 	fun `Should findVehiclesPage call port findPage`() {
@@ -203,6 +214,7 @@ class VehicleServiceTest {
 		// Assert
 		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = null)
 		verify(movementPort).countAllByVehicleId(defaultProjectId, defaultVehicleId, MovementSearchParamModel())
+verify(rowLockPort).lock(VEHICLE, defaultVehicleId)
 		verify(port).deleteById(defaultVehicleId)
 	}
 

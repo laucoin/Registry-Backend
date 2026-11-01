@@ -25,6 +25,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.r2dbc.core.DatabaseClient
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -44,7 +45,7 @@ class ParticipantEffectiveDatesRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var databaseClient: DatabaseClient
 
-	private val base: ZonedDateTime = ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)
+	private val base: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
 	private val guestEntry: ZonedDateTime = base.minusHours(5).minusMinutes(30)
 	private val guestExit: ZonedDateTime = base.minusHours(2).minusMinutes(30)
 	private lateinit var registeredId: UUID
@@ -138,7 +139,7 @@ class ParticipantEffectiveDatesRepositoryTest : TestContext() {
 			birthday = LocalDate.EPOCH
 			type = participantType
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return participantPort.create(participant).block()!!.id!!
 	}
@@ -157,7 +158,7 @@ class ParticipantEffectiveDatesRepositoryTest : TestContext() {
 			content =
 				listOf(MovementContentModel().apply { participant = ParticipantModel().apply { id = participantId } })
 			this.projectId = defaultProjectId
-			create(currentUser())
+			create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 		}
 		return movementPort.create(movement).block()!!.id!!
 	}

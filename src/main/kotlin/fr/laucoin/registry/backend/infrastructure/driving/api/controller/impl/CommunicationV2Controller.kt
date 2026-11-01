@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -36,8 +37,8 @@ class CommunicationV2Controller(
 	private val readerMovementMapper: MovementReaderDtoMapper,
 	private val writerMapper: CommunicationWriterDtoMapper,
 ): ICommunicationV2Controller {
-	override fun findCommunicationById(projectId: UUID, id: UUID): Mono<CommunicationReaderDto> {
-		return service.findCommunicationById(projectId, id, isVisible = null).map(readerMapper::toDto)
+	override fun findCommunicationById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<CommunicationReaderDto> {
+		return service.findCommunicationById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_COMMUNICATION_D)).map(readerMapper::toDto)
 	}
 
 	override fun searchMovements(projectId: UUID, query: String?): Flux<MovementReaderDto> {

@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import java.time.OffsetTime
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
@@ -57,8 +60,13 @@ class ProjectProfileServiceTest {
 	private val principalCache: IPrincipalCacheService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val maxUser: Int = 1
+	private val rowLockPort: IRowLockPort = mock()
+	init {
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+	}
+
 	private val service = ProjectProfileService(
-		profileService, port, roleService, userPort, principalCache, transactionalOperator, maxUser
+		profileService, port, roleService, userPort, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
 	)
 
 	init {
@@ -351,8 +359,8 @@ class ProjectProfileServiceTest {
 			userIds = eq(listOf(uuid)),
 			profileIdToExclude = eq(null),
 			status = eq(listOf(ACCEPTED, INVITED)),
-			from = any(),
-			to = any(),
+			from = eq(CustomDateTimeModel.MIN.toZonedDateTime(OffsetTime.MIN)),
+			to = eq(CustomDateTimeModel.MAX.toZonedDateTime(OffsetTime.MAX)),
 		)
 		verify(profileService).validateNotLastProjectRoleLevel0(
 			uuid,

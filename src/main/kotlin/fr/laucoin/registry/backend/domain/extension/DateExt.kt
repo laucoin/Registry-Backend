@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.extension
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
@@ -65,8 +66,8 @@ object DateExt {
 		}
 	}
 
-	fun LocalDate?.isMajor(): Boolean {
-		val today = LocalDate.now()
+	fun LocalDate?.isMajor(clock: Clock): Boolean {
+		val today = LocalDate.now(clock)
 		val minBirthday = today.minusYears(18)
 		return this?.let {
 			minBirthday.isAfter(it) || minBirthday.isEqual(it)
@@ -74,13 +75,13 @@ object DateExt {
 	}
 
 	fun CustomDateTimeModel?.isInRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {
-		val realStart = (start ?: CustomDateTimeModel.MIN)
+		val realStart = (start ?: CustomDateTimeModel.MIN).copy()
 		if (Objects.isNull(realStart.time)) realStart.time = OffsetTime.MIN
-		val realEnd = (end ?: CustomDateTimeModel.MAX)
+		val realEnd = (end ?: CustomDateTimeModel.MAX).copy()
 		if (Objects.isNull(realEnd.time)) realEnd.time = OffsetTime.MAX
-		val realChallengerForStart = this ?: realStart
+		val realChallengerForStart = (this ?: realStart).copy()
 		if (Objects.isNull(realChallengerForStart.time)) realChallengerForStart.time = realStart.time
-		val realChallengerForEnd = this ?: realEnd
+		val realChallengerForEnd = (this ?: realEnd).copy()
 		if (Objects.isNull(realChallengerForEnd.time)) realChallengerForEnd.time = realEnd.time
 
 		val isEqualStart =

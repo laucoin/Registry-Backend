@@ -1,5 +1,15 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
+import reactor.core.Exceptions
+import kotlin.test.assertEquals
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.never
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.dao.DataIntegrityViolationException
+import org.junit.jupiter.api.Assertions.assertSame
+import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
@@ -28,7 +38,7 @@ class PreferencesServiceTest {
 	private val port: IPreferencesPort = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val supportedLocale: List<String> = listOf(EN_US, FR_FR)
-	private val service: IPreferencesService = PreferencesService(port, principalCache, supportedLocale)
+	private val service: IPreferencesService = PreferencesService(port, principalCache, Clock.systemUTC(), supportedLocale)
 
 	private companion object {
 		private const val EN_US = "en-US"
@@ -141,6 +151,36 @@ class PreferencesServiceTest {
 		verify(port).findByUserId(uuid, isVisible = null)
 		verify(port, times(expectedCallOnUpdateLanguage)).save(any())
 		verify(principalCache, times(expectedCallOnUpdateLanguage)).invalidate(oidc)
+	}
+
+	@Test
+	fun `Should findByUser reread the preferences when a concurrent request created them first`() {
+		// Arrange
+		val existing = PreferencesModel()
+		whenever(port.findByUserId(any(), anyOrNull())).thenReturn(Mono.empty(), Mono.just(existing))
+		whenever(port.save(any())).thenReturn(Mono.error(DataIntegrityViolationException("duplicate")))
+
+		// Act
+		val result = service.findByUser(currentUser()).block()
+
+		// Assert
+		assertSame(existing, result)
+		verify(port, times(2)).findByUserId(currentUser().id!!, isVisible = null)
+	}
+
+	@Test
+	fun `Should updateLanguage refuse an unsupported language`() {
+		// Arrange
+		val currentUser = CurrentUserModel().apply { id = UUID.randomUUID(); oidcId = UUID.randomUUID() }
+
+		// Act
+		val error = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateLanguage(currentUser, "xx").block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(BAD_REQUEST, error.status)
+		verify(port, never()).save(any())
 	}
 
 	@ParameterizedTest

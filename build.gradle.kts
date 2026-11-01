@@ -103,6 +103,7 @@ kover {
 tasks.withType<Test>().configureEach {
 	useJUnitPlatform()
 	maxParallelForks = Runtime.getRuntime().availableProcessors()
+	jvmArgs("-Duser.timezone=UTC")
 	testLogging {
 		events = setOf(FAILED, SKIPPED)
 		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

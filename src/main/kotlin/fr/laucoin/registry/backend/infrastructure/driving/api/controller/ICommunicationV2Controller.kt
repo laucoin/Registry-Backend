@@ -52,6 +52,7 @@ interface ICommunicationV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_R')")
 	@GetMapping("/{id}")
 	fun findCommunicationById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<CommunicationReaderDto>

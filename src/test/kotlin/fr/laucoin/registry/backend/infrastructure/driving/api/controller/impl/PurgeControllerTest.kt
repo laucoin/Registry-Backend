@@ -13,10 +13,13 @@ import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
@@ -27,6 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.util.UUID
 
@@ -66,6 +70,24 @@ class PurgeControllerTest : TestContext() {
 		result.body<List<*>>(OK)
 
 		verify(purgeService).purgeUsers(any(), any())
+	}
+
+	@Test
+	fun `Should purgeUsersIfNecessary report at most 1000 identifiers`() {
+		// Arrange
+		val ids = List(PURGE_REPORTED_IDS_MAX + 1) { UUID.randomUUID() }
+		whenever(purgeService.purgeUsers(anyOrNull(), any())).thenReturn(Flux.fromIterable(ids))
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_JOB_C)
+			.post()
+			.uri(uriBuilder("$BASE_URL/users", listOf(defaultProjectId), listOf(Pair("dryRun", true))))
+			.exchange()
+
+		// Assert
+		val body = result.body<List<*>>(OK)
+		assertEquals(PURGE_REPORTED_IDS_MAX, body!!.size)
 	}
 
 	@Test
@@ -155,7 +177,7 @@ class PurgeControllerTest : TestContext() {
 	@ValueSource(strings = ["/users", "/projects", "/projects/contents", "/projects/configurations"])
 	fun `Should reject a purge threshold in the future`(endpoint: String) {
 		// Arrange
-		val tomorrow = LocalDate.now().plusDays(1)
+		val tomorrow = LocalDate.now(ZoneOffset.UTC).plusDays(1)
 
 		// Act
 		val result = webClient
@@ -189,7 +211,7 @@ class PurgeControllerTest : TestContext() {
 	@ValueSource(ints = [0, -1])
 	fun `Should accept a purge threshold more recent than the configured retention window`(daysFromToday: Long) {
 		// Arrange
-		val threshold = LocalDate.now().plusDays(daysFromToday)
+		val threshold = LocalDate.now(ZoneOffset.UTC).plusDays(daysFromToday)
 
 		whenever(purgeService.purgeUsers(any(), any())).thenReturn(Flux.empty())
 

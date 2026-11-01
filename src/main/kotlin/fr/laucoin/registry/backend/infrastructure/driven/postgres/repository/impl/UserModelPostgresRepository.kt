@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -27,6 +28,7 @@ class UserModelPostgresRepository(
 	private val repository: IUserEntityRepository,
 	private val mapper: UserEntityMapper,
 	private val currentUserMapper: CurrentUserEntityMapper,
+	private val clock: Clock,
 ): IUserPort {
 	override fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>> {
 		return repository.findAll(
@@ -37,13 +39,14 @@ class UserModelPostgresRepository(
 			searchParams.sort?.isDescending,
 			pageable.limit,
 			pageable.offset,
-		).toPageModel(pageable, UserEntity::fullCount, mapper::toModel)
+		).toPageModel(pageable, clock, UserEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel> {
 		return repository.findWithLimit(
 			searchParams.query,
 			searchParams.isVisible,
+			searchParams.memberOfProjectId,
 			limit,
 		).map(mapper::toModel)
 	}

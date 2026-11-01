@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.test.TestContext
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -40,7 +41,7 @@ class LastMovementProjectScopeRepositoryTest: TestContext() {
 	private val siblingId = UUID.randomUUID()
 	private val strangerId = UUID.randomUUID()
 	private val futureStrangerId = UUID.randomUUID()
-	private val sharedInstant = ZonedDateTime.now().minusHours(3).truncatedTo(ChronoUnit.SECONDS)
+	private val sharedInstant = ZonedDateTime.now(ZoneOffset.UTC).minusHours(3).truncatedTo(ChronoUnit.SECONDS)
 
 	@BeforeAll
 	fun setup() {
@@ -91,7 +92,7 @@ class LastMovementProjectScopeRepositoryTest: TestContext() {
 	@Test
 	fun `Should select the participants of every project whose last movement is old in the cross project purge`() {
 		// Arrange
-		val threshold = LocalDate.now().plusDays(1)
+		val threshold = LocalDate.now(ZoneOffset.UTC).plusDays(1)
 
 		// Act
 		val unused = participantPort.findUnusedSince(threshold).collectList().block()!!

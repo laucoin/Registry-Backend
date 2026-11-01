@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
@@ -20,7 +21,7 @@ import org.mockito.kotlin.whenever
 
 class AvailabilityStatusReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper = AvailabilityStatusReaderDtoMapper(translateService)
+	private val mapper = AvailabilityStatusReaderDtoMapper(translateService, Clock.systemUTC())
 
 	private companion object {
 		private const val NOT_YET = "availability.status.profile.duration.NOT_YET"

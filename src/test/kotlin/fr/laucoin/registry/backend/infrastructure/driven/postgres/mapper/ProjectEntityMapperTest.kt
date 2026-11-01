@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
@@ -17,7 +18,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 
 class ProjectEntityMapperTest {
-	private val mapper = ProjectEntityMapper()
+	private val mapper = ProjectEntityMapper(Clock.systemUTC())
 
 	private fun entityWithCounts(options: List<ProjectOptionEnum>?) = ProjectEntity(
 		options = options,

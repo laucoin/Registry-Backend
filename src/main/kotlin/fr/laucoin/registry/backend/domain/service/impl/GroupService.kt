@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import java.time.Clock
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_ALREADY_ADDED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
@@ -41,9 +42,10 @@ class GroupService(
 	private val port: IGroupPort,
 	private val participantPort: IParticipantPort,
 	private val transactionalOperator: TransactionalOperator,
+	clock: Clock,
 	@param:Value($$"${registry.feature.group.searched.max-participant-result}")
 	private val maxParticipantResult: Int,
-): IGroupService, GenericService() {
+): IGroupService, GenericService(clock) {
 	override fun findGroupsPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -105,7 +107,7 @@ class GroupService(
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
 			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
-			.flatMap { port.create(group.apply { create(currentUser) }) }
+			.flatMap { port.create(group.apply { create(currentUser, now()) }) }
 	}
 
 	override fun updateGroupById(
@@ -202,7 +204,7 @@ class GroupService(
 	}
 
 	private fun Mono<GroupModel>.updateGroup(currentUser: CurrentUserModel) = flatMap {
-		port.update(it.apply { update(currentUser) })
+		port.update(it.apply { update(currentUser, now()) })
 	}
 
 	private fun validateMembers(projectId: UUID, group: GroupModel, newMemberIds: List<UUID>): Mono<GroupModel> {
@@ -271,16 +273,6 @@ class GroupService(
 	): Flux<UUID> {
 		log.info("Purging empty groups")
 		return port.findEmpty(participantToExclude)
-			.flatMap {
-				if (dryRun) {
-					log.info("[Dry run] group {} would be deleted", it)
-					Mono.just(it)
-				} else {
-					log.info("Purging group {}", it)
-					port.deleteById(it).thenReturn(it)
-						.doOnNext { e -> log.info("Group {} was deleted", e) }
-						.doOnError { err -> log.error("Failed to purge group{}", it, err) }
-				}
-			}
+			.purgeEach("group", dryRun, port::deleteById)
 	}
 }

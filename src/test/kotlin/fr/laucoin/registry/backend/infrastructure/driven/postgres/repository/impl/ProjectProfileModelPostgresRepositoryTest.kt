@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -402,7 +404,7 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 				this.projectId = defaultProjectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -425,7 +427,7 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 				this.projectId = defaultProjectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = ACCEPTED
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -457,7 +459,7 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 				this.projectId = defaultProjectId
 				role = "PROJECT_ADMINISTRATOR"
 				status = INVITED
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act

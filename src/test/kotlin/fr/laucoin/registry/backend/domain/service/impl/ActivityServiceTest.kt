@@ -1,5 +1,15 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.model.ActivityModel
+import kotlin.test.assertEquals
+import org.mockito.kotlin.argumentCaptor
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
+import java.time.Instant
+import java.time.Clock
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ACTIVITY
+import org.springframework.transaction.reactive.TransactionalOperator
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
@@ -38,7 +48,14 @@ class ActivityServiceTest {
 	private val port: IActivityPort = mock()
 	private val projectService: IProjectService = mock()
 	private val movementPort: IMovementPort = mock()
-	private val service: IActivityService = ActivityService(projectService, port, movementPort)
+	private val rowLockPort: IRowLockPort = mock()
+	private val transactionalOperator: TransactionalOperator = mock()
+	init {
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Any>(0) }
+	}
+
+	private val service: IActivityService = ActivityService(projectService, port, movementPort, rowLockPort, transactionalOperator, Clock.systemUTC())
 
 	@Test
 	fun `Should findActivitiesPage call port findPage`() {
@@ -189,6 +206,7 @@ class ActivityServiceTest {
 		// Assert
 		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = null)
 		verify(movementPort).countAllByActivityId(defaultProjectId, defaultActivityId, MovementSearchParamModel())
+verify(rowLockPort).lock(ACTIVITY, defaultActivityId)
 		verify(port).deleteById(defaultActivityId)
 	}
 
@@ -244,5 +262,24 @@ class ActivityServiceTest {
 		// Assert
 		verify(port).findUnusedSince(date)
 		verify(port, never()).deleteById(any())
+	}
+
+	@Test
+	fun `Should createActivity stamp the creation with the injected clock`() {
+		// Arrange
+		val clock = Clock.fixed(Instant.parse("2030-01-02T03:04:05Z"), ZoneOffset.UTC)
+		val clockedService = ActivityService(projectService, port, movementPort, rowLockPort, transactionalOperator, clock)
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.create(any())).thenReturn(Mono.just(defaultActivity()))
+
+		// Act
+		clockedService.createActivity(currentUser(), defaultActivity()).block()
+
+		// Assert
+		val captor = argumentCaptor<ActivityModel>()
+		verify(port).create(captor.capture())
+		assertEquals(ZonedDateTime.now(clock), captor.firstValue.creation!!.dateTime)
+		assertEquals(ZonedDateTime.now(clock), captor.firstValue.lastEdition!!.dateTime)
 	}
 }

@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TYPE_MISMATCH
@@ -69,6 +70,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Mono
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Objects
@@ -225,6 +227,7 @@ class AlertControllerTest : TestContext() {
 		fun `Should findAlertCommunications throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -235,7 +238,7 @@ class AlertControllerTest : TestContext() {
 			Arguments.of(
 				AlertCreationWriterDto(
 					title = null,
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					message = null,
 					movementId = null,
 				),
@@ -244,7 +247,7 @@ class AlertControllerTest : TestContext() {
 			Arguments.of(
 				AlertCreationWriterDto(
 					title = "Alert name very loooooooooooooooooooooooooooooooooooooooooooooong",
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					message = null,
 					movementId = null,
 				),
@@ -262,7 +265,7 @@ class AlertControllerTest : TestContext() {
 			Arguments.of(
 				AlertCreationWriterDto(
 					title = "Alert 1",
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					message = "Message very loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong",
 					movementId = null,
 				),
@@ -275,7 +278,7 @@ class AlertControllerTest : TestContext() {
 			Arguments.of(
 				AlertWriterDto(
 					title = null,
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					status = IN_PROGRESS,
 				),
 				ALERT_TITLE_NULL_OR_BLANK,
@@ -283,7 +286,7 @@ class AlertControllerTest : TestContext() {
 			Arguments.of(
 				AlertWriterDto(
 					title = "Alert name very loooooooooooooooooooooooooooooooooooooooooooooong",
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					status = IN_PROGRESS,
 				),
 				ALERT_TITLE_TOO_LONG,
@@ -299,7 +302,7 @@ class AlertControllerTest : TestContext() {
 			Arguments.of(
 				AlertWriterDto(
 					title = "Alert 1",
-					dateTime = ZonedDateTime.now(),
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					status = null,
 				),
 				ALERT_STATUS_NULL,
@@ -323,7 +326,7 @@ class AlertControllerTest : TestContext() {
 		// Arrange
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = AlertSearchParamModel(
 			query = query,
 			isVisible = isVisible,
@@ -474,7 +477,7 @@ class AlertControllerTest : TestContext() {
 		val uuid = UUID.randomUUID()
 		val expectedPageNumber = page ?: 0
 		val expectedPageSize = size ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
 		val searchParams = CommunicationSearchParamModel(
 			query = query,
 			isVisible = isVisible,
@@ -568,7 +571,7 @@ class AlertControllerTest : TestContext() {
 		val createdId = UUID.randomUUID()
 		val alert = AlertCreationWriterDto(
 			title = "Alert 1",
-			dateTime = ZonedDateTime.now(),
+			dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 			message = "test",
 			movementId = null
 		)
@@ -626,7 +629,7 @@ class AlertControllerTest : TestContext() {
 	fun `Should updateAlert return 200`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(), status = IN_PROGRESS)
+		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(ZoneOffset.UTC), status = IN_PROGRESS)
 
 		whenever(service.updateAlertById(any(), any(), any(), any())).thenReturn(Mono.just(AlertModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
@@ -654,7 +657,7 @@ class AlertControllerTest : TestContext() {
 	fun `Should updateAlert accept the matching If-Match`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(), status = IN_PROGRESS)
+		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(ZoneOffset.UTC), status = IN_PROGRESS)
 
 		whenever(service.updateAlertById(any(), any(), any(), any())).thenReturn(Mono.just(AlertModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(AlertReaderDto())
@@ -688,7 +691,7 @@ class AlertControllerTest : TestContext() {
 	fun `Should updateAlertById throw when the element changed since it was read`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(), status = IN_PROGRESS)
+		val alert = AlertWriterDto(title = "Alert 1", dateTime = ZonedDateTime.now(ZoneOffset.UTC), status = IN_PROGRESS)
 
 		whenever(writerMapper.toModel(any(), any())).thenReturn(AlertModel())
 		whenever(service.findAlertById(any(), any(), anyOrNull())).thenReturn(

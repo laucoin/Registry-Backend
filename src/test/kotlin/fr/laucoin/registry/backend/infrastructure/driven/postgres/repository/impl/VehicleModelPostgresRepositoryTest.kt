@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
@@ -242,7 +244,7 @@ class VehicleModelPostgresRepositoryTest : TestContext() {
 				brand = "test"
 				model = "test"
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -266,7 +268,7 @@ class VehicleModelPostgresRepositoryTest : TestContext() {
 				brand = "test update"
 				model = "test update"
 				this.projectId = defaultProjectId
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
