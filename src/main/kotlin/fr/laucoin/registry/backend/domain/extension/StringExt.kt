@@ -4,6 +4,8 @@ import java.util.Objects
 import kotlin.random.Random
 
 object StringExt {
+	fun String.toNormalizedEmail(): String = trim().lowercase()
+
 	fun String?.getStringBetween(delimiter: String): String? {
 		if (Objects.isNull(this)) return null
 

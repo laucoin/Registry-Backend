@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
@@ -20,9 +21,11 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.domain.service.IFeatureService
 import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import fr.laucoin.registry.backend.domain.service.IUserService
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectProfileId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
@@ -39,6 +42,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -60,13 +64,15 @@ class ProjectProfileServiceTest {
 	private val principalCache: IPrincipalCacheService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val maxUser: Int = 1
+	private val userService: IUserService = mock()
+	private val featureService: IFeatureService = mock()
 	private val rowLockPort: IRowLockPort = mock()
 	init {
 		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
 	}
 
 	private val service = ProjectProfileService(
-		profileService, port, roleService, userPort, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
+		profileService, port, roleService, userPort, userService, featureService, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
 	)
 
 	init {
@@ -76,13 +82,17 @@ class ProjectProfileServiceTest {
 	private companion object {
 		@JvmStatic
 		fun `Should createProjectProfiles call port findUserIdsWithProjectProfile and saveAll`(): Stream<Arguments> {
-			val uuid1 = UUID.randomUUID()
-			val uuid2 = UUID.randomUUID()
+			val user1 = invitedUser("first@sgdf.fr")
+			val user2 = invitedUser("second@sgdf.fr")
 			return Stream.of(
-				Arguments.of(listOf(uuid1, uuid2), emptyList<UUID>(), listOf(uuid1, uuid2)),
-				Arguments.of(listOf(uuid1, uuid2), listOf(uuid2), listOf(uuid1)),
+				Arguments.of(listOf(user1, user2), emptyList<UUID>(), listOf(user1.email, user2.email)),
+				Arguments.of(listOf(user1, user2), listOf(user2.id), listOf(user1.email)),
 			)
 		}
+
+		private fun invitedUser(userEmail: String) = UserModel().apply { id = UUID.randomUUID(); email = userEmail }
+
+		private fun invitation(userEmail: String) = ProjectProfileModel().apply { user = UserModel().apply { email = userEmail } }
 
 		@JvmStatic
 		fun `Should updateProjectProfileById call port findById, findUserIdsWithProjectProfile and throw because user are not allowed to edit that role`(): Stream<Arguments> {
@@ -228,82 +238,109 @@ class ProjectProfileServiceTest {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should createProjectProfiles call port findUserIdsWithProjectProfile and saveAll`(
-		wantedProfileForUserIds: List<UUID>,
+		existingUsers: List<UserModel>,
 		userIdWithExistingProfile: List<UUID>,
-		expectedCreatedUserIds: List<UUID>,
+		expectedCreatedEmails: List<String>,
 	) {
 		// Arrange
-		val profiles =
-			wantedProfileForUserIds.map { ProjectProfileModel().apply { user = UserModel().apply { id = it } } }
-		val expectedProfiles = profiles.filter { expectedCreatedUserIds.contains(it.user?.id) }
+		val profiles = existingUsers.map { invitation(it.email!!) }
+		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.fromIterable(existingUsers))
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(false)
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-				any(),
-				any(),
-				anyOrNull(),
-				any(),
-				anyOrNull(),
-				anyOrNull()
+				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
 			)
-		).thenReturn(Flux.just(*userIdWithExistingProfile.toTypedArray()))
-		whenever(port.saveAll(any())).thenReturn(Flux.just(*expectedProfiles.toTypedArray()))
+		).thenReturn(Flux.fromIterable(userIdWithExistingProfile))
+		whenever(port.saveAll(any())).thenAnswer { Flux.fromIterable(it.getArgument<List<ProjectProfileModel>>(0)) }
 
 		// Act
-		val result =
-			service.createProjectProfiles(currentUser(), defaultProjectId, wantedProfileForUserIds, profiles).block()
+		val result = service.createProjectProfiles(currentUser(), defaultProjectId, profiles).block()
 
 		// Assert
-		assertEquals(expectedCreatedUserIds, result?.first)
-		assertEquals(userIdWithExistingProfile, result?.second)
-		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			defaultProjectId,
-			wantedProfileForUserIds,
-			profileIdToExclude = null,
-			status = listOf(ACCEPTED, INVITED),
-			from = null,
-			to = null,
-		)
-		verify(port).saveAll(expectedProfiles)
+		assertEquals(expectedCreatedEmails, result?.first)
+		assertEquals(existingUsers.mapNotNull { it.email }.minus(expectedCreatedEmails.toSet()), result?.second)
+		verify(userService, never()).createPendingUser(any())
+	}
+
+	@Test
+	fun `Should createProjectProfiles create a pending user for an unknown email when invite by email is enabled`() {
+		// Arrange
+		val pending = invitedUser("new@sgdf.fr")
+		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.empty())
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
+		whenever(userService.createPendingUser("new@sgdf.fr")).thenReturn(Mono.just(pending))
+		whenever(
+			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
+			)
+		).thenReturn(Flux.empty())
+		whenever(port.saveAll(any())).thenAnswer { Flux.fromIterable(it.getArgument<List<ProjectProfileModel>>(0)) }
+
+		// Act
+		val result = service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("new@sgdf.fr"))).block()
+
+		// Assert
+		assertEquals(Pair(listOf("new@sgdf.fr"), emptyList<String>()), result)
+		verify(userService).createPendingUser("new@sgdf.fr")
+		verify(port).saveAll(any())
+	}
+
+	@Test
+	fun `Should createProjectProfiles not create anything for an unknown email when invite by email is disabled`() {
+		// Arrange
+		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.empty())
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(false)
+
+		// Act
+		val result = service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("new@sgdf.fr"))).block()
+
+		// Assert
+		assertEquals(Pair(emptyList<String>(), listOf("new@sgdf.fr")), result)
+		verify(userService, never()).createPendingUser(any())
+		verify(port, never()).saveAll(any())
+	}
+
+	@Test
+	fun `Should createProjectProfiles throw a conflict when the pending user is concurrently created`() {
+		// Arrange
+		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.empty())
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
+		whenever(userService.createPendingUser(any())).thenReturn(Mono.error(DataIntegrityViolationException("duplicate")))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("new@sgdf.fr"))).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(CONCURRENT_UPDATE_CONFLICT, result.message)
+		verify(port, never()).saveAll(any())
 	}
 
 	@Test
 	fun `Should createProjectProfiles call port findUserIdsWithProjectProfile and throw because all profiles duplicated`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val users = listOf(uuid)
-		val profile = ProjectProfileModel().apply {
-			user = UserModel().apply { id = uuid }
+		val user = invitedUser("duplicate@sgdf.fr")
+		val profile = invitation("duplicate@sgdf.fr").apply {
 			startAccess = CustomDateTimeModel(LocalDate.EPOCH)
 			endAccess = CustomDateTimeModel(LocalDate.EPOCH)
 		}
-		val profiles = listOf(profile)
+		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.just(user))
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-				any(),
-				any(),
-				anyOrNull(),
-				any(),
-				anyOrNull(),
-				anyOrNull()
+				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
 			)
-		).thenReturn(Flux.just(uuid))
+		).thenReturn(Flux.just(user.id!!))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createProjectProfiles(currentUser(), defaultProjectId, users, profiles).block()
+			service.createProjectProfiles(currentUser(), defaultProjectId, listOf(profile)).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(CONFLICT, result.status)
 		assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
-		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			projectId = eq(defaultProjectId),
-			userIds = eq(users),
-			profileIdToExclude = eq(null),
-			status = eq(listOf(ACCEPTED, INVITED)),
-			from = any(),
-			to = any(),
-		)
 		verify(port, never()).saveAll(any())
 	}
 

@@ -133,7 +133,7 @@ class ServiceConcurrencyTest : TestContext() {
 		val projectId = insertProject()
 		val userId = insertUser(role = "USER")
 		val invite = {
-			profileService.createProjectProfiles(administrator(userId), projectId, listOf(userId), listOf(invitation(projectId, userId)))
+			profileService.createProjectProfiles(administrator(userId), projectId, listOf(invitation(projectId, userId)))
 		}
 
 		// Act
@@ -252,7 +252,7 @@ class ServiceConcurrencyTest : TestContext() {
 	).apply { this.projectId = projectId }
 
 	private fun invitation(projectId: UUID, userId: UUID) = ProjectProfileModel(
-		user = UserModel().apply { id = userId },
+		user = UserModel().apply { email = "$userId@concurrency.test" },
 		role = "PROJECT_PARTICIPANT",
 	).apply { this.projectId = projectId }
 

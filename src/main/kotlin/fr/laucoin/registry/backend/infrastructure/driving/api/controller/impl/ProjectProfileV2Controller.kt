@@ -88,10 +88,10 @@ class ProjectProfileV2Controller(
 	): Mono<ResponseEntity<CreatedProjectProfilesReaderDto>> {
 		val profileModels = profilesWriterMapper.toModels(profiles, projectId)
 
-		return service.createProjectProfiles(currentUser, projectId, profiles.userIds!!, profileModels)
+		return service.createProjectProfiles(currentUser, projectId, profileModels)
 			.map(createdProjectProfilesReaderMapper::toDto)
 			.map {
-				val status = if (it.notCreatedUserIds.isEmpty()) OK else MULTI_STATUS
+				val status = if (it.notCreatedEmails.isEmpty()) OK else MULTI_STATUS
 				ResponseEntity.status(status).body(it)
 			}
 	}
