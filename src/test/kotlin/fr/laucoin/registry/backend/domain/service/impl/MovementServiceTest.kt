@@ -22,6 +22,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.MOVEMENT
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.EMERGENCY
@@ -58,8 +59,10 @@ import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IGroupPort
+import fr.laucoin.registry.backend.domain.port.IMovementHistoryPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
+import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.test.ModelExt.defaultActivity
@@ -85,6 +88,7 @@ import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -111,6 +115,8 @@ import java.util.stream.Stream
 class MovementServiceTest {
 	private val projectService: IProjectService = mock()
 	private val port: IMovementPort = mock()
+	private val historyPort: IMovementHistoryPort = mock()
+	private val rowLockPort: IRowLockPort = mock()
 	private val participantPort: IParticipantPort = mock()
 	private val vehiclePort: IVehiclePort = mock()
 	private val activityPort: IActivityPort = mock()
@@ -121,6 +127,8 @@ class MovementServiceTest {
 	private fun buildService(clock: Clock) = MovementService(
 		projectService,
 		port,
+		historyPort,
+		rowLockPort,
 		participantPort,
 		vehiclePort,
 		activityPort,
@@ -288,6 +296,8 @@ class MovementServiceTest {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 		whenever(participantPort.refreshEffectiveDates(any())).thenReturn(Mono.just(Unit))
 		whenever(participantPort.lockByIds(any())).thenReturn(Flux.empty())
+		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(historyPort.archiveMovement(any())).thenReturn(Mono.just(Unit))
 	}
 
 	@Test
@@ -1178,6 +1188,37 @@ class MovementServiceTest {
 		// Assert
 		verify(participantPort).lockByIds(listOf(previousParticipantId, defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(previousParticipantId, defaultParticipantId))
+	}
+
+	@Test
+	fun `Should updateMovementById lock then archive the current state before updating`() {
+		// Arrange
+		val movement = defaultMovement().apply { type = IN; contentType = REGISTERED }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.update(any())).thenReturn(Mono.just(movement))
+
+		// Act
+		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, movement).block()
+
+		// Assert
+		val order = inOrder(rowLockPort, historyPort, port)
+		order.verify(rowLockPort).lock(MOVEMENT, defaultMovementId)
+		order.verify(historyPort).archiveMovement(defaultMovementId)
+		order.verify(port).update(any())
+	}
+
+	@Test
+	fun `Should disableMovementById not archive the state`() {
+		// Arrange
+		val movement = defaultMovement().apply { contentType = REGISTERED }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.update(any())).thenReturn(Mono.just(movement))
+
+		// Act
+		service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+
+		// Assert
+		verify(historyPort, never()).archiveMovement(any())
 	}
 
 	@Test
