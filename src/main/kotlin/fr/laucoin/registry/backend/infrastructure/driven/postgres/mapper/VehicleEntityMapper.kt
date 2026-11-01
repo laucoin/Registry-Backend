@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
@@ -8,6 +7,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
 import org.springframework.stereotype.Component
+import java.time.Clock
 
 @Component
 class VehicleEntityMapper(private val clock: Clock): IEntityMapper<VehicleModel, VehicleEntity> {

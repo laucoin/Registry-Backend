@@ -745,6 +745,5 @@ class MovementService(
 		log.info("Purging movements older than {} and uncommented since {}", dateThreshold, dateThreshold)
 		return port.findOlderThanAndUncommentedSince(dateThreshold)
 			.purgeEach("movement", dryRun, port::deleteById)
-
 	}
 }

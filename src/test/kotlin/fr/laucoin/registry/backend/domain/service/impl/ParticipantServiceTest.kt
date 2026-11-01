@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import org.mockito.kotlin.argThat
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -60,6 +59,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import org.springframework.transaction.reactive.TransactionalOperator
 import org.junit.jupiter.api.BeforeEach
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream

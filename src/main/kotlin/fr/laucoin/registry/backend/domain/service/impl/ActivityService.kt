@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -20,6 +19,7 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IProjectService
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
@@ -121,7 +121,6 @@ class ActivityService(
 		log.info("Purging activities unused since {}", dateThreshold)
 		return port.findUnusedSince(dateThreshold)
 			.purgeEach("activity", dryRun, port::deleteById)
-
 	}
 
 	private fun Mono<ActivityModel>.updateActivity(currentUser: CurrentUserModel) = flatMap {

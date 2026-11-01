@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -10,6 +9,7 @@ import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IActivityEntityRepository
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service

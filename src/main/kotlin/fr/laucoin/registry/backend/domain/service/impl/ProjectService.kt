@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
 import org.springframework.http.HttpStatus.FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
@@ -29,6 +28,7 @@ import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import fr.laucoin.registry.backend.domain.service.IRoleService
 import fr.laucoin.registry.backend.domain.service.IUserProjectProfileService
+import java.time.Clock
 import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.UUID
@@ -287,7 +287,6 @@ class ProjectService(
 		log.info("Purging projects inactive since {}", dateThreshold)
 		return port.findProjectsEligibleForPurge(dateThreshold)
 			.purgeEach("project", dryRun, port::deleteById)
-
 	}
 
 	/**

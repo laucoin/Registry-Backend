@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
+import java.time.Clock
 import java.time.LocalDate
 import java.util.Optional
 import org.springframework.stereotype.Component

@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.domain.extension
 
 import kotlin.test.assertTrue
 import kotlin.test.assertFalse
-import java.time.Instant
 import java.time.Clock
+import java.time.Instant
 import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test

@@ -1,7 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import java.time.ZonedDateTime
-import java.time.ZoneOffset
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -24,6 +22,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 

@@ -1,7 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import java.time.Clock
-import java.time.OffsetTime
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
@@ -48,7 +46,9 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Clock
 import java.time.LocalDate
+import java.time.OffsetTime
 import java.util.UUID
 import java.util.stream.Stream
 

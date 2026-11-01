@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ProjectCountsModel
@@ -10,6 +9,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithModel
 import org.springframework.stereotype.Component
+import java.time.Clock
 
 @Component
 class ProjectEntityMapper(private val clock: Clock): IEntityMapper<ProjectModel, ProjectEntity> {

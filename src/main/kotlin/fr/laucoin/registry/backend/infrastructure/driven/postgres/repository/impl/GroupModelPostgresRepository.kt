@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -14,6 +13,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupCo
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupEntityRepository
+import java.time.Clock
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator

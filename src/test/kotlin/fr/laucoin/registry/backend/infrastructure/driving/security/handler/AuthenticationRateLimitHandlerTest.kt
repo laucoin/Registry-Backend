@@ -1,11 +1,11 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
-import java.time.Instant
-import java.time.Duration
 import fr.laucoin.registry.backend.test.MutableClock
-import java.time.Clock
 import fr.laucoin.registry.backend.domain.service.ITranslateService
 import java.net.InetSocketAddress
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
