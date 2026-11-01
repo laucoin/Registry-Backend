@@ -3,6 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.port.IAuditPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.audit.AuditFields.AUDIT_TABLE
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 import org.springframework.r2dbc.core.DatabaseClient
 import org.springframework.r2dbc.core.DatabaseClient.GenericExecuteSpec
@@ -11,8 +13,8 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Adaptateur Postgres du port d'écriture de la trace d'audit.
- * Périmètre : Insère un événement d'audit dans la table d'audit, valeurs tronquées à la taille des colonnes.
- * Limites : Insertion seule ; ne porte aucune règle métier et ne lit jamais la table.
+ * Périmètre : Insère un événement d'audit dans la table d'audit (valeurs tronquées à la taille des colonnes) et purge ceux antérieurs à un seuil.
+ * Limites : Ne porte aucune règle métier ; ne lit la table que pour compter les événements à purger.
  */
 @Service
 class AuditPostgresRepository(
@@ -34,6 +36,14 @@ class AuditPostgresRepository(
 			.thenReturn(Unit)
 	}
 
+	override fun purgeOlderThan(deleteOlderThan: LocalDate, dryRun: Boolean): Mono<Long> {
+		val sql = if (dryRun) COUNT_OLDER_THAN else DELETE_OLDER_THAN
+		return databaseClient.sql(sql)
+			.bind("threshold", deleteOlderThan.atStartOfDay().atOffset(ZoneOffset.UTC))
+			.map { row -> row.get(0, Long::class.javaObjectType)!! }
+			.one()
+	}
+
 	private fun <T : Any> GenericExecuteSpec.bindNullable(name: String, value: T?, type: Class<T>): GenericExecuteSpec {
 		return if (value == null) bindNull(name, type) else bind(name, value)
 	}
@@ -41,6 +51,13 @@ class AuditPostgresRepository(
 	private companion object {
 		const val IP_MAX = 45
 		const val USER_AGENT_MAX = 512
+
+		const val COUNT_OLDER_THAN = "SELECT COUNT(*) FROM $AUDIT_TABLE WHERE occurred_at < :threshold"
+
+		const val DELETE_OLDER_THAN = """
+			WITH deleted AS (DELETE FROM $AUDIT_TABLE WHERE occurred_at < :threshold RETURNING 1)
+			SELECT COUNT(*) FROM deleted
+		"""
 
 		const val INSERT_AUDIT = """
 			INSERT INTO $AUDIT_TABLE (action, resource_type, resource_id, project_id, actor_user_id, outcome, client_ip, user_agent, occurred_at)

@@ -103,6 +103,9 @@ registry:
       users:
         cron: 0 0 1 * * *
         months-threshold: 12
+      audit:
+        cron: 0 0 3 * * *
+        months-threshold: 12
   information:
     name: Registry
     description: This application allows virtual registry management. This is a backend which one is called by the frontend.
