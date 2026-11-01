@@ -7,11 +7,13 @@ import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.port.IAuditPort
 import fr.laucoin.registry.backend.test.TestContext
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.r2dbc.core.DatabaseClient
+import reactor.core.publisher.Flux
 import reactor.test.StepVerifier
 
 class AuditPostgresRepositoryTest : TestContext() {
@@ -21,7 +23,12 @@ class AuditPostgresRepositoryTest : TestContext() {
 	@Autowired
 	private lateinit var databaseClient: DatabaseClient
 
-	private fun audit(actor: UUID, client: ClientContextModel, projectId: UUID? = null) = AuditModel(
+	private fun audit(
+		actor: UUID,
+		client: ClientContextModel,
+		projectId: UUID? = null,
+		occurredAt: ZonedDateTime = ZonedDateTime.parse("2026-01-01T10:00:00Z"),
+	) = AuditModel(
 		action = AuditActionEnum.EXPORT,
 		resourceType = AuditResourceTypeEnum.PARTICIPANT,
 		resourceId = UUID.randomUUID(),
@@ -29,7 +36,7 @@ class AuditPostgresRepositoryTest : TestContext() {
 		actorUserId = actor,
 		outcome = AuditOutcomeEnum.RATE_LIMITED,
 		client = client,
-		occurredAt = ZonedDateTime.parse("2026-01-01T10:00:00Z"),
+		occurredAt = occurredAt,
 	)
 
 	private fun select(actor: UUID) = databaseClient
@@ -87,5 +94,28 @@ class AuditPostgresRepositoryTest : TestContext() {
 
 		// Assert
 		StepVerifier.create(result.map { (it[4] as String).length }).expectNext(512).verifyComplete()
+	}
+
+	@Test
+	fun `Should purgeOlderThan count on a dry run then delete only the events older than the threshold`() {
+		// Arrange
+		val client = ClientContextModel("203.0.113.7", "JUnit")
+		val old = audit(UUID.randomUUID(), client, occurredAt = ZonedDateTime.parse("1999-12-31T23:00:00Z"))
+		val older = audit(UUID.randomUUID(), client, occurredAt = ZonedDateTime.parse("1998-06-01T10:00:00Z"))
+		val kept = audit(UUID.randomUUID(), client, occurredAt = ZonedDateTime.parse("2000-01-01T00:00:00Z"))
+		val threshold = LocalDate.of(2000, 1, 1)
+
+		// Act
+		val result = port.record(old).then(port.record(older)).then(port.record(kept))
+			.thenMany(Flux.concat(
+				port.purgeOlderThan(threshold, dryRun = true),
+				port.purgeOlderThan(threshold, dryRun = false),
+				port.purgeOlderThan(threshold, dryRun = true),
+			))
+			.collectList()
+
+		// Assert
+		StepVerifier.create(result).expectNext(listOf(2L, 2L, 0L)).verifyComplete()
+		StepVerifier.create(select(kept.actorUserId!!).map { it[2]!! }).expectNext("RATE_LIMITED").verifyComplete()
 	}
 }

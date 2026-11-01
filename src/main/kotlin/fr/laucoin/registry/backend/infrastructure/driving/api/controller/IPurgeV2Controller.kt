@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PurgeError.PURGE_DATE_THRESHOLD_IN_FUTURE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_JOB_C
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuditPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectContentPurgeReaderDto
 import io.swagger.v3.oas.annotations.Operation
@@ -83,4 +84,18 @@ interface IPurgeV2Controller {
 		@DateTimeFormat(iso = DATE) dateThreshold: LocalDate? = null,
 		@RequestParam(required = false, defaultValue = "true") dryRun: Boolean,
 	): Mono<ProjectConfigurationPurgeReaderDto>
+
+	@Operation(
+		summary = "Purge audit events",
+		description = "Purge the personal data access audit events older than the threshold. The response gives the number of events purged, or that would be purged on a dry run.",
+	)
+	@PreAuthorize("hasAuthority('$REGISTRY_JOB_C')")
+	@PostMapping("/audits")
+	fun purgeAuditsIfNecessary(
+		@Parameter(description = "If not specified, the purge will be done with the default threshold defined in registry's configuration")
+		@RequestParam(required = false)
+		@Valid @PastOrPresent(message = PURGE_DATE_THRESHOLD_IN_FUTURE)
+		@DateTimeFormat(iso = DATE) dateThreshold: LocalDate? = null,
+		@RequestParam(required = false, defaultValue = "true") dryRun: Boolean,
+	): Mono<AuditPurgeReaderDto>
 }

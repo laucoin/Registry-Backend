@@ -76,4 +76,28 @@ class PurgeSchedulerTest {
 		// Assert
 		verify(purgeService).purgeProjectsConfigurations(null, false)
 	}
+
+	@Test
+	fun `Should purgeAudits run a real purge with the configured threshold`() {
+		// Arrange
+		whenever(purgeService.purgeAudits(null, false)).thenReturn(Mono.just(3L))
+
+		// Act
+		scheduler.purgeAudits()
+
+		// Assert
+		verify(purgeService).purgeAudits(null, false)
+	}
+
+	@Test
+	fun `Should purgeAudits not propagate a purge failure`() {
+		// Arrange
+		whenever(purgeService.purgeAudits(null, false)).thenReturn(Mono.error(IllegalStateException("boom")))
+
+		// Act
+		scheduler.purgeAudits()
+
+		// Assert
+		verify(purgeService).purgeAudits(null, false)
+	}
 }

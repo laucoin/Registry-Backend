@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.port.IAuditPort
 import fr.laucoin.registry.backend.domain.service.IAuditService
 import java.time.Duration
+import java.time.LocalDate
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import org.springframework.beans.factory.annotation.Value
@@ -15,7 +16,7 @@ import reactor.core.publisher.Sinks.EmitResult.FAIL_NON_SERIALIZED
 
 /**
  * Objectif : Enregistre la trace d'audit hors du chemin de la réponse, via une file d'attente bornée.
- * Périmètre : Porte la file, son unique consommateur (démarré et drainé avec le cycle de vie de l'application) et la politique de débordement.
+ * Périmètre : Porte la purge de rétention, la file, son unique consommateur (démarré et drainé avec le cycle de vie de l'application) et la politique de débordement.
  * Limites : File locale à l'instance ; un événement en attente est perdu en cas d'arrêt brutal, et rejeté (journalisé) si la file est pleine.
  */
 @Service
@@ -30,6 +31,11 @@ class AuditService(
 
 	override fun record(audit: AuditModel) {
 		if (!offer(audit)) log.error("Audit event {} on {} was dropped", audit.action, audit.resourceType)
+	}
+
+	override fun purgeAuditsIfNecessary(deleteOlderThan: LocalDate, dryRun: Boolean): Mono<Long> {
+		return port.purgeOlderThan(deleteOlderThan, dryRun)
+			.doOnNext { log.info("[dryRun={}] {} audit events older than {} matched", dryRun, it, deleteOlderThan) }
 	}
 
 	private fun offer(audit: AuditModel): Boolean {

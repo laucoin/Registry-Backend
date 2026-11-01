@@ -236,4 +236,32 @@ class PurgeControllerTest : TestContext() {
 
 		verify(purgeService).purgeUsers(threshold, true)
 	}
+
+	@Test
+	fun `Should purgeAuditsIfNecessary return 200 with the count and default to a dry run`() {
+		// Arrange
+		whenever(purgeService.purgeAudits(anyOrNull(), any())).thenReturn(Mono.just(4L))
+
+		// Act
+		val result = webClient.authenticate(REGISTRY_JOB_C).post()
+			.uri(uriBuilder("$BASE_URL/audits", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isOk
+			.expectBody().jsonPath("$.count").isEqualTo(4)
+		verify(purgeService).purgeAudits(null, true)
+	}
+
+	@Test
+	fun `Should purgeAuditsIfNecessary return 403 without the job permission`() {
+		// Act
+		val result = webClient.authenticate().post()
+			.uri(uriBuilder("$BASE_URL/audits", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isForbidden
+		verifyNoInteractions(purgeService)
+	}
 }

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 
 /**
- * Objectif : Déclenche les quatre balayages de rétention selon leurs expressions cron configurées.
+ * Objectif : Déclenche les cinq balayages de rétention selon leurs expressions cron configurées.
  * Périmètre : Porte la planification et la journalisation des exécutions en échec ; chaque exécution est une vraie purge avec le seuil configuré.
  * Limites : Ne porte aucune logique de purge ; une exécution en échec est journalisée et jamais rejouée avant le prochain déclenchement cron.
  */
@@ -29,6 +29,9 @@ class PurgeScheduler(
 	@Scheduled(cron = $$"${registry.feature.purge.projects.configuration.cron}")
 	fun purgeProjectsConfigurations() =
 		launch("projects configurations", purgeService.purgeProjectsConfigurations(dateThreshold = null, dryRun = false))
+
+	@Scheduled(cron = $$"${registry.feature.purge.audit.cron}")
+	fun purgeAudits() = launch("audits", purgeService.purgeAudits(dateThreshold = null, dryRun = false))
 
 	private fun launch(job: String, purge: Publisher<*>) {
 		Mono.from(purge)

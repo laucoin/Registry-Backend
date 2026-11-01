@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
 import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.port.IAuditPort
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -20,6 +21,7 @@ import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 
 class AuditServiceTest {
 	private val port: IAuditPort = mock()
@@ -113,6 +115,19 @@ class AuditServiceTest {
 
 		// Assert
 		assertTrue(stopped.await(WAIT_MS, TimeUnit.MILLISECONDS))
+	}
+
+	@Test
+	fun `Should purgeAuditsIfNecessary delegate the threshold and the dry run to the port`() {
+		// Arrange
+		val threshold = LocalDate.of(2025, 1, 1)
+		whenever(port.purgeOlderThan(threshold, true)).thenReturn(Mono.just(12L))
+
+		// Act
+		val result = AuditService(port, 10).purgeAuditsIfNecessary(threshold, dryRun = true)
+
+		// Assert
+		StepVerifier.create(result).expectNext(12L).verifyComplete()
 	}
 
 	private companion object {

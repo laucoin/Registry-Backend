@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
 import fr.laucoin.registry.backend.domain.service.IPurgeService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPurgeV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuditPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectContentPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectConfigurationPurgeReaderDtoMapper
@@ -48,5 +49,9 @@ class PurgeV2Controller(
 		dryRun: Boolean,
 	): Mono<ProjectConfigurationPurgeReaderDto> {
 		return service.purgeProjectsConfigurations(dateThreshold, dryRun).map(configurationMapper::toDto)
+	}
+
+	override fun purgeAuditsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Mono<AuditPurgeReaderDto> {
+		return service.purgeAudits(dateThreshold, dryRun).map { AuditPurgeReaderDto(it) }
 	}
 }

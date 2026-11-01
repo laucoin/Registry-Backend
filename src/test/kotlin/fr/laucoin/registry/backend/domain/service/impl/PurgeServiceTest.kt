@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.service.IActivityService
 import fr.laucoin.registry.backend.domain.service.IAlertService
+import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import fr.laucoin.registry.backend.domain.service.IMovementService
@@ -35,13 +36,14 @@ class PurgeServiceTest {
 	private val vehicleService: IVehicleService = mock()
 	private val participantService: IParticipantService = mock()
 	private val groupService: IGroupService = mock()
+	private val auditService: IAuditService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val clock: Clock = Clock.fixed(Instant.parse("2026-10-12T10:00:00Z"), UTC)
 	private val service = PurgeService(
 		userService, projectService, movementService, alertService, communicationService,
-		activityService, vehicleService, participantService, groupService, clock,
+		activityService, vehicleService, participantService, groupService, auditService, clock,
 		transactionalOperator,
-		USERS_MONTHS, PROJECTS_MONTHS, CONTENT_MONTHS, CONFIGURATION_MONTHS,
+		USERS_MONTHS, PROJECTS_MONTHS, CONTENT_MONTHS, CONFIGURATION_MONTHS, AUDIT_MONTHS,
 	)
 
 	private companion object {
@@ -49,6 +51,7 @@ class PurgeServiceTest {
 		private const val PROJECTS_MONTHS = 12L
 		private const val CONTENT_MONTHS = 3L
 		private const val CONFIGURATION_MONTHS = 24L
+		private const val AUDIT_MONTHS = 18L
 	}
 
 	@BeforeEach
@@ -208,5 +211,31 @@ class PurgeServiceTest {
 
 		// Assert
 		verify(transactionalOperator).transactional(any<Mono<*>>())
+	}
+
+	@Test
+	fun `Should purgeAudits use the configured threshold when no date is given`() {
+		// Arrange
+		whenever(auditService.purgeAuditsIfNecessary(LocalDate.of(2025, 4, 12), true)).thenReturn(Mono.just(7L))
+
+		// Act
+		val result = service.purgeAudits(dateThreshold = null, dryRun = true)
+
+		// Assert
+		StepVerifier.create(result).expectNext(7L).verifyComplete()
+	}
+
+	@Test
+	fun `Should purgeAudits prefer the explicit date over the configured threshold`() {
+		// Arrange
+		val threshold = LocalDate.of(2025, 1, 1)
+		whenever(auditService.purgeAuditsIfNecessary(threshold, false)).thenReturn(Mono.just(0L))
+
+		// Act
+		val result = service.purgeAudits(threshold, dryRun = false)
+
+		// Assert
+		StepVerifier.create(result).expectNext(0L).verifyComplete()
+		verify(auditService).purgeAuditsIfNecessary(threshold, false)
 	}
 }
