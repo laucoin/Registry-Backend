@@ -13,6 +13,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
@@ -119,7 +121,7 @@ interface IProjectV2Controller {
 		summary = "Disable Project",
 		description = "Disable Project access, obviously the related profile is no accessible anymore.",
 	)
-	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_U')")
+	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_SOFT_DELETE')")
 	@PostMapping("/{id}/disable")
 	fun disableProjectById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -130,7 +132,7 @@ interface IProjectV2Controller {
 		summary = "Enable Project",
 		description = "Enable Project, obviously the profiles concerned are accessible again.",
 	)
-	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_D')")
+	@PreAuthorize("hasPermission(#id, '$REGISTRY_PROJECT_RESTORE')")
 	@PostMapping("/{id}/enable")
 	fun enableProjectById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ALERT
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_RESTORE
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
@@ -273,7 +273,7 @@ class AlertServiceTest {
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
 
 		// Act
-		service.findAlertForUser(currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_D)), defaultProjectId, defaultAlertId).block()
+		service.findAlertForUser(currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_RESTORE)), defaultProjectId, defaultAlertId).block()
 
 		// Assert
 		verify(port).findById(defaultProjectId, defaultAlertId, null)

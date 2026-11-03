@@ -21,6 +21,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
@@ -540,8 +542,6 @@ class MovementControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should searchParticipantsAndGroups return 200`() {
-	@Test
 	fun `Should searchParticipantsAndGroups return 400 without the movement date`() {
 		// Act
 		val result = webClient
@@ -561,6 +561,8 @@ class MovementControllerTest : TestContext() {
 		verifyNoInteractions(service)
 	}
 
+	@Test
+	fun `Should searchParticipantsAndGroups return 200`() {
 		// Arrange
 		val searched = "text"
 		val type = REGISTERED
@@ -873,7 +875,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_SOFT_DELETE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -905,7 +907,7 @@ class MovementControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_D))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_RESTORE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()

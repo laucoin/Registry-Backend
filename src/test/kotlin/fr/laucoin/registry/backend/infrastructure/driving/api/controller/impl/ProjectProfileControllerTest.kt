@@ -15,6 +15,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_U
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
@@ -198,8 +200,6 @@ class ProjectProfileControllerTest : TestContext() {
 		)
 	}
 
-	@ParameterizedTest
-	@MethodSource
 	@Test
 	fun `Should findProjectProfiles pass the visibility filter independently of the status`() {
 		// Arrange
@@ -229,6 +229,8 @@ class ProjectProfileControllerTest : TestContext() {
 		verify(service).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
 	}
 
+	@ParameterizedTest
+	@MethodSource
 	fun `Should findProjectProfiles return 200`(
 		requestedLocale: String?,
 		page: Int?,
@@ -661,7 +663,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_SOFT_DELETE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/block", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -691,7 +693,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()

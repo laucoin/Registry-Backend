@@ -42,8 +42,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_RESTORE
 
 /**
  * Objectif : Adaptateur REST des endpoints du participant.
@@ -81,7 +81,7 @@ class ParticipantV2Controller(
 		birthdayTo: LocalDate?,
 		sort: String?,
 	): Mono<PageModel<ParticipantReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ParticipantSearchParamModel(
 			query,
@@ -107,7 +107,7 @@ class ParticipantV2Controller(
 	}
 
 	override fun findParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
-		return service.findParticipantById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_PARTICIPANT_D)).map(readerMapper::toDto)
+		return service.findParticipantById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_PARTICIPANT_RESTORE)).map(readerMapper::toDto)
 	}
 
 	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
@@ -142,7 +142,7 @@ class ParticipantV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
 			visibility,
