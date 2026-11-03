@@ -213,7 +213,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
 			.get()
 			.uri(
 				uriBuilder(
@@ -222,6 +222,29 @@ class ProjectProfileControllerTest : TestContext() {
 					listOf(Pair("status", ProfileStatusEnum.ACCEPTED), Pair("isVisible", false)),
 				)
 			)
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+		verify(service).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should findProjectProfiles only return visible profiles without the restore permission`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val searchParams = ProjectProfileSearchParamModel(isVisible = true)
+		whenever(service.findProjectProfilesPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("isVisible", false))))
 			.exchange()
 
 		// Assert
@@ -258,7 +281,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
 			.get()
 			.uri(
 				uriBuilder(
@@ -325,7 +348,7 @@ class ProjectProfileControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should findProjectProfileById return 200`() {
+	fun `Should findProjectProfileById only look for a visible profile without the restore permission`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
@@ -335,6 +358,27 @@ class ProjectProfileControllerTest : TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ProjectProfileReaderDto>(OK)
+
+		verify(service).findProjectProfileById(defaultProjectId, uuid, isVisible = true)
+	}
+
+	@Test
+	fun `Should findProjectProfileById return 200`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+
+		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -746,7 +790,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
 			.get()
 			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("role", "PROJECT_ADMINISTRATOR"))))
 			.exchange()

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_RESTORE
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
@@ -50,6 +51,7 @@ class ProjectProfileV2Controller(
 	private val profilesWriterMapper: ProjectProfilesWriterDtoMapper,
 ) : IProjectProfileV2Controller {
 	override fun findProjectProfiles(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		page: Long,
 		size: Int,
@@ -65,14 +67,16 @@ class ProjectProfileV2Controller(
 		val searchParams = ProjectProfileSearchParamModel(
 			query, isAvailable, status, at, role,
 			sort = sort.toSortModel(ProjectProfileSearchParamModel.SORT_FIELDS),
-			isVisible = isVisible,
+			isVisible = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PROFILE_RESTORE),
 		)
 
 		return service.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
-	override fun findProjectProfileById(projectId: UUID, id: UUID): Mono<ProjectProfileReaderDto> {
-		return service.findProjectProfileById(projectId, id, isVisible = null).map(readerMapper::toDto)
+	override fun findProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ProjectProfileReaderDto> {
+		val visibility = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_PROFILE_RESTORE)
+
+		return service.findProjectProfileById(projectId, id, isVisible = visibility).map(readerMapper::toDto)
 	}
 
 	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
