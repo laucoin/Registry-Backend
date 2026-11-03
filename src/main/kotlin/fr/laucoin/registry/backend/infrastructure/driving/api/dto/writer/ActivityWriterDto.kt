@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DESCRIPTION_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DESCRIPTION_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_NAME_TOO_LONG
@@ -21,6 +22,7 @@ data class ActivityWriterDto(
 	@field:NotBlank(message = ACTIVITY_NAME_NULL_OR_BLANK)
 	@field:Size(max = ACTIVITY_NAME_MAX, message = ACTIVITY_NAME_TOO_LONG)
 	var name: String? = null,
+	@field:Pattern(regexp = "|.*\\S.*", flags = [Pattern.Flag.DOTALL], message = ACTIVITY_DESCRIPTION_BLANK)
 	@field:Size(max = ACTIVITY_DESCRIPTION_MAX, message = ACTIVITY_DESCRIPTION_TOO_LONG)
 	var description: String? = null,
 	@field:Size(max = ACTIVITY_DURATION_MAX, message = PARAMETER_TOO_LONG)

@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MESSAGE_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_OR_ALERT_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
@@ -78,6 +79,7 @@ class CommunicationControllerTest : TestContext() {
 					dateTime = null,
 					alertId = null,
 					movementId = defaultMovementId,
+					message = "Message",
 				),
 				COMMUNICATION_DATETIME_NULL
 			),
@@ -86,11 +88,29 @@ class CommunicationControllerTest : TestContext() {
 					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					alertId = null,
 					movementId = null,
+					message = "Message",
 				),
 				COMMUNICATION_MOVEMENT_OR_ALERT_NULL
 			),
 			Arguments.of(
 				CommunicationWriterDto(
+			Arguments.of(
+				CommunicationWriterDto(
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
+					alertId = null,
+					movementId = defaultMovementId,
+				),
+				COMMUNICATION_MESSAGE_NULL_OR_BLANK
+			),
+			Arguments.of(
+				CommunicationWriterDto(
+					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
+					message = "   ",
+					alertId = null,
+					movementId = defaultMovementId,
+				),
+				COMMUNICATION_MESSAGE_NULL_OR_BLANK
+			),
 					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					message = "Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message.",
 					alertId = null,
@@ -156,7 +176,7 @@ class CommunicationControllerTest : TestContext() {
 		// Arrange
 		val createdId = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), message = "Message", alertId = null, movementId = defaultMovementId)
 
 		whenever(service.createCommunication(any(), any())).thenReturn(Mono.just(CommunicationModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(CommunicationReaderDto().apply { id = createdId })
@@ -211,7 +231,7 @@ class CommunicationControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), message = "Message", alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
@@ -248,7 +268,7 @@ class CommunicationControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), message = "Message", alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(
@@ -291,7 +311,7 @@ class CommunicationControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val communication =
-			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), alertId = null, movementId = defaultMovementId)
+			CommunicationWriterDto(dateTime = ZonedDateTime.now(ZoneOffset.UTC), message = "Message", alertId = null, movementId = defaultMovementId)
 
 		whenever(
 			service.updateCommunicationById(

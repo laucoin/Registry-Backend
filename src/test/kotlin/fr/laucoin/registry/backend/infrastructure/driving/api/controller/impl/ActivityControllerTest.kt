@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_ALLOWED_PARTICIPANTS_MAX_IS_HIGHER_THAN_MIN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_ALLOWED_PARTICIPANTS_TOO_LOW
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DESCRIPTION_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DESCRIPTION_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DURATION_FORMAT_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DURATION_MIN_HIGHER_THAN_MAX
@@ -280,6 +281,17 @@ class ActivityControllerTest : TestContext() {
 			),
 			Arguments.of(
 				ActivityWriterDto(
+			Arguments.of(
+				ActivityWriterDto(
+					name = "Activity 1",
+					description = "   ",
+					duration = "PT15M",
+					allowedParticipants = NumericRangeWriterDto(lower = 1, upper = 10),
+					startAvailability = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
+					endAvailability = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
+				),
+				ACTIVITY_DESCRIPTION_BLANK
+			),
 					name = "Activity 1",
 					description = "This is an activity very interesting",
 					duration = "PT15M",
@@ -625,6 +637,27 @@ class ActivityControllerTest : TestContext() {
 
 	@Test
 	fun `Should createActivity expose the location of the new activity`() {
+	@Test
+	fun `Should createActivity accept a multiline description`() {
+		// Arrange
+		val activity = ActivityWriterDto(name = "Activity 1", description = "First line\nSecond line")
+
+		whenever(service.createActivity(any(), any())).thenReturn(Mono.just(ActivityModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ActivityReaderDto())
+		whenever(writerMapper.toModel(any(), any())).thenReturn(ActivityModel())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_C), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
+			.bodyValue(activity)
+			.exchange()
+
+		// Assert
+		result.body<ActivityReaderDto>(CREATED)
+	}
+
 		// Arrange
 		val activity = ActivityWriterDto(name = "Activity 1")
 		val createdId = UUID.randomUUID()
