@@ -28,13 +28,16 @@ class AuditPostgresRepositoryTest : TestContext() {
 		client: ClientContextModel,
 		projectId: UUID? = null,
 		occurredAt: ZonedDateTime = ZonedDateTime.parse("2026-01-01T10:00:00Z"),
+		action: AuditActionEnum = AuditActionEnum.EXPORT,
+		resourceType: AuditResourceTypeEnum = AuditResourceTypeEnum.PARTICIPANT,
+		outcome: AuditOutcomeEnum = AuditOutcomeEnum.RATE_LIMITED,
 	) = AuditModel(
-		action = AuditActionEnum.EXPORT,
-		resourceType = AuditResourceTypeEnum.PARTICIPANT,
+		action = action,
+		resourceType = resourceType,
 		resourceId = UUID.randomUUID(),
 		projectId = projectId,
 		actorUserId = actor,
-		outcome = AuditOutcomeEnum.RATE_LIMITED,
+		outcome = outcome,
 		client = client,
 		occurredAt = occurredAt,
 	)
@@ -67,6 +70,28 @@ class AuditPostgresRepositoryTest : TestContext() {
 		// Assert
 		StepVerifier.create(result)
 			.expectNext(listOf("EXPORT", "PARTICIPANT", "RATE_LIMITED", "203.0.113.7", "JUnit/1.0", projectId))
+			.verifyComplete()
+	}
+
+	@Test
+	fun `Should record persist a read of a movement`() {
+		// Arrange
+		val actor = UUID.randomUUID()
+		val projectId = UUID.randomUUID()
+		val client = ClientContextModel("203.0.113.7", "JUnit/1.0")
+		val event = audit(
+			actor, client, projectId,
+			action = AuditActionEnum.READ,
+			resourceType = AuditResourceTypeEnum.MOVEMENT,
+			outcome = AuditOutcomeEnum.SUCCESS,
+		)
+
+		// Act
+		val result = port.record(event).then(select(actor))
+
+		// Assert
+		StepVerifier.create(result)
+			.expectNext(listOf("READ", "MOVEMENT", "SUCCESS", "203.0.113.7", "JUnit/1.0", projectId))
 			.verifyComplete()
 	}
 
