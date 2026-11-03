@@ -541,10 +541,31 @@ class MovementControllerTest : TestContext() {
 
 	@Test
 	fun `Should searchParticipantsAndGroups return 200`() {
+	@Test
+	fun `Should searchParticipantsAndGroups return 400 without the movement date`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R))
+			.get()
+			.uri(
+				uriBuilder(
+					"$BASE_URL/search/participants-and-groups",
+					listOf(defaultProjectId),
+					listOf(Pair("contentType", REGISTERED))
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.expectStatus().isBadRequest
+		verifyNoInteractions(service)
+	}
+
 		// Arrange
 		val searched = "text"
 		val type = REGISTERED
-		whenever(service.searchParticipantsAndGroupsByText(any(), any(), anyOrNull())).thenReturn(
+		val at = "2026-01-01T10:00:00Z"
+		whenever(service.searchParticipantsAndGroupsByText(any(), any(), anyOrNull(), any(), any())).thenReturn(
 			Mono.just(
 				Tuples.of(
 					listOf(ParticipantModel()),
@@ -567,7 +588,7 @@ class MovementControllerTest : TestContext() {
 				uriBuilder(
 					"$BASE_URL/search/participants-and-groups",
 					listOf(defaultProjectId),
-					listOf(Pair("contentType", type), Pair("q", searched))
+					listOf(Pair("contentType", type), Pair("q", searched), Pair("at", at))
 				)
 			)
 			.exchange()
@@ -575,7 +596,7 @@ class MovementControllerTest : TestContext() {
 		// Assert
 		result.body<MovementParticipantsAndGroupsReaderDto>(OK)
 
-		verify(service).searchParticipantsAndGroupsByText(defaultProjectId, type, searched)
+		verify(service).searchParticipantsAndGroupsByText(defaultProjectId, type, searched, ZonedDateTime.parse(at), false)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementTypeReaderMapper)
 		verify(movementParticipantsAndGroupsReaderMapper).toDto(any())

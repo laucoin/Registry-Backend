@@ -160,6 +160,11 @@ interface IMovementV2Controller {
 		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 	): Mono<MovementParticipantsAndGroupsReaderDto>
 
+		@Parameter(description = "Date-time of the movement: participants must be present at this instant")
+		@RequestParam(required = true)
+		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime,
+		@Parameter(description = "When true, returns every visible participant of the project regardless of the date")
+		@RequestParam(required = false, defaultValue = "false") all: Boolean,
 	@Operation(
 		summary = "Search Vehicles",
 		description = "Search Vehicles to add in a Movement",

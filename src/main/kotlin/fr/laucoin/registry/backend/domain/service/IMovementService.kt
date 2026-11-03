@@ -19,6 +19,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -58,7 +59,9 @@ interface IMovementService {
 	fun searchParticipantsAndGroupsByText(
 		projectId: UUID,
 		type: ParticipantTypeEnum,
-		query: String?
+		query: String?,
+		at: ZonedDateTime,
+		all: Boolean,
 	): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>>
 
 	fun searchVehiclesByText(projectId: UUID, query: String?): Flux<VehicleModel>
