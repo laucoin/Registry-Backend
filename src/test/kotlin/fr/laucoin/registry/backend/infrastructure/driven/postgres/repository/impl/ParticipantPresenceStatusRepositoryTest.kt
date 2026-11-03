@@ -102,6 +102,22 @@ class ParticipantPresenceStatusRepositoryTest : TestContext() {
 		assertTrue(present.none { absent.contains(it) || unavailable.contains(it) })
 	}
 
+	@Test
+	@Order(4)
+	fun `Should ignore a definitive departure followed by a later non definitive movement`() {
+		// Arrange
+		val returnedId = createParticipant("returned", start = -1, end = 1)
+		createMovement(returnedId, IN, null, base.minusMinutes(60))
+		createMovement(returnedId, OUT, DEFINITIVE_DEPARTURE, base.minusMinutes(50))
+		createMovement(returnedId, OUT, SHOPPING, base.minusMinutes(40))
+
+		// Act
+		participantPort.refreshEffectiveDates(listOf(returnedId)).block()
+
+		// Assert
+		assertEquals(ABSENT, statusOf(returnedId))
+	}
+
 	private fun statusOf(id: UUID): PresenceStatusEnum? =
 		participantPort.findById(defaultProjectId, id, null).block()!!.status
 
