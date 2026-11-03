@@ -84,6 +84,8 @@ interface IProjectProfileV2Controller {
 		@RequestParam(required = false) status: ProfileStatusEnum?,
 		@Parameter(description = "Instant that must fall inside the validity window")
 		@RequestParam(required = false)
+		@Parameter(description = "Visibility filter: true keeps visible profiles only, false keeps blocked ones only, omitted keeps both")
+		@RequestParam(required = false) isVisible: Boolean?,
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Exact role of the profile, as listed by the roles endpoint")
 		@RequestParam(required = false)
