@@ -14,6 +14,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
@@ -184,7 +186,7 @@ interface IAlertV2Controller {
 		summary = "Disable Alert",
 		description = "Disable Alert, it will not visible anymore in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_SOFT_DELETE')")
 	@PostMapping("/{id}/disable")
 	fun disableAlertById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -196,7 +198,7 @@ interface IAlertV2Controller {
 		summary = "Enable Alert",
 		description = "Enable Alert, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_D')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_RESTORE')")
 	@PostMapping("/{id}/enable")
 	fun enableAlertById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

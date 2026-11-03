@@ -14,6 +14,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_OPTIONS_MISSING
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_R
@@ -549,7 +551,7 @@ class ProjectControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_U))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_SOFT_DELETE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(defaultProjectId), emptyList()))
 			.exchange()
@@ -570,7 +572,7 @@ class ProjectControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_D))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_RESTORE))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId), emptyList()))
 			.exchange()

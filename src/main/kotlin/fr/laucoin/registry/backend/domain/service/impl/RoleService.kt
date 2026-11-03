@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_RESTORE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_PREFIX
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
@@ -82,7 +83,8 @@ class RoleService(
 					listOf(
 						REGISTRY_PROJECT_R,
 						REGISTRY_PROJECT_U,
-						REGISTRY_PROJECT_D
+						REGISTRY_PROJECT_D,
+						REGISTRY_PROJECT_RESTORE
 					).contains(it)
 				}.map { "${projectId}_$it" }
 

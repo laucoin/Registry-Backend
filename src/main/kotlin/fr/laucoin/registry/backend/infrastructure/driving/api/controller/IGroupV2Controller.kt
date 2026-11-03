@@ -15,6 +15,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_U
@@ -216,7 +218,7 @@ interface IGroupV2Controller {
 		summary = "Disable Group",
 		description = "Disable Group, it will not visible anymore in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_SOFT_DELETE')")
 	@PostMapping("/{id}/disable")
 	fun disableGroupById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -228,7 +230,7 @@ interface IGroupV2Controller {
 		summary = "Enable Group",
 		description = "Enable Group, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_D')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_GROUP_RESTORE')")
 	@PostMapping("/{id}/enable")
 	fun enableGroupById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

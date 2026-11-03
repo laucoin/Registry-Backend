@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
 import org.springframework.http.HttpStatus.FORBIDDEN
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_RESTORE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectError.PROJECT_DATE_CONFLICT_WITH_ELEMENTS
@@ -68,8 +68,8 @@ class ProjectService(
 		}
 
 		searchParams.userId = currentUser.id
-		searchParams.hiddenReadableIds = currentUser.projectIdsWith(REGISTRY_PROJECT_D)
-		return (if (!(withProfile ?: !canReadAll)) {
+		searchParams.hiddenReadableIds = currentUser.projectIdsWith(REGISTRY_PROJECT_RESTORE)
+		return (if (!(withProfile ?: true)) {
 			port.findPage(pageable, searchParams)
 		} else port.findPage(
 			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),

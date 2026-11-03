@@ -10,6 +10,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
@@ -77,23 +79,21 @@ class CommunicationControllerTest : TestContext() {
 			Arguments.of(
 				CommunicationWriterDto(
 					dateTime = null,
+					message = "Message",
 					alertId = null,
 					movementId = defaultMovementId,
-					message = "Message",
 				),
 				COMMUNICATION_DATETIME_NULL
 			),
 			Arguments.of(
 				CommunicationWriterDto(
 					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
+					message = "Message",
 					alertId = null,
 					movementId = null,
-					message = "Message",
 				),
 				COMMUNICATION_MOVEMENT_OR_ALERT_NULL
 			),
-			Arguments.of(
-				CommunicationWriterDto(
 			Arguments.of(
 				CommunicationWriterDto(
 					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
@@ -111,6 +111,8 @@ class CommunicationControllerTest : TestContext() {
 				),
 				COMMUNICATION_MESSAGE_NULL_OR_BLANK
 			),
+			Arguments.of(
+				CommunicationWriterDto(
 					dateTime = ZonedDateTime.now(ZoneOffset.UTC),
 					message = "Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message, Message.",
 					alertId = null,
@@ -386,7 +388,7 @@ class CommunicationControllerTest : TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_U),
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_SOFT_DELETE),
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.post()
@@ -416,7 +418,7 @@ class CommunicationControllerTest : TestContext() {
 		// Act
 		val result = webClient
 			.authenticate(
-				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_D),
+				buildAuthority(REGISTRY_PROJECT_COMMUNICATION_RESTORE),
 				buildAuthority(REGISTRY_PROJECT_OPTION_COMMUNICATION)
 			)
 			.post()

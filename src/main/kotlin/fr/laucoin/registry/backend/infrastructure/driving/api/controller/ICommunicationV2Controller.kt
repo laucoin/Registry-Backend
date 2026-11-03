@@ -3,6 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_U
@@ -112,7 +114,7 @@ interface ICommunicationV2Controller {
 		summary = "Disable Communication",
 		description = "Disable Communication, it will not visible anymore in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_SOFT_DELETE')")
 	@PostMapping("/{id}/disable")
 	fun disableCommunicationById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -124,7 +126,7 @@ interface ICommunicationV2Controller {
 		summary = "Enable Communication",
 		description = "Enable Communication, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_D')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_COMMUNICATION') && hasPermission(#projectId, '$REGISTRY_PROJECT_COMMUNICATION_RESTORE')")
 	@PostMapping("/{id}/enable")
 	fun enableCommunicationById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

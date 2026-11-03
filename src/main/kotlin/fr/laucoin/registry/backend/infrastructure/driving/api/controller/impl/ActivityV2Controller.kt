@@ -32,8 +32,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_RESTORE
 
 /**
  * Objectif : Adaptateur REST des endpoints d'activité du projet.
@@ -63,7 +63,7 @@ class ActivityV2Controller(
 		participants: Int?,
 		sort: String?,
 	): Mono<PageModel<ActivityReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_ACTIVITY_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_ACTIVITY_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ActivitySearchParamModel(
 			query, visibility, isAvailable, at,
@@ -75,7 +75,7 @@ class ActivityV2Controller(
 	}
 
 	override fun findActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityReaderDto> {
-		return service.findActivityById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_ACTIVITY_D)).map(readerMapper::toDto)
+		return service.findActivityById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_ACTIVITY_RESTORE)).map(readerMapper::toDto)
 	}
 
 	override fun findActivityStatistics(
@@ -98,7 +98,7 @@ class ActivityV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
 			visibility,
