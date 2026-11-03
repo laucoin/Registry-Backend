@@ -200,6 +200,35 @@ class ProjectProfileControllerTest : TestContext() {
 
 	@ParameterizedTest
 	@MethodSource
+	@Test
+	fun `Should findProjectProfiles pass the visibility filter independently of the status`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val searchParams = ProjectProfileSearchParamModel(status = ProfileStatusEnum.ACCEPTED, isVisible = false)
+		whenever(service.findProjectProfilesPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.get()
+			.uri(
+				uriBuilder(
+					BASE_URL,
+					listOf(defaultProjectId),
+					listOf(Pair("status", ProfileStatusEnum.ACCEPTED), Pair("isVisible", false)),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+		verify(service).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
+	}
+
 	fun `Should findProjectProfiles return 200`(
 		requestedLocale: String?,
 		page: Int?,

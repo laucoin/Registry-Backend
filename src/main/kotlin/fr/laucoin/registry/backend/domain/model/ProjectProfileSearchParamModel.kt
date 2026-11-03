@@ -22,8 +22,9 @@ data class ProjectProfileSearchParamModel(
 		at: ZonedDateTime? = null,
 		role: String? = null,
 		sort: SortModel? = null,
+		isVisible: Boolean? = null,
 	): this(
-		if (status === BLOCKED) false else null,
+		isVisible ?: if (status === BLOCKED) false else null,
 		isAvailable,
 		if (Objects.nonNull(status) && status!! != BLOCKED) listOf(status) else ProfileStatusEnum.entries.toList(),
 		at,
