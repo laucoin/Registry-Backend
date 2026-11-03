@@ -174,6 +174,7 @@ class AuditReadHandlerTest {
 			Arguments.of("/api/v2/projects/{p}/participants/{id}/export", OK),
 			Arguments.of("/api/v2/projects/{p}/movements/planned/arrivals", OK),
 			Arguments.of("/api/v2/projects/{p}/groups", OK),
+			Arguments.of("/api/v2/projects/not-a-uuid/participants", OK),
 			Arguments.of("/api/v2/projects/{p}/participants/{id}", NOT_FOUND),
 			Arguments.of("/api/v2/users", INTERNAL_SERVER_ERROR),
 		)

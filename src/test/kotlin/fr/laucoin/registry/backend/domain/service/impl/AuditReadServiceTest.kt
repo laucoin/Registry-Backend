@@ -93,6 +93,21 @@ class AuditReadServiceTest {
 	}
 
 	@Test
+	fun `Should recordRead trace refused reads of one actor once whatever the resource or project`() {
+		// Arrange
+		val user = user()
+
+		// Act
+		repeat(3) {
+			service.recordRead(user, AuditResourceTypeEnum.PARTICIPANT, UUID.randomUUID(), UUID.randomUUID(), client, AuditOutcomeEnum.FORBIDDEN)
+		}
+		service.recordRead(user, AuditResourceTypeEnum.USER, UUID.randomUUID(), null, client, AuditOutcomeEnum.FORBIDDEN)
+
+		// Assert
+		verify(auditService, times(2)).record(any())
+	}
+
+	@Test
 	fun `Should recordRead trace list reads of another actor, project or outcome separately`() {
 		// Arrange
 		val user = user()
