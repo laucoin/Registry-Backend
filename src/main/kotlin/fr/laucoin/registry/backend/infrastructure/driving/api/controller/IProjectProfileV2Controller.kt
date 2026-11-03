@@ -14,6 +14,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_I
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_U
@@ -82,10 +84,10 @@ interface IProjectProfileV2Controller {
 		@Parameter(description = "Availability filter at the current time: true keeps available elements only, false keeps unavailable ones only, omitted keeps both")
 		@RequestParam(required = false) isAvailable: Boolean?,
 		@RequestParam(required = false) status: ProfileStatusEnum?,
-		@Parameter(description = "Instant that must fall inside the validity window")
-		@RequestParam(required = false)
 		@Parameter(description = "Visibility filter: true keeps visible profiles only, false keeps blocked ones only, omitted keeps both")
 		@RequestParam(required = false) isVisible: Boolean?,
+		@Parameter(description = "Instant that must fall inside the validity window")
+		@RequestParam(required = false)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
 		@Parameter(description = "Exact role of the profile, as listed by the roles endpoint")
 		@RequestParam(required = false)
@@ -160,7 +162,7 @@ interface IProjectProfileV2Controller {
 		summary = "Block Project's Profile",
 		description = "Prevent a User from using it",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_SOFT_DELETE')")
 	@PostMapping("/{id}/block")
 	fun blockProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -172,7 +174,7 @@ interface IProjectProfileV2Controller {
 		summary = "Unblock Project's Profile",
 		description = "Re-authorize a User to use it",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_RESTORE')")
 	@PostMapping("/{id}/unblock")
 	fun unblockProjectProfileById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

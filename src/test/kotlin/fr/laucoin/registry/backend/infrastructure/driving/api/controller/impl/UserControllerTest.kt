@@ -9,6 +9,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_RESTORE
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -261,7 +263,7 @@ class UserControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(REGISTRY_USER_U)
+			.authenticate(REGISTRY_USER_SOFT_DELETE)
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/block", listOf(uuid), emptyList()))
 			.exchange()
@@ -283,7 +285,7 @@ class UserControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(REGISTRY_USER_U)
+			.authenticate(REGISTRY_USER_RESTORE)
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(uuid), emptyList()))
 			.exchange()

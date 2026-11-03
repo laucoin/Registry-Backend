@@ -34,8 +34,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_D
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_GROUP_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_RESTORE
 
 /**
  * Objectif : Adaptateur REST des endpoints du groupe.
@@ -65,7 +65,7 @@ class GroupV2Controller(
 		hasOnSiteMembers: Boolean?,
 		sort: String?,
 	): Mono<PageModel<GroupWithoutMemberReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_GROUP_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_GROUP_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = GroupSearchParamModel(
 			query, visibility, isPresent, at,
@@ -95,7 +95,7 @@ class GroupV2Controller(
 		birthdayTo: LocalDate?,
 		sort: String?,
 	): Mono<PageModel<ParticipantReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = ParticipantSearchParamModel(
 			query, isMajor, type, visibility, status, at,
@@ -114,7 +114,7 @@ class GroupV2Controller(
 		return service.findGroupById(
 			projectId,
 			id,
-			isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_GROUP_D),
+			isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_GROUP_RESTORE),
 			memberIsVisible = null,
 			memberIsAvailable = null,
 		).map(readerMapper::toDto)

@@ -28,8 +28,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_RESTORE
 
 /**
  * Objectif : Adaptateur REST des endpoints du véhicule.
@@ -58,7 +58,7 @@ class VehicleV2Controller(
 		model: String?,
 		sort: String?,
 	): Mono<PageModel<VehicleReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_VEHICLE_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_VEHICLE_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = VehicleSearchParamModel(
 			query, visibility, status, at, brand, model,
@@ -69,7 +69,7 @@ class VehicleV2Controller(
 	}
 
 	override fun findVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
-		return service.findVehicleById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_VEHICLE_D)).map(readerMapper::toDto)
+		return service.findVehicleById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_VEHICLE_RESTORE)).map(readerMapper::toDto)
 	}
 
 	override fun findVehicleTimeline(
@@ -93,7 +93,7 @@ class VehicleV2Controller(
 		to: ZonedDateTime?,
 		sort: String?,
 	): Mono<PageModel<MovementReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_D)
+		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
 		val pageable = PageableModel(page * size, size)
 		val searchParams = MovementSearchParamModel(
 			visibility,

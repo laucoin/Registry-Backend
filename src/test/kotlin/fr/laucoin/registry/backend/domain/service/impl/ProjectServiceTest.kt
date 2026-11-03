@@ -268,7 +268,7 @@ class ProjectServiceTest {
 		whenever(port.findPage(any(), any())).thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R, "${projectId}_REGISTRY_PROJECT_D"), PageableModel(0, 10), false, params).block()
+		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R, "${projectId}_REGISTRY_PROJECT_RESTORE"), PageableModel(0, 10), false, params).block()
 
 		// Assert
 		assertEquals(listOf(projectId), params.hiddenReadableIds)
@@ -302,6 +302,25 @@ class ProjectServiceTest {
 
 		// Assert
 		verify(port).findPage(eq(listOf(defaultProjectId)), any(), eq(params))
+	}
+
+	@Test
+	fun `Should findProjectsPage restrict to the projects of the user profiles by default even with read all`() {
+		// Arrange
+		val pageable = PageableModel(0, 10)
+		val params = ProjectSearchParamModel()
+
+		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(listOf(REGISTRY_PROJECT_R))
+		whenever(roleService.getProjectIdsFromCurrentUserProfiles(any())).thenReturn(emptyList())
+		whenever(port.findPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
+
+		// Act
+		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), pageable, null, params).block()
+
+		// Assert
+		verify(port).findPage(emptyList(), pageable, params)
+		verify(port, never()).findPage(any(), any())
 	}
 
 	@Test

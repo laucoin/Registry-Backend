@@ -13,6 +13,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_RESTORE
+import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
@@ -139,7 +141,7 @@ interface IUserV2Controller {
 		summary = "Block User",
 		description = "Prevent a User from logging in",
 	)
-	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
+	@PreAuthorize("hasAuthority('$REGISTRY_USER_SOFT_DELETE')")
 	@PostMapping("/{id}/block")
 	fun blockUserById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -150,7 +152,7 @@ interface IUserV2Controller {
 		summary = "Unblock User",
 		description = "Re-authorize a User to log in",
 	)
-	@PreAuthorize("hasAuthority('$REGISTRY_USER_U')")
+	@PreAuthorize("hasAuthority('$REGISTRY_USER_RESTORE')")
 	@PostMapping("/{id}/unblock")
 	fun unblockUserById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

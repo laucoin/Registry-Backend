@@ -18,6 +18,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_D
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_U
@@ -158,13 +160,13 @@ interface IMovementV2Controller {
 		@RequestParam(required = true) contentType: ParticipantTypeEnum,
 		@Parameter(description = "Text matched against the participant first name and last name, or the group name")
 		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
-	): Mono<MovementParticipantsAndGroupsReaderDto>
-
 		@Parameter(description = "Date-time of the movement: participants must be present at this instant")
 		@RequestParam(required = true)
 		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime,
 		@Parameter(description = "When true, returns every visible participant of the project regardless of the date")
 		@RequestParam(required = false, defaultValue = "false") all: Boolean,
+	): Mono<MovementParticipantsAndGroupsReaderDto>
+
 	@Operation(
 		summary = "Search Vehicles",
 		description = "Search Vehicles to add in a Movement",
@@ -303,7 +305,7 @@ interface IMovementV2Controller {
 		summary = "Disable Movement",
 		description = "Disable Movement, it will not visible anymore in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_SOFT_DELETE')")
 	@PostMapping("/{id}/disable")
 	fun disableMovementById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
@@ -315,7 +317,7 @@ interface IMovementV2Controller {
 		summary = "Enable Movement",
 		description = "Enable Movement, obviously it will be visible again in the Project",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_D')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_RESTORE')")
 	@PostMapping("/{id}/enable")
 	fun enableMovementById(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,

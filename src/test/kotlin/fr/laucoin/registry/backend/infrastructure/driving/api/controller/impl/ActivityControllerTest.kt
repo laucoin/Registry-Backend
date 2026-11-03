@@ -27,6 +27,8 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_HISTORY_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ACTIVITY_U
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -281,8 +283,6 @@ class ActivityControllerTest : TestContext() {
 			),
 			Arguments.of(
 				ActivityWriterDto(
-			Arguments.of(
-				ActivityWriterDto(
 					name = "Activity 1",
 					description = "   ",
 					duration = "PT15M",
@@ -292,6 +292,8 @@ class ActivityControllerTest : TestContext() {
 				),
 				ACTIVITY_DESCRIPTION_BLANK
 			),
+			Arguments.of(
+				ActivityWriterDto(
 					name = "Activity 1",
 					description = "This is an activity very interesting",
 					duration = "PT15M",
@@ -636,8 +638,6 @@ class ActivityControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should createActivity expose the location of the new activity`() {
-	@Test
 	fun `Should createActivity accept a multiline description`() {
 		// Arrange
 		val activity = ActivityWriterDto(name = "Activity 1", description = "First line\nSecond line")
@@ -658,6 +658,8 @@ class ActivityControllerTest : TestContext() {
 		result.body<ActivityReaderDto>(CREATED)
 	}
 
+	@Test
+	fun `Should createActivity expose the location of the new activity`() {
 		// Arrange
 		val activity = ActivityWriterDto(name = "Activity 1")
 		val createdId = UUID.randomUUID()
@@ -804,7 +806,7 @@ class ActivityControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_U), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_SOFT_DELETE), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/disable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
@@ -834,7 +836,7 @@ class ActivityControllerTest : TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_D), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_ACTIVITY_RESTORE), buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY))
 			.post()
 			.uri(uriBuilder("$BASE_URL/{id}/enable", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
