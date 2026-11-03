@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_IN_FUTURE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
@@ -398,6 +399,21 @@ class MovementService(
 			saveGuestsIfNecessary(currentUser, movement, movement, newGuests),
 		)
 			.flatMap { validateNewMovementContent(movement) }
+			.flatMap { validateNoLaterMovementForLastDeparture(movement) }
+	}
+
+	private fun validateNoLaterMovementForLastDeparture(movement: MovementModel): Mono<MovementModel> {
+		if (!movement.isLastParticipantMovement()) return Mono.just(movement)
+
+		return participantPort.findAllByIds(movement.projectId!!, movement.participantIds(), isVisible = true)
+			.collectList()
+			.handle { found, handle ->
+				if (found.any { it.lastMovement?.isAfter(movement.dateTime) == true }) {
+					handle.error(RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS))
+				} else {
+					handle.next(movement)
+				}
+			}
 	}
 
 	private fun validateNewMovementContent(movement: MovementModel): Mono<*> {

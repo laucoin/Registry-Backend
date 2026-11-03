@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_IN_FUTURE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
@@ -154,8 +155,8 @@ class MovementServiceTest {
 		private const val MAX_PLANNED = 5
 		private val FUTURE_TOLERANCE: Duration = Duration.ofMinutes(2)
 		private val PLANNED_DAY = LocalDate.of(2026, 7, 14)
-
 		private val searchAt: ZonedDateTime = ZonedDateTime.of(2026, 7, 14, 10, 0, 0, 0, ZoneOffset.UTC)
+
 		@JvmStatic
 		fun `Should searchReasonsByText return filtered reason depending params`(): Stream<Arguments> {
 			return Stream.of(
@@ -487,7 +488,6 @@ class MovementServiceTest {
 	}
 
 	@Test
-	@Test
 	fun `Should searchParticipantsAndGroupsByText ignore the date when all is requested`() {
 		// Arrange
 		val expectedParticipantSearch = ParticipantSearchParamModel(
@@ -508,6 +508,33 @@ class MovementServiceTest {
 		verify(groupPort).findContent(defaultProjectId, emptyList(), isVisible = true, isAvailable = null)
 	}
 
+	@Test
+	fun `Should createMovement throw on a definitive departure before a later movement`() {
+		// Arrange
+		val laterMovementParticipant = defaultParticipant().apply { lastMovement = searchAt.plusDays(1) }
+		val participantContent = MovementContentModel().apply { participant = defaultParticipant() }
+		val movement = defaultMovement().apply {
+			type = OUT
+			reason = DEFINITIVE_DEPARTURE
+			contentType = REGISTERED
+			content = listOf(participantContent)
+			dateTime = searchAt
+		}
+		whenever(participantPort.findAllByIds(any(), any(), anyOrNull()))
+			.thenReturn(Flux.just(defaultParticipant()), Flux.just(laterMovementParticipant))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createMovement(currentUser(), movement).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
+		assertEquals(MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS, result.code)
+		verify(port, never()).create(any())
+	}
+
+	@Test
 	fun `Should searchParticipantsAndGroupsByText not return a group without any available member`() {
 		// Arrange
 		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
