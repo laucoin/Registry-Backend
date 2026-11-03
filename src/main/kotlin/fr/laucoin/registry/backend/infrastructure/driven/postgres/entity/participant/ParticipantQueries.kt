@@ -186,7 +186,11 @@ object ParticipantQueries {
                         FROM $MOVEMENT_TABLE later
                         INNER JOIN $MOVEMENT_CONTENT_TABLE later_content ON later_content.$MOVEMENT_CONTENT_MOVEMENT_ID = later.$ID
                         WHERE later_content.$MOVEMENT_CONTENT_PARTICIPANT_ID = p.$ID AND later.$VISIBLE IS TRUE
-                            AND later.$MOVEMENT_TYPE = 'IN' AND later.$MOVEMENT_DATE_TIME > m.$MOVEMENT_DATE_TIME
+                            AND later.$MOVEMENT_DATE_TIME > m.$MOVEMENT_DATE_TIME
+                            AND (
+                                later.$MOVEMENT_TYPE = 'IN'
+                                OR (later.$MOVEMENT_REASON IS DISTINCT FROM 'DEFINITIVE_DEPARTURE' AND p.$PARTICIPANT_TYPE <> 'GUEST')
+                            )
                     )
             )
         WHERE p.$ID IN (:ids)
