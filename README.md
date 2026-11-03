@@ -128,6 +128,7 @@ non voulue.
 | `REGISTRY_CODEC_MAX_IN_MEMORY_SIZE` | `512KB` | Taille maximale d'un corps de requête mis en mémoire tampon ; les corps plus volumineux sont rejetés |
 | `REGISTRY_UPDATE_TIMEOUT` | `10s` | Durée maximale d'une mise à jour protégée par `If-Match` ; au-delà, la transaction est annulée et la requête échoue avec un `408` |
 | `REGISTRY_AUDIT_BUFFER_SIZE` | `1000` | Taille de la file en mémoire des événements d'audit écrits de façon asynchrone ; une file pleine rejette (et journalise) l'événement, un arrêt brutal perd les événements en attente |
+| `REGISTRY_AUDIT_READ_DEDUP_WINDOW` | `60s` | Fenêtre pendant laquelle les lectures de liste d'un même utilisateur sur une même ressource et un même projet ne produisent qu'un événement d'audit ; les lectures d'une fiche sont toujours tracées. En mémoire (par instance, remis à zéro au redémarrage) |
 | `REGISTRY_PRINCIPAL_CACHE_TTL_SECONDS` | `60` | Durée de vie, en secondes, du principal (utilisateur et autorités) mis en cache après la validation du JWT ; un changement de droits est visible au plus tard à l'expiration, ou immédiatement s'il passe par l'API |
 
 > [!NOTE]

@@ -56,6 +56,7 @@ registry:
     lock-timeout-ms: ${DATASOURCE_LOCK_TIMEOUT_MS:5000}
   audit:
     buffer-size: ${REGISTRY_AUDIT_BUFFER_SIZE:1000}
+    read-dedup-window: ${REGISTRY_AUDIT_READ_DEDUP_WINDOW:60s}
   concurrency:
     update-timeout: ${REGISTRY_UPDATE_TIMEOUT:10s}
   feature:
