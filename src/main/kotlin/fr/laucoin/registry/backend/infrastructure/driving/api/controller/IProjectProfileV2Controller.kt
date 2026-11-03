@@ -76,6 +76,7 @@ interface IProjectProfileV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@GetMapping
 	fun findProjectProfiles(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
 		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
@@ -105,6 +106,7 @@ interface IProjectProfileV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_R')")
 	@GetMapping("/{id}")
 	fun findProjectProfileById(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ProjectProfileReaderDto>
