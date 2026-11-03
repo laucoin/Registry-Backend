@@ -155,6 +155,7 @@ class MovementServiceTest {
 		private val FUTURE_TOLERANCE: Duration = Duration.ofMinutes(2)
 		private val PLANNED_DAY = LocalDate.of(2026, 7, 14)
 
+		private val searchAt: ZonedDateTime = ZonedDateTime.of(2026, 7, 14, 10, 0, 0, 0, ZoneOffset.UTC)
 		@JvmStatic
 		fun `Should searchReasonsByText return filtered reason depending params`(): Stream<Arguments> {
 			return Stream.of(
@@ -453,8 +454,10 @@ class MovementServiceTest {
 			isMajor = null,
 			type,
 			isVisible = true,
-			isAvailable = true,
-		).apply { this.query = query }
+		).apply {
+			this.query = query
+			at = searchAt
+		}
 		val expectedGroupSearch =
 			GroupSearchParamModel(query, isVisible = true, isPresent = true)
 
@@ -466,7 +469,7 @@ class MovementServiceTest {
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(detailedMember))
 
 		// Act
-		val result = service.searchParticipantsAndGroupsByText(defaultProjectId, type, query).block()
+		val result = service.searchParticipantsAndGroupsByText(defaultProjectId, type, query, searchAt, false).block()
 
 		// Assert
 		assertEquals(1, result?.t1?.size)
@@ -484,6 +487,27 @@ class MovementServiceTest {
 	}
 
 	@Test
+	@Test
+	fun `Should searchParticipantsAndGroupsByText ignore the date when all is requested`() {
+		// Arrange
+		val expectedParticipantSearch = ParticipantSearchParamModel(
+			isMajor = null,
+			REGISTERED,
+			isVisible = true,
+		).apply { query = "searched" }
+		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(groupPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(groupPort.findContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
+
+		// Act
+		service.searchParticipantsAndGroupsByText(defaultProjectId, REGISTERED, "searched", searchAt, true).block()
+
+		// Assert
+		verify(participantPort).findWithLimit(MAX_PARTICIPANTS, defaultProjectId, expectedParticipantSearch)
+		verify(groupPort).findContent(defaultProjectId, emptyList(), isVisible = true, isAvailable = null)
+	}
+
 	fun `Should searchParticipantsAndGroupsByText not return a group without any available member`() {
 		// Arrange
 		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
@@ -493,7 +517,8 @@ class MovementServiceTest {
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
 
 		// Act
-		val result = service.searchParticipantsAndGroupsByText(defaultProjectId, REGISTERED, "searched").block()
+		val result =
+			service.searchParticipantsAndGroupsByText(defaultProjectId, REGISTERED, "searched", searchAt, false).block()
 
 		// Assert
 		assertEquals(1, result?.t1?.size)
