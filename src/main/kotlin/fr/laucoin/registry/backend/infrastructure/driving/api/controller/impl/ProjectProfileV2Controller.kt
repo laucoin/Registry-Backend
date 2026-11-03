@@ -56,6 +56,7 @@ class ProjectProfileV2Controller(
 		query: String?,
 		isAvailable: Boolean?,
 		status: ProfileStatusEnum?,
+		isVisible: Boolean?,
 		at: ZonedDateTime?,
 		role: String?,
 		sort: String?,
@@ -64,6 +65,7 @@ class ProjectProfileV2Controller(
 		val searchParams = ProjectProfileSearchParamModel(
 			query, isAvailable, status, at, role,
 			sort = sort.toSortModel(ProjectProfileSearchParamModel.SORT_FIELDS),
+			isVisible = isVisible,
 		)
 
 		return service.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
