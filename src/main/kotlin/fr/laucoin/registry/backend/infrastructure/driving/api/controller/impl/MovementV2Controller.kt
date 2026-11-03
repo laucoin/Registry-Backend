@@ -172,9 +172,11 @@ class MovementV2Controller(
 	override fun searchParticipantsAndGroups(
 		projectId: UUID,
 		contentType: ParticipantTypeEnum,
-		query: String?
+		query: String?,
+		at: ZonedDateTime,
+		all: Boolean,
 	): Mono<MovementParticipantsAndGroupsReaderDto> {
-		return service.searchParticipantsAndGroupsByText(projectId, contentType, query)
+		return service.searchParticipantsAndGroupsByText(projectId, contentType, query, at, all)
 			.map { Pair(it.t1, it.t2) }
 			.map(movementParticipantsAndGroupsMapper::toDto)
 	}

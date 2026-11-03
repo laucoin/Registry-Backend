@@ -157,28 +157,30 @@ class MovementService(
 	override fun searchParticipantsAndGroupsByText(
 		projectId: UUID,
 		type: ParticipantTypeEnum,
-		query: String?
+		query: String?,
+		at: ZonedDateTime,
+		all: Boolean,
 	): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>> {
 		return zip(
-			findParticipantWithLimit(projectId, type, query).collectList(),
-			findGroupWithLimit(projectId, query),
+			findParticipantWithLimit(projectId, type, query, at, all).collectList(),
+			findGroupWithLimit(projectId, query, all),
 		)
 	}
 
 	private fun findParticipantWithLimit(
-		projectId: UUID, type: ParticipantTypeEnum, query: String?
+		projectId: UUID, type: ParticipantTypeEnum, query: String?, at: ZonedDateTime, all: Boolean,
 	): Flux<ParticipantModel> {
 		val participantSearch = ParticipantSearchParamModel().apply {
 			this.type = type
 			this.query = query
 			isVisible = true
-			isAvailable = true
+			this.at = if (all) null else at
 		}
 
 		return participantPort.findWithLimit(maxParticipantResult, projectId, participantSearch)
 	}
 
-	private fun findGroupWithLimit(projectId: UUID, query: String?): Mono<List<GroupModel>> {
+	private fun findGroupWithLimit(projectId: UUID, query: String?, all: Boolean): Mono<List<GroupModel>> {
 		val groupSearch = GroupSearchParamModel(query, isVisible = true, isPresent = true)
 
 		return groupPort.findWithLimit(maxGroupResult, projectId, groupSearch)
@@ -188,7 +190,7 @@ class MovementService(
 					projectId,
 					groups.mapNotNull(GroupModel::id),
 					isVisible = true,
-					isAvailable = true,
+					isAvailable = if (all) null else true,
 				)
 					.filter { (_, members) -> members.isNotEmpty() }
 					.collectList()

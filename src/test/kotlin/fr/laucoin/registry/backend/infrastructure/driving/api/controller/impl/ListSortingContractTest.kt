@@ -280,7 +280,7 @@ class ListSortingContractTest : TestContext() {
 				"$project/movements/search/participants-and-groups",
 				inProject,
 				listOf(perm(REGISTRY_PROJECT_MOVEMENT_METADATA_R)),
-				listOf(Pair("contentType", "REGISTERED"))
+				listOf(Pair("contentType", "REGISTERED"), Pair("at", "2026-01-01T10:00:00Z"))
 			),
 			Picker(
 				"movement vehicles",
