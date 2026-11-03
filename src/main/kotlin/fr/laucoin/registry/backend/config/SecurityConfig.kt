@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.config
 
+import fr.laucoin.registry.backend.domain.service.IAuditReadService
 import fr.laucoin.registry.backend.domain.service.IAuditService
 import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuditReadHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.CookieBearerTokenHandler
@@ -80,6 +82,7 @@ class SecurityConfig(
 	private val csrfTokenService: CsrfTokenService,
 	private val clock: Clock,
 	private val auditService: IAuditService,
+	private val auditReadService: IAuditReadService,
 	private val clientContextService: ClientContextService,
 	@param:Value($$"${external.cors.urls}")
 	private val corsUrls: List<String>,
@@ -148,6 +151,7 @@ class SecurityConfig(
 			.configureSecurityHeaders(API_CONTENT_SECURITY_POLICY)
 			.rateLimitAuthentication()
 			.rateLimitExport()
+			.auditReads()
 			.exposeCsrfToken()
 			.configureCsrf()
 			.configureResourceAccess()
@@ -193,6 +197,11 @@ class SecurityConfig(
 			exportRateLimitWindowSeconds,
 			exportRateLimitMaxTrackedUsers,
 		),
+		AUTHENTICATION,
+	)
+
+	private fun ServerHttpSecurity.auditReads() = addFilterAfter(
+		AuditReadHandler(auditReadService, clientContextService),
 		AUTHENTICATION,
 	)
 
