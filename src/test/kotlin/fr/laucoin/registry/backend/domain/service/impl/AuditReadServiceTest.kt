@@ -7,11 +7,9 @@ import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.service.IAuditService
-import java.time.Clock
+import fr.laucoin.registry.backend.test.MutableClock
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -107,17 +105,5 @@ class AuditReadServiceTest {
 
 		// Assert
 		verify(auditService, times(4)).record(any())
-	}
-
-	private class MutableClock(private var instant: Instant) : Clock() {
-		override fun getZone(): ZoneId = ZoneOffset.UTC
-
-		override fun withZone(zone: ZoneId): Clock = this
-
-		override fun instant(): Instant = instant
-
-		fun advance(duration: Duration) {
-			instant = instant.plus(duration)
-		}
 	}
 }
