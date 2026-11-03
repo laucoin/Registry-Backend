@@ -16,6 +16,13 @@ Strict guidelines for AI agents and developers working on this reactive Kotlin b
   what is at stake, the relevant code or spec reference (`file:line`), 2–4 options each with its consequences and
   trade-offs, and a recommended option placed first. Group related decisions in a single call. Do not ask when a
   convention of this document or the existing code already settles the point.
+- **Detailed questions (exception to the brevity rule):** assume the user has lost the context (after `/clear`, a task
+  switch or a long session). Every interactive question is therefore self-contained and detailed, never a terse label:
+  1. **Situation:** recall the starting point (current behaviour, what was already done, files with `file:line`).
+  2. **Stakes:** why a decision is needed now and what it unblocks.
+  3. **Options:** for each one, state concretely what changes, what is kept or lost, the risks and the follow-up work.
+  4. **Recommendation:** first option, with the reason for the choice.
+  Use `preview` to compare before/after. A question the user must reject to ask for clarification is a failed question.
 - **Code & Comments:** All source code, identifiers, commit messages, and error-key defaults **must** be written in
   **US English**. Comments and KDoc **must** be written in **French**; the `// Arrange`, `// Act`, `// Assert` test
   markers stay as is.
