@@ -134,7 +134,7 @@ class PurgeServiceTest {
 		whenever(vehicleService.purgeVehiclesIfNecessary(threshold, true)).thenReturn(Flux.just(vehicleId))
 		whenever(participantService.purgeParticipantsIfNecessary(threshold, true)).thenReturn(Flux.just(participantId))
 		whenever(activityService.purgeActivitiesIfNecessary(threshold, true)).thenReturn(Flux.just(activityId))
-		whenever(groupService.purgeEmptyGroups(listOf(participantId), true)).thenReturn(Flux.just(groupId))
+		whenever(groupService.purgeEmptyGroups(listOf(participantId), threshold, true)).thenReturn(Flux.just(groupId))
 
 		// Act
 		val result = service.purgeProjectsConfigurations(dateThreshold = null, dryRun = true)
@@ -172,7 +172,7 @@ class PurgeServiceTest {
 		whenever(vehicleService.purgeVehiclesIfNecessary(threshold, true)).thenReturn(Flux.empty())
 		whenever(participantService.purgeParticipantsIfNecessary(threshold, true)).thenReturn(Flux.empty())
 		whenever(activityService.purgeActivitiesIfNecessary(threshold, true)).thenReturn(Flux.empty())
-		whenever(groupService.purgeEmptyGroups(emptyList(), true)).thenReturn(Flux.empty())
+		whenever(groupService.purgeEmptyGroups(emptyList(), threshold, true)).thenReturn(Flux.empty())
 
 		// Act
 		val result = service.purgeProjectsConfigurations(threshold, dryRun = true)
@@ -204,7 +204,7 @@ class PurgeServiceTest {
 		whenever(vehicleService.purgeVehiclesIfNecessary(any(), any())).thenReturn(Flux.empty())
 		whenever(participantService.purgeParticipantsIfNecessary(any(), any())).thenReturn(Flux.empty())
 		whenever(activityService.purgeActivitiesIfNecessary(any(), any())).thenReturn(Flux.empty())
-		whenever(groupService.purgeEmptyGroups(any(), any())).thenReturn(Flux.empty())
+		whenever(groupService.purgeEmptyGroups(any(), any(), any())).thenReturn(Flux.empty())
 
 		// Act
 		service.purgeProjectsConfigurations(dateThreshold = null, dryRun = true).block()

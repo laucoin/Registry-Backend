@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.GroupEn
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IGroupEntityRepository
 import java.time.Clock
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -113,9 +114,9 @@ class GroupModelPostgresRepository(
 		).map(mapper::toModel)
 	}
 
-	override fun findEmpty(participantToExclude: List<UUID>): Flux<UUID> {
-		return if (participantToExclude.isEmpty()) Flux.empty()
-		else repository.findEmpty(participantToExclude)
+	override fun findEmpty(participantToExclude: List<UUID>, dateThreshold: LocalDate): Flux<UUID> {
+		// NOT IN () est invalide en SQL : sans participant à exclure, on exclut l'UUID nul, qui n'existe pas.
+		return repository.findEmpty(participantToExclude.ifEmpty { listOf(UUID(0, 0)) }, dateThreshold)
 	}
 
 	override fun findByIdWithContent(

@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -40,7 +41,7 @@ interface IGroupPort {
 	fun findSummaryById(projectId: UUID, id: UUID): Mono<GroupModel>
 	fun lockByIds(ids: List<UUID>): Flux<UUID>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
-	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
+	fun findEmpty(participantToExclude: List<UUID>, dateThreshold: LocalDate): Flux<UUID>
 	fun create(element: GroupModel): Mono<GroupModel>
 	fun update(element: GroupModel): Mono<GroupModel>
 	fun deleteById(id: UUID): Mono<Unit>

@@ -90,7 +90,7 @@ class PurgeService(
 		val purgeActivities = activityService.purgeActivitiesIfNecessary(deleteOlderThan, dryRun).collectList()
 
 		return Mono.zip(purgeVehicles, purgeParticipants, purgeActivities)
-			.flatMap { purgeEmptyGroups(it.t1, it.t2, it.t3, dryRun) }
+			.flatMap { purgeEmptyGroups(it.t1, it.t2, it.t3, deleteOlderThan, dryRun) }
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -98,9 +98,10 @@ class PurgeService(
 		vehicles: List<UUID>,
 		participants: List<UUID>,
 		activities: List<UUID>,
+		dateThreshold: LocalDate,
 		dryRun: Boolean,
 	): Mono<ProjectConfigurationPurgeModel> {
-		return groupService.purgeEmptyGroups(participants, dryRun)
+		return groupService.purgeEmptyGroups(participants, dateThreshold, dryRun)
 			.collectList()
 			.map { ProjectConfigurationPurgeModel(vehicles, participants, activities, it) }
 	}

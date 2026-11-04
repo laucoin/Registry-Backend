@@ -27,6 +27,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -126,8 +128,8 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
             WHERE t.$GROUP_CONTENT_PARTICIPANT_ID NOT IN (:participantToExclude)
             GROUP BY t.$GROUP_CONTENT_GROUP_ID
         ) gc ON t.$ID = gc.$GROUP_CONTENT_GROUP_ID
-        WHERE gc.count IS NULL OR gc.count = 0
+        WHERE (gc.count IS NULL OR gc.count = 0) AND t.$LAST_MODIFIER_DATE < :dateThreshold
         """
 	)
-	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
+	fun findEmpty(participantToExclude: List<UUID>, dateThreshold: LocalDate): Flux<UUID>
 }
