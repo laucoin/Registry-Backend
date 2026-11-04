@@ -16,6 +16,8 @@ data class GroupModel(
 	var outMembersCount: Long? = null,
 	var overdueMembersCount: Long? = null,
 	var members: List<ParticipantModel> = emptyList(),
+	/** Vrai quand la requête d'écriture ne fournit pas de membres : la composition existante est alors conservée. */
+	var membersUnchanged: Boolean = false,
 ): GenericProjectModel() {
 	fun getNewMembers(group: GroupModel): List<ParticipantModel> {
 		val currentParticipants = members.mapNotNull { it.id }

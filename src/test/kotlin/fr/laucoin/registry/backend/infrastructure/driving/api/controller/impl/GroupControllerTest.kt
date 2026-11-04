@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
 import fr.laucoin.registry.backend.domain.model.SortModel
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_TOO_MANY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_TOO_LONG
@@ -174,14 +173,6 @@ class GroupControllerTest : TestContext() {
 					members = listOf(UUID.randomUUID())
 				),
 				GROUP_START_LATER_THAN_END,
-			),
-			Arguments.of(
-				GroupWriterDto().apply { name = "name"; members = null },
-				GROUP_MEMBERS_EMPTY,
-			),
-			Arguments.of(
-				GroupWriterDto().apply { name = "name"; members = emptyList() },
-				GROUP_MEMBERS_EMPTY,
 			),
 		)
 	}
@@ -459,11 +450,10 @@ class GroupControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should createGroup return 201`() {
+	fun `Should createGroup return 201 without members`() {
 		// Arrange
 		val createdId = UUID.randomUUID()
-		val uuid = UUID.randomUUID()
-		val group = GroupWriterDto(name = "name", members = listOf(uuid))
+		val group = GroupWriterDto(name = "name")
 		whenever(service.createGroup(any(), any())).thenReturn(Mono.just(GroupModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
 		whenever(lightReaderMapper.toDto(any())).thenReturn(GroupReaderDto().apply { id = createdId })
@@ -511,10 +501,10 @@ class GroupControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should updateGroupById return 200`() {
+	fun `Should updateGroupById return 200 without members`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
-		val group = GroupWriterDto(name = "name", members = listOf(uuid))
+		val group = GroupWriterDto(name = "name")
 
 		whenever(service.updateGroupById(any(), any(), any(), any())).thenReturn(Mono.just(GroupModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())

@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_ALREADY_ADDED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
@@ -33,12 +32,12 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -46,6 +45,7 @@ import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Clock
+import java.time.LocalDate
 import java.util.UUID
 import java.util.stream.Stream
 
@@ -203,6 +203,42 @@ class GroupServiceTest {
 		)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(port).create(group)
+	}
+
+	@Test
+	fun `Should createGroup without members skip the members check and call port create`() {
+		// Arrange
+		val group = defaultGroup().apply { members = emptyList() }
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.create(any())).thenReturn(Mono.just(group))
+
+		// Act
+		service.createGroup(currentUser(), group).block()
+
+		// Assert
+		verify(participantPort, never()).findAllByIds(any(), any(), anyOrNull())
+		verify(port).create(group)
+	}
+
+	@Test
+	fun `Should updateGroupById keep the existing members when none are provided`() {
+		// Arrange
+		val memberId = UUID.randomUUID()
+		val existing = defaultGroup().apply { members = listOf(defaultParticipant().apply { id = memberId }) }
+		val update = defaultGroup().apply { name = "renamed"; members = emptyList(); membersUnchanged = true }
+		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
+			.thenReturn(Mono.just(existing))
+		whenever(port.update(any())).thenReturn(Mono.just(existing))
+
+		// Act
+		service.updateGroupById(currentUser(), defaultProjectId, defaultGroupId, update).block()
+
+		// Assert
+		verify(participantPort, never()).findAllByIds(any(), any(), anyOrNull())
+		verify(port).update(argThat { name == "renamed" && members.map { it.id } == listOf(memberId) })
 	}
 
 	@Test
@@ -395,40 +431,20 @@ class GroupServiceTest {
 	}
 
 	@Test
-	fun `Should removeMemberFromGroupById get existing, check members throw because it's the last group member`() {
+	fun `Should removeMemberFromGroupById leave an empty group when the last member is removed`() {
 		// Arrange
 		val uuid1 = UUID.randomUUID()
-		val previousParticipantIds = listOf(uuid1)
 		val group = defaultGroup().apply {
-			members = previousParticipantIds.map { ParticipantModel().apply { id = it } }
+			members = listOf(ParticipantModel().apply { id = uuid1 })
 		}
-		whenever(
-			port.findByIdWithContent(
-				any(),
-				any(),
-				anyOrNull(),
-				anyOrNull(),
-				anyOrNull()
-			)
-		).thenReturn(Mono.just(group))
+		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Mono.just(group))
 		whenever(port.update(any())).thenReturn(Mono.just(group))
 
 		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.removeMemberFromGroupById(currentUser(), defaultProjectId, defaultGroupId, uuid1).block()
-		}) as RegistryException
+		service.removeMemberFromGroupById(currentUser(), defaultProjectId, defaultGroupId, uuid1).block()
 
 		// Assert
-		assertEquals(CONFLICT, result.status)
-		assertEquals(GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED, result.message)
-		verify(port).findByIdWithContent(
-			defaultProjectId,
-			defaultGroupId,
-			isVisible = null,
-			memberIsVisible = null,
-			memberIsAvailable = null
-		)
-		verify(port, never()).update(any())
+		verify(port).update(argThat { members.isEmpty() })
 	}
 
 	@Test
@@ -546,16 +562,17 @@ class GroupServiceTest {
 	@Test
 	fun `Should purgeEmptyGroups call empty group vehicle since a date, and call port deleteById`() {
 		// Arrange
+		val threshold = LocalDate.of(2025, 1, 1)
 		val uuid1 = UUID.randomUUID()
 		val uuid2 = UUID.randomUUID()
-		whenever(port.findEmpty(any())).thenReturn(Flux.just(uuid1, uuid2))
+		whenever(port.findEmpty(any(), any())).thenReturn(Flux.just(uuid1, uuid2))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeEmptyGroups(emptyList(), false).collectList().block()
+		service.purgeEmptyGroups(emptyList(), threshold, false).collectList().block()
 
 		// Assert
-		verify(port).findEmpty(emptyList())
+		verify(port).findEmpty(emptyList(), threshold)
 		verify(port).deleteById(uuid1)
 		verify(port).deleteById(uuid2)
 	}
@@ -563,13 +580,14 @@ class GroupServiceTest {
 	@Test
 	fun `Should purgeEmptyGroups call empty group since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
-		whenever(port.findEmpty(any())).thenReturn(Flux.just(UUID.randomUUID()))
+		val threshold = LocalDate.of(2025, 1, 1)
+		whenever(port.findEmpty(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
 
 		// Act
-		service.purgeEmptyGroups(emptyList(), true).collectList().block()
+		service.purgeEmptyGroups(emptyList(), threshold, true).collectList().block()
 
 		// Assert
-		verify(port).findEmpty(emptyList())
+		verify(port).findEmpty(emptyList(), threshold)
 		verify(port, never()).deleteById(any())
 	}
 }
