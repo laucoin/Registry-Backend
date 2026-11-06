@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.requireOrderedRange
@@ -26,6 +27,7 @@ data class ParticipantSearchParamModel(
 
 	var query: String? = null
 
+	@Default
 	constructor(
 		query: String? = null,
 		isMajor: Boolean? = null,
