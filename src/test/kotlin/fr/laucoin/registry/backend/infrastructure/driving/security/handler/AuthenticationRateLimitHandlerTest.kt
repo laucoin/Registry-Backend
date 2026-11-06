@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
 import fr.laucoin.registry.backend.test.MutableClock
 import java.net.InetSocketAddress
 import java.time.Clock
@@ -34,6 +36,7 @@ import tools.jackson.databind.json.JsonMapper
 class AuthenticationRateLimitHandlerTest {
 	private companion object {
 		const val MAX_TRACKED_CLIENTS = 1000L
+		const val PROXY = "10.0.0.254"
 	}
 
 	private val objectMapper = JsonMapper.builder().build()
@@ -51,18 +54,32 @@ class AuthenticationRateLimitHandlerTest {
 		whenever(localeContextResolver.resolveLocaleContext(any())).thenReturn(SimpleLocaleContext(Locale.ENGLISH))
 	}
 
-	private fun filter(capacity: Int = 2, windowSeconds: Long = 60, clock: Clock = Clock.systemUTC()): AuthenticationRateLimitHandler =
-		AuthenticationRateLimitHandler(translateService, localeContextResolver, objectMapper, clock, capacity, windowSeconds, MAX_TRACKED_CLIENTS)
+	private val responder = TooManyRequestsResponder(translateService, localeContextResolver, objectMapper)
+
+	private fun filter(
+		capacity: Int = 2,
+		windowSeconds: Long = 60,
+		clock: Clock = MutableClock(Instant.parse("2030-01-01T00:00:00Z")),
+		trustedProxies: List<String> = emptyList(),
+	): AuthenticationRateLimitHandler = AuthenticationRateLimitHandler(
+		ClientContextService(trustedProxies),
+		responder,
+		clock,
+		capacity,
+		windowSeconds,
+		MAX_TRACKED_CLIENTS,
+	)
 
 	private fun exchange(
 		path: String,
 		method: HttpMethod,
 		remoteHost: String = "10.0.0.1",
+		forwardedFor: String? = null,
 	): ServerWebExchange {
 		val request = MockServerHttpRequest.method(method, path)
 			.remoteAddress(InetSocketAddress(remoteHost, 12345))
-			.build()
-		return MockServerWebExchange.from(request)
+		forwardedFor?.let { request.header("X-Forwarded-For", it) }
+		return MockServerWebExchange.from(request.build())
 	}
 
 	@Test
@@ -164,5 +181,38 @@ class AuthenticationRateLimitHandlerTest {
 
 		// Assert
 		assertEquals(2, chainCalls.get())
+	}
+
+	@Test
+	fun `Should filter rate-limit each real client independently behind a trusted proxy`() {
+		// Arrange
+		val limiter = filter(capacity = 1, trustedProxies = listOf(PROXY))
+		val clientA = exchange("/api/v2/authentication/token", POST, PROXY, forwardedFor = "203.0.113.1")
+		val clientB = exchange("/api/v2/authentication/token", POST, PROXY, forwardedFor = "203.0.113.2")
+
+		// Act
+		limiter.filter(clientA, chain).block()
+		limiter.filter(clientB, chain).block()
+
+		// Assert
+		assertEquals(2, chainCalls.get())
+		assertEquals(OK, clientA.response.statusCode)
+		assertEquals(OK, clientB.response.statusCode)
+	}
+
+	@Test
+	fun `Should filter ignore a forwarded address sent by an untrusted peer`() {
+		// Arrange
+		val limiter = filter(capacity = 1, trustedProxies = listOf(PROXY))
+		val first = exchange("/api/v2/authentication/token", POST, "198.51.100.7", forwardedFor = "203.0.113.1")
+		val spoofed = exchange("/api/v2/authentication/token", POST, "198.51.100.7", forwardedFor = "203.0.113.2")
+
+		// Act
+		limiter.filter(first, chain).block()
+		limiter.filter(spoofed, chain).block()
+
+		// Assert
+		assertEquals(1, chainCalls.get())
+		assertEquals(TOO_MANY_REQUESTS, spoofed.response.statusCode)
 	}
 }

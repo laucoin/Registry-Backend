@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.service
 
 import fr.laucoin.registry.backend.domain.model.ClientContextModel
+import fr.laucoin.registry.backend.domain.service.LoggerService
 import java.net.InetAddress
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.server.reactive.ServerHttpRequest
@@ -10,14 +11,18 @@ import org.springframework.stereotype.Component
 /**
  * Objectif : Résout le contexte client d'une requête (IP réelle et User-Agent) pour la traçabilité.
  * Périmètre : Lit X-Forwarded-For uniquement lorsque l'appelant direct est un proxy de confiance, en remontant la chaîne de droite à gauche jusqu'au premier saut non fiable.
- * Limites : Ne résout jamais de nom d'hôte (littéraux IP seulement) ; sans proxy configuré, seule l'adresse de la connexion fait foi.
+ * Limites : Ne résout jamais de nom d'hôte (littéraux IP seulement) ; sans proxy configuré, seule l'adresse de la connexion fait foi, ce qu'il signale au démarrage.
  */
 @Component
 class ClientContextService(
 	@Value($$"${registry.security.trusted-proxies:}")
 	trustedProxies: List<String>,
-) {
+) : LoggerService() {
 	private val trusted = trustedProxies.map(String::trim).filter(String::isNotEmpty).map(::IpAddressMatcher)
+
+	init {
+		if (trusted.isEmpty()) log.info("No trusted proxy is configured: the client IP is the connection address")
+	}
 
 	fun resolve(request: ServerHttpRequest): ClientContextModel {
 		val peer = request.remoteAddress?.address?.hostAddress

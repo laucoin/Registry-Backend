@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.security.handler.Authe
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.ExportRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
-import java.time.Clock
 import org.springframework.core.annotation.Order
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder.FIRST
@@ -14,6 +13,7 @@ import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.stereotype.Component
 import org.springframework.web.server.i18n.LocaleContextResolver
 import tools.jackson.databind.ObjectMapper
+import java.time.Clock
 
 /**
  * Objectif : Limite le débit des appels d'authentification et des exports de données personnelles.
@@ -38,9 +38,8 @@ class RateLimitChainCustomizer(
 	}
 
 	private fun authenticationRateLimit() = AuthenticationRateLimitHandler(
-		translateService,
-		localeContextResolver,
-		objectMapper,
+		clientContextService,
+		tooManyRequestsResponder(),
 		clock,
 		rateLimits.auth.capacity,
 		rateLimits.auth.windowSeconds,
@@ -50,10 +49,13 @@ class RateLimitChainCustomizer(
 	private fun exportRateLimit() = ExportRateLimitHandler(
 		auditService,
 		clientContextService,
-		TooManyRequestsResponder(translateService, localeContextResolver, objectMapper),
+		tooManyRequestsResponder(),
 		clock,
 		rateLimits.export.capacity,
 		rateLimits.export.windowSeconds,
 		rateLimits.export.maxTrackedUsers,
 	)
+
+	private fun tooManyRequestsResponder() =
+		TooManyRequestsResponder(translateService, localeContextResolver, objectMapper)
 }
