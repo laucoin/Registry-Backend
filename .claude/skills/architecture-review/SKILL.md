@@ -23,7 +23,11 @@ with a baseline score of **100 points** and deduct points based on findings: **b
       must **never** call sibling core services nor UseCases to prevent circular dependencies.
     - **Orchestrators (`service/usecase/`):** Business workflows (suffix `UseCase`, e.g., `ProjectProfileUseCase`).
       UseCases orchestrate core services and ports; they are only invoked by upstream callers (driving adapters /
-      controllers). UseCases are **never** injected into core services or other UseCases.
+      controllers). UseCases are **never** injected into core services, support services or other UseCases.
+      Controllers (`infrastructure.driving`) reach `core/` only through a UseCase; they may call `support/` directly.
+    - **Support Services (`service/support/`):** Technical services without a business resource (e.g., translation,
+      concurrency, logging, principal cache; suffix `Service`). They are callable from controllers, UseCases and core
+      services, and must **never** depend on core services nor UseCases.
     - **Naming Convention:** Retain `I*` interfaces and `impl/` packages (e.g., `IProjectService` +
       `impl/ProjectService`) to avoid scope churn.
 - **Helper Placement & Cross-Feature Mutualization:**
