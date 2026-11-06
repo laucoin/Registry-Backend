@@ -16,7 +16,10 @@ deductions: **blocker −40**, **should-fix −10**, **nit −2.5** (minimum flo
 - **Method Size:** A method must not exceed **25 lines** (excluding signature declaration and imports/annotations). Any
   longer block must be broken down or extracted.
 - **Parameter Count:** Maximum **7 parameters** per method/constructor (prefer a parameter object or a DTO if the number
-  of parameters increases).
+  of parameters increases). *Exemption:* pure data holders (entities, DTOs and domain models: classes under `entity/`,
+  `dto/` or `model/` that carry fields and no business logic) are not counted; each parameter there is a column or a
+  field. REST contracts and repository queries are not exempt: group filter, sort and pagination parameters into a
+  parameter object.
 - **Nesting Levels:** Maximum **2 nesting levels** (e.g., a loop or an `if` nested inside another). Beyond that, extract
   the blocks into dedicated methods or helpers.
 - **Cyclomatic Complexity:** Limited to a maximum of **6** per method. Control structures that are too complex
