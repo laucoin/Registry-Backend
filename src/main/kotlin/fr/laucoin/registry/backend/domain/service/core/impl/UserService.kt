@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
+import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import org.springframework.dao.DataIntegrityViolationException
 import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
@@ -247,7 +248,7 @@ class UserService(
 		// Séquentiel : les vérifications du "dernier administrateur" dépendent des utilisateurs supprimés plus tôt dans la même exécution
 		return port.findUserIdsOlderThanLastLogin(dateThreshold)
 			.concatMap(::keepIfPurgeable)
-			.concatMap { purgeUser(it, dryRun) }
+			.purgeEach("user", dryRun, port::deleteById, concurrency = 1)
 	}
 
 	private fun keepIfPurgeable(id: UUID): Mono<UUID> {
@@ -259,18 +260,6 @@ class UserService(
 				log.info("User {} is not purged: {}", id, it.message)
 				Mono.empty()
 			}
-	}
-
-	private fun purgeUser(id: UUID, dryRun: Boolean): Mono<UUID> {
-		if (dryRun) {
-			log.info("[Dry run] user {} would be deleted", id)
-			return Mono.just(id)
-		}
-
-		log.info("Purging user {}", id)
-		return port.deleteById(id).thenReturn(id)
-			.doOnNext { log.info("User {} was deleted", it) }
-			.doOnError { log.error("Failed to purge user {}", id, it) }
 	}
 
 	private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) =

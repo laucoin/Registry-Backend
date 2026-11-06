@@ -6,13 +6,14 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
+import java.time.ZonedDateTime
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Objectif : Contrat de cas d'usage du profil de projet.
- * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos du profil de projet.
+ * Objectif : Contrat du service core du profil de projet.
+ * Périmètre : Déclare ce que les cas d'usage peuvent demander à propos du profil de projet, y compris la vérification de conflit de plage d'accès.
  * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
  */
 interface IProjectProfileService {
@@ -41,4 +42,11 @@ interface IProjectProfileService {
 	fun blockProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ProjectProfileModel>
 	fun unblockProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ProjectProfileModel>
 	fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit>
+	fun validateNoProfileConflict(
+		projectId: UUID,
+		userIds: List<UUID>,
+		profileId: UUID?,
+		startAccess: ZonedDateTime?,
+		endAccess: ZonedDateTime?,
+	): Mono<List<UUID>>
 }

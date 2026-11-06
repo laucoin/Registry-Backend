@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
@@ -19,22 +21,25 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
-import fr.laucoin.registry.backend.domain.service.GenericProfileService
+import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import java.time.Clock
 import java.time.OffsetTime
+import java.time.ZonedDateTime
 import java.util.UUID
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.SynchronousSink
 
 /**
  * Objectif : Gère les profils (rôles) des utilisateurs au sein d'un projet.
- * Périmètre : Statut des profils, changements de rôle et garde-fous du dernier administrateur.
+ * Périmètre : Statut des profils, changements de rôle, conflits de plages d'accès et garde-fous du dernier administrateur.
  * Limites : Ne gère pas les vues de profils de l'utilisateur courant ; voir UserProjectProfileService.
  */
 @Service
@@ -46,7 +51,7 @@ class ProjectProfileService(
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
 	clock: Clock,
-): IProjectProfileService, GenericProfileService(port, clock) {
+): IProjectProfileService, GenericService(clock) {
 	override fun findProjectProfilesPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -258,5 +263,41 @@ class ProjectProfileService(
 		val oidcId = profile.user?.oidcId
 		return port.update(profile.apply { update(currentUser, now()) })
 			.doOnNext { principalCache.invalidate(oidcId) }
+	}
+
+	override fun validateNoProfileConflict(
+		projectId: UUID,
+		userIds: List<UUID>,
+		profileId: UUID?,
+		startAccess: ZonedDateTime?,
+		endAccess: ZonedDateTime?,
+	): Mono<List<UUID>> {
+		return port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+			projectId,
+			userIds,
+			profileId,
+			status = listOf(ACCEPTED, INVITED),
+			from = startAccess,
+			to = endAccess,
+		)
+			.collectList()
+			.handle { conflicting, sink -> sink.nextIfSomeoneIsFree(projectId, userIds, conflicting) }
+	}
+
+	private fun SynchronousSink<List<UUID>>.nextIfSomeoneIsFree(projectId: UUID, userIds: List<UUID>, conflicting: List<UUID>) {
+		if (conflicting.size != userIds.size) return next(usersWithoutConflict(projectId, userIds, conflicting))
+		log.warn("Another profile already exists for the user(s) \"{}\" on the project \"{}\".", userIds, projectId)
+		error(RegistryException(CONFLICT, PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE))
+	}
+
+	private fun usersWithoutConflict(projectId: UUID, userIds: List<UUID>, conflicting: List<UUID>): List<UUID> {
+		if (conflicting.isEmpty()) return userIds
+
+		log.warn(
+			"Partial request: a profile already exists for the user(s) \"{}\" on the project \"{}\".",
+			userIds.filter { conflicting.contains(it) },
+			projectId
+		)
+		return userIds.filter { !conflicting.contains(it) }
 	}
 }
