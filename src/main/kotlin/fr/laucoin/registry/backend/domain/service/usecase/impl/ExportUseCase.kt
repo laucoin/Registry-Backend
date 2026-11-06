@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.helper.ExportAssemblyHelper
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_EXPORT
@@ -10,20 +11,14 @@ import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantExportModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserExportModel
-import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.port.IPreferencesPort
-import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -49,15 +44,10 @@ class ExportUseCase(
 	private val preferencesPort: IPreferencesPort,
 	private val profilePort: IProjectProfilePort,
 	private val participantPort: IParticipantPort,
-	private val movementPort: IMovementPort,
-	private val projectPort: IProjectPort,
+	private val exports: ExportAssemblyHelper,
 	private val auditService: IAuditService,
 	clock: Clock,
 ): IExportUseCase, GenericService(clock) {
-	companion object {
-		private const val EXPORT_PAGE_SIZE = 200
-	}
-
 	override fun exportUser(
 		currentUser: CurrentUserModel,
 		userId: UUID,
@@ -77,7 +67,7 @@ class ExportUseCase(
 			preferencesPort.findByUserId(user.id!!, isVisible = null).map { Optional.of(it) }
 				.defaultIfEmpty(Optional.empty()),
 			findAllProfiles(user.id!!).collectList(),
-			findAllParticipantExports(user.id!!, generatedAt).collectList(),
+			exports.findAllParticipantExports(user.id!!, generatedAt).collectList(),
 		).map { UserExportModel(generatedAt, user, it.t1.orElse(null), it.t2, it.t3) }
 	}
 
@@ -92,7 +82,7 @@ class ExportUseCase(
 			.filter { canExportParticipant(currentUser, projectId, it) }
 			.switchIfEmpty(Mono.error { forbidden(currentUser, projectId, id, client) })
 			.doOnNext { log.info("User {} exports the data of the participant {}", currentUser.id, id) }
-			.flatMap { buildParticipantExport(it, ZonedDateTime.now(clock)) }
+			.flatMap { exports.buildParticipantExport(it, ZonedDateTime.now(clock)) }
 			.doOnNext { audit(currentUser, client, AuditResourceTypeEnum.PARTICIPANT, id, projectId, AuditOutcomeEnum.SUCCESS) }
 	}
 
@@ -122,40 +112,8 @@ class ExportUseCase(
 		auditService.record(AuditModel(EXPORT, resourceType, resourceId, projectId, currentUser.id, outcome, client, now()))
 	}
 
-	private fun findAllParticipantExports(userId: UUID, generatedAt: ZonedDateTime) =
-		participantPort.findAllByUserId(userId)
-			.concatMap { participantPort.findById(it.projectId!!, it.id!!, isVisible = null) }
-			.concatMap { buildParticipantExport(it, generatedAt) }
-
-	private fun buildParticipantExport(
-		participant: ParticipantModel,
-		generatedAt: ZonedDateTime
-	): Mono<ParticipantExportModel> {
-		val projectId = participant.projectId!!
-
-		return Mono.zip(
-			projectPort.findById(projectId, isVisible = null).map { it.name ?: "" }.defaultIfEmpty(""),
-			findAllMovements(projectId, participant.id!!).collectList(),
-		).map { ParticipantExportModel(generatedAt, it.t1.ifEmpty { null }, participant, it.t2) }
-	}
-
-	private fun findAllMovements(projectId: UUID, participantId: UUID): Flux<MovementModel> =
-		allPages {
-			movementPort.findPageByParticipantId(projectId, participantId, it, MovementSearchParamModel())
-		}
-
 	private fun findAllProfiles(userId: UUID): Flux<ProjectProfileModel> =
-		allPages {
+		exports.allPages {
 			profilePort.findProjectProfilesPageByUserId(userId, it, ProjectProfileSearchParamModel(isVisible = null))
 		}
-
-	private fun <T : Any> allPages(pageNumber: Int = 0, fetch: (PageableModel) -> Mono<PageModel<T>>): Flux<T> =
-		fetch(PageableModel(pageNumber.toLong() * EXPORT_PAGE_SIZE, EXPORT_PAGE_SIZE))
-			.flatMapMany { page -> Flux.fromIterable(page.content).concatWith(nextPages(page, pageNumber, fetch)) }
-
-	private fun <T : Any> nextPages(
-		page: PageModel<T>,
-		pageNumber: Int,
-		fetch: (PageableModel) -> Mono<PageModel<T>>,
-	): Flux<T> = if (pageNumber + 1 < page.totalPages) allPages(pageNumber + 1, fetch) else Flux.empty()
 }

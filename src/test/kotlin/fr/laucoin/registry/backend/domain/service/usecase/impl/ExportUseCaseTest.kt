@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.helper.ExportAssemblyHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_EXPORT
@@ -56,7 +57,7 @@ class ExportUseCaseTest {
 	private val auditService: IAuditService = mock()
 	private val clock = Clock.fixed(Instant.parse("2026-01-01T10:00:00Z"), UTC)
 	private val service: IExportUseCase = ExportUseCase(
-		userPort, preferencesPort, profilePort, participantPort, movementPort, projectPort, auditService, clock,
+		userPort, preferencesPort, profilePort, participantPort, ExportAssemblyHelper(participantPort, movementPort, projectPort), auditService, clock,
 	)
 
 	private val client = ClientContextModel("203.0.113.7", "JUnit")

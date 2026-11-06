@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.helper.ProjectProfileFavoriteHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
@@ -14,7 +15,6 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
@@ -36,7 +36,7 @@ import java.util.UUID
 @Service
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
-	private val favoritePort: IProjectFavoritePort,
+	private val favorites: ProjectProfileFavoriteHelper,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
 	private val lastAdministrator: LastAdministratorHelper,
@@ -60,33 +60,10 @@ class UserProjectProfileService(
 	}
 
 	private fun Mono<ProjectProfileModel>.withFavorite(userId: UUID): Mono<ProjectProfileModel> =
-		flatMap { attachFavorite(userId, it) }
-
-	private fun attachFavorite(userId: UUID, profile: ProjectProfileModel): Mono<ProjectProfileModel> {
-		val projectId = profile.project?.id ?: return Mono.just(profile)
-		return favoritePort.findFavoriteProjectIds(userId, listOf(projectId))
-			.hasElements()
-			.map { profile.apply { project?.favorite = it } }
-	}
+		flatMap { favorites.withFavorite(userId, it) }
 
 	private fun Mono<PageModel<ProjectProfileModel>>.withFavorites(userId: UUID): Mono<PageModel<ProjectProfileModel>> =
-		flatMap { attachFavorites(userId, it) }
-
-	private fun attachFavorites(
-		userId: UUID,
-		page: PageModel<ProjectProfileModel>,
-	): Mono<PageModel<ProjectProfileModel>> {
-		return favoritePort.findFavoriteProjectIds(userId, page.content.mapNotNull { it.project?.id }.distinct())
-			.collectList()
-			.map { page.withFavoriteProjects(it.toSet()) }
-	}
-
-	private fun PageModel<ProjectProfileModel>.withFavoriteProjects(
-		favoriteIds: Set<UUID>,
-	): PageModel<ProjectProfileModel> {
-		content.forEach { profile -> profile.project?.let { it.favorite = it.id in favoriteIds } }
-		return this
-	}
+		flatMap { favorites.withFavorites(userId, it) }
 
 	override fun createUserProjectProfileFromProject(
 		currentUser: CurrentUserModel,

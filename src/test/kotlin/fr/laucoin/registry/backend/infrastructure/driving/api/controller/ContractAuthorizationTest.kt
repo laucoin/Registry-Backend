@@ -20,7 +20,7 @@ class ContractAuthorizationTest {
 			"ISecurityV2Controller.fetchToken",
 			"ISecurityV2Controller.refreshToken",
 		)
-		private const val PUBLIC_CONTRACT = "IMetadataV2Controller"
+		private val PUBLIC_CONTRACTS = setOf("IMetadataV2Controller", "IPlatformMetadataV2Controller")
 		private val MAPPINGS = listOf(
 			GetMapping::class.java, PostMapping::class.java, PatchMapping::class.java,
 			DeleteMapping::class.java, PutMapping::class.java,
@@ -36,7 +36,7 @@ class ContractAuthorizationTest {
 
 		// Act
 		val unprotected = contracts
-			.filter { it.simpleName != PUBLIC_CONTRACT }
+			.filter { it.simpleName !in PUBLIC_CONTRACTS }
 			.flatMap { contract -> contract.methods.filter(::isEndpoint).map { "${contract.simpleName}.${it.name}" to it } }
 			.filter { (name, method) -> name !in PUBLIC_ENDPOINTS && !method.isAnnotatedWith(PreAuthorize::class.java) }
 			.map { (name, _) -> name }

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.helper.ProjectProfileFavoriteHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
@@ -56,7 +57,7 @@ class UserProjectProfileServiceTest {
 	}
 
 	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, favoritePort, roleService, principalCache, LastAdministratorHelper(port), rowLockPort, transactionalOperator, Clock.systemUTC()
+		port, ProjectProfileFavoriteHelper(favoritePort), roleService, principalCache, LastAdministratorHelper(port), rowLockPort, transactionalOperator, Clock.systemUTC()
 	)
 
 	init {
