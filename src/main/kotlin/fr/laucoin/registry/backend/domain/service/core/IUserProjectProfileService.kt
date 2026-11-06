@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.domain.service.core
 
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -25,13 +24,6 @@ interface IUserProjectProfileService {
 
 	fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
 
-
-	fun <T : GenericModel> validateNotLastProjectRoleLevel0(
-		userId: UUID,
-		projectId: UUID?,
-		result: T,
-		error: String
-	): Mono<T>
 
 	fun createUserProjectProfileFromProject(
 		currentUser: CurrentUserModel,

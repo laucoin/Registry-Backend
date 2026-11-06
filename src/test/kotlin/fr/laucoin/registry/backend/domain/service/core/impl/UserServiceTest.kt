@@ -15,7 +15,7 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.core.IPreferencesService
-import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
+import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserFields.USER_ROLE
@@ -57,12 +57,12 @@ import java.util.stream.Stream
 class UserServiceTest {
 	private val port: IUserPort = mock()
 	private val preferencesService: IPreferencesService = mock()
-	private val userProjectProfileService: IUserProjectProfileService = mock()
+	private val lastAdministrator: LastAdministratorHelper = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val service = UserService(
-		port, preferencesService, userProjectProfileService, transactionalOperator, roleService, principalCache, Clock.systemUTC()
+		port, preferencesService, lastAdministrator, transactionalOperator, roleService, principalCache, Clock.systemUTC()
 	)
 
 	init {
@@ -293,7 +293,7 @@ class UserServiceTest {
 		assertEquals(serviceAccount, result)
 		verifyNoInteractions(port)
 		verifyNoInteractions(preferencesService)
-		verifyNoInteractions(userProjectProfileService)
+		verifyNoInteractions(lastAdministrator)
 		verifyNoInteractions(transactionalOperator)
 		verifyNoInteractions(roleService)
 	}
@@ -441,7 +441,7 @@ class UserServiceTest {
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
 		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
 		whenever(
-			userProjectProfileService.validateNotLastProjectRoleLevel0(
+			lastAdministrator.validateNotLastProjectRoleLevel0(
 				any(),
 				anyOrNull(),
 				any(),
@@ -456,7 +456,7 @@ class UserServiceTest {
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService).getLevelByUserRole(USER_ROLE)
 		verify(port).update(any())
-		verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
+		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
 			projectId = null,
 			foundUser,
@@ -504,7 +504,7 @@ class UserServiceTest {
 		verify(port).findById(uuid, isVisible = true)
 		verify(roleService).getAssignableUserRoles(currentUser())
 		verify(roleService, never()).getLevelByUserRole(anyOrNull())
-		verify(userProjectProfileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
+		verify(lastAdministrator, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
 		verify(port, never()).update(any())
 	}
 
@@ -536,7 +536,7 @@ class UserServiceTest {
 
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(foundUser))
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-		whenever(userProjectProfileService.validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any()))
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any()))
 			.thenReturn(Mono.just(foundUser))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
@@ -545,7 +545,7 @@ class UserServiceTest {
 
 		// Assert
 		verify(port).deleteById(uuid)
-		verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
+		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
 			projectId = null,
 			foundUser,
@@ -565,7 +565,7 @@ class UserServiceTest {
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 		whenever(
-			userProjectProfileService.validateNotLastProjectRoleLevel0(
+			lastAdministrator.validateNotLastProjectRoleLevel0(
 				any(),
 				anyOrNull(),
 				any(),
@@ -580,7 +580,7 @@ class UserServiceTest {
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService).getLevelByUserRole(USER_ROLE)
 		verify(port).deleteById(any())
-		verify(userProjectProfileService).validateNotLastProjectRoleLevel0(
+		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
 			projectId = null,
 			foundUser,
@@ -594,7 +594,7 @@ class UserServiceTest {
 			Mono.just(UserModel().apply { id = it.getArgument(0); role = USER_ROLE })
 		}
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-		whenever(userProjectProfileService.validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any()))
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any()))
 			.thenAnswer { Mono.just(it.getArgument<UserModel>(2)) }
 	}
 
@@ -625,7 +625,7 @@ class UserServiceTest {
 		val uuid2 = UUID.randomUUID()
 
 		mockPurgeableUsers(uuid1, uuid2)
-		whenever(userProjectProfileService.validateNotLastProjectRoleLevel0(eq(uuid1), anyOrNull(), any(), any()))
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(eq(uuid1), anyOrNull(), any(), any()))
 			.thenReturn(Mono.error(RegistryException(CONFLICT, USER_DELETE_LAST_PROJECT_ADMINISTRATOR)))
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 

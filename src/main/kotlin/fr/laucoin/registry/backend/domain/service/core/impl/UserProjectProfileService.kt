@@ -6,15 +6,14 @@ import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -22,13 +21,11 @@ import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
 import java.time.Clock
 import java.time.OffsetTime
-import java.util.Objects
 import java.util.UUID
 
 /**
@@ -42,6 +39,7 @@ class UserProjectProfileService(
 	private val favoritePort: IProjectFavoritePort,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
+	private val lastAdministrator: LastAdministratorHelper,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
 	clock: Clock,
@@ -79,24 +77,6 @@ class UserProjectProfileService(
 					page
 				}
 		}
-
-	override fun <T : GenericModel> validateNotLastProjectRoleLevel0(
-		userId: UUID,
-		projectId: UUID?,
-		result: T,
-		error: String
-	): Mono<T> {
-		return port.lockLevel0ProjectProfilesByUserId(userId)
-			.then(Mono.defer { port.findLevel0ProjectProfileRoleByUserId(userId, isVisible = true).collectList() })
-			.map { counts -> counts.filter { c -> Objects.isNull(projectId) || Objects.equals(c.project!!.id, projectId) } }
-			.handle { it, handle ->
-				val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
-				if (projects.isNotEmpty()) {
-					log.warn("The user {} is the last administrator of {} project(s)", userId, it.size)
-					handle.error(RegistryException(CONFLICT, error, arrayListOf(projects.first().project!!.name)))
-				} else handle.next(result)
-			}
-	}
 
 	override fun createUserProjectProfileFromProject(
 		currentUser: CurrentUserModel,
@@ -172,7 +152,7 @@ class UserProjectProfileService(
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
 			.notFoundIfEmpty(id)
 			.flatMap {
-				validateNotLastProjectRoleLevel0(
+				lastAdministrator.validateNotLastProjectRoleLevel0(
 					it.user!!.id!!,
 					it.projectId!!,
 					it,
