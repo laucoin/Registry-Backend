@@ -332,17 +332,35 @@ class ProjectControllerTest : TestContext() {
 	}
 
 	@Test
-	fun `Should findProjectById return 403 with the global read authority but no profile on the project`() {
+	fun `Should findProjectById return 200 with the global read authority but no profile on the project`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		whenever(useCase.findProjectWithProfileById(any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
+
 		// Act
 		val result = webClient
 			.authenticate(REGISTRY_PROJECT_R)
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ProjectWithProfileReaderDto>(OK)
+		verify(useCase).findProjectWithProfileById(any(), eq(uuid))
+	}
+
+	@Test
+	fun `Should findProjectById return 403 with the read permission of another project only`() {
+		// Act
+		val result = webClient
+			.authenticate("${UUID.randomUUID()}_$PROJECT_SCOPED_PROJECT_R")
 			.get()
 			.uri(uriBuilder("$BASE_URL/{id}", listOf(UUID.randomUUID()), emptyList()))
 			.exchange()
 
 		// Assert
 		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
-
 		verifyNoInteractions(useCase)
 	}
 
