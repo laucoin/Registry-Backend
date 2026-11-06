@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_DEL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.extension.StringExt.toNormalizedEmail
+import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -19,7 +20,6 @@ import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IPreferencesService
-import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
@@ -45,7 +45,7 @@ import java.util.UUID
 class UserService(
 	private val port: IUserPort,
 	private val preferencesService: IPreferencesService,
-	private val userProjectProfileService: IUserProjectProfileService,
+	private val lastAdministrator: LastAdministratorHelper,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
@@ -291,7 +291,7 @@ class UserService(
 	}
 
 	private fun Mono<UserModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
-		userProjectProfileService.validateNotLastProjectRoleLevel0(it.id!!, projectId = null, it, error)
+		lastAdministrator.validateNotLastProjectRoleLevel0(it.id!!, projectId = null, it, error)
 	}
 
 	private fun Mono<UserModel>.validateRole(

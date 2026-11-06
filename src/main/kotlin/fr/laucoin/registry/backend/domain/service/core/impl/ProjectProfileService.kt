@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.extension.StringExt.toNormalizedEmail
+import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -23,7 +24,6 @@ import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
-import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
@@ -47,7 +47,7 @@ import reactor.core.publisher.Mono
  */
 @Service
 class ProjectProfileService(
-	private val profileService: IUserProjectProfileService,
+	private val lastAdministrator: LastAdministratorHelper,
 	private val port: IProjectProfilePort,
 	private val roleService: IRoleService,
 	private val userPort: IUserPort,
@@ -236,7 +236,7 @@ class ProjectProfileService(
 	}
 
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
-		profileService.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.projectId!!, it, error)
+		lastAdministrator.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.projectId!!, it, error)
 	}
 
 	private fun Mono<ProjectProfileModel>.validateRole(

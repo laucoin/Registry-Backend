@@ -21,7 +21,7 @@ import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IUserPort
-import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
+import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
@@ -58,7 +58,7 @@ import java.util.stream.Stream
 
 class ProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
-	private val profileService: IUserProjectProfileService = mock()
+	private val lastAdministrator: LastAdministratorHelper = mock()
 	private val roleService: IRoleService = mock()
 	private val userPort: IUserPort = mock()
 	private val principalCache: IPrincipalCacheService = mock()
@@ -72,7 +72,7 @@ class ProjectProfileServiceTest {
 	}
 
 	private val service = ProjectProfileService(
-		profileService, port, roleService, userPort, userService, featureService, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
+		lastAdministrator, port, roleService, userPort, userService, featureService, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
 	)
 
 	init {
@@ -345,7 +345,7 @@ class ProjectProfileServiceTest {
 	}
 
 	@Test
-	fun `Should updateProjectProfileById call port findById, findUserIdsWithProjectProfile, call profileService validateNotLastProjectRoleLevel0, call port findProjectProfileByProjectAndUserId, call roleService getAssignableProjectRoles and finally call port update`() {
+	fun `Should updateProjectProfileById call port findById, findUserIdsWithProjectProfile, call lastAdministrator validateNotLastProjectRoleLevel0, call port findProjectProfileByProjectAndUserId, call roleService getAssignableProjectRoles and finally call port update`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val profileRole = "ROLE_PROJECT"
@@ -372,7 +372,7 @@ class ProjectProfileServiceTest {
 				anyOrNull()
 			)
 		).thenReturn(Flux.just())
-		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
 			Mono.just(
 				profile
 			)
@@ -399,7 +399,7 @@ class ProjectProfileServiceTest {
 			from = eq(CustomDateTimeModel.MIN.toZonedDateTime(OffsetTime.MIN)),
 			to = eq(CustomDateTimeModel.MAX.toZonedDateTime(OffsetTime.MAX)),
 		)
-		verify(profileService).validateNotLastProjectRoleLevel0(
+		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
 			defaultProjectId,
 			profile,
@@ -419,7 +419,7 @@ class ProjectProfileServiceTest {
 	}
 
 	@Test
-	fun `Should updateProjectProfileById call port findById, findUserIdsWithProjectProfile, call profileService validateNotLastProjectRoleLevel0, call port findProjectProfileByProjectAndUserId, call roleService getAssignableProjectRoles and throw because profile duplicated`() {
+	fun `Should updateProjectProfileById call port findById, findUserIdsWithProjectProfile, call lastAdministrator validateNotLastProjectRoleLevel0, call port findProjectProfileByProjectAndUserId, call roleService getAssignableProjectRoles and throw because profile duplicated`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 		val profileRole = "ROLE_PROJECT"
@@ -457,7 +457,7 @@ class ProjectProfileServiceTest {
 			from = null,
 			to = null,
 		)
-		verify(profileService, never()).validateNotLastProjectRoleLevel0(any(), any(), any(), any())
+		verify(lastAdministrator, never()).validateNotLastProjectRoleLevel0(any(), any(), any(), any())
 		verify(port, never()).findProjectProfileByProjectAndUserId(any(), any(), any())
 		verify(roleService, never()).getAssignableProjectRoles(any())
 		verify(port, never()).update(any())
@@ -524,7 +524,7 @@ class ProjectProfileServiceTest {
 			from = null,
 			to = null,
 		)
-		verify(profileService, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
+		verify(lastAdministrator, never()).validateNotLastProjectRoleLevel0(any(), anyOrNull(), any(), any())
 		verify(port).findProjectProfileByProjectAndUserId(
 			defaultProjectId,
 			currentUser().id!!,
@@ -548,7 +548,7 @@ class ProjectProfileServiceTest {
 			visible = true
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
-		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
 			Mono.just(
 				profile
 			)
@@ -560,7 +560,7 @@ class ProjectProfileServiceTest {
 
 		// Assert
 		verify(port).findById(defaultProjectId, uuid, isVisible = true)
-		verify(profileService).validateNotLastProjectRoleLevel0(
+		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
 			defaultProjectId,
 			profile,
@@ -599,7 +599,7 @@ class ProjectProfileServiceTest {
 			visible = true
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
-		whenever(profileService.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
 			Mono.just(
 				profile
 			)
@@ -611,7 +611,7 @@ class ProjectProfileServiceTest {
 
 		// Assert
 		verify(port).findById(defaultProjectId, uuid, isVisible = null)
-		verify(profileService).validateNotLastProjectRoleLevel0(
+		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
 			defaultProjectId,
 			profile,
