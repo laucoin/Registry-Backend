@@ -10,31 +10,21 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IParticipantUseCase
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IParticipantV2Controller
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantTimelineReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantWriterDtoMapper
 import java.util.TimeZone
-import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import java.util.UUID
 import org.springframework.http.ResponseEntity
-import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
@@ -53,13 +43,8 @@ class ParticipantV2Controller(
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ParticipantReaderDtoMapper,
 	private val timelineReaderMapper: ParticipantTimelineReaderDtoMapper,
-	private val groupReaderMapper: GroupWithoutMemberReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
-	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
 	private val writerMapper: ParticipantWriterDtoMapper,
-	private val exportUseCase: IExportUseCase,
-	private val exportMapper: ExportReaderDtoMapper,
-	private val clientContextService: ClientContextService,
 ): IParticipantV2Controller {
 	override fun findParticipants(
 		currentUser: CurrentUserModel,
@@ -93,17 +78,6 @@ class ParticipantV2Controller(
 
 	override fun findParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ParticipantReaderDto> {
 		return service.findParticipantById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_PARTICIPANT_RESTORE)).map(readerMapper::toDto)
-	}
-
-	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
-		return service.searchUsersByText(projectId, query).map(partialUserReaderMapper::toDto)
-	}
-
-	override fun searchGroups(
-		projectId: UUID,
-		query: String?
-	): Flux<GroupWithoutMemberReaderDto> {
-		return service.searchGroupsByText(projectId, query).map(groupReaderMapper::toDto)
 	}
 
 	override fun findParticipantTimeline(
@@ -179,17 +153,6 @@ class ParticipantV2Controller(
 		id: UUID,
 	): Mono<ParticipantReaderDto> {
 		return service.enableParticipantById(currentUser, projectId, id).map(readerMapper::toDto)
-	}
-
-	override fun exportParticipantById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		request: ServerHttpRequest,
-	): Mono<ResponseEntity<ParticipantExportReaderDto>> {
-		return exportUseCase.exportParticipant(currentUser, projectId, id, clientContextService.resolve(request))
-			.map(exportMapper::toDto)
-			.map { it.asAttachment("participant-$id.json") }
 	}
 
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {

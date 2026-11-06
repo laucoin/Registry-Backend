@@ -11,17 +11,13 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectProfileV2Controller
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CreatedProjectProfilesReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfilesWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CreatedProjectProfilesReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileRoleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfilesWriterDtoMapper
 import java.util.UUID
@@ -30,7 +26,6 @@ import org.springframework.http.HttpStatus.OK
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
@@ -43,8 +38,6 @@ class ProjectProfileV2Controller(
 	private val useCase: IProjectProfileUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
-	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
-	private val projectProfileRoleReaderMapper: ProjectProfileRoleReaderDtoMapper,
 	private val createdProjectProfilesReaderMapper: CreatedProjectProfilesReaderDtoMapper,
 	private val writerMapper: ProjectProfileWriterDtoMapper,
 	private val profilesWriterMapper: ProjectProfilesWriterDtoMapper,
@@ -68,14 +61,6 @@ class ProjectProfileV2Controller(
 		val visibility = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_PROFILE_RESTORE)
 
 		return useCase.findProjectProfileById(projectId, id, isVisible = visibility).map(readerMapper::toDto)
-	}
-
-	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
-		return useCase.searchUsers(query).map(partialUserReaderMapper::toDto)
-	}
-
-	override fun getAssignableProjectProfileRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<LabelDto> {
-		return useCase.getAssignableProjectRoles(currentUser, projectId).map(projectProfileRoleReaderMapper::toDto)
 	}
 
 	override fun createProjectProfiles(

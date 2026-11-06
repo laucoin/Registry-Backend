@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.helper.MovementContentPostgresHelper
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
@@ -12,10 +13,8 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityStatisticsEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementContentEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.MovementEventEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementContentEntityRepository
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementEntityRepository
 import java.time.Clock
 import java.time.LocalDate
@@ -33,12 +32,11 @@ import reactor.core.publisher.Mono
 @Service
 class MovementModelPostgresRepository(
 	private val repository: IMovementEntityRepository,
-	private val contentRepository: IMovementContentEntityRepository,
+	private val content: MovementContentPostgresHelper,
 	private val transactionalOperator: TransactionalOperator,
 	private val mapper: MovementEntityMapper,
 	private val eventMapper: MovementEventEntityMapper,
 	private val statisticsMapper: ActivityStatisticsEntityMapper,
-	private val contentMapper: MovementContentEntityMapper,
 	private val clock: Clock,
 ): IMovementPort {
 	override fun findPage(
@@ -82,24 +80,14 @@ class MovementModelPostgresRepository(
 	}
 
 	override fun findContent(projectId: UUID, movementIds: List<UUID>): Flux<Pair<UUID, List<MovementContentModel>>> {
-		return if (movementIds.isEmpty()) Flux.empty()
-		else contentRepository.findAllByMovementIds(projectId, movementIds)
-			.groupBy { it.movementId!! }
-			.flatMap {
-				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
-			}
+		return content.findContent(projectId, movementIds)
 	}
 
 	override fun findCurrentContent(
 		projectId: UUID,
 		movementIds: List<UUID>
 	): Flux<Pair<UUID, List<MovementContentModel>>> {
-		return if (movementIds.isEmpty()) Flux.empty()
-		else contentRepository.findCurrentByMovementIds(projectId, movementIds)
-			.groupBy { it.movementId!! }
-			.flatMap {
-				it.collectList().map { list -> it.key() to list.map(contentMapper::toModel) }
-			}
+		return content.findCurrentContent(projectId, movementIds)
 	}
 
 	override fun findEventsByParticipantId(projectId: UUID, participantId: UUID): Flux<MovementEventModel> {
@@ -264,28 +252,12 @@ class MovementModelPostgresRepository(
 			.`as`(transactionalOperator::transactional)
 	}
 
-	fun Mono<MovementModel>.saveNewContent(element: MovementModel): Mono<MovementModel> {
-		return flatMap { addNewContent(it, element) }
+	private fun Mono<MovementModel>.saveNewContent(element: MovementModel): Mono<MovementModel> {
+		return content.saveNewContent(this, element)
 	}
 
-	private fun addNewContent(movement: MovementModel, element: MovementModel): Mono<MovementModel> {
-		val newContent = movement.getNewContent(element)
-		if (newContent.isEmpty()) return Mono.just(movement)
-		return contentRepository.saveAll(newContent.map { contentMapper.toEntity(movement.id!!, it) })
-			.map(contentMapper::toModel)
-			.collectList()
-			.map { movement.apply { content = content.plus(it) } }
-	}
-
-	fun Mono<MovementModel>.removeDeletedContent(element: MovementModel): Mono<MovementModel> {
-		return flatMap { dropRemovedContent(it, element) }
-	}
-
-	private fun dropRemovedContent(movement: MovementModel, element: MovementModel): Mono<MovementModel> {
-		val removedIds = movement.getOldContentIds(element)
-		if (removedIds.isEmpty()) return Mono.just(movement)
-		return contentRepository.deleteAllById(removedIds)
-			.then(Mono.fromCallable { movement.apply { content = content.filter { !removedIds.contains(it.id) } } })
+	private fun Mono<MovementModel>.removeDeletedContent(element: MovementModel): Mono<MovementModel> {
+		return content.removeDeletedContent(this, element)
 	}
 
 	private fun save(element: MovementModel): Mono<MovementModel> {

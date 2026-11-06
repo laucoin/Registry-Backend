@@ -3,35 +3,26 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 import org.springdoc.core.annotations.ParameterObject
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ParticipantQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ElementMovementQueryDto
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_RESTORE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_U
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Size
 import java.util.TimeZone
 import java.util.UUID
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.ResponseEntity
-import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -41,7 +32,6 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
@@ -88,30 +78,6 @@ interface IParticipantV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ParticipantReaderDto>
-
-	@Operation(
-		summary = "Search Users",
-		description = "Search Users to link to a Participant",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
-	@GetMapping("/search/users")
-	fun searchUsers(
-		@PathVariable projectId: UUID,
-		@Parameter(description = "Text matched against the user first name, last name and email")
-		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
-	): Flux<PartialUserReaderDto>
-
-	@Operation(
-		summary = "Search Groups",
-		description = "Search Groups to add Participant in it",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PARTICIPANT_METADATA_R')")
-	@GetMapping("/search/groups")
-	fun searchGroups(
-		@PathVariable projectId: UUID,
-		@Parameter(description = "Text matched against the group name (accent-insensitive substring)")
-		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?
-	): Flux<GroupWithoutMemberReaderDto>
 
 	@Operation(
 		summary = "Find Participant timeline",
@@ -189,20 +155,6 @@ interface IParticipantV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<ParticipantReaderDto>
-
-	@Operation(
-		summary = "Export Participant data",
-		description = "Export the personal data of a Participant, limited to its Project. " +
-			"Allowed for the linked User or for a Project administrator",
-	)
-	@PreAuthorize("isAuthenticated()")
-	@GetMapping("/{id}/export")
-	fun exportParticipantById(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
-		@PathVariable id: UUID,
-		request: ServerHttpRequest,
-	): Mono<ResponseEntity<ParticipantExportReaderDto>>
 
 	@Operation(
 		summary = "Delete Participant",
