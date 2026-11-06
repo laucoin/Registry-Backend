@@ -42,34 +42,34 @@ object UserQueries {
 
 	const val SELECT_USER_SEARCH = """
         CASE
-            WHEN :query IS NULL THEN 1
-            ELSE word_similarity(:query, t.search_text)
+            WHEN :#{#c.query} IS NULL THEN 1
+            ELSE word_similarity(:#{#c.query}, t.search_text)
         END AS similarity_score
     """
 
 	const val USER_PROJECT_MEMBER_CLAUSE = """
-        (CAST(:memberOfProjectId AS UUID) IS NULL OR EXISTS (
+        (CAST(:#{#c.memberOfProjectId} AS UUID) IS NULL OR EXISTS (
             SELECT 1 FROM $PROJECT_PROFILE_TABLE member
-            WHERE member.$PROJECT_PROFILE_USER_ID = t.$ID AND member.$LINKED_PROJECT_ID = CAST(:memberOfProjectId AS UUID)
+            WHERE member.$PROJECT_PROFILE_USER_ID = t.$ID AND member.$LINKED_PROJECT_ID = CAST(:#{#c.memberOfProjectId} AS UUID)
         ))
     """
 
-	const val USER_TEXT_SEARCH_CLAUSE = "(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
+	const val USER_TEXT_SEARCH_CLAUSE = "(:#{#c.query} IS NULL OR word_similarity(:#{#c.query}, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
 
-	const val USER_ROLE_CLAUSE = "(CAST(:role AS TEXT) IS NULL OR t.$USER_ROLE = CAST(:role AS TEXT))"
+	const val USER_ROLE_CLAUSE = "(CAST(:#{#c.role} AS TEXT) IS NULL OR t.$USER_ROLE = CAST(:#{#c.role} AS TEXT))"
 
 	const val USER_SORT = """
-        CASE WHEN CAST(:sortField AS TEXT) = 'firstName' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_FIRST_NAME END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'firstName' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_FIRST_NAME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'lastName' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_NAME END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'lastName' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_NAME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'email' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_EMAIL END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'email' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_EMAIL END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'role' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_ROLE END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'role' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_ROLE END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'birthday' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_BIRTHDAY END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'birthday' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_BIRTHDAY END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'lastLogin' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_LOGIN END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'lastLogin' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$USER_LAST_LOGIN END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'firstName' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_FIRST_NAME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'firstName' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_FIRST_NAME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'lastName' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_LAST_NAME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'lastName' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_LAST_NAME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'email' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_EMAIL END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'email' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_EMAIL END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'role' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_ROLE END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'role' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_ROLE END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'birthday' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_BIRTHDAY END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'birthday' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_BIRTHDAY END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'lastLogin' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_LAST_LOGIN END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'lastLogin' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$USER_LAST_LOGIN END DESC NULLS LAST,
     """
 }

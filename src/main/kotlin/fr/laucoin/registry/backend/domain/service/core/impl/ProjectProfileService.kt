@@ -72,18 +72,9 @@ class ProjectProfileService(
 	}
 
 	override fun getAssignableProjectRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<String> {
-		return port.findProjectProfileByProjectAndUserId(
-			projectId,
-			currentUser.id!!,
-			ProjectProfileSearchParamModel(
-				isVisible = true,
-				isAvailable = true,
-				status = listOf(ACCEPTED),
-			),
-		)
+		return assignerProfile(currentUser, projectId)
 			.notFoundIfEmpty(Pair(projectId, currentUser.id!!))
-			.map { roleService.getAssignableProjectRoles(it) }
-			.flatMapMany { Flux.fromIterable(it) }
+			.flatMapIterable { roleService.getAssignableProjectRoles(it) }
 	}
 
 	override fun createProjectProfiles(
@@ -208,9 +199,13 @@ class ProjectProfileService(
 			.handle { roles, sink -> sink.nextOrError(profileToUpdate, roleError(currentUser, roles, profileToUpdate, profile)) }
 	}
 
-	private fun assignableRolesOf(currentUser: CurrentUserModel, projectId: UUID): Mono<List<String>> {
+	private fun assignerProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel> {
 		val searchParams = ProjectProfileSearchParamModel(isVisible = true, isAvailable = true, status = listOf(ACCEPTED))
 		return port.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, searchParams)
+	}
+
+	private fun assignableRolesOf(currentUser: CurrentUserModel, projectId: UUID): Mono<List<String>> {
+		return assignerProfile(currentUser, projectId)
 			.map { roleService.getAssignableProjectRoles(it) }
 			.defaultIfEmpty(emptyList())
 	}

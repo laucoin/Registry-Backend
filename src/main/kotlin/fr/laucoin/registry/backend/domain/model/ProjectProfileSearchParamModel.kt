@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.annotation.Default
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import java.time.ZonedDateTime
-import java.util.Objects
 
 data class ProjectProfileSearchParamModel(
 	var isVisible: Boolean? = null,
@@ -28,7 +27,7 @@ data class ProjectProfileSearchParamModel(
 	): this(
 		isVisible ?: if (status === BLOCKED) false else null,
 		isAvailable,
-		if (Objects.nonNull(status) && status!! != BLOCKED) listOf(status) else ProfileStatusEnum.entries.toList(),
+		if (status != null && status != BLOCKED) listOf(status) else ProfileStatusEnum.entries.toList(),
 		at,
 		role?.takeUnless { it.isBlank() },
 		sort = sort,

@@ -7,6 +7,8 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.UserCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserEntityMapper
@@ -32,35 +34,33 @@ class UserModelPostgresRepository(
 ): IUserPort {
 	override fun findPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>> {
 		return repository.findAll(
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.role,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			UserCriteria(query = searchParams.query, role = searchParams.role),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, UserEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findWithLimit(limit: Int, searchParams: UserSearchParamModel): Flux<UserModel> {
 		return repository.findWithLimit(
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.memberOfProjectId,
-			limit,
+			UserCriteria(query = searchParams.query, memberOfProjectId = searchParams.memberOfProjectId),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 
 	override fun findById(id: UUID, isVisible: Boolean?): Mono<UserModel> {
 		return repository.findById(id, isVisible)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findByOidcId(oidcId: UUID, isVisible: Boolean?): Mono<CurrentUserModel> {
 		return repository.findByOidcId(oidcId, isVisible)
 			.map(currentUserMapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun findByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel> {
