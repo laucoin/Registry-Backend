@@ -18,6 +18,8 @@ import fr.laucoin.registry.backend.domain.model.PlannedMovementModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
+import fr.laucoin.registry.backend.domain.service.core.IMovementQueryService
+import fr.laucoin.registry.backend.domain.service.core.IMovementSearchService
 import fr.laucoin.registry.backend.domain.service.core.IMovementService
 import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import java.time.LocalDate
@@ -33,8 +35,10 @@ import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 
 class MovementUseCaseTest {
+	private val queryService: IMovementQueryService = mock()
+	private val searchService: IMovementSearchService = mock()
 	private val service: IMovementService = mock()
-	private val useCase: IMovementUseCase = MovementUseCase(service)
+	private val useCase: IMovementUseCase = MovementUseCase(queryService, searchService, service)
 
 	@Test
 	fun `Should findMovementsPage delegate to the service`() {
@@ -44,14 +48,14 @@ class MovementUseCaseTest {
 		val pageable: PageableModel = mock()
 		val searchParams: MovementSearchParamModel = mock()
 		val expected: Mono<PageModel<MovementModel>> = Mono.empty()
-		whenever(service.findMovementsPage(currentUser, projectId, pageable, searchParams)).thenReturn(expected)
+		whenever(queryService.findMovementsPage(currentUser, projectId, pageable, searchParams)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findMovementsPage(currentUser, projectId, pageable, searchParams)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findMovementsPage(currentUser, projectId, pageable, searchParams)
+		verify(queryService).findMovementsPage(currentUser, projectId, pageable, searchParams)
 	}
 
 	@Test
@@ -62,14 +66,14 @@ class MovementUseCaseTest {
 		val pageable: PageableModel = mock()
 		val searchParams: MovementSearchParamModel = mock()
 		val expected: Mono<PageModel<MovementModel>> = Mono.empty()
-		whenever(service.findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)).thenReturn(expected)
+		whenever(queryService.findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)
+		verify(queryService).findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)
 	}
 
 	@Test
@@ -78,14 +82,14 @@ class MovementUseCaseTest {
 		val projectId: UUID = UUID.randomUUID()
 		val movementIds: List<UUID> = emptyList()
 		val expected: Flux<Pair<UUID, List<MovementContentModel>>> = Flux.empty()
-		whenever(service.findMovementsContent(projectId, movementIds)).thenReturn(expected)
+		whenever(queryService.findMovementsContent(projectId, movementIds)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findMovementsContent(projectId, movementIds)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findMovementsContent(projectId, movementIds)
+		verify(queryService).findMovementsContent(projectId, movementIds)
 	}
 
 	@Test
@@ -94,14 +98,14 @@ class MovementUseCaseTest {
 		val projectId: UUID = UUID.randomUUID()
 		val movementIds: List<UUID> = emptyList()
 		val expected: Flux<Pair<UUID, List<MovementContentModel>>> = Flux.empty()
-		whenever(service.findCurrentMovementsContent(projectId, movementIds)).thenReturn(expected)
+		whenever(queryService.findCurrentMovementsContent(projectId, movementIds)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findCurrentMovementsContent(projectId, movementIds)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findCurrentMovementsContent(projectId, movementIds)
+		verify(queryService).findCurrentMovementsContent(projectId, movementIds)
 	}
 
 	@Test
@@ -111,14 +115,14 @@ class MovementUseCaseTest {
 		val id: UUID = UUID.randomUUID()
 		val isVisible: Boolean? = null
 		val expected: Mono<MovementModel> = Mono.empty()
-		whenever(service.findMovementById(projectId, id, isVisible)).thenReturn(expected)
+		whenever(queryService.findMovementById(projectId, id, isVisible)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findMovementById(projectId, id, isVisible)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findMovementById(projectId, id, isVisible)
+		verify(queryService).findMovementById(projectId, id, isVisible)
 	}
 
 	@Test
@@ -130,14 +134,14 @@ class MovementUseCaseTest {
 		val at: ZonedDateTime = ZonedDateTime.now()
 		val all: Boolean = true
 		val expected: Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>> = Mono.empty()
-		whenever(service.searchParticipantsAndGroupsByText(projectId, type, query, at, all)).thenReturn(expected)
+		whenever(searchService.searchParticipantsAndGroupsByText(projectId, type, query, at, all)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchParticipantsAndGroupsByText(projectId, type, query, at, all)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchParticipantsAndGroupsByText(projectId, type, query, at, all)
+		verify(searchService).searchParticipantsAndGroupsByText(projectId, type, query, at, all)
 	}
 
 	@Test
@@ -146,14 +150,14 @@ class MovementUseCaseTest {
 		val projectId: UUID = UUID.randomUUID()
 		val query: String? = null
 		val expected: Flux<VehicleModel> = Flux.empty()
-		whenever(service.searchVehiclesByText(projectId, query)).thenReturn(expected)
+		whenever(searchService.searchVehiclesByText(projectId, query)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchVehiclesByText(projectId, query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchVehiclesByText(projectId, query)
+		verify(searchService).searchVehiclesByText(projectId, query)
 	}
 
 	@Test
@@ -162,14 +166,14 @@ class MovementUseCaseTest {
 		val contentType: ParticipantTypeEnum = ParticipantTypeEnum.entries.first()
 		val type: MovementTypeEnum = MovementTypeEnum.entries.first()
 		val expected: Flux<MovementReasonEnum> = Flux.empty()
-		whenever(service.searchReasonsByText(contentType, type)).thenReturn(expected)
+		whenever(searchService.searchReasonsByText(contentType, type)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchReasonsByText(contentType, type)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchReasonsByText(contentType, type)
+		verify(searchService).searchReasonsByText(contentType, type)
 	}
 
 	@Test
@@ -179,14 +183,14 @@ class MovementUseCaseTest {
 		val contentType: ParticipantTypeEnum = ParticipantTypeEnum.entries.first()
 		val query: String? = null
 		val expected: Flux<ActivityModel> = Flux.empty()
-		whenever(service.searchActivitiesByText(projectId, contentType, query)).thenReturn(expected)
+		whenever(searchService.searchActivitiesByText(projectId, contentType, query)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchActivitiesByText(projectId, contentType, query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchActivitiesByText(projectId, contentType, query)
+		verify(searchService).searchActivitiesByText(projectId, contentType, query)
 	}
 
 	@Test
@@ -197,14 +201,14 @@ class MovementUseCaseTest {
 		val pageable: PageableModel = mock()
 		val searchParams: CommunicationSearchParamModel = mock()
 		val expected: Mono<PageModel<CommunicationModel>> = Mono.empty()
-		whenever(service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)).thenReturn(expected)
+		whenever(queryService.findMovementCommunicationsPage(projectId, id, pageable, searchParams)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findMovementCommunicationsPage(projectId, id, pageable, searchParams)
+		verify(queryService).findMovementCommunicationsPage(projectId, id, pageable, searchParams)
 	}
 
 	@Test
@@ -214,14 +218,14 @@ class MovementUseCaseTest {
 		val type: MovementTypeEnum = MovementTypeEnum.entries.first()
 		val date: LocalDate? = null
 		val expected: Flux<PlannedMovementModel> = Flux.empty()
-		whenever(service.findPlannedMovements(projectId, type, date)).thenReturn(expected)
+		whenever(searchService.findPlannedMovements(projectId, type, date)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findPlannedMovements(projectId, type, date)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findPlannedMovements(projectId, type, date)
+		verify(searchService).findPlannedMovements(projectId, type, date)
 	}
 
 	@Test
@@ -229,14 +233,14 @@ class MovementUseCaseTest {
 		// Arrange
 		val projectId: UUID = UUID.randomUUID()
 		val expected: Mono<ProjectStatusModel> = Mono.empty()
-		whenever(service.findParticipantsStatus(projectId)).thenReturn(expected)
+		whenever(queryService.findParticipantsStatus(projectId)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findParticipantsStatus(projectId)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findParticipantsStatus(projectId)
+		verify(queryService).findParticipantsStatus(projectId)
 	}
 
 	@Test
@@ -244,14 +248,14 @@ class MovementUseCaseTest {
 		// Arrange
 		val projectId: UUID = UUID.randomUUID()
 		val expected: Mono<VehicleStatusModel> = Mono.empty()
-		whenever(service.findVehiclesStatus(projectId)).thenReturn(expected)
+		whenever(queryService.findVehiclesStatus(projectId)).thenReturn(expected)
 
 		// Act
 		val result = useCase.findVehiclesStatus(projectId)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).findVehiclesStatus(projectId)
+		verify(queryService).findVehiclesStatus(projectId)
 	}
 
 	@Test
