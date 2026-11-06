@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PRO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.driven.idp.mapper.AuthenticationTokenEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.idp.mapper.AuthenticationTokenEntityMapperImpl
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import okhttp3.mockwebserver.MockResponse
@@ -22,7 +23,7 @@ import reactor.core.Exceptions
 
 class IdpAuthenticationAdapterTest {
 	private val mockWebServer: MockWebServer = MockWebServer()
-	private val mapper: AuthenticationTokenEntityMapper = spy()
+	private val mapper: AuthenticationTokenEntityMapper = spy(AuthenticationTokenEntityMapperImpl())
 	private val adapter: IdpAuthenticationAdapter = IdpAuthenticationAdapter(
 		mapper,
 		authorizationUri = "authorizationUri",
