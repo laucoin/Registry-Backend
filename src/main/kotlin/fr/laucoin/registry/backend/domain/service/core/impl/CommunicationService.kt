@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.helper.CommunicationConflictHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
+import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel

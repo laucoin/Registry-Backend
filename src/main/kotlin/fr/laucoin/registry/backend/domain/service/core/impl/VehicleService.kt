@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
+import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.springframework.transaction.reactive.TransactionalOperator

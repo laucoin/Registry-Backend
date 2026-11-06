@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.support.IAuthenticationService
-import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
+import fr.laucoin.registry.backend.domain.service.LoggerService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ISecurityV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuthenticationUriReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto

@@ -12,7 +12,7 @@ import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
-import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
+import fr.laucoin.registry.backend.domain.service.LoggerService
 import java.util.UUID
 import org.springframework.core.convert.converter.Converter
 import org.springframework.dao.DataIntegrityViolationException

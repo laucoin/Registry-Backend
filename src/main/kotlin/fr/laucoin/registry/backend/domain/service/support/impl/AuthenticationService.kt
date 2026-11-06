@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
 import fr.laucoin.registry.backend.domain.port.IAuthenticationPort
+import fr.laucoin.registry.backend.domain.service.LoggerService
 import fr.laucoin.registry.backend.domain.service.support.IAuthenticationService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.BAD_REQUEST

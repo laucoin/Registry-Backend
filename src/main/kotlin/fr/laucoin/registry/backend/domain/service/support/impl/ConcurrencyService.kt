@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
+import fr.laucoin.registry.backend.domain.service.LoggerService
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import java.time.Duration
 import java.time.Instant
