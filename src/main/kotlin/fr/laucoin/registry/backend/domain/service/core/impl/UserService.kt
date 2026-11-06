@@ -310,7 +310,7 @@ class UserService(
 		role: String?,
 		error: String,
 	): RegistryException? {
-		if (Objects.isNull(role) || eligibleRoles.contains(role)) return null
+		if (role in eligibleRoles) return null
 		log.warn("The role {} is not assignable by the user {}", role, currentUser.id)
 		return RegistryException(FORBIDDEN, error, arrayListOf(role))
 	}

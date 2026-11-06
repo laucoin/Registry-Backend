@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileErro
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_MANAGE_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
@@ -49,6 +50,7 @@ import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.UUID
 import java.util.stream.Stream
+import reactor.test.StepVerifier
 
 class ProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
@@ -67,9 +69,14 @@ class ProjectProfileServiceTest {
 
 	init {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(roleService.getAssignableProjectRoles(any())).thenReturn(listOf(INVITED_ROLE))
 	}
 
 	private companion object {
+		@JvmStatic
+		fun managementActions(): Stream<String> = Stream.of("block", "unblock", "delete")
+
 		@JvmStatic
 		fun `Should createProjectProfiles call port findUserIdsWithProjectProfile and saveAll`(): Stream<Arguments> {
 			val user1 = invitedUser("first@sgdf.fr")
@@ -82,7 +89,11 @@ class ProjectProfileServiceTest {
 
 		private fun invitedUser(userEmail: String) = UserModel().apply { id = UUID.randomUUID(); email = userEmail }
 
-		private fun invitation(userEmail: String) = ProjectProfileModel().apply { user = UserModel().apply { email = userEmail } }
+		private const val INVITED_ROLE = "PROJECT_ROLE"
+		private const val HIGHER_ROLE = "PROJECT_HIGHER_ROLE"
+
+		private fun invitation(userEmail: String, invitedRole: String = INVITED_ROLE) =
+			ProjectProfileModel().apply { user = UserModel().apply { email = userEmail }; role = invitedRole }
 
 		@JvmStatic
 		fun `Should updateProjectProfileById call port findById, findUserIdsWithProjectProfile and throw because user are not allowed to edit that role`(): Stream<Arguments> {
@@ -500,6 +511,7 @@ class ProjectProfileServiceTest {
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
 			this.projectId = defaultProjectId
+			role = INVITED_ROLE
 			visible = true
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
@@ -532,6 +544,7 @@ class ProjectProfileServiceTest {
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
 			this.projectId = defaultProjectId
+			role = INVITED_ROLE
 			visible = false
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
@@ -553,6 +566,7 @@ class ProjectProfileServiceTest {
 		val profile = ProjectProfileModel().apply {
 			user = UserModel().apply { id = uuid }
 			this.projectId = defaultProjectId
+			role = INVITED_ROLE
 			visible = true
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
@@ -575,5 +589,70 @@ class ProjectProfileServiceTest {
 			PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR,
 		)
 		verify(port).deleteById(uuid)
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse a role the inviting user cannot assign and save nothing`() {
+		// Arrange
+		val users = mapOf("first@sgdf.fr" to invitedUser("first@sgdf.fr"))
+
+		// Act
+		val result = service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("first@sgdf.fr", HIGHER_ROLE)), users)
+
+		// Assert
+		StepVerifier.create(result)
+			.expectErrorSatisfies { assertForbidden(it, PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER) }
+			.verify()
+		verify(port, never()).saveAll(any())
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse when the inviting user has no usable profile on the project`() {
+		// Arrange
+		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), any())).thenReturn(Mono.empty())
+		val users = mapOf("first@sgdf.fr" to invitedUser("first@sgdf.fr"))
+
+		// Act
+		val result = service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("first@sgdf.fr")), users)
+
+		// Assert
+		StepVerifier.create(result)
+			.expectErrorSatisfies { assertForbidden(it, PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER) }
+			.verify()
+		verify(port, never()).saveAll(any())
+	}
+
+	@ParameterizedTest
+	@MethodSource("managementActions")
+	fun `Should refuse to manage a profile whose role is higher than the current user's`(action: String) {
+		// Arrange
+		val id = UUID.randomUUID()
+		val profile = ProjectProfileModel().apply {
+			this.id = id
+			user = UserModel().apply { this.id = UUID.randomUUID() }
+			this.projectId = defaultProjectId
+			role = HIGHER_ROLE
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+
+		// Act
+		val result = when (action) {
+			"block" -> service.blockProjectProfileById(currentUser(), defaultProjectId, id)
+			"unblock" -> service.unblockProjectProfileById(currentUser(), defaultProjectId, id)
+			else -> service.deleteProjectProfileById(currentUser(), defaultProjectId, id)
+		}
+
+		// Assert
+		StepVerifier.create(result)
+			.expectErrorSatisfies { assertForbidden(it, PROJECT_PROFILE_MANAGE_ROLE_HIGHER_THAN_CURRENT_USER) }
+			.verify()
+		verify(port, never()).update(any())
+		verify(port, never()).deleteById(any())
+	}
+
+	private fun assertForbidden(error: Throwable, code: String) {
+		val exception = error as RegistryException
+		assertEquals(FORBIDDEN, exception.status)
+		assertEquals(code, exception.code)
 	}
 }

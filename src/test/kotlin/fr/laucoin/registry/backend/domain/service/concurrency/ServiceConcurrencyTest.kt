@@ -136,8 +136,10 @@ class ServiceConcurrencyTest : TestContext() {
 		// Arrange
 		val projectId = insertProject()
 		val userId = insertUser(role = "USER")
+		val administratorId = insertUser(role = "USER")
+		insertAdministratorProfile(projectId, administratorId)
 		val invite = {
-			profileUseCase.createProjectProfiles(administrator(userId), projectId, listOf(invitation(projectId, userId)))
+			profileUseCase.createProjectProfiles(administrator(administratorId), projectId, listOf(invitation(projectId, userId)))
 		}
 
 		// Act
@@ -147,7 +149,7 @@ class ServiceConcurrencyTest : TestContext() {
 		assertEquals(1, outcomes.count { it.isSuccess })
 		val failure = outcomes.single { it.isFailure }.exceptionOrNull() as RegistryException
 		assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, failure.code)
-		assertEquals(1L, count("SELECT COUNT(*) FROM tb_project_profile WHERE project_id = :id", projectId))
+		assertEquals(1L, count("SELECT COUNT(*) FROM tb_project_profile WHERE user_id = :id", userId))
 	}
 
 	@Test
@@ -278,6 +280,12 @@ class ServiceConcurrencyTest : TestContext() {
 		).bind("id", id).bind("oidc", UUID.randomUUID()).bind("email", "$id@concurrency.test").bind("role", role)
 			.fetch().rowsUpdated().block()
 		return id
+	}
+
+	private fun insertAdministratorProfile(projectId: UUID, userId: UUID) {
+		databaseClient.sql(
+			"INSERT INTO tb_project_profile(user_id, project_id, role, status) VALUES (:user, :project, 'PROJECT_ADMINISTRATOR', 'ACCEPTED')"
+		).bind("user", userId).bind("project", projectId).fetch().rowsUpdated().block()
 	}
 
 	private fun insertProject(): UUID {

@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_MANAGE_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
@@ -93,7 +94,8 @@ class ProjectProfileService(
 	): Mono<Pair<List<String>, List<String>>> {
 		val emails = profiles.map { it.user!!.email!! }
 
-		return saveAllowedProfiles(currentUser, projectId, profiles, users)
+		return validateAssignableRoles(currentUser, projectId, profiles.map { it.role }.toSet())
+			.then(Mono.defer { saveAllowedProfiles(currentUser, projectId, profiles, users) })
 			.map { created -> Pair(created, emails.minus(created.toSet())) }
 	}
 
@@ -161,6 +163,7 @@ class ProjectProfileService(
 		id: UUID
 	): Mono<ProjectProfileModel> {
 		return findProjectProfileById(projectId, id, isVisible = true)
+			.validateManageable(currentUser, projectId)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR)
 			.updateVisibility(visibility = false)
 			.updateProjectProfile(currentUser)
@@ -174,12 +177,14 @@ class ProjectProfileService(
 		id: UUID
 	): Mono<ProjectProfileModel> {
 		return findProjectProfileById(projectId, id, isVisible = false)
+			.validateManageable(currentUser, projectId)
 			.updateVisibility(visibility = true)
 			.updateProjectProfile(currentUser)
 	}
 
 	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findProjectProfileById(projectId, id, isVisible = null)
+			.validateManageable(currentUser, projectId)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR)
 			.flatMap { port.deleteById(id).doOnSuccess { _ -> principalCache.invalidate(it.user?.oidcId) } }
 			.`as`(transactionalOperator::transactional)
@@ -199,19 +204,40 @@ class ProjectProfileService(
 		profileToUpdate: ProjectProfileModel,
 		profile: ProjectProfileModel,
 	): Mono<ProjectProfileModel> {
-		val searchParams = ProjectProfileSearchParamModel(isVisible = true, isAvailable = true, status = listOf(ACCEPTED))
-		return port.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, searchParams)
-			.handle { assigner, sink -> sink.nextOrError(profileToUpdate, roleErrorFor(currentUser, assigner, profileToUpdate, profile)) }
+		return assignableRolesOf(currentUser, projectId)
+			.handle { roles, sink -> sink.nextOrError(profileToUpdate, roleError(currentUser, roles, profileToUpdate, profile)) }
 	}
 
-	private fun roleErrorFor(
-		currentUser: CurrentUserModel,
-		assigner: ProjectProfileModel,
-		profileToUpdate: ProjectProfileModel,
-		profile: ProjectProfileModel,
-	): RegistryException? {
-		val eligibleRoles = roleService.getAssignableProjectRoles(assigner)
-		return roleError(currentUser, eligibleRoles, profileToUpdate, profile)
+	private fun assignableRolesOf(currentUser: CurrentUserModel, projectId: UUID): Mono<List<String>> {
+		val searchParams = ProjectProfileSearchParamModel(isVisible = true, isAvailable = true, status = listOf(ACCEPTED))
+		return port.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, searchParams)
+			.map { roleService.getAssignableProjectRoles(it) }
+			.defaultIfEmpty(emptyList())
+	}
+
+	private fun validateAssignableRoles(currentUser: CurrentUserModel, projectId: UUID, roles: Set<String?>): Mono<Unit> {
+		return assignableRolesOf(currentUser, projectId)
+			.handle<Unit> { assignable, sink -> sink.nextOrError(Unit, assignError(currentUser, assignable, roles)) }
+	}
+
+	private fun assignError(currentUser: CurrentUserModel, assignable: List<String>, roles: Set<String?>): RegistryException? {
+		val refused = roles.firstOrNull { it !in assignable } ?: return null
+		log.warn("User \"{}\" tried to assign the role {}, higher than their own.", currentUser.id, refused)
+		return RegistryException(FORBIDDEN, PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER, arrayListOf(refused))
+	}
+
+	private fun Mono<ProjectProfileModel>.validateManageable(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel> =
+		flatMap { manageable(currentUser, projectId, it) }
+
+	private fun manageable(currentUser: CurrentUserModel, projectId: UUID, profile: ProjectProfileModel): Mono<ProjectProfileModel> {
+		return assignableRolesOf(currentUser, projectId)
+			.handle { roles, sink -> sink.nextOrError(profile, manageError(currentUser, roles, profile)) }
+	}
+
+	private fun manageError(currentUser: CurrentUserModel, assignable: List<String>, profile: ProjectProfileModel): RegistryException? {
+		if (profile.role in assignable) return null
+		log.warn("User \"{}\" cannot manage the project profile {} with a role higher than their own.", currentUser.id, profile.id)
+		return RegistryException(FORBIDDEN, PROJECT_PROFILE_MANAGE_ROLE_HIGHER_THAN_CURRENT_USER, arrayListOf(profile.role))
 	}
 
 	private fun validateNoConflictForUpdate(
@@ -241,7 +267,7 @@ class ProjectProfileService(
 		profile: ProjectProfileModel,
 	): RegistryException? = when {
 		!eligibleRoles.contains(profileToUpdate.role) -> {
-			log.warn("User \"{}\" cannot update project profile with a role higher up the breast.", currentUser.id)
+			log.warn("User \"{}\" cannot update a project profile with a role higher than their own.", currentUser.id)
 			RegistryException(
 				FORBIDDEN,
 				PROJECT_PROFILE_UPDATE_ROLE_HIGHER_THAN_CURRENT_USER,
@@ -250,7 +276,7 @@ class ProjectProfileService(
 		}
 
 		!eligibleRoles.contains(profile.role) -> {
-			log.warn("User \"{}\" tried to update project profile with a role higher up the breast.", currentUser.id)
+			log.warn("User \"{}\" tried to assign a role higher than their own to a project profile.", currentUser.id)
 			RegistryException(FORBIDDEN, PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER, arrayListOf(profile.role))
 		}
 
