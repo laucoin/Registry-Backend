@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import org.mockito.kotlin.verifyNoMoreInteractions
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
@@ -68,6 +71,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -268,7 +272,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createMovement(currentUser(), movement).block()
+			service.createMovement(optionHolder(), movement).block()
 		}) as RegistryException
 
 		// Assert
@@ -284,7 +288,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createMovement(currentUser(), movement).block()
+			service.createMovement(optionHolder(), movement).block()
 		}) as RegistryException
 
 		// Assert
@@ -300,7 +304,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, movement).block()
+			service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, movement).block()
 		}) as RegistryException
 
 		// Assert
@@ -322,7 +326,7 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		val result = service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(optionHolder(), movement).block()
 
 		// Assert
 		assertEquals(movement, result)
@@ -340,7 +344,7 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		val result = service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(optionHolder(), movement).block()
 
 		// Assert
 		assertEquals(expected, result)
@@ -366,7 +370,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createMovement(currentUser(), movement).block()
+			service.createMovement(optionHolder(), movement).block()
 		}) as RegistryException
 
 		// Assert
@@ -391,7 +395,7 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		val result = service.createMovement(currentUser(), movement, listOf(guest)).block()
+		val result = service.createMovement(optionHolder(), movement, listOf(guest)).block()
 
 		// Assert
 		assertEquals(expected, result)
@@ -415,7 +419,7 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		val result = service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(optionHolder(), movement).block()
 
 		// Assert
 		assertEquals(expected, result)
@@ -441,7 +445,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createMovement(currentUser(), movement).block()
+			service.createMovement(optionHolder(), movement).block()
 		}) as RegistryException
 
 		// Assert
@@ -467,7 +471,7 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		val result = service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(optionHolder(), movement).block()
 
 		// Assert
 		assertEquals(expected, result)
@@ -493,7 +497,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createMovement(currentUser(), movement).block()
+			service.createMovement(optionHolder(), movement).block()
 		}) as RegistryException
 
 		// Assert
@@ -521,7 +525,7 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		val result = service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(optionHolder(), movement).block()
 
 		// Assert
 		assertEquals(movement, result)
@@ -547,7 +551,7 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		val result = service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(optionHolder(), movement).block()
 
 		// Assert
 		assertEquals(movement, result)
@@ -575,7 +579,7 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
 
 		// Act
-		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+		service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
 		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
@@ -599,7 +603,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+			service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
 		}) as RegistryException
 
 		// Assert
@@ -619,7 +623,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, movement).block()
+			service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, movement).block()
 		}) as RegistryException
 
 		// Assert
@@ -651,7 +655,7 @@ class MovementServiceTest {
 		whenever(participantPort.saveAllGuest(any())).thenReturn(Flux.just(*newGuests.toTypedArray()))
 
 		// Act
-		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement, newGuests)
+		service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement, newGuests)
 			.block()
 
 		// Assert
@@ -719,7 +723,7 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
 
 		// Act
-		val result = service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+		val result = service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
 		assertEquals(updatedMovement, result)
@@ -757,7 +761,7 @@ class MovementServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+			service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
 		}) as RegistryException
 
 		// Assert
@@ -787,7 +791,7 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
 
 		// Act
-		val result = service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+		val result = service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
 		assertEquals(updatedMovement, result)
@@ -803,7 +807,7 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		val result = service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, movement).block()
+		val result = service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, movement).block()
 
 		// Assert
 		assertEquals(movement, result)
@@ -1031,5 +1035,59 @@ class MovementServiceTest {
 		assertEquals(listOf(expected), result)
 		verify(port).findOlderThanAndUncommentedSince(date)
 		verify(port, never()).deleteById(any())
+	}
+
+	private fun optionHolder() = currentUser(
+		"${defaultProjectId}_$REGISTRY_PROJECT_OPTION_ACTIVITY",
+		"${defaultProjectId}_$REGISTRY_PROJECT_OPTION_VEHICLE",
+	)
+
+	@Test
+	fun `Should createMovement refuse an activity when the project has not the activity option`() {
+		// Arrange
+		val movement = defaultMovement().apply { activity = defaultActivity() }
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createMovement(currentUser("${defaultProjectId}_$REGISTRY_PROJECT_OPTION_VEHICLE"), movement).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(NOT_ENOUGH_PERMISSION, result.code)
+		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should updateMovementById refuse a vehicle when the project has not the vehicle option`() {
+		// Arrange
+		val movement = defaultMovement().apply { content = listOf(MovementContentModel(participant = defaultParticipant(), vehicle = defaultVehicle())) }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultMovement()))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateMovementById(currentUser("${defaultProjectId}_$REGISTRY_PROJECT_OPTION_ACTIVITY"), defaultProjectId, defaultMovementId, movement).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(NOT_ENOUGH_PERMISSION, result.code)
+		verify(port, never()).update(any())
+	}
+
+	@Test
+	fun `Should updateMovementById keep an existing activity editable once the activity option is disabled`() {
+		// Arrange
+		val oldMovement = defaultMovement().apply { type = IN; activity = defaultActivity() }
+		val updatedMovement = defaultMovement().apply { type = OUT; activity = defaultActivity() }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(MOVEMENT_UPDATE_CHANGE_TYPE, result.code)
 	}
 }

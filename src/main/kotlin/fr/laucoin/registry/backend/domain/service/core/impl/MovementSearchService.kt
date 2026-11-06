@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
@@ -7,6 +8,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -129,11 +131,12 @@ class MovementSearchService(
 	}
 
 	override fun searchActivitiesByText(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		contentType: ParticipantTypeEnum,
 		query: String?
 	): Flux<ActivityModel> {
-		return if (contentType === GUEST) Flux.empty()
+		return if (contentType === GUEST || !currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY)) Flux.empty()
 		else activityPort.findWithLimit(
 			feature.searched.maxActivityResult,
 			projectId,

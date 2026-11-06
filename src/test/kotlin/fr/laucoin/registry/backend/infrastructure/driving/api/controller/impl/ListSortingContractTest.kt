@@ -286,7 +286,7 @@ class ListSortingContractTest : TestContext() {
 				"movement vehicles",
 				"$project/movements/search/vehicles",
 				inProject,
-				listOf(perm(REGISTRY_PROJECT_MOVEMENT_METADATA_R))
+				listOf(option(REGISTRY_PROJECT_OPTION_VEHICLE), perm(REGISTRY_PROJECT_MOVEMENT_METADATA_R))
 			),
 		)
 	}

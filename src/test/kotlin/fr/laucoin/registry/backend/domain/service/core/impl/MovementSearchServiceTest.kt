@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.EMERGENCY
@@ -36,6 +37,7 @@ import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
 import fr.laucoin.registry.backend.test.ModelExt.defaultParticipant
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.ModelExt.defaultVehicle
+import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -45,6 +47,7 @@ import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -248,7 +251,7 @@ class MovementSearchServiceTest {
 		whenever(activityPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultActivity()))
 
 		// Act
-		val result = service.searchActivitiesByText(defaultProjectId, type, query).collectList().block()
+		val result = service.searchActivitiesByText(activityOptionHolder(), defaultProjectId, type, query).collectList().block()
 
 		// Assert
 		assertEquals(expectedActivities, result)
@@ -457,5 +460,17 @@ class MovementSearchServiceTest {
 			)
 		).thenReturn(Flux.fromIterable(inherited))
 		whenever(groupPort.findAllByIds(eq(projectId), any(), eq(true))).thenReturn(Flux.fromIterable(groups))
+	}
+
+	private fun activityOptionHolder() = currentUser("${defaultProjectId}_$REGISTRY_PROJECT_OPTION_ACTIVITY")
+
+	@Test
+	fun `Should searchActivitiesByText return no activity when the project has not the activity option`() {
+		// Act
+		val result = service.searchActivitiesByText(currentUser(), defaultProjectId, REGISTERED, "searched").collectList().block()
+
+		// Assert
+		assertEquals(emptyList<ActivityModel>(), result)
+		verify(activityPort, never()).findWithLimit(any(), any(), anyOrNull())
 	}
 }

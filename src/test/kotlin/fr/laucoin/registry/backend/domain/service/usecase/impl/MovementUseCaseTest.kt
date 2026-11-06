@@ -179,18 +179,19 @@ class MovementUseCaseTest {
 	@Test
 	fun `Should searchActivitiesByText delegate to the service`() {
 		// Arrange
+		val currentUser: CurrentUserModel = mock()
 		val projectId: UUID = UUID.randomUUID()
 		val contentType: ParticipantTypeEnum = ParticipantTypeEnum.entries.first()
 		val query: String? = null
 		val expected: Flux<ActivityModel> = Flux.empty()
-		whenever(searchService.searchActivitiesByText(projectId, contentType, query)).thenReturn(expected)
+		whenever(searchService.searchActivitiesByText(currentUser, projectId, contentType, query)).thenReturn(expected)
 
 		// Act
-		val result = useCase.searchActivitiesByText(projectId, contentType, query)
+		val result = useCase.searchActivitiesByText(currentUser, projectId, contentType, query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(searchService).searchActivitiesByText(projectId, contentType, query)
+		verify(searchService).searchActivitiesByText(currentUser, projectId, contentType, query)
 	}
 
 	@Test

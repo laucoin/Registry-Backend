@@ -4,10 +4,13 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DISABLED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_ENABLED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.helper.MovementContentHelper
 import fr.laucoin.registry.backend.domain.helper.MovementParticipantHelper
 import fr.laucoin.registry.backend.domain.helper.MovementPersistenceHelper
 import fr.laucoin.registry.backend.domain.helper.MovementRulesHelper
+import fr.laucoin.registry.backend.domain.helper.ProjectOptionHelper.requireActivityOption
+import fr.laucoin.registry.backend.domain.helper.ProjectOptionHelper.requireProjectOption
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -44,11 +47,31 @@ class MovementService(
 		movement: MovementModel,
 		newGuests: List<ParticipantModel>,
 	): Mono<MovementModel> {
-		return participants.lock((movement.participantIds() + newGuests.mapNotNull { it.id }).distinct())
+		return validateOptions(currentUser, movement)
+			.then(Mono.defer { participants.lock((movement.participantIds() + newGuests.mapNotNull { it.id }).distinct()) })
 			.then(Mono.defer { validateNewMovement(currentUser, movement, newGuests) })
 			.flatMap { createMovement(currentUser, movement) }
 			.flatMap { participants.refreshEffectiveDates(it) }
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateOptions(currentUser: CurrentUserModel, movement: MovementModel): Mono<Unit> {
+		val projectId = movement.projectId!!
+		return Mono.just(Unit)
+			.requireActivityOption(currentUser, projectId, movement.activity != null)
+			.requireProjectOption(currentUser, projectId, REGISTRY_PROJECT_OPTION_VEHICLE, movement.content.any { it.vehicle != null })
+	}
+
+	private fun validateAddedOptions(
+		currentUser: CurrentUserModel,
+		oldMovement: MovementModel,
+		movement: MovementModel,
+	): Mono<MovementModel> {
+		val projectId = oldMovement.projectId!!
+		val activityAdded = movement.activity != null && movement.activity?.id != oldMovement.activity?.id
+		return Mono.just(oldMovement)
+			.requireActivityOption(currentUser, projectId, activityAdded)
+			.requireProjectOption(currentUser, projectId, REGISTRY_PROJECT_OPTION_VEHICLE, oldMovement.getNewContentVehicleIds(movement).isNotEmpty())
 	}
 
 	private fun validateNewMovement(
@@ -78,6 +101,7 @@ class MovementService(
 	): Mono<MovementModel> {
 		return rules.validateMovementDate(movement)
 			.flatMap { findLockedMovement(projectId, id, isVisible = null) }
+			.flatMap { validateAddedOptions(currentUser, it, movement) }
 			.flatMap { rules.validateUpdatableFields(it, movement) }
 			.flatMap { rules.validateIsAlterable(it, MOVEMENT_CANNOT_BE_UPDATED) }
 			.flatMap { rules.validateNoCommunicationConflict(movement, it) }
@@ -161,7 +185,7 @@ class MovementService(
 	}
 
 	override fun purgeMovementsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
-		log.info("Purging movements older than {} and uncommented since {}", dateThreshold, dateThreshold)
+		log.info("Purging movements older than {} without any later communication", dateThreshold)
 		return port.findOlderThanAndUncommentedSince(dateThreshold)
 			.purgeEach("movement", dryRun, port::deleteById)
 	}

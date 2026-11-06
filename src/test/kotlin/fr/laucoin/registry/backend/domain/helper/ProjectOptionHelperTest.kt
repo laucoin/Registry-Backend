@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.domain.helper
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ACTIVITY
-import fr.laucoin.registry.backend.domain.helper.ActivityOptionHelper.requireActivityOption
+import fr.laucoin.registry.backend.domain.helper.ProjectOptionHelper.requireActivityOption
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import java.util.UUID
@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus.FORBIDDEN
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 
-class ActivityOptionHelperTest {
+class ProjectOptionHelperTest {
 	private val projectA = UUID.randomUUID()
 	private val projectB = UUID.randomUUID()
 
