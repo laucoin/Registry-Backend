@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity
 
+import fr.laucoin.registry.backend.test.withNamedParameters
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_TEXT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.COMMUNICATION_TEXT_SEARCH_CLAUSE
@@ -50,7 +51,7 @@ class TextSearchClausesTest : TestContext() {
 				dynamicTest("$name searched with $query") {
 					// Arrange
 					val sql = "SELECT 1 FROM (SELECT CAST('$SEARCH_TEXT' AS TEXT) AS search_text) t WHERE $clause"
-					val spec = databaseClient.sql(sql).let {
+					val spec = databaseClient.sql(sql.withNamedParameters()).let {
 						if (query == null) it.bindNull("query", String::class.java) else it.bind("query", query)
 					}
 

@@ -122,20 +122,20 @@ object MovementQueries {
 
 	const val MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE = """
         (
-            COALESCE(:from, '-infinity'::TIMESTAMP) <= t.$MOVEMENT_DATE_TIME AND
-            COALESCE(:to, '+infinity'::TIMESTAMP) >= t.$MOVEMENT_DATE_TIME
+            COALESCE(:#{#c.from}, '-infinity'::TIMESTAMP) <= t.$MOVEMENT_DATE_TIME AND
+            COALESCE(:#{#c.to}, '+infinity'::TIMESTAMP) >= t.$MOVEMENT_DATE_TIME
         )
     """
 
 	const val MOVEMENT_TYPE_CLAUSE = """
-        (t.$MOVEMENT_TYPE IN (:type))
+        (t.$MOVEMENT_TYPE IN (:#{#c.type}))
     """
 
 	const val MOVEMENT_LINKED_ACTIVITY_CLAUSE =
 		"(CAST(:activityId AS UUID) IS NULL OR t.$MOVEMENT_ACTIVITY_ID = CAST(:activityId AS UUID))"
 
 	const val MOVEMENT_ACTIVITY_CLAUSE = """
-        (:hasActivity IS NULL OR :hasActivity = (t.$MOVEMENT_ACTIVITY_ID IS NOT NULL))
+        (:#{#c.hasActivity} IS NULL OR :#{#c.hasActivity} = (t.$MOVEMENT_ACTIVITY_ID IS NOT NULL))
     """
 
 	private const val PARTICIPANT_PREFIX = "participant_"
@@ -262,10 +262,10 @@ object MovementQueries {
 	const val CURRENT_MOVEMENT_JOIN = "INNER JOIN current_movement ON current_movement.$ID = t.$ID"
 
 	const val MOVEMENT_SORT = """
-        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_DATE_TIME END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_DATE_TIME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'type' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'type' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$MOVEMENT_DATE_TIME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$MOVEMENT_DATE_TIME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'type' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'type' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$MOVEMENT_TYPE END DESC NULLS LAST,
     """
 
 	const val ACTIVITY_STATISTICS = """

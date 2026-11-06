@@ -38,13 +38,13 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 object CommunicationQueries {
 	const val SELECT_COMMUNICATION_SEARCH = """
         CASE
-            WHEN :query IS NULL THEN 1
-            ELSE word_similarity(:query, t.search_text)
+            WHEN :#{#c.query} IS NULL THEN 1
+            ELSE word_similarity(:#{#c.query}, t.search_text)
         END AS similarity_score
     """
 
 	const val COMMUNICATION_TEXT_SEARCH_CLAUSE =
-		"(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
+		"(:#{#c.query} IS NULL OR word_similarity(:#{#c.query}, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
 
 	private const val LINKED_MOVEMENT_TABLE = "movement_tb"
 	private const val LINKED_ACTIVITY_TABLE = "activity_tb"
@@ -78,15 +78,15 @@ object CommunicationQueries {
 
 	const val COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE = """
         (
-            COALESCE(:from, '-infinity'::TIMESTAMP) <= t.$COMMUNICATION_DATE_TIME AND
-            COALESCE(:to, '+infinity'::TIMESTAMP) >= t.$COMMUNICATION_DATE_TIME
+            COALESCE(:#{#c.from}, '-infinity'::TIMESTAMP) <= t.$COMMUNICATION_DATE_TIME AND
+            COALESCE(:#{#c.to}, '+infinity'::TIMESTAMP) >= t.$COMMUNICATION_DATE_TIME
         )
     """
 
 	const val COMMUNICATION_SORT = """
-        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_DATE_TIME END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_DATE_TIME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'message' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_MESSAGE END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'message' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_MESSAGE END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_DATE_TIME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_DATE_TIME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'message' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_MESSAGE END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'message' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_MESSAGE END DESC NULLS LAST,
     """
 }

@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ProjectCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_END_AVAILABILITY_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_END_AVAILABILITY_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_START_AVAILABILITY_DATE
@@ -72,20 +74,15 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
         SELECT t.*, $SELECT_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $HIDDEN_READABLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
         ORDER BY $PROJECT_SORT t.$PROJECT_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
-		query: String?,
 		isVisible: Boolean?,
 		hiddenReadableIds: List<UUID>,
-		at: ZonedDateTime?,
-		isFavorite: Boolean?,
 		userId: UUID?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: ProjectCriteria,
+		page: PageQuery,
 	): Flux<ProjectEntity>
 
 	@Query(
@@ -93,21 +90,16 @@ interface IProjectEntityRepository: ReactiveCrudRepository<ProjectEntity, UUID> 
         SELECT t.*, $SELECT_COUNTS, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $PROJECT_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$ID IN (:projectIds) AND $PROJECT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $HIDDEN_READABLE_CLAUSE AND $DATE_IN_PROJECT_DATES_RANGE_CLAUSE AND $PROJECT_FAVORITE_CLAUSE
         ORDER BY $PROJECT_SORT t.$PROJECT_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAllInProjectIds(
 		projectIds: List<UUID>,
-		query: String?,
 		isVisible: Boolean?,
 		hiddenReadableIds: List<UUID>,
-		at: ZonedDateTime?,
-		isFavorite: Boolean?,
 		userId: UUID?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: ProjectCriteria,
+		page: PageQuery,
 	): Flux<ProjectEntity>
 
 	@Query(

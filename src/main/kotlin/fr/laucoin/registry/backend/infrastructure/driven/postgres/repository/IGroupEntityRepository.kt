@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.GroupCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
@@ -27,7 +29,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -50,21 +51,15 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
             AND $GROUP_MEMBER_USER_CLAUSE AND $GROUP_ON_SITE_MEMBERS_CLAUSE
         ORDER BY $GROUP_SORT t.$GROUP_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isPresent: Boolean?,
-		at: ZonedDateTime?,
 		memberUserId: UUID?,
-		hasOnSiteMembers: Boolean?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: GroupCriteria,
+		page: PageQuery,
 	): Flux<GroupEntity>
 
 	@Query(
@@ -96,16 +91,14 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
         FROM $GROUP_TABLE t $GROUP_INSIDE_MEMBERS_JOIN $GROUP_MEMBERS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $GROUP_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $GROUP_PRESENCE_CLAUSE AND $DATE_IN_GROUP_DATES_RANGE_CLAUSE
         ORDER BY t.$GROUP_NAME
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isPresent: Boolean?,
-		at: ZonedDateTime?,
-		limit: Int,
+		c: GroupCriteria,
+		page: PageQuery,
 	): Flux<GroupEntity>
 
 	@Query(

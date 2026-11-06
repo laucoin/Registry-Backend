@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ParticipantCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
@@ -24,7 +25,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.partici
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_CLAUSE
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -78,7 +78,7 @@ interface IGroupContentEntityRepository: ReactiveCrudRepository<GroupContentEnti
         GROUP BY gc.$GROUP_CONTENT_GROUP_ID
     """
 	)
-	fun findOnSiteCounts(projectId: UUID, groupIds: List<UUID>, at: ZonedDateTime?): Flux<GroupOnSiteCountsEntity>
+	fun findOnSiteCounts(projectId: UUID, groupIds: List<UUID>, c: ParticipantCriteria): Flux<GroupOnSiteCountsEntity>
 
 	@Query("DELETE FROM $GROUP_CONTENT_TABLE WHERE $GROUP_CONTENT_GROUP_ID = :groupId AND $GROUP_CONTENT_PARTICIPANT_ID IN (:participantIds)")
 	fun deleteAllByGroupIdAndParticipantIds(groupId: UUID, participantIds: List<UUID>): Mono<Unit>

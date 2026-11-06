@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ParticipantCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
@@ -219,22 +221,26 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		assertEquals(5, result.totalPages)
 		verify(postgresRepository).findAll(
 			defaultProjectId,
-			query = null,
-			isMajor = null,
-			type = null,
-			isVisible = null,
-			isAvailable = null,
-			status = null,
-			presence = null,
-			at = null,
-			hasUser = null,
-			isOnSite = null,
-			birthdayFrom = null,
-			birthdayTo = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			ParticipantCriteria(
+				query = null,
+				isMajor = null,
+				type = null,
+				isAvailable = null,
+				status = null,
+				presence = null,
+				at = null,
+				hasUser = null,
+				isOnSite = null,
+				birthdayFrom = null,
+				birthdayTo = null,
+			),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, times(10)).toModel(any())
 	}
@@ -256,22 +262,26 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findAllByGroupId(
 			defaultProjectId,
 			defaultGroupId,
-			query = null,
-			isMajor = null,
-			type = null,
-			isVisible = null,
-			isAvailable = null,
-			status = null,
-			presence = null,
-			at = null,
-			hasUser = null,
-			isOnSite = null,
-			birthdayFrom = null,
-			birthdayTo = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			ParticipantCriteria(
+				query = null,
+				isMajor = null,
+				type = null,
+				isAvailable = null,
+				status = null,
+				presence = null,
+				at = null,
+				hasUser = null,
+				isOnSite = null,
+				birthdayFrom = null,
+				birthdayTo = null,
+			),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -291,7 +301,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			defaultProjectId,
 			ids,
 			isVisible = null,
-			at = null,
+			ParticipantCriteria(),
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -303,7 +313,11 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 
 		// Assert
 		assertEquals(result?.map { it.id }?.distinct(), result?.map { it.id })
-		verify(postgresRepository).findByUserId(defaultProjectId, currentUser().id!!, at = null)
+		verify(postgresRepository).findByUserId(
+			defaultProjectId,
+			currentUser().id!!,
+			ParticipantCriteria(at = null),
+		)
 		verify(mapper).toModel(any())
 	}
 
@@ -332,15 +346,17 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		assertEquals(10, result.size)
 		verify(postgresRepository).findWithLimit(
 			defaultProjectId,
-			query = null,
-			isMajor = null,
-			type = null,
-			isVisible = null,
-			isAvailable = null,
-			status = null,
-			presence = null,
-			at = null,
-			size,
+			null,
+			ParticipantCriteria(
+				query = null,
+				isMajor = null,
+				type = null,
+				isAvailable = null,
+				status = null,
+				presence = null,
+				at = null,
+			),
+			PageQuery(limit = size),
 		)
 		verify(mapper, times(10)).toModel(any())
 	}
@@ -355,8 +371,8 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findById(
 			defaultProjectId,
 			defaultParticipantId,
-			isVisible = null,
-			at = null,
+			null,
+			ParticipantCriteria(at = null),
 		)
 		verify(mapper).toModel(any())
 	}
@@ -371,12 +387,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 
 		// Assert
 		assertNull(result)
-		verify(postgresRepository).findById(
-			defaultProjectId,
-			uuid,
-			isVisible = null,
-			at = null,
-		)
+		verify(postgresRepository).findById(defaultProjectId, uuid, null, ParticipantCriteria(at = null))
 		verify(mapper, never()).toModel(any())
 	}
 
@@ -492,7 +503,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any())
-			verify(postgresRepository, times(2)).findById(defaultProjectId, uuid, isVisible = null, at = null)
+			verify(postgresRepository, times(2)).findById(defaultProjectId, uuid, isVisible = null, ParticipantCriteria())
 			verify(contentPostgresRepository).saveAll(any<Iterable<GroupContentEntity>>())
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())
@@ -518,7 +529,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			// Assert
 			assertNotNull(result)
 			verify(postgresRepository).save(any())
-			verify(postgresRepository, times(2)).findById(defaultProjectId, uuid, isVisible = null, at = null)
+			verify(postgresRepository, times(2)).findById(defaultProjectId, uuid, isVisible = null, ParticipantCriteria())
 			verify(contentPostgresRepository).deleteAllByParticipantIdAndGroupIds(uuid, listOf(defaultGroupId))
 			verify(mapper).toEntity(any())
 			verify(mapper, atLeastOnce()).toModel(any())

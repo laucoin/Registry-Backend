@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ParticipantCriteria
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -163,7 +164,7 @@ class GroupOnSiteCountsRepositoryTest: TestContext() {
 	@Test
 	fun `Should never count the members of a group of another project`() {
 		// Act
-		val counts = contentRepository.findOnSiteCounts(projectId, listOf(otherProjectGroupId), null).collectList().block()!!
+		val counts = contentRepository.findOnSiteCounts(projectId, listOf(otherProjectGroupId), ParticipantCriteria()).collectList().block()!!
 
 		// Assert
 		assertEquals(emptyList(), counts)

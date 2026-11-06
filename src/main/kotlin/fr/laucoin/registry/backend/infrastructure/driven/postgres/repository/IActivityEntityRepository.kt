@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ActivityCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityFields.ACTIVITY_TABLE
@@ -24,7 +26,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -45,22 +46,14 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE AND $ACTIVITY_DURATION_CLAUSE AND $ACTIVITY_PARTICIPANTS_CLAUSE
         ORDER BY $ACTIVITY_SORT similarity_score DESC, t.$ACTIVITY_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		at: ZonedDateTime?,
-		minDuration: String?,
-		maxDuration: String?,
-		participants: Int?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: ActivityCriteria,
+		page: PageQuery,
 	): Flux<ActivityEntity>
 
 	@Query(
@@ -78,19 +71,14 @@ interface IActivityEntityRepository: ReactiveCrudRepository<ActivityEntity, UUID
         FROM $ACTIVITY_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $ACTIVITY_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE AND $ACTIVITY_DURATION_CLAUSE AND $ACTIVITY_PARTICIPANTS_CLAUSE
         ORDER BY similarity_score DESC, t.$ACTIVITY_NAME
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		at: ZonedDateTime?,
-		minDuration: String?,
-		maxDuration: String?,
-		participants: Int?,
-		limit: Int,
+		c: ActivityCriteria,
+		page: PageQuery,
 	): Flux<ActivityEntity>
 
 	@Query(

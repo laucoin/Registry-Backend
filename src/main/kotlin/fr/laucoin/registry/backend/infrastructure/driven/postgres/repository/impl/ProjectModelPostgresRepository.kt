@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ProjectCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -33,16 +35,20 @@ class ProjectModelPostgresRepository(
 		searchParams: ProjectSearchParamModel,
 	): Mono<PageModel<ProjectModel>> {
 		return repository.findAll(
-			searchParams.query,
 			searchParams.isVisible,
 			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
-			searchParams.at,
-			searchParams.isFavorite,
 			searchParams.userId,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			ProjectCriteria(
+				query = searchParams.query,
+				at = searchParams.at,
+				isFavorite = searchParams.isFavorite,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 
@@ -57,16 +63,20 @@ class ProjectModelPostgresRepository(
 
 		return repository.findAllInProjectIds(
 			projectIds,
-			searchParams.query,
 			searchParams.isVisible,
 			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
-			searchParams.at,
-			searchParams.isFavorite,
 			searchParams.userId,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			ProjectCriteria(
+				query = searchParams.query,
+				at = searchParams.at,
+				isFavorite = searchParams.isFavorite,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 

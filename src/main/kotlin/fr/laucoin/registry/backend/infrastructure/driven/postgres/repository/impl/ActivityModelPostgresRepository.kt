@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ActivityCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -34,17 +36,21 @@ class ActivityModelPostgresRepository(
 	): Mono<PageModel<ActivityModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.at,
-			searchParams.minDuration?.toIsoString(),
-			searchParams.maxDuration?.toIsoString(),
-			searchParams.participants,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			ActivityCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				at = searchParams.at,
+				minDuration = searchParams.minDuration?.toIsoString(),
+				maxDuration = searchParams.maxDuration?.toIsoString(),
+				participants = searchParams.participants,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, ActivityEntity::fullCount, mapper::toModel)
 	}
 
@@ -60,14 +66,16 @@ class ActivityModelPostgresRepository(
 	): Flux<ActivityModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.at,
-			searchParams.minDuration?.toIsoString(),
-			searchParams.maxDuration?.toIsoString(),
-			searchParams.participants,
-			limit,
+			ActivityCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				at = searchParams.at,
+				minDuration = searchParams.minDuration?.toIsoString(),
+				maxDuration = searchParams.maxDuration?.toIsoString(),
+				participants = searchParams.participants,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 

@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ParticipantCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
@@ -43,22 +45,26 @@ class ParticipantModelPostgresRepository(
 	): Mono<PageModel<ParticipantModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.query,
-			searchParams.isMajor,
-			searchParams.type,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
-			searchParams.presence,
-			searchParams.at,
-			searchParams.hasUser,
-			searchParams.isOnSite,
-			searchParams.birthdayFrom,
-			searchParams.birthdayTo,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			ParticipantCriteria(
+				query = searchParams.query,
+				isMajor = searchParams.isMajor,
+				type = searchParams.type,
+				isAvailable = searchParams.isAvailable,
+				status = searchParams.status,
+				presence = searchParams.presence,
+				at = searchParams.at,
+				hasUser = searchParams.hasUser,
+				isOnSite = searchParams.isOnSite,
+				birthdayFrom = searchParams.birthdayFrom,
+				birthdayTo = searchParams.birthdayTo,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
@@ -73,18 +79,20 @@ class ParticipantModelPostgresRepository(
 	): Mono<Long> {
 		return repository.countAll(
 			projectId,
-			searchParams.query,
-			searchParams.isMajor,
-			searchParams.type,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
-			searchParams.presence,
-			searchParams.at,
-			searchParams.hasUser,
-			searchParams.isOnSite,
-			searchParams.birthdayFrom,
-			searchParams.birthdayTo,
+			ParticipantCriteria(
+				query = searchParams.query,
+				isMajor = searchParams.isMajor,
+				type = searchParams.type,
+				isAvailable = searchParams.isAvailable,
+				status = searchParams.status,
+				presence = searchParams.presence,
+				at = searchParams.at,
+				hasUser = searchParams.hasUser,
+				isOnSite = searchParams.isOnSite,
+				birthdayFrom = searchParams.birthdayFrom,
+				birthdayTo = searchParams.birthdayTo,
+			),
 		)
 	}
 
@@ -97,32 +105,36 @@ class ParticipantModelPostgresRepository(
 		return repository.findAllByGroupId(
 			projectId,
 			groupId,
-			searchParams.query,
-			searchParams.isMajor,
-			searchParams.type,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
-			searchParams.presence,
-			searchParams.at,
-			searchParams.hasUser,
-			searchParams.isOnSite,
-			searchParams.birthdayFrom,
-			searchParams.birthdayTo,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			ParticipantCriteria(
+				query = searchParams.query,
+				isMajor = searchParams.isMajor,
+				type = searchParams.type,
+				isAvailable = searchParams.isAvailable,
+				status = searchParams.status,
+				presence = searchParams.presence,
+				at = searchParams.at,
+				hasUser = searchParams.hasUser,
+				isOnSite = searchParams.isOnSite,
+				birthdayFrom = searchParams.birthdayFrom,
+				birthdayTo = searchParams.birthdayTo,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, ParticipantEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ParticipantModel> {
 		return if (ids.isEmpty()) Flux.empty()
-		else repository.findAllByIds(projectId, ids, isVisible, at = null).map(mapper::toModel)
+		else repository.findAllByIds(projectId, ids, isVisible, ParticipantCriteria(at = null)).map(mapper::toModel)
 	}
 
 	override fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel> {
-		return repository.findByUserId(projectId, userId, null).map(mapper::toModel)
+		return repository.findByUserId(projectId, userId, ParticipantCriteria(at = null)).map(mapper::toModel)
 	}
 
 	override fun findAllByUserId(userId: UUID): Flux<ParticipantModel> {
@@ -136,15 +148,17 @@ class ParticipantModelPostgresRepository(
 	): Flux<ParticipantModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.query,
-			searchParams.isMajor,
-			searchParams.type,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
-			searchParams.presence,
-			searchParams.at,
-			limit,
+			ParticipantCriteria(
+				query = searchParams.query,
+				isMajor = searchParams.isMajor,
+				type = searchParams.type,
+				isAvailable = searchParams.isAvailable,
+				status = searchParams.status,
+				presence = searchParams.presence,
+				at = searchParams.at,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 
@@ -154,7 +168,7 @@ class ParticipantModelPostgresRepository(
 		day: LocalDate,
 		limit: Int,
 	): Flux<ParticipantModel> {
-		return repository.findIdsPlannedOnOwnDate(projectId, true, type == IN, day, limit)
+		return repository.findIdsPlannedOnOwnDate(projectId, true, type == IN, day, PageQuery(limit = limit))
 			.collectList()
 			.flatMapMany { ids -> findAllByIds(projectId, ids, true).sortedLike(ids) }
 	}
@@ -165,7 +179,7 @@ class ParticipantModelPostgresRepository(
 		day: LocalDate,
 		limit: Int,
 	): Flux<Pair<UUID, ParticipantModel>> {
-		return repository.findGroupContentsPlannedOnGroupDate(projectId, true, type == IN, day, limit)
+		return repository.findGroupContentsPlannedOnGroupDate(projectId, true, type == IN, day, PageQuery(limit = limit))
 			.collectList()
 			.flatMapMany { contents -> withParticipants(projectId, contents) }
 	}
@@ -207,7 +221,7 @@ class ParticipantModelPostgresRepository(
 	}
 
 	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel> {
-		return repository.findById(projectId, id, isVisible, at = null).map(mapper::toModel)
+		return repository.findById(projectId, id, isVisible, ParticipantCriteria(at = null)).map(mapper::toModel)
 	}
 
 	override fun create(element: ParticipantModel): Mono<ParticipantModel> {

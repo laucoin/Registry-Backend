@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ProjectProfileCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
@@ -68,21 +69,14 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$PROJECT_PROFILE_USER_ID = :userId AND $PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE AND $PROJECT_PROFILE_ROLE_CLAUSE
         ORDER BY $PROJECT_PROFILE_PROJECT_SORT $LINKED_PROJECT_TABLE.$PROJECT_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findByUserId(
 		userId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: List<ProfileStatusEnum>,
-		at: ZonedDateTime?,
-		role: String?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: ProjectProfileCriteria,
+		page: PageQuery,
 	): Flux<ProjectProfileEntity>
 
 	@Query(
@@ -91,21 +85,14 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
         FROM $PROJECT_PROFILE_TABLE t $JOIN_USER $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE t.$LINKED_PROJECT_ID = :projectId AND $PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PROJECT_PROFILE_USABLE_CLAUSE AND $PROJECT_PROFILE_STATUS_CLAUSE AND $DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE AND $PROJECT_PROFILE_ROLE_CLAUSE
         ORDER BY $PROJECT_PROFILE_USER_SORT similarity_score DESC, $LINKED_USER_TABLE.$USER_LAST_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findByProjectId(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: List<ProfileStatusEnum>,
-		at: ZonedDateTime?,
-		role: String?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: ProjectProfileCriteria,
+		page: PageQuery,
 	): Flux<ProjectProfileEntity>
 
 	@Query(
@@ -119,9 +106,9 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		projectId: UUID,
 		userIds: List<UUID>,
 		profileIdToExclude: UUID?,
-		status: List<ProfileStatusEnum>,
 		from: ZonedDateTime?,
 		to: ZonedDateTime?,
+		c: ProjectProfileCriteria,
 	): Flux<UUID>
 
 	@Query(
@@ -134,8 +121,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 	fun findAllRolesByUserId(
 		userId: UUID,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: List<ProfileStatusEnum>,
+		c: ProjectProfileCriteria,
 	): Flux<ProjectProfileRoleEntity>
 
 	@Query(
@@ -149,8 +135,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		userId: UUID,
 		projectIds: List<UUID>,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: List<ProfileStatusEnum>,
+		c: ProjectProfileCriteria,
 	): Flux<ProjectProfileEntity>
 
 	@Query(
@@ -176,8 +161,7 @@ interface IProjectProfileEntityRepository: ReactiveCrudRepository<ProjectProfile
 		projectId: UUID,
 		userId: UUID,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: List<ProfileStatusEnum>,
+		c: ProjectProfileCriteria,
 	): Mono<ProjectProfileEntity>
 
 	@Query(

@@ -145,12 +145,12 @@ object GroupQueries {
 
 	const val GROUP_TEXT_SEARCH_CLAUSE = """
         (
-            :query IS NULL OR UNACCENT(t.$GROUP_NAME) ILIKE '%' || UNACCENT(:query) || '%'
+            :#{#c.query} IS NULL OR UNACCENT(t.$GROUP_NAME) ILIKE '%' || UNACCENT(:#{#c.query}) || '%'
         )
     """
 	const val GROUP_PRESENCE_CLAUSE = """
         (
-            :isPresent IS NULL OR :isPresent = (
+            :#{#c.isPresent} IS NULL OR :#{#c.isPresent} = (
                 (
                     (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
@@ -174,7 +174,7 @@ object GroupQueries {
 
 	const val GROUP_ON_SITE_MEMBERS_CLAUSE = """
         (
-            CAST(:hasOnSiteMembers AS BOOLEAN) IS NULL OR CAST(:hasOnSiteMembers AS BOOLEAN) = EXISTS (
+            CAST(:#{#c.hasOnSiteMembers} AS BOOLEAN) IS NULL OR CAST(:#{#c.hasOnSiteMembers} AS BOOLEAN) = EXISTS (
                 SELECT 1 FROM $GROUP_CONTENT_TABLE site_content
                 INNER JOIN $PARTICIPANT_TABLE site_member ON site_member.$ID = site_content.$GROUP_CONTENT_PARTICIPANT_ID
                 WHERE site_content.$GROUP_CONTENT_GROUP_ID = t.$ID AND site_member.$LINKED_PROJECT_ID = :projectId
@@ -193,23 +193,23 @@ object GroupQueries {
 
 	const val DATE_IN_GROUP_DATES_RANGE_CLAUSE = """
         (
-            :at IS NULL OR (
+            :#{#c.at} IS NULL OR (
                 (
-                    (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:at AS TIMESTAMPTZ)
+                    (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{#c.at} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:at AS TIMESTAMPTZ)
+                    (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{#c.at} AS TIMESTAMPTZ)
                 )
             )
         )
     """
 
 	const val GROUP_SORT = """
-        CASE WHEN CAST(:sortField AS TEXT) = 'name' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$GROUP_NAME END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'name' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$GROUP_NAME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'startAvailability' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'startAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'name' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$GROUP_NAME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'name' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$GROUP_NAME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'startAvailability' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'startAvailability' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$GROUP_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'endAvailability' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'endAvailability' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$GROUP_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$GROUP_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
     """
 }

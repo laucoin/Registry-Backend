@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.CommunicationCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
@@ -33,7 +35,7 @@ class CommunicationPostgresRepository(
 		isVisible: Boolean?,
 	): Flux<Pair<UUID, List<CommunicationModel>>> {
 		return if (movementIds.isEmpty()) Flux.empty()
-		else repository.findAllByMovementIdsWithLimit(projectId, movementIds, isVisible, limit)
+		else repository.findAllByMovementIdsWithLimit(projectId, movementIds, isVisible, PageQuery(limit = limit))
 			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
@@ -49,14 +51,18 @@ class CommunicationPostgresRepository(
 		return repository.findAllByMovementId(
 			projectId,
 			movementId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			CommunicationCriteria(
+				query = searchParams.query,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, CommunicationEntity::fullCount, mapper::toModel)
 	}
 
@@ -67,7 +73,7 @@ class CommunicationPostgresRepository(
 		isVisible: Boolean?
 	): Flux<Pair<UUID, List<CommunicationModel>>> {
 		return if (alertIds.isEmpty()) Flux.empty()
-		else repository.findAllByAlertIdsWithLimit(projectId, alertIds, isVisible, limit)
+		else repository.findAllByAlertIdsWithLimit(projectId, alertIds, isVisible, PageQuery(limit = limit))
 			.groupBy { it.movementId!! }
 			.flatMap {
 				it.collectList().map { list -> it.key() to list.map(mapper::toModel) }
@@ -83,14 +89,18 @@ class CommunicationPostgresRepository(
 		return repository.findAllByAlertId(
 			projectId,
 			alertId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			CommunicationCriteria(
+				query = searchParams.query,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, CommunicationEntity::fullCount, mapper::toModel)
 	}
 
@@ -111,10 +121,12 @@ class CommunicationPostgresRepository(
 		return repository.countAllByMovementId(
 			projectId,
 			movementId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.from,
-			searchParams.to,
+			CommunicationCriteria(
+				query = searchParams.query,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
 		)
 	}
 
@@ -126,10 +138,12 @@ class CommunicationPostgresRepository(
 		return repository.countAllByAlertId(
 			projectId,
 			alertId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.from,
-			searchParams.to,
+			CommunicationCriteria(
+				query = searchParams.query,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
 		)
 	}
 

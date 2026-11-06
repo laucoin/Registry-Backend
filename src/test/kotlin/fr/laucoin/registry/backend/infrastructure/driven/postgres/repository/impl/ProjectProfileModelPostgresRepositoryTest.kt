@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ProjectProfileCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -75,16 +77,20 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findByUserId(
 			currentUser().id!!,
-			query = null,
-			isVisible = null,
-			isAvailable = null,
-			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			at = null,
-			role = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			ProjectProfileCriteria(
+				query = null,
+				isAvailable = null,
+				status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+				at = null,
+				role = null,
+			),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, times(1)).toModel(any())
 	}
@@ -125,16 +131,20 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findByProjectId(
 			defaultProjectId,
-			query = null,
-			isVisible = null,
-			isAvailable = null,
-			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			at = null,
-			role = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			ProjectProfileCriteria(
+				query = null,
+				isAvailable = null,
+				status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+				at = null,
+				role = null,
+			),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -156,10 +166,10 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 			defaultProjectId,
 			listOf(currentUser().id!!),
-			profileIdToExclude = null,
-			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
-			from = null,
-			to = null
+			null,
+			null,
+			null,
+			ProjectProfileCriteria(status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED)),
 		)
 	}
 
@@ -174,9 +184,8 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		assertNotNull(result)
 		verify(postgresRepository).findAllRolesByUserId(
 			currentUser().id!!,
-			isVisible = true,
-			isAvailable = true,
-			status = listOf(ACCEPTED),
+			true,
+			ProjectProfileCriteria(isAvailable = true, status = listOf(ACCEPTED)),
 		)
 		verify(roleMapper).toModel(any())
 	}
@@ -266,9 +275,11 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findProjectProfileByProjectAndUserId(
 			defaultProjectId,
 			currentUser().id!!,
-			isVisible = null,
-			isAvailable = null,
-			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			null,
+			ProjectProfileCriteria(
+				isAvailable = null,
+				status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			),
 		)
 		verify(mapper).toModel(any())
 	}
@@ -288,9 +299,11 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findProjectProfileByProjectAndUserId(
 			defaultProjectId,
 			uuid,
-			isVisible = null,
-			isAvailable = null,
-			status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			null,
+			ProjectProfileCriteria(
+				isAvailable = null,
+				status = listOf(INVITED, ACCEPTED, REJECTED, BLOCKED),
+			),
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -313,9 +326,8 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findByUserIdAndProjectIds(
 			currentUser().id!!,
 			projectIds,
-			isVisible = null,
-			isAvailable = null,
-			status = params.status,
+			null,
+			ProjectProfileCriteria(isAvailable = null, status = params.status),
 		)
 		verify(mapper).toModel(any())
 	}
@@ -331,7 +343,7 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 
 		// Assert
 		assertEquals(emptyList(), result)
-		verify(postgresRepository, never()).findByUserIdAndProjectIds(any(), any(), anyOrNull(), anyOrNull(), any())
+		verify(postgresRepository, never()).findByUserIdAndProjectIds(any(), any(), anyOrNull(), any())
 	}
 
 	@Test

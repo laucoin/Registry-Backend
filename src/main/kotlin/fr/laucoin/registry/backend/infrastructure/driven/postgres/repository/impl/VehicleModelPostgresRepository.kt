@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.VehicleCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -34,17 +36,21 @@ class VehicleModelPostgresRepository(
 	): Mono<PageModel<VehicleModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.isPresent,
-			searchParams.at,
-			searchParams.brand,
-			searchParams.model,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			VehicleCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+				brand = searchParams.brand,
+				model = searchParams.model,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, VehicleEntity::fullCount, mapper::toModel)
 	}
 
@@ -54,13 +60,15 @@ class VehicleModelPostgresRepository(
 	): Mono<Long> {
 		return repository.countAll(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.isPresent,
-			searchParams.at,
-			searchParams.brand,
-			searchParams.model,
+			VehicleCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+				brand = searchParams.brand,
+				model = searchParams.model,
+			),
 		)
 	}
 
@@ -72,14 +80,16 @@ class VehicleModelPostgresRepository(
 	override fun findWithLimit(limit: Int, projectId: UUID, searchParams: VehicleSearchParamModel): Flux<VehicleModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.isPresent,
-			searchParams.at,
-			searchParams.brand,
-			searchParams.model,
-			limit,
+			VehicleCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+				brand = searchParams.brand,
+				model = searchParams.model,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 

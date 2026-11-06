@@ -28,17 +28,17 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle
 
 object ProjectQueries {
 	const val PROJECT_TEXT_SEARCH_CLAUSE = """
-        (:query IS NULL OR UNACCENT(t.$PROJECT_NAME) ILIKE '%' || UNACCENT(:query) || '%')
+        (:#{#c.query} IS NULL OR UNACCENT(t.$PROJECT_NAME) ILIKE '%' || UNACCENT(:#{#c.query}) || '%')
     """
 
 	const val DATE_IN_PROJECT_DATES_RANGE_CLAUSE = """
         (
-            :at IS NULL OR (
+            :#{#c.at} IS NULL OR (
                 (
-                    (COALESCE(t.$PROJECT_BEGIN_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_BEGIN_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:at AS TIMESTAMPTZ)
+                    (COALESCE(t.$PROJECT_BEGIN_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_BEGIN_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{#c.at} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    (COALESCE(t.$PROJECT_END_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_END_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:at AS TIMESTAMPTZ)
+                    (COALESCE(t.$PROJECT_END_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_END_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{#c.at} AS TIMESTAMPTZ)
                 )
             )
         )
@@ -67,7 +67,7 @@ object ProjectQueries {
     """
 
 	private const val COUNT_SORT_VALUE = """
-        CASE CAST(:sortField AS TEXT)
+        CASE CAST(:#{#page.sortField} AS TEXT)
             WHEN 'participants' THEN $COUNT_PARTICIPANTS
             WHEN 'groups' THEN $COUNT_GROUPS
             WHEN 'acceptedProfiles' THEN $COUNT_ACCEPTED_PROFILES
@@ -81,18 +81,18 @@ object ProjectQueries {
 		"EXISTS (SELECT 1 FROM $PROJECT_FAVORITE_TABLE f WHERE f.$PROJECT_FAVORITE_PROJECT_ID = t.id AND f.$PROJECT_FAVORITE_USER_ID = CAST(:userId AS UUID))"
 
 	const val PROJECT_FAVORITE_CLAUSE =
-		"(CAST(:isFavorite AS BOOLEAN) IS NULL OR $IS_FAVORITE = CAST(:isFavorite AS BOOLEAN))"
+		"(CAST(:#{#c.isFavorite} AS BOOLEAN) IS NULL OR $IS_FAVORITE = CAST(:#{#c.isFavorite} AS BOOLEAN))"
 
 	const val PROJECT_SORT = """
-        CASE WHEN CAST(:sortField AS TEXT) = 'name' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$PROJECT_NAME END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'name' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$PROJECT_NAME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'begin' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_BEGIN_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_BEGIN_TIME, '00:00:00.000000'::TIMETZ)) END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'begin' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_BEGIN_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_BEGIN_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'end' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_END_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_END_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'end' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_END_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_END_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'favorite' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN CAST($IS_FAVORITE AS INT) END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'favorite' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN CAST($IS_FAVORITE AS INT) END DESC NULLS LAST,
-        CASE WHEN NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN $COUNT_SORT_VALUE END ASC NULLS LAST,
-        CASE WHEN COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN $COUNT_SORT_VALUE END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'name' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$PROJECT_NAME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'name' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$PROJECT_NAME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'begin' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_BEGIN_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_BEGIN_TIME, '00:00:00.000000'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'begin' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_BEGIN_DATE, '-infinity'::DATE) + COALESCE(t.$PROJECT_BEGIN_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'end' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_END_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_END_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'end' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$PROJECT_END_DATE, '+infinity'::DATE) + COALESCE(t.$PROJECT_END_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'favorite' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN CAST($IS_FAVORITE AS INT) END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'favorite' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN CAST($IS_FAVORITE AS INT) END DESC NULLS LAST,
+        CASE WHEN NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN $COUNT_SORT_VALUE END ASC NULLS LAST,
+        CASE WHEN COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN $COUNT_SORT_VALUE END DESC NULLS LAST,
     """
 }

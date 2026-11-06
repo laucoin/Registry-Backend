@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity
 
+import fr.laucoin.registry.backend.test.withNamedParameters
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_DURATION_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.ACTIVITY_PARTICIPANTS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityQueries.DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE
@@ -70,7 +71,7 @@ class ActivityQueriesTest: TestContext() {
 	fun `Should compare the instant with the window whatever its offset`(at: ZonedDateTime?, expected: Boolean) {
 		// Arrange
 		val query = "$WINDOW $DATE_IN_ACTIVITY_DATES_RANGE_CLAUSE"
-		val spec = databaseClient.sql(query).let {
+		val spec = databaseClient.sql(query.withNamedParameters()).let {
 			if (at == null) it.bindNull("at", ZonedDateTime::class.java) else it.bind("at", at)
 		}
 
@@ -85,7 +86,7 @@ class ActivityQueriesTest: TestContext() {
 	@MethodSource
 	fun `Should filter the activities by duration`(minDuration: String?, maxDuration: String?, expectedCount: Int) {
 		// Arrange
-		val spec = databaseClient.sql("$CAPACITY $ACTIVITY_DURATION_CLAUSE")
+		val spec = databaseClient.sql("$CAPACITY $ACTIVITY_DURATION_CLAUSE".withNamedParameters())
 			.let { if (minDuration == null) it.bindNull("minDuration", String::class.java) else it.bind("minDuration", minDuration) }
 			.let { if (maxDuration == null) it.bindNull("maxDuration", String::class.java) else it.bind("maxDuration", maxDuration) }
 
@@ -100,7 +101,7 @@ class ActivityQueriesTest: TestContext() {
 	@MethodSource
 	fun `Should filter the activities by hosted participants`(participants: Int?, expectedCount: Int) {
 		// Arrange
-		val spec = databaseClient.sql("$CAPACITY $ACTIVITY_PARTICIPANTS_CLAUSE")
+		val spec = databaseClient.sql("$CAPACITY $ACTIVITY_PARTICIPANTS_CLAUSE".withNamedParameters())
 			.let { if (participants == null) it.bindNull("participants", Int::class.javaObjectType) else it.bind("participants", participants) }
 
 		// Act
