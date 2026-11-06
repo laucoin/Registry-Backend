@@ -14,7 +14,6 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -109,33 +108,6 @@ interface IMovementV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 		@RequestBody @Valid movement: ParticipantMovementWriterDto,
-		exchange: ServerWebExchange,
-	): Mono<MovementReaderDto>
-
-	@Operation(
-		summary = "Create Guest Movement",
-		description = "Create Movement and related Guest Content",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_C')")
-	@PostMapping("/guests")
-	fun createGuestsMovement(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
-		@RequestBody @Valid movement: GuestMovementWriterDto,
-		exchange: ServerWebExchange,
-	): Mono<ResponseEntity<MovementReaderDto>>
-
-	@Operation(
-		summary = "Update Guest Movement",
-		description = "Update Movement and related Guest Content",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_U')")
-	@PatchMapping("/guests/{id}")
-	fun updateGuestsMovementById(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
-		@PathVariable id: UUID,
-		@RequestBody @Valid movement: GuestMovementWriterDto,
 		exchange: ServerWebExchange,
 	): Mono<MovementReaderDto>
 
