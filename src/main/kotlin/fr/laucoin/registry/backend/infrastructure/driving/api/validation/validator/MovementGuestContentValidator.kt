@@ -1,10 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementGuestContent
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNotEmpty
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNullOrEmpty
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementGuestContent
 import jakarta.validation.ConstraintValidatorContext
 
 /**

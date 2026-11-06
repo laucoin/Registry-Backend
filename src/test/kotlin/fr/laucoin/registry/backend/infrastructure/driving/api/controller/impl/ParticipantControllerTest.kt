@@ -1,13 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import org.springframework.http.HttpStatus.FORBIDDEN
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantTimelineReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantTimelineReaderDto
-import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
-import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.DATE_RANGE_FROM_LATER_THAN_TO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
@@ -40,19 +36,23 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantExportModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
+import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.IExportService
-import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.domain.service.core.IParticipantService
+import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PartialUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantTimelineReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
@@ -118,7 +118,7 @@ class ParticipantControllerTest : TestContext() {
 	private lateinit var writerMapper: ParticipantWriterDtoMapper
 
 	@MockitoBean
-	private lateinit var exportService: IExportService
+	private lateinit var exportUseCase: IExportUseCase
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
@@ -975,7 +975,7 @@ class ParticipantControllerTest : TestContext() {
 		// Arrange
 		val id = UUID.randomUUID()
 		val export = ParticipantExportModel(ZonedDateTime.now(ZoneOffset.UTC), "Camp", ParticipantModel(), emptyList())
-		whenever(exportService.exportParticipant(any(), eq(defaultProjectId), eq(id), any())).thenReturn(Mono.just(export))
+		whenever(exportUseCase.exportParticipant(any(), eq(defaultProjectId), eq(id), any())).thenReturn(Mono.just(export))
 
 		// Act
 		val result = webClient.authenticate().get()
@@ -988,6 +988,6 @@ class ParticipantControllerTest : TestContext() {
 			.expectHeader().valueEquals(CACHE_CONTROL, "no-store")
 			.expectHeader().valueEquals(CONTENT_DISPOSITION, "attachment; filename=\"participant-$id.json\"")
 			.expectBody().jsonPath("$.subjectType").isEqualTo("PARTICIPANT")
-		verify(exportService).exportParticipant(any(), eq(defaultProjectId), eq(id), argThat { userAgent == "JUnit/1.0" })
+		verify(exportUseCase).exportParticipant(any(), eq(defaultProjectId), eq(id), argThat { userAgent == "JUnit/1.0" })
 	}
 }

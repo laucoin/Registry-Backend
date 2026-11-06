@@ -2,9 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.junit.jupiter.params.provider.ValueSource
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleTimelineReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleTimelineReaderDto
-import fr.laucoin.registry.backend.domain.model.VehicleTimelineModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
@@ -37,13 +34,16 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
-import fr.laucoin.registry.backend.domain.service.IVehicleService
+import fr.laucoin.registry.backend.domain.model.VehicleTimelineModel
+import fr.laucoin.registry.backend.domain.service.core.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.VehicleWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleTimelineReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.VehicleWriterDtoMapper
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext

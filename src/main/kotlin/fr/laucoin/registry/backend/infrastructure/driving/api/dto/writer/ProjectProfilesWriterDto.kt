@@ -6,8 +6,8 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ROLE_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_USERS_EMPTY
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PROJECT_PROFILE_ROLE_MAX
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PROJECT_PROFILE_EMAILS_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PROJECT_PROFILE_ROLE_MAX
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.ROLE_PATTERN
 import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.StartBeforeEnd
 import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.ValidEmails

@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
-import fr.laucoin.registry.backend.domain.service.IPurgeService
+import fr.laucoin.registry.backend.domain.service.usecase.IPurgeUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPurgeV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuditPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
@@ -21,7 +21,7 @@ import reactor.core.publisher.Mono
  */
 @RestController
 class PurgeV2Controller(
-	private val service: IPurgeService,
+	private val service: IPurgeUseCase,
 	private val contentMapper: ProjectContentPurgeReaderDtoMapper,
 	private val configurationMapper: ProjectConfigurationPurgeReaderDtoMapper,
 ) : IPurgeV2Controller {

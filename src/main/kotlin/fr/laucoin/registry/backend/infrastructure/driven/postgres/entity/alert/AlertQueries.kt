@@ -16,8 +16,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communi
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.history.HistoryFields.ALERT_HISTORY_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.history.HistoryFields.ALERT_HISTORY_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.TEXT_SEARCH_MIN_SCORE
 
 object AlertQueries {

@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AuditOutcomeEnum
 import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
 import fr.laucoin.registry.backend.domain.model.ClientContextModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.service.IAuditReadService
+import fr.laucoin.registry.backend.domain.service.support.IAuditReadService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import java.net.InetSocketAddress
 import java.util.UUID

@@ -14,11 +14,11 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.UserExportModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
-import fr.laucoin.registry.backend.domain.model.UserExportModel
-import fr.laucoin.registry.backend.domain.service.IExportService
-import fr.laucoin.registry.backend.domain.service.IUserService
+import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRoleWriterDto
@@ -67,7 +67,7 @@ class UserControllerTest: TestContext() {
 	private lateinit var userRoleReaderMapper: UserRoleReaderDtoMapper
 
 	@MockitoBean
-	private lateinit var exportService: IExportService
+	private lateinit var exportUseCase: IExportUseCase
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
@@ -423,7 +423,7 @@ class UserControllerTest: TestContext() {
 	@Test
 	fun `Should exportCurrentUser return 200 as an attachment`() {
 		// Arrange
-		whenever(exportService.exportUser(any(), any(), any())).thenReturn(Mono.just(userExport))
+		whenever(exportUseCase.exportUser(any(), any(), any())).thenReturn(Mono.just(userExport))
 
 		// Act
 		val result = webClient.authenticate().get()
@@ -442,7 +442,7 @@ class UserControllerTest: TestContext() {
 	fun `Should exportUserById return 200 for a User administrator`() {
 		// Arrange
 		val id = UUID.randomUUID()
-		whenever(exportService.exportUser(any(), eq(id), any())).thenReturn(Mono.just(userExport))
+		whenever(exportUseCase.exportUser(any(), eq(id), any())).thenReturn(Mono.just(userExport))
 
 		// Act
 		val result = webClient.authenticate(REGISTRY_USER_R).get()
@@ -452,7 +452,7 @@ class UserControllerTest: TestContext() {
 
 		// Assert
 		result.expectStatus().isOk
-		verify(exportService).exportUser(any(), eq(id), argThat { userAgent == "JUnit/1.0" })
+		verify(exportUseCase).exportUser(any(), eq(id), argThat { userAgent == "JUnit/1.0" })
 	}
 
 	@Test
@@ -464,6 +464,6 @@ class UserControllerTest: TestContext() {
 
 		// Assert
 		result.expectStatus().isForbidden
-		verifyNoInteractions(exportService)
+		verifyNoInteractions(exportUseCase)
 	}
 }

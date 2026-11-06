@@ -8,12 +8,12 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleFields.VEHICLE_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.DATE_IN_VEHICLE_DATES_RANGE_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_BRAND_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_MODEL_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.LAST_MOVEMENT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.SELECT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.SELECT_VEHICLE_SEARCH
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_AVAILABILITY_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_BRAND_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_MODEL_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_PRESENCE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleQueries.VEHICLE_TEXT_SEARCH_CLAUSE

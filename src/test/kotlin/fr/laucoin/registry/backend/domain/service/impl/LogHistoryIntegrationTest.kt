@@ -5,9 +5,9 @@ import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.service.IAlertService
-import fr.laucoin.registry.backend.domain.service.ICommunicationService
-import fr.laucoin.registry.backend.domain.service.IMovementService
+import fr.laucoin.registry.backend.domain.service.core.IAlertService
+import fr.laucoin.registry.backend.domain.service.core.ICommunicationService
+import fr.laucoin.registry.backend.domain.service.core.IMovementService
 import fr.laucoin.registry.backend.test.TestContext
 import java.time.OffsetDateTime
 import java.time.ZoneOffset

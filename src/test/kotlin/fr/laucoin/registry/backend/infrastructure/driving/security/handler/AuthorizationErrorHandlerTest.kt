@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.INVALID_TOKEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_AUTHENTICATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
-import fr.laucoin.registry.backend.domain.service.IConcurrencyService
+import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
@@ -11,8 +11,8 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.service.IExportService
-import fr.laucoin.registry.backend.domain.service.IParticipantService
+import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
+import fr.laucoin.registry.backend.domain.service.core.IParticipantService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
@@ -60,7 +60,7 @@ class ParticipantV2Controller(
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
 	private val writerMapper: ParticipantWriterDtoMapper,
-	private val exportService: IExportService,
+	private val exportUseCase: IExportUseCase,
 	private val exportMapper: ExportReaderDtoMapper,
 	private val clientContextService: ClientContextService,
 ): IParticipantV2Controller {
@@ -209,7 +209,7 @@ class ParticipantV2Controller(
 		id: UUID,
 		request: ServerHttpRequest,
 	): Mono<ResponseEntity<ParticipantExportReaderDto>> {
-		return exportService.exportParticipant(currentUser, projectId, id, clientContextService.resolve(request))
+		return exportUseCase.exportParticipant(currentUser, projectId, id, clientContextService.resolve(request))
 			.map(exportMapper::toDto)
 			.map { it.asAttachment("participant-$id.json") }
 	}

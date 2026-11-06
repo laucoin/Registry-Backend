@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum.FAST
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum.DARK
-import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import fr.laucoin.registry.backend.domain.service.core.IPreferencesService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError

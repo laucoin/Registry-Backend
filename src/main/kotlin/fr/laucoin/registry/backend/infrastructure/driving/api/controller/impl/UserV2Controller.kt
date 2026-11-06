@@ -5,15 +5,15 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
-import fr.laucoin.registry.backend.domain.service.IExportService
-import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserExportReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
+import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRoleWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
@@ -34,7 +34,7 @@ class UserV2Controller(
 	private val service: IUserService,
 	private val readerMapper: UserReaderDtoMapper,
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
-	private val exportService: IExportService,
+	private val exportUseCase: IExportUseCase,
 	private val exportMapper: ExportReaderDtoMapper,
 	private val clientContextService: ClientContextService,
 ): IUserV2Controller {
@@ -68,7 +68,7 @@ class UserV2Controller(
 		id: UUID,
 		request: ServerHttpRequest,
 	): Mono<ResponseEntity<UserExportReaderDto>> {
-		return exportService.exportUser(currentUser, id, clientContextService.resolve(request))
+		return exportUseCase.exportUser(currentUser, id, clientContextService.resolve(request))
 			.map(exportMapper::toDto)
 			.map { it.asAttachment("user-$id.json") }
 	}

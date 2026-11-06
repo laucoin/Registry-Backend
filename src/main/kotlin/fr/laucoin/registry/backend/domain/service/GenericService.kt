@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.service.impl.LoggerService
+import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
 import org.springframework.http.HttpStatus.FORBIDDEN
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono

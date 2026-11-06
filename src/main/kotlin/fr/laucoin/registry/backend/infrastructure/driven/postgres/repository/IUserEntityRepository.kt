@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.USER_PROJECT_MEMBER_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
@@ -22,6 +21,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.Us
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.PREFERENCES_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.SELECT_PREFERENCES
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.SELECT_USER_SEARCH
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.USER_PROJECT_MEMBER_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.USER_ROLE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.USER_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserQueries.USER_TEXT_SEARCH_CLAUSE

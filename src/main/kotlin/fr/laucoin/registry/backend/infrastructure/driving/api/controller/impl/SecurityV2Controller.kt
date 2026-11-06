@@ -1,18 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuthenticationUriReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AuthenticationUriReaderDtoMapper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
-import fr.laucoin.registry.backend.domain.service.IAuthenticationService
-import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.domain.service.impl.LoggerService
+import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.support.IAuthenticationService
+import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ISecurityV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuthenticationUriReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AuthenticationInfoWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AuthenticationUriReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CurrentUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService
 import org.springframework.beans.factory.annotation.Value

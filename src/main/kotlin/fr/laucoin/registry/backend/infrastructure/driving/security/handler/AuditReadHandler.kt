@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 import fr.laucoin.registry.backend.domain.enumeration.AuditOutcomeEnum
 import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.service.IAuditReadService
+import fr.laucoin.registry.backend.domain.service.support.IAuditReadService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import org.springframework.http.HttpMethod.GET
 import org.springframework.http.HttpMethod.HEAD
