@@ -9,12 +9,10 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_UPD
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
-import fr.laucoin.registry.backend.domain.service.core.IPreferencesService
 import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
@@ -56,13 +54,12 @@ import java.util.stream.Stream
 
 class UserServiceTest {
 	private val port: IUserPort = mock()
-	private val preferencesService: IPreferencesService = mock()
 	private val lastAdministrator: LastAdministratorHelper = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val service = UserService(
-		port, preferencesService, lastAdministrator, transactionalOperator, roleService, principalCache, Clock.systemUTC()
+		port, lastAdministrator, transactionalOperator, roleService, principalCache, Clock.systemUTC()
 	)
 
 	init {
@@ -292,7 +289,6 @@ class UserServiceTest {
 		// Assert
 		assertEquals(serviceAccount, result)
 		verifyNoInteractions(port)
-		verifyNoInteractions(preferencesService)
 		verifyNoInteractions(lastAdministrator)
 		verifyNoInteractions(transactionalOperator)
 		verifyNoInteractions(roleService)
@@ -311,21 +307,19 @@ class UserServiceTest {
 	}
 
 	@Test
-	fun `Should createUser create and return User`() {
+	fun `Should createUser create the user with the default role and return it`() {
 		// Arrange
 		val user = currentUser()
 
 		whenever(port.create(any())).thenReturn(Mono.just(user))
-		whenever(preferencesService.findByUser(any())).thenReturn(Mono.just(PreferencesModel(userId = user.id)))
-		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
-		service.createUser(user.oidcId!!, user.email!!, user.firstName, user.lastName).block()
+		val result = service.createUser(user.oidcId!!, user.email!!, user.firstName, user.lastName).block()
 
 		// Assert
+		assertEquals(user.oidcId, result?.oidcId)
 		verify(port).create(any())
-		verify(preferencesService).findByUser(any())
-		verify(transactionalOperator).transactional(any<Mono<*>>())
+		verifyNoInteractions(transactionalOperator)
 	}
 
 	@ParameterizedTest

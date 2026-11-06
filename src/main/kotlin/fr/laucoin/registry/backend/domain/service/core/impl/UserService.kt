@@ -19,7 +19,6 @@ import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
-import fr.laucoin.registry.backend.domain.service.core.IPreferencesService
 import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
@@ -44,7 +43,6 @@ import java.util.UUID
 @Service
 class UserService(
 	private val port: IUserPort,
-	private val preferencesService: IPreferencesService,
 	private val lastAdministrator: LastAdministratorHelper,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
@@ -125,14 +123,6 @@ class UserService(
 
 		return port.create(user)
 			.map { CurrentUserModel(it) }
-			.flatMap { createdUser ->
-				preferencesService.findByUser(createdUser)
-					.map {
-						createdUser.preferences = it
-						createdUser
-					}
-			}
-			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun updateUserIfPersonalDataChanged(

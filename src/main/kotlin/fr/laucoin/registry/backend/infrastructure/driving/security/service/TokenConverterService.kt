@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
+import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -34,6 +35,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 @Component
 class TokenConverterService(
 	private val userService: IUserService,
+	private val userUseCase: IUserUseCase,
 	private val profilePort: IProjectProfilePort,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
@@ -113,7 +115,7 @@ class TokenConverterService(
 		return when {
 			matches.isEmpty() -> {
 				log.info("No user found with the given email, creating a new user with OIDC ID \"{}\"", oidcId)
-				userService.createUser(oidcId, email, firstName, lastName)
+				userUseCase.createUser(oidcId, email, firstName, lastName)
 			}
 
 			matches.size == 1 && emailVerified && matches.first().oidcId == null -> {
