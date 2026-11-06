@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.SecurityClaimsProperties
 import org.springframework.security.oauth2.jwt.Jwt
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
@@ -16,7 +17,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.Authent
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AuthenticationUriReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CurrentUserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.AuthenticationCookieService
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.UNAUTHORIZED
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import org.springframework.web.bind.annotation.RestController
@@ -36,8 +36,7 @@ class SecurityV2Controller(
 	private val uriMapper: AuthenticationUriReaderDtoMapper,
 	private val userService: IUserUseCase,
 	private val jwtDecoder: ReactiveJwtDecoder,
-	@param:Value($$"${registry.security.oauth2.claims.user-id}")
-	private val userIdKey: String,
+	private val claims: SecurityClaimsProperties,
 ) : ISecurityV2Controller, LoggerService() {
 	override fun getLoginUri(redirectUri: String?, state: String?): AuthenticationUriReaderDto {
 		return uriMapper.toDto(authenticationService.getLoginUri(redirectUri!!, state))
@@ -77,7 +76,7 @@ class SecurityV2Controller(
 	}
 
 	private fun recordLoginOf(jwt: Jwt): Mono<Void> {
-		val oidcId = jwt.getClaimAsUUID(userIdKey)
+		val oidcId = jwt.getClaimAsUUID(claims.userId)
 		return if (oidcId != null) userService.recordLoginByOidcId(oidcId) else Mono.empty()
 	}
 
