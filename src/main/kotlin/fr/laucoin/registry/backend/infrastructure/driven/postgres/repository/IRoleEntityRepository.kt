@@ -15,6 +15,11 @@ import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 
+/**
+ * Objectif : Repository R2DBC des rôles et de leurs permissions.
+ * Périmètre : Requêtes SQL d'agrégation des permissions par rôle utilisateur et par rôle de projet.
+ * Limites : Lecture seule ; les rôles sont définis par les migrations Flyway.
+ */
 @Repository
 interface IRoleEntityRepository: ReactiveCrudRepository<RoleEntity, String> {
 	@Query(

@@ -12,6 +12,11 @@ import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.ServerWebInputException
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Contrat des gestionnaires d'erreurs de l'API.
+ * Périmètre : Associe chaque exception connue à sa réponse d'erreur.
+ * Limites : Contrat uniquement ; les messages sont des clés i18n, jamais de détail interne.
+ */
 interface IRegistryControllerAdvice {
 	@ExceptionHandler(RegistryException::class)
 	fun handleRegistryException(exception: RegistryException, exchange: ServerWebExchange): Mono<ResponseEntity<ErrorDto>>

@@ -2,6 +2,11 @@ package fr.laucoin.registry.backend.domain.extension
 
 import java.util.Objects
 
+/**
+ * Objectif : Fournit des extensions de test de vacuité et d'itérabilité sur les valeurs génériques.
+ * Périmètre : Couvre les collections et les tableaux, y compris primitifs.
+ * Limites : Aucune transformation de collection ; lecture seule.
+ */
 object ListExt {
 	fun Any?.isIterable(): Boolean {
 		return this is Iterable<*> || (Objects.nonNull(this) && this!!.javaClass.isArray)
