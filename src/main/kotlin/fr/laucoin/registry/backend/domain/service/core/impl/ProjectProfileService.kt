@@ -209,10 +209,17 @@ class ProjectProfileService(
 	): Mono<ProjectProfileModel> {
 		val searchParams = ProjectProfileSearchParamModel(isVisible = true, isAvailable = true, status = listOf(ACCEPTED))
 		return port.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, searchParams)
-			.handle { assigner, sink ->
-				val eligibleRoles = roleService.getAssignableProjectRoles(assigner)
-				sink.nextOrError(profileToUpdate, roleError(currentUser, eligibleRoles, profileToUpdate, profile))
-			}
+			.handle { assigner, sink -> sink.nextOrError(profileToUpdate, roleErrorFor(currentUser, assigner, profileToUpdate, profile)) }
+	}
+
+	private fun roleErrorFor(
+		currentUser: CurrentUserModel,
+		assigner: ProjectProfileModel,
+		profileToUpdate: ProjectProfileModel,
+		profile: ProjectProfileModel,
+	): RegistryException? {
+		val eligibleRoles = roleService.getAssignableProjectRoles(assigner)
+		return roleError(currentUser, eligibleRoles, profileToUpdate, profile)
 	}
 
 	private fun validateNoConflictForUpdate(

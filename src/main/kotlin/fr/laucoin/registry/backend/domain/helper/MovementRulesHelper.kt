@@ -74,44 +74,24 @@ class MovementRulesHelper(
 	}
 
 	fun validateUpdatableFields(movement: MovementModel, newMovement: MovementModel): Mono<MovementModel> =
-		Mono.just(movement).handle<MovementModel> { it, handle ->
-			when {
-				it.type !== newMovement.type -> handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						MOVEMENT_UPDATE_CHANGE_TYPE,
-					)
-				)
+		Mono.just(movement).handle<MovementModel> { it, sink -> sink.nextOrError(it, updatableFieldsError(it, newMovement)) }
 
-				it.contentType !== newMovement.contentType -> handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE,
-					)
-				)
+	private fun updatableFieldsError(movement: MovementModel, newMovement: MovementModel): RegistryException? = when {
+		movement.type !== newMovement.type -> RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_UPDATE_CHANGE_TYPE)
 
-				it.atLeastOldGuestIfGuestsEntrance(newMovement) -> handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						MOVEMENT_REMOVE_GUEST_CONTENT,
-					)
-				)
+		movement.contentType !== newMovement.contentType ->
+			RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE)
 
-				else -> handle.next(it)
-			}
-		}
+		movement.atLeastOldGuestIfGuestsEntrance(newMovement) ->
+			RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_REMOVE_GUEST_CONTENT)
+
+		else -> null
+	}
 
 	fun validateIsAlterable(movement: MovementModel, errorMessage: String): Mono<MovementModel> =
-		Mono.just(movement).handle<MovementModel> { it, handle ->
-			when {
-				it.isLastParticipantMovement() -> handle.error(
-					RegistryException(
-						UNPROCESSABLE_CONTENT,
-						errorMessage,
-					)
-				)
+		Mono.just(movement).handle<MovementModel> { it, sink -> sink.nextOrError(it, alterableError(it, errorMessage)) }
 
-				else -> handle.next(it)
-			}
-		}
+	private fun alterableError(movement: MovementModel, errorMessage: String): RegistryException? {
+		return if (movement.isLastParticipantMovement()) RegistryException(UNPROCESSABLE_CONTENT, errorMessage) else null
+	}
 }
