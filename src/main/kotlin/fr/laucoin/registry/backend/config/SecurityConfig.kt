@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.config
 
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.SecurityClaimsProperties
 import fr.laucoin.registry.backend.infrastructure.driving.security.chain.SecurityChainCustomizer
 import fr.laucoin.registry.backend.infrastructure.driving.security.chain.SecurityRateLimitProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -17,7 +18,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain
  */
 @Configuration
 @EnableWebFluxSecurity
-@EnableConfigurationProperties(SecurityRateLimitProperties::class)
+@EnableConfigurationProperties(SecurityRateLimitProperties::class, SecurityClaimsProperties::class)
 class SecurityConfig(private val customizers: List<SecurityChainCustomizer>) {
 	@Bean
 	@Order(2)

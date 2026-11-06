@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.idp.adapter
 
+import fr.laucoin.registry.backend.infrastructure.driven.idp.IdpProperties
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
@@ -24,27 +25,26 @@ import reactor.core.Exceptions
 class IdpAuthenticationAdapterTest {
 	private val mockWebServer: MockWebServer = MockWebServer()
 	private val mapper: AuthenticationTokenEntityMapper = spy(AuthenticationTokenEntityMapperImpl())
-	private val adapter: IdpAuthenticationAdapter = IdpAuthenticationAdapter(
-		mapper,
-		authorizationUri = "authorizationUri",
-		tokenUri = "tokenUri",
-		endSessionUri = "endSessionUri",
-		revocationUri = "revocationUri",
-		clientId = "clientId",
-		clientSecret = "clientSecret",
-		connectTimeoutMillis = 2000,
-		responseTimeoutMillis = 5000,
-		maxConnections = 20,
-	)
+	private lateinit var adapter: IdpAuthenticationAdapter
 
 	@BeforeEach
 	fun setUp() {
 		mockWebServer.start()
+		adapter = IdpAuthenticationAdapter(
+			mapper,
+			IdpProperties(
+				authorizationUri = mockWebServer.url("/oauth2/authorize").toString(),
+				tokenUri = mockWebServer.url("/oauth2/token").toString(),
+				endSessionUri = mockWebServer.url("/oauth2/logout").toString(),
+				revocationUri = mockWebServer.url("/oauth2/revoke").toString(),
+				clientId = "clientId",
+				clientSecret = "clientSecret",
+				connectTimeoutMillis = 2000,
+				responseTimeoutMillis = 5000,
+				maxConnections = 20,
+			),
+		)
 		setField(adapter, "http", WebClient.create())
-		setField(adapter, "authorizationUri", mockWebServer.url("/oauth2/authorize").toString())
-		setField(adapter, "tokenUri", mockWebServer.url("/oauth2/token").toString())
-		setField(adapter, "endSessionUri", mockWebServer.url("/oauth2/logout").toString())
-		setField(adapter, "revocationUri", mockWebServer.url("/oauth2/revoke").toString())
 	}
 
 	@AfterEach

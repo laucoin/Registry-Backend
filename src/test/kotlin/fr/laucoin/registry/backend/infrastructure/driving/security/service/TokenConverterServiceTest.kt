@@ -51,7 +51,11 @@ class TokenConverterServiceTest {
 	private val profilePort: IProjectProfilePort = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val service = TokenConverterService(
-		userUseCase, profilePort, roleService, principalCache, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY, EMAIL_VERIFIED_KEY
+		userUseCase,
+		profilePort,
+		roleService,
+		principalCache,
+		SecurityClaimsProperties(USER_ID_KEY, EMAIL_KEY, EMAIL_VERIFIED_KEY, FIRST_NAME_KEY, LAST_NAME_KEY),
 	)
 
 	private val jwt = mock<Jwt>()

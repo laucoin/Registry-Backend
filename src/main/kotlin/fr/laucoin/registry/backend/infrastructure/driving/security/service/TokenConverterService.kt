@@ -14,7 +14,6 @@ import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.convert.converter.Converter
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus.CONFLICT
@@ -39,29 +38,20 @@ class TokenConverterService(
 	private val profilePort: IProjectProfilePort,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
-	@param:Value($$"${registry.security.oauth2.claims.user-id}")
-	private val userIdKey: String,
-	@param:Value($$"${registry.security.oauth2.claims.email}")
-	private val emailKey: String,
-	@param:Value($$"${registry.security.oauth2.claims.first-name}")
-	private val firstNameKey: String,
-	@param:Value($$"${registry.security.oauth2.claims.last-name}")
-	private val lastNameKey: String,
-	@param:Value($$"${registry.security.oauth2.claims.email-verified}")
-	private val emailVerifiedKey: String,
+	private val claims: SecurityClaimsProperties,
 ): Converter<Jwt, Mono<AbstractAuthenticationToken>>, LoggerService() {
 
 	override fun convert(jwt: Jwt): Mono<AbstractAuthenticationToken> {
-		if (!jwt.hasClaim(userIdKey) || !jwt.hasClaim(emailKey)) {
-			log.error("The \"{}\" and \"{}\" keys are not found in the token", userIdKey, emailKey)
+		if (!jwt.hasClaim(claims.userId) || !jwt.hasClaim(claims.email)) {
+			log.error("The \"{}\" and \"{}\" keys are not found in the token", claims.userId, claims.email)
 			return Mono.error(JwtConversionException(UNAUTHORIZED, AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN))
 		}
 
-		val oidcId: UUID = jwt.getClaimAsUUID(userIdKey)!!
-		val email: String = jwt.getClaimAsString(emailKey)!!
-		val firstName: String? = jwt.getClaimAsString(firstNameKey)
-		val lastName: String? = jwt.getClaimAsString(lastNameKey)
-		val emailVerified: Boolean = jwt.getClaimAsBoolean(emailVerifiedKey) == true
+		val oidcId: UUID = jwt.getClaimAsUUID(claims.userId)!!
+		val email: String = jwt.getClaimAsString(claims.email)!!
+		val firstName: String? = jwt.getClaimAsString(claims.firstName)
+		val lastName: String? = jwt.getClaimAsString(claims.lastName)
+		val emailVerified: Boolean = jwt.getClaimAsBoolean(claims.emailVerified) == true
 
 		return principalCache.get(oidcId) { resolveCurrentUser(oidcId, email, emailVerified, firstName, lastName) }
 			.map { UsernamePasswordAuthenticationToken(it, null, it.authorities) }
