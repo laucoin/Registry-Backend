@@ -7,7 +7,7 @@ import java.util.UUID
 
 /**
  * Objectif : Supprime une à une les ressources éligibles d'un balayage de rétention.
- * Périmètre : Applique le mode simulation, borne la concurrence des suppressions et journalise chaque ressource traitée.
+ * Périmètre : Applique le mode simulation, borne la concurrence des suppressions (séquentielle à 1) et journalise chaque ressource traitée.
  * Limites : Ne sélectionne pas les ressources éligibles et n'ouvre aucune transaction ; l'appelant s'en charge.
  */
 object PurgeHelper {
@@ -15,8 +15,13 @@ object PurgeHelper {
 
 	private val log = LoggerFactory.getLogger(PurgeHelper::class.java)
 
-	fun Flux<UUID>.purgeEach(label: String, dryRun: Boolean, delete: (UUID) -> Mono<Unit>): Flux<UUID> {
-		return flatMap({ purgeOne(it, label, dryRun, delete) }, PURGE_DELETE_CONCURRENCY)
+	fun Flux<UUID>.purgeEach(
+		label: String,
+		dryRun: Boolean,
+		delete: (UUID) -> Mono<Unit>,
+		concurrency: Int = PURGE_DELETE_CONCURRENCY,
+	): Flux<UUID> {
+		return flatMap({ purgeOne(it, label, dryRun, delete) }, concurrency)
 	}
 
 	private fun purgeOne(id: UUID, label: String, dryRun: Boolean, delete: (UUID) -> Mono<Unit>): Mono<UUID> {

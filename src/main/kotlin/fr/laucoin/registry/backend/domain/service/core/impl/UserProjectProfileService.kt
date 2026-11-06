@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.helper.ProjectProfileFavoriteHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
-import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -16,8 +15,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
-import fr.laucoin.registry.backend.domain.port.IRowLockPort
-import fr.laucoin.registry.backend.domain.service.GenericProfileService
+import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
@@ -25,12 +23,11 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Mono
 import java.time.Clock
-import java.time.OffsetTime
 import java.util.UUID
 
 /**
  * Objectif : Gère les profils de l'utilisateur courant à travers les projets.
- * Périmètre : Liste et accepte les invitations, crée les profils de support et protège le dernier administrateur du projet.
+ * Périmètre : Liste et accepte les invitations, prépare et enregistre les profils de support et protège le dernier administrateur du projet.
  * Limites : Ne gère pas les profils des autres utilisateurs ; voir ProjectProfileService.
  */
 @Service
@@ -40,10 +37,9 @@ class UserProjectProfileService(
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
 	private val lastAdministrator: LastAdministratorHelper,
-	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
 	clock: Clock,
-) : IUserProjectProfileService, GenericProfileService(port, clock) {
+) : IUserProjectProfileService, GenericService(clock) {
 	override fun findProjectProfilesPage(
 		userId: UUID,
 		pageable: PageableModel,
@@ -94,41 +90,21 @@ class UserProjectProfileService(
 			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
-	override fun createSupportProjectProfile(
-		currentUser: CurrentUserModel,
-		projectId: UUID
-	): Mono<ProjectProfileModel> {
-		val now = CustomDateTimeModel.now(clock)
-		val nowPlusOneHour = CustomDateTimeModel.now(clock).plusHours(1)
-		val profile = ProjectProfileModel().apply {
+	override fun supportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): ProjectProfileModel {
+		return ProjectProfileModel().apply {
 			user = currentUser
 			this.projectId = projectId
 			role = roleService.getLevel0RoleFromProjectRoles()
 			status = ACCEPTED
-			startAccess = now
-			endAccess = nowPlusOneHour
+			startAccess = CustomDateTimeModel.now(clock)
+			endAccess = CustomDateTimeModel.now(clock).plusHours(1)
 			create(currentUser, now())
 		}
-
-		return rowLockPort.lock(PROJECT, projectId)
-			.then(Mono.defer { validateNoSupportConflict(currentUser, projectId, profile) })
-			.flatMap { port.create(profile) }
-			.`as`(transactionalOperator::transactional)
-			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
-	private fun validateNoSupportConflict(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		profile: ProjectProfileModel,
-	): Mono<List<UUID>> {
-		return validateNoProfileConflict(
-			projectId,
-			listOf(currentUser.id!!),
-			profileId = null,
-			profile.startAccess!!.toZonedDateTime(OffsetTime.MIN),
-			profile.endAccess!!.toZonedDateTime(OffsetTime.MAX),
-		)
+	override fun createSupportProjectProfile(currentUser: CurrentUserModel, profile: ProjectProfileModel): Mono<ProjectProfileModel> {
+		return port.create(profile)
+			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	private fun ProjectProfileModel.withStatus(

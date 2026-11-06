@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IUserProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserProjectProfileV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
@@ -26,7 +25,6 @@ import java.util.UUID
 @RestController
 class UserProjectProfileV2Controller(
 	private val service: IUserProjectProfileUseCase,
-	private val projectService: IProjectUseCase,
 	private val readerMapper: UserInvitationReaderDtoMapper,
 	private val projectReaderMapper: ProjectWithProfileReaderDtoMapper,
 ) : IUserProjectProfileV2Controller {
@@ -63,9 +61,7 @@ class UserProjectProfileV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID
 	): Mono<ProjectWithProfileReaderDto> {
-		return service.createSupportProjectProfile(currentUser, projectId)
-			.then(projectService.findProjectWithProfileById(currentUser, projectId))
-			.map(projectReaderMapper::toDto)
+		return service.createSupportProjectProfile(currentUser, projectId).map(projectReaderMapper::toDto)
 	}
 
 	override fun deleteUserProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {

@@ -2,10 +2,10 @@ package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.helper.ProjectProfileFavoriteHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -14,7 +14,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
-import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
@@ -24,6 +23,8 @@ import fr.laucoin.registry.backend.test.ModelExt.defaultProjectProfile
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectProfileId
 import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.Instant
+import java.time.ZoneOffset
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -36,7 +37,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
@@ -51,13 +51,10 @@ class UserProjectProfileServiceTest {
 	private val roleService: IRoleService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val principalCache: IPrincipalCacheService = mock()
-	private val rowLockPort: IRowLockPort = mock()
-	init {
-		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
-	}
+	private val clock: Clock = Clock.fixed(Instant.parse("2030-01-01T10:00:00Z"), ZoneOffset.UTC)
 
 	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, ProjectProfileFavoriteHelper(favoritePort), roleService, principalCache, LastAdministratorHelper(port), rowLockPort, transactionalOperator, Clock.systemUTC()
+		port, ProjectProfileFavoriteHelper(favoritePort), roleService, principalCache, LastAdministratorHelper(port), transactionalOperator, clock
 	)
 
 	init {
@@ -139,84 +136,33 @@ class UserProjectProfileServiceTest {
 	}
 
 	@Test
-	fun `Should createSupportProjectProfile call port findUserIdsWithProjectProfile and create`() {
+	fun `Should supportProjectProfile prepare an accepted level 0 profile for one hour`() {
 		// Arrange
-		val profile = defaultProjectProfile().apply { role = PROJECT_ROLE }
-
 		whenever(roleService.getLevel0RoleFromProjectRoles()).thenReturn(PROJECT_ROLE)
-		whenever(
-			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-				any(),
-				any(),
-				anyOrNull(),
-				any(),
-				anyOrNull(),
-				anyOrNull()
-			)
-		).thenReturn(Flux.empty())
-
-		whenever(port.create(any())).thenReturn(Mono.just(profile))
-		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
-		val result = service.createSupportProjectProfile(currentUser(), defaultProjectId).block()
+		val result = service.supportProjectProfile(currentUser(), defaultProjectId)
 
 		// Assert
-		assertEquals(profile, result)
-
-		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			eq(defaultProjectId),
-			eq(listOf(currentUser().id!!)),
-			eq(null),
-			eq(listOf(ACCEPTED, INVITED)),
-			any(),
-			any(),
-		)
-
-		verify(port).create(any())
-		verify(transactionalOperator).transactional(any<Mono<*>>())
-		verify(principalCache).invalidate(currentUser().oidcId)
+		assertEquals(defaultProjectId, result.projectId)
+		assertEquals(PROJECT_ROLE, result.role)
+		assertEquals(ACCEPTED, result.status)
+		assertEquals(CustomDateTimeModel.now(clock), result.startAccess)
+		assertEquals(CustomDateTimeModel.now(clock).plusHours(1), result.endAccess)
 	}
 
 	@Test
-	fun `Should createSupportProjectProfile call port findUserIdsWithProjectProfile and throw because profile duplicated`() {
+	fun `Should createSupportProjectProfile persist the profile and refresh the current principal`() {
 		// Arrange
 		val profile = defaultProjectProfile().apply { role = PROJECT_ROLE }
-
-		whenever(roleService.getLevel0RoleFromProjectRoles()).thenReturn(PROJECT_ROLE)
-		whenever(
-			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-				any(),
-				any(),
-				anyOrNull(),
-				any(),
-				anyOrNull(),
-				anyOrNull()
-			)
-		).thenReturn(Flux.just(currentUser().id!!))
-
-		whenever(port.create(any())).thenReturn(Mono.just(profile))
-		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
+		whenever(port.create(profile)).thenReturn(Mono.just(profile))
 
 		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createSupportProjectProfile(currentUser(), defaultProjectId).block()
-		}) as RegistryException
+		val result = service.createSupportProjectProfile(currentUser(), profile).block()
 
 		// Assert
-		assertEquals(CONFLICT, result.status)
-		assertEquals(PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE, result.message)
-
-		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
-			eq(defaultProjectId),
-			eq(listOf(currentUser().id!!)),
-			eq(null),
-			eq(listOf(ACCEPTED, INVITED)),
-			any(),
-			any(),
-		)
-
-		verify(port, never()).create(any())
+		assertEquals(profile, result)
+		verify(principalCache).invalidate(currentUser().oidcId)
 	}
 
 	@Test

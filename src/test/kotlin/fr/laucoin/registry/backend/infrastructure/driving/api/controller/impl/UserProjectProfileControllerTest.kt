@@ -13,7 +13,6 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IUserProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserInvitationReaderDto
@@ -54,9 +53,6 @@ class UserProjectProfileControllerTest : TestContext() {
 
 	@MockitoBean
 	private lateinit var readerMapper: UserInvitationReaderDtoMapper
-
-	@MockitoBean
-	private lateinit var projectService: IProjectUseCase
 
 	@MockitoBean
 	private lateinit var projectReaderMapper: ProjectWithProfileReaderDtoMapper
@@ -147,12 +143,7 @@ class UserProjectProfileControllerTest : TestContext() {
 	@Test
 	fun `Should createSupportProjectProfile return 200`() {
 		// Arrange
-		whenever(service.createSupportProjectProfile(any(), any())).thenReturn(Mono.just(ProjectProfileModel()))
-		whenever(projectService.findProjectWithProfileById(any(), eq(defaultProjectId))).thenReturn(
-			Mono.just(
-				ProjectModel()
-			)
-		)
+		whenever(service.createSupportProjectProfile(any(), eq(defaultProjectId))).thenReturn(Mono.just(ProjectModel()))
 		whenever(projectReaderMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
@@ -164,7 +155,6 @@ class UserProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
-		verify(projectService).findProjectWithProfileById(any(), eq(defaultProjectId))
 		verify(projectReaderMapper).toDto(any())
 		verify(service).createSupportProjectProfile(any(), eq(defaultProjectId))
 	}

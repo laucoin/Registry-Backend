@@ -24,7 +24,6 @@ interface IUserProjectProfileService {
 
 	fun findProjectProfilesById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectProfileModel>
 
-
 	fun createUserProjectProfileFromProject(
 		currentUser: CurrentUserModel,
 		project: ProjectModel
@@ -36,6 +35,7 @@ interface IUserProjectProfileService {
 		status: ProfileStatusEnum
 	): Mono<ProjectProfileModel>
 
-	fun createSupportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): Mono<ProjectProfileModel>
+	fun supportProjectProfile(currentUser: CurrentUserModel, projectId: UUID): ProjectProfileModel
+	fun createSupportProjectProfile(currentUser: CurrentUserModel, profile: ProjectProfileModel): Mono<ProjectProfileModel>
 	fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
 }
