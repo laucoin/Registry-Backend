@@ -6,6 +6,8 @@ import fr.laucoin.registry.backend.domain.service.usecase.IPlatformPurgeUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectConfigurationPurgeUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectContentPurgeUseCase
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -20,15 +22,17 @@ class PurgeSchedulerTest {
 	private val scheduler = PurgeScheduler(platform, content, configuration)
 
 	@Test
-	fun `Should purgeUsers run a real purge with the configured threshold`() {
+	fun `Should purgeUsers consume every purged user with the configured threshold`() {
 		// Arrange
-		whenever(platform.purgeUsers(null, false)).thenReturn(Flux.just(UUID.randomUUID()))
+		val consumed = AtomicInteger(0)
+		val purged = Flux.just(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()).doOnNext { consumed.incrementAndGet() }
+		whenever(platform.purgeUsers(null, false)).thenReturn(purged)
 
 		// Act
 		scheduler.purgeUsers()
 
 		// Assert
-		verify(platform).purgeUsers(null, false)
+		assertEquals(3, consumed.get())
 	}
 
 	@Test
@@ -44,15 +48,17 @@ class PurgeSchedulerTest {
 	}
 
 	@Test
-	fun `Should purgeProjects run a real purge with the configured threshold`() {
+	fun `Should purgeProjects consume every purged project with the configured threshold`() {
 		// Arrange
-		whenever(platform.purgeProjects(null, false)).thenReturn(Flux.empty())
+		val consumed = AtomicInteger(0)
+		val purged = Flux.just(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()).doOnNext { consumed.incrementAndGet() }
+		whenever(platform.purgeProjects(null, false)).thenReturn(purged)
 
 		// Act
 		scheduler.purgeProjects()
 
 		// Assert
-		verify(platform).purgeProjects(null, false)
+		assertEquals(3, consumed.get())
 	}
 
 	@Test
