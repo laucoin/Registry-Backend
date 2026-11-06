@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.ActivityModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.PlannedMovementModel
@@ -37,6 +38,7 @@ interface IMovementSearchService {
 	): Flux<MovementReasonEnum>
 
 	fun searchActivitiesByText(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		contentType: ParticipantTypeEnum,
 		query: String?

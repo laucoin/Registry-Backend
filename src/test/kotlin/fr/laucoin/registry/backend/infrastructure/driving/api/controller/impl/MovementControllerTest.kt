@@ -491,7 +491,7 @@ class MovementControllerTest : TestContext() {
 		val searched = "text"
 		val type = IN
 		val contentType = REGISTERED
-		whenever(service.searchActivitiesByText(any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
+		whenever(service.searchActivitiesByText(any(), any(), any(), anyOrNull())).thenReturn(Flux.just(ActivityModel()))
 		whenever(service.searchReasonsByText(any(), any())).thenReturn(Flux.just(OTHER))
 		whenever(activityReasonReaderMapper.toDto(any())).thenReturn(
 			MovementReasonsReaderDto(
@@ -530,7 +530,7 @@ class MovementControllerTest : TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(service).searchActivitiesByText(defaultProjectId, contentType, searched)
+		verify(service).searchActivitiesByText(any(), eq(defaultProjectId), eq(contentType), eq(searched))
 		verify(service).searchReasonsByText(contentType, type)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(movementTypeReaderMapper)
@@ -606,6 +606,20 @@ class MovementControllerTest : TestContext() {
 		verifyNoInteractions(activityReasonReaderMapper)
 		verifyNoInteractions(reasonReaderMapper)
 		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should searchVehicles return 403 without the vehicle option`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R))
+			.get()
+			.uri(uriBuilder("$BASE_URL/search/vehicles", listOf(defaultProjectId), listOf(Pair("q", "text"))))
+			.exchange()
+
+		// Assert
+		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
+		verify(service, never()).searchVehiclesByText(any(), anyOrNull())
 	}
 
 	@Test

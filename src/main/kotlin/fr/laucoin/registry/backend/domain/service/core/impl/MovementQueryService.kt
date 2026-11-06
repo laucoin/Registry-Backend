@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.helper.ActivityOptionHelper.requireActivityOption
+import fr.laucoin.registry.backend.domain.helper.ProjectOptionHelper.requireActivityOption
 import reactor.kotlin.core.util.function.component5
 import reactor.kotlin.core.util.function.component4
 import reactor.kotlin.core.util.function.component3

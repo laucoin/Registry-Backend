@@ -9,18 +9,25 @@ import reactor.core.publisher.Mono
 import java.util.UUID
 
 /**
- * Objectif : Refuse une lecture qui demande des données d'activité sans l'option d'activité du projet.
- * Périmètre : Vérifie l'autorité d'option d'activité de l'utilisateur courant sur le projet demandé.
+ * Objectif : Refuse une opération qui sollicite une option de projet que le projet n'a pas activée.
+ * Périmètre : Vérifie l'autorité d'option (activité, véhicule…) de l'utilisateur courant sur le projet demandé.
  * Limites : Ne vérifie aucune autre permission ; l'autorisation de l'endpoint reste portée par le contrat.
  */
-object ActivityOptionHelper {
+object ProjectOptionHelper {
+	fun <T : Any> Mono<T>.requireProjectOption(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		option: String,
+		isOptionRequested: Boolean,
+	): Mono<T> {
+		return if (isOptionRequested && !currentUser.hasAuthority(projectId, option)) {
+			Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
+		} else this
+	}
+
 	fun <T : Any> Mono<T>.requireActivityOption(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		isActivityRequested: Boolean,
-	): Mono<T> {
-		return if (isActivityRequested && !currentUser.hasAuthority(projectId, REGISTRY_PROJECT_OPTION_ACTIVITY)) {
-			Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
-		} else this
-	}
+	): Mono<T> = requireProjectOption(currentUser, projectId, REGISTRY_PROJECT_OPTION_ACTIVITY, isActivityRequested)
 }

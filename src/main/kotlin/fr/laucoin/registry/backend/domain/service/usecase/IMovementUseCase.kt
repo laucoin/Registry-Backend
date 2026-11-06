@@ -62,6 +62,7 @@ interface IMovementUseCase {
 	fun searchVehiclesByText(projectId: UUID, query: String?): Flux<VehicleModel>
 	fun searchReasonsByText(contentType: ParticipantTypeEnum, type: MovementTypeEnum): Flux<MovementReasonEnum>
 	fun searchActivitiesByText(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		contentType: ParticipantTypeEnum,
 		query: String?,

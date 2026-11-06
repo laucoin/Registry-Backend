@@ -99,11 +99,12 @@ class MovementUseCase(
 	}
 
 	override fun searchActivitiesByText(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		contentType: ParticipantTypeEnum,
 		query: String?,
 	): Flux<ActivityModel> {
-		return searchService.searchActivitiesByText(projectId, contentType, query)
+		return searchService.searchActivitiesByText(currentUser, projectId, contentType, query)
 	}
 
 	override fun findMovementCommunicationsPage(

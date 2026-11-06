@@ -3,9 +3,11 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_METADATA_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PlannedMovementReaderDto
@@ -22,6 +24,7 @@ import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE
 import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -44,6 +47,7 @@ interface IMovementSearchV2Controller {
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@GetMapping("/search/reasons")
 	fun searchReasonsAndActivities(
+		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@RequestParam(required = true) type: MovementTypeEnum,
 		@RequestParam(required = true) contentType: ParticipantTypeEnum,
@@ -73,7 +77,7 @@ interface IMovementSearchV2Controller {
 		summary = "Search Vehicles",
 		description = "Search Vehicles to add in a Movement",
 	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
+	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_VEHICLE') && hasPermission(#projectId, '$REGISTRY_PROJECT_MOVEMENT_METADATA_R')")
 	@GetMapping("/search/vehicles")
 	fun searchVehicles(
 		@PathVariable projectId: UUID,

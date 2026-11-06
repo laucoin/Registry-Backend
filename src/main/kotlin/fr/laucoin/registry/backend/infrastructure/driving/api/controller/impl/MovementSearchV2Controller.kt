@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementSearchV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
@@ -38,12 +39,13 @@ class MovementSearchV2Controller(
 	private val vehiclesMapper: VehicleReaderDtoMapper,
 ): IMovementSearchV2Controller {
 	override fun searchReasonsAndActivities(
+		currentUser: CurrentUserModel,
 		projectId: UUID,
 		type: MovementTypeEnum,
 		contentType: ParticipantTypeEnum,
 		query: String?,
 	): Flux<MovementReasonsReaderDto> {
-		return service.searchActivitiesByText(projectId, contentType, query)
+		return service.searchActivitiesByText(currentUser, projectId, contentType, query)
 			.map(activityReasonReaderMapper::toDto)
 			.mergeWith(searchReasons(query, type, contentType))
 	}
