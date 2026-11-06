@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
+package fr.laucoin.registry.backend.infrastructure.driving.api.helper
 
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import java.time.Duration
@@ -15,21 +15,19 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 
-class GenericDurationReaderDtoMapperTest {
-	private class DurationMapper(translateService: ITranslateService) : GenericDurationReaderDtoMapper(translateService)
-
+class DurationLabelHelperTest {
 	private val messageSource = ReloadableResourceBundleMessageSource().apply {
 		setBasename("classpath:i18n/messages")
 		setDefaultEncoding(Charsets.UTF_8.name())
 		setFallbackToSystemLocale(false)
 	}
 
-	private fun mapperFor(locale: Locale): DurationMapper {
+	private fun mapperFor(locale: Locale): DurationLabelHelper {
 		val translateService: ITranslateService = mock()
 		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenAnswer {
 			messageSource.getMessage(it.getArgument<String>(0), it.getArgument<Array<Any>?>(1), locale)
 		}
-		return DurationMapper(translateService)
+		return DurationLabelHelper(translateService)
 	}
 
 	private companion object {

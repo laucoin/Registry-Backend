@@ -22,7 +22,7 @@ class PlannedMovementReaderDtoMapperTest {
 	private val typeMapper: MovementTypeReaderDtoMapper = mock()
 	private val reasonMapper: MovementReasonReaderDtoMapper = mock()
 	private val participantMapper: ParticipantReaderDtoMapper = mock()
-	private val mapper = PlannedMovementReaderDtoMapper(typeMapper, reasonMapper, participantMapper)
+	private val mapper = PlannedMovementReaderDtoMapperImpl(typeMapper, reasonMapper, participantMapper)
 
 	@Test
 	fun `Should toDto map an individual arrival without reason and pool name`() {

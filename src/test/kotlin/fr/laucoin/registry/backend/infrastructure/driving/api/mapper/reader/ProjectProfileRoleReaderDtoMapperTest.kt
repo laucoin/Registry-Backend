@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_PROFILE_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import kotlin.test.assertEquals
@@ -12,7 +13,7 @@ import org.mockito.kotlin.whenever
 
 class ProjectProfileRoleReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper: ProjectProfileRoleReaderDtoMapper = ProjectProfileRoleReaderDtoMapper(translateService)
+	private val mapper: ProjectProfileRoleReaderDtoMapper = ProjectProfileRoleReaderDtoMapperImpl(LabelMappingHelper(translateService))
 
 	@Test
 	fun `Should toDto convert role as String to LabelDto`() {

@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.ProfileLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -26,9 +29,14 @@ import org.mockito.kotlin.whenever
 class ProjectProfileReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
 	private val partialUserMapper: PartialUserReaderDtoMapper = mock()
-	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
+	private val statusHelper: StatusLabelMappingHelper = mock()
 	private val mapper: ProjectProfileReaderDtoMapper =
-		ProjectProfileReaderDtoMapper(translateService, availabilityMapper, partialUserMapper)
+		ProjectProfileReaderDtoMapperImpl(
+			partialUserMapper,
+			ProjectProfileRoleReaderDtoMapperImpl(LabelMappingHelper(translateService)),
+			statusHelper,
+			ProfileLabelMappingHelper(translateService),
+		)
 
 	private companion object {
 		@JvmStatic

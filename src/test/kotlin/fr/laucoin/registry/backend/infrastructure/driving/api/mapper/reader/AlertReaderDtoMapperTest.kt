@@ -16,7 +16,7 @@ import org.mockito.kotlin.whenever
 class AlertReaderDtoMapperTest {
 	private val statusMapper: AlertStatusReaderDtoMapper = mock()
 	private val criticalityMapper: AlertCriticalityReaderDtoMapper = mock()
-	private val mapper = AlertReaderDtoMapper(statusMapper, criticalityMapper)
+	private val mapper = AlertReaderDtoMapperImpl(statusMapper, criticalityMapper)
 
 	@Test
 	fun `Should toDto expose the criticality and the last communication`() {

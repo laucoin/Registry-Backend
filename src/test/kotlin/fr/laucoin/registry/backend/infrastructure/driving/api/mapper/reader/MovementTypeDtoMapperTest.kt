@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_TYPE_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
@@ -13,7 +14,7 @@ import org.mockito.kotlin.whenever
 
 class MovementTypeDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper: MovementTypeReaderDtoMapper = MovementTypeReaderDtoMapper(translateService)
+	private val mapper: MovementTypeReaderDtoMapper = MovementTypeReaderDtoMapperImpl(LabelMappingHelper(translateService))
 
 	@Test
 	fun `Should toDto convert Movement type as String to LabelDto`() {

@@ -1,45 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantReaderDto
-import java.time.Clock
-import java.time.LocalDate
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.AgeMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ParticipantReaderDtoMapper(
-	private val partialUserMapper: PartialUserReaderDtoMapper,
-	private val typeMapper: ParticipantTypeReaderDtoMapper,
-	private val statusMapper: PresenceStatusReaderDtoMapper,
-	private val groupMapper: GroupWithoutMemberReaderDtoMapper,
-	private val clock: Clock,
-): IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
-	override fun toDto(model: ParticipantModel): ParticipantReaderDto {
-		return ParticipantReaderDto(
-			firstName = model.firstName,
-			lastName = model.lastName,
-			birthday = model.birthday,
-			type = Optional.ofNullable(model.type).map(typeMapper::toDto).orElse(null),
-			major = isMajor(model.birthday),
-			groups = groupMapper.toDtoList(model.groups),
-			availableGroups = groupMapper.toDtoList(model.availableGroups),
-			status = Optional.ofNullable(model.status)
-				.map { statusMapper.toDto(it, model.lastMovement, model.startAvailability, model.endAvailability) }
-				.orElse(null),
-			startAvailability = model.startAvailability,
-			endAvailability = model.endAvailability,
-			effectiveArrival = model.effectiveArrival,
-			effectiveDeparture = model.effectiveDeparture,
-			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
-		).apply {
-			id = model.id
-			visible = model.visible
-			creation = model.creation
-			lastEdition = model.lastEdition
-		}
-	}
-
-	private fun isMajor(birthday: LocalDate?): Boolean = birthday.isMajor(clock)
+@Mapper(config = DtoMapperConfig::class, uses = [PartialUserReaderDtoMapper::class, ParticipantTypeReaderDtoMapper::class, StatusLabelMappingHelper::class, GroupWithoutMemberReaderDtoMapper::class, AgeMappingHelper::class])
+interface ParticipantReaderDtoMapper: IGenericReaderDtoMapper<ParticipantModel, ParticipantReaderDto> {
+	@Mapping(target = "major", source = "model", qualifiedByName = ["major"])
+	@Mapping(target = "status", source = "model", qualifiedByName = ["participantStatus"])
+	override fun toDto(model: ParticipantModel): ParticipantReaderDto
 }

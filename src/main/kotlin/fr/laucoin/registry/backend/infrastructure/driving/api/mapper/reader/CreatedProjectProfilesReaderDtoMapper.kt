@@ -1,15 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CreatedProjectProfilesReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class CreatedProjectProfilesReaderDtoMapper:
-	IGenericReaderDtoMapper<Pair<List<String>, List<String>>, CreatedProjectProfilesReaderDto> {
-	override fun toDto(model: Pair<List<String>, List<String>>): CreatedProjectProfilesReaderDto {
-		return CreatedProjectProfilesReaderDto(
-			createdEmails = model.first,
-			notCreatedEmails = model.second,
-		)
-	}
+@Mapper(config = DtoMapperConfig::class)
+interface CreatedProjectProfilesReaderDtoMapper {
+	@Mapping(target = "createdEmails", source = "model.first")
+	@Mapping(target = "notCreatedEmails", source = "model.second")
+	fun toDto(model: @JvmSuppressWildcards Pair<List<String>, List<String>>): CreatedProjectProfilesReaderDto
 }

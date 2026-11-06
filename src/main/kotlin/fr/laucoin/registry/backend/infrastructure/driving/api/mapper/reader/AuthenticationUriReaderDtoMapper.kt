@@ -2,11 +2,12 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.AuthenticationUriModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuthenticationUriReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class AuthenticationUriReaderDtoMapper : IGenericReaderDtoMapper<AuthenticationUriModel, AuthenticationUriReaderDto> {
-	override fun toDto(model: AuthenticationUriModel): AuthenticationUriReaderDto {
-		return AuthenticationUriReaderDto(uri = model.uri)
-	}
+@Mapper(config = DtoMapperConfig::class)
+interface AuthenticationUriReaderDtoMapper: IGenericReaderDtoMapper<AuthenticationUriModel, AuthenticationUriReaderDto> {
+	@Mapping(target = "copy", ignore = true)
+	override fun toDto(model: AuthenticationUriModel): AuthenticationUriReaderDto
 }

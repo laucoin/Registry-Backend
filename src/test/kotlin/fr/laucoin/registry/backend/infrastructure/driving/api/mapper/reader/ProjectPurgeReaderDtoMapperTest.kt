@@ -13,7 +13,7 @@ class ProjectPurgeReaderDtoMapperTest {
 		val model = ProjectContentPurgeModel(listOf(UUID.randomUUID()), listOf(UUID.randomUUID()), listOf(UUID.randomUUID()))
 
 		// Act
-		val result = ProjectContentPurgeReaderDtoMapper().toDto(model)
+		val result = ProjectContentPurgeReaderDtoMapperImpl().toDto(model)
 
 		// Assert
 		assertEquals(model.movements, result.movements)
@@ -29,7 +29,7 @@ class ProjectPurgeReaderDtoMapperTest {
 		)
 
 		// Act
-		val result = ProjectConfigurationPurgeReaderDtoMapper().toDto(model)
+		val result = ProjectConfigurationPurgeReaderDtoMapperImpl().toDto(model)
 
 		// Assert
 		assertEquals(model.vehicles, result.vehicles)

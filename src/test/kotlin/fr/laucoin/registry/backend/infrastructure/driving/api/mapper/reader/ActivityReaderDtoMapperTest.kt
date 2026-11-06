@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.ActivityLabelMappingHelper
+import org.mockito.kotlin.argThat
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
-import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
@@ -14,11 +16,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.ZoneOffset
@@ -28,8 +26,8 @@ import kotlin.test.assertEquals
 import kotlin.time.Duration
 
 class ActivityReaderDtoMapperTest {
-	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
-	private val mapper = ActivityReaderDtoMapper(availabilityMapper)
+	private val statusHelper: StatusLabelMappingHelper = mock()
+	private val mapper = ActivityReaderDtoMapperImpl(statusHelper, ActivityLabelMappingHelper())
 
 	private companion object {
 		private val activityStatus = LabelDto(value = AVAILABLE.name, label = "Available")
@@ -65,15 +63,15 @@ class ActivityReaderDtoMapperTest {
 		@JvmStatic
 		fun `ActivityModel to ActivityReaderDto data`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(model, dto, 1),
-				Arguments.of(ActivityModel(), ActivityReaderDto(), 0),
+				Arguments.of(model, dto),
+				Arguments.of(ActivityModel(), ActivityReaderDto()),
 			)
 		}
 	}
 
 	@BeforeEach
 	fun setup() {
-		whenever(availabilityMapper.toDto(any(), eq(ACTIVITY), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(statusHelper.activityStatus(argThat { status != null })).thenReturn(activityStatus)
 	}
 
 	@ParameterizedTest
@@ -81,7 +79,6 @@ class ActivityReaderDtoMapperTest {
 	fun `Should toDto convert ActivityModel to ActivityReaderDto`(
 		model: ActivityModel,
 		dto: ActivityReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Act
 		val result = mapper.toDto(model)
@@ -89,8 +86,7 @@ class ActivityReaderDtoMapperTest {
 		// Assert
 		assertEquals(dto, result)
 
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, ACTIVITY, model.startAvailability, model.endAvailability)
+		verify(statusHelper).activityStatus(model)
 
 	}
 
@@ -99,7 +95,6 @@ class ActivityReaderDtoMapperTest {
 	fun `Should toDto convert ActivityModel list to ActivityReaderDto list`(
 		model: ActivityModel,
 		dto: ActivityReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Arrange
 		val models = listOf(model)
@@ -111,8 +106,7 @@ class ActivityReaderDtoMapperTest {
 		// Assert
 		assertEquals(dtos, result)
 
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, ACTIVITY, model.startAvailability, model.endAvailability)
+		verify(statusHelper).activityStatus(model)
 
 	}
 
@@ -121,7 +115,6 @@ class ActivityReaderDtoMapperTest {
 	fun `Should toDto convert ActivityModel page to ActivityReaderDto page`(
 		model: ActivityModel,
 		dto: ActivityReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Arrange
 		val modelPage = PageModel(
@@ -146,8 +139,7 @@ class ActivityReaderDtoMapperTest {
 		// Assert
 		assertEquals(dtoPage, result)
 
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, ACTIVITY, model.startAvailability, model.endAvailability)
+		verify(statusHelper).activityStatus(model)
 
 	}
 }

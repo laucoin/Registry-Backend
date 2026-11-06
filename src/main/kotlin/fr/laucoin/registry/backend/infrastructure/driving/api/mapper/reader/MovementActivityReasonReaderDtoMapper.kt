@@ -1,22 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_REASON_PREFIX
-import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.model.ActivityModel
-import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class MovementActivityReasonReaderDtoMapper(
-	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<ActivityModel, MovementReasonsReaderDto> {
-	override fun toDto(model: ActivityModel): MovementReasonsReaderDto {
-		return MovementReasonsReaderDto(
-			label = "${model.name} (${translateService.getMessage(code = "$MOVEMENT_REASON_PREFIX$ACTIVITY")})",
-			value = model.id!!.toString(),
-			kind = MovementReasonKindEnum.ACTIVITY,
-		)
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [LabelMappingHelper::class])
+interface MovementActivityReasonReaderDtoMapper: IGenericReaderDtoMapper<ActivityModel, MovementReasonsReaderDto> {
+	@Mapping(target = "label", source = "model", qualifiedByName = ["activityReasonLabel"])
+	@Mapping(target = "value", expression = "java(model.getId().toString())")
+	@Mapping(target = "kind", constant = "ACTIVITY")
+	@Mapping(target = "type", ignore = true)
+	override fun toDto(model: ActivityModel): MovementReasonsReaderDto
 }

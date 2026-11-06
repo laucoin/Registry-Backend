@@ -2,33 +2,13 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class VehicleReaderDtoMapper(
-	private val statusMapper: PresenceStatusReaderDtoMapper,
-): IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
-	override fun toDto(model: VehicleModel): VehicleReaderDto {
-		return VehicleReaderDto(
-			licensePlate = model.licensePlate,
-			brand = model.brand,
-			model = model.model,
-			status = Optional.ofNullable(model.status).map {
-				statusMapper.toDto(
-					it,
-					model.lastMovement,
-					model.startAvailability,
-					model.endAvailability,
-				)
-			}.orElse(null),
-			startAvailability = model.startAvailability,
-			endAvailability = model.endAvailability,
-		).apply {
-			id = model.id
-			visible = model.visible
-			creation = model.creation
-			lastEdition = model.lastEdition
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [StatusLabelMappingHelper::class])
+interface VehicleReaderDtoMapper: IGenericReaderDtoMapper<VehicleModel, VehicleReaderDto> {
+	@Mapping(target = "status", source = "vehicle", qualifiedByName = ["vehicleStatus"])
+	override fun toDto(vehicle: VehicleModel): VehicleReaderDto
 }

@@ -1,14 +1,19 @@
-package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
+package fr.laucoin.registry.backend.infrastructure.driving.api.helper
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.DURATION_PREFIX
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import java.time.Duration
 import java.time.LocalTime
+import org.springframework.stereotype.Component
 
-abstract class GenericDurationReaderDtoMapper(
-	private val translateService: ITranslateService,
-) {
+/**
+ * Objectif : Formate un écart de temps en texte lisible et traduit (jours, semaines, mois, années).
+ * Périmètre : Calcule les écarts entre l'instant courant et une fenêtre de disponibilité, puis les formate par clés de traduction.
+ * Limites : Ne connaît aucun statut ; il ne renvoie que des durées et leur texte.
+ */
+@Component
+class DurationLabelHelper(private val translateService: ITranslateService) {
 	private companion object {
 		const val DAYS_PER_WEEK = 7L
 		const val DAYS_PER_MONTH = 30L
@@ -18,19 +23,19 @@ abstract class GenericDurationReaderDtoMapper(
 		const val MINUTES_PER_HOUR = 60L
 	}
 
-	protected fun durationMessage(code: String, interval: Duration): String {
+	fun durationMessage(code: String, interval: Duration): String {
 		return translateService.getMessage(code = code, args = arrayOf(formatDuration(interval)))
 	}
 
-	protected fun untilStart(now: CustomDateTimeModel, start: CustomDateTimeModel?): Duration {
+	fun untilStart(now: CustomDateTimeModel, start: CustomDateTimeModel?): Duration {
 		return Duration.between(now.toZonedDateTime(), start?.toZonedDateTime(LocalTime.MIN, now.zone()!!))
 	}
 
-	protected fun sinceStart(now: CustomDateTimeModel, start: CustomDateTimeModel?): Duration {
+	fun sinceStart(now: CustomDateTimeModel, start: CustomDateTimeModel?): Duration {
 		return Duration.between(start?.toZonedDateTime(LocalTime.MIN, now.zone()!!), now.toZonedDateTime())
 	}
 
-	protected fun sinceEnd(now: CustomDateTimeModel, end: CustomDateTimeModel?): Duration {
+	fun sinceEnd(now: CustomDateTimeModel, end: CustomDateTimeModel?): Duration {
 		return Duration.between(end?.toZonedDateTime(LocalTime.MAX, now.zone()!!), now.toZonedDateTime())
 	}
 

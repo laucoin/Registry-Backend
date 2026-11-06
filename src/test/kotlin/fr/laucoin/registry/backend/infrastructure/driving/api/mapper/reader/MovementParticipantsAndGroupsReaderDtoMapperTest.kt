@@ -10,7 +10,7 @@ class MovementParticipantsAndGroupsReaderDtoMapperTest {
 	private val participantMapper: ParticipantReaderDtoMapper = mock()
 	private val groupsMapper: GroupReaderDtoMapper = mock()
 	private val mapper: MovementParticipantsAndGroupsReaderDtoMapper =
-		MovementParticipantsAndGroupsReaderDtoMapper(participantMapper, groupsMapper)
+		MovementParticipantsAndGroupsReaderDtoMapperImpl(participantMapper, groupsMapper)
 
 	@Test
 	fun `Should toDto convert Pair of participants and groups list to MovementParticipantsAndGroupsReaderDto`() {

@@ -1,33 +1,19 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.GROUP
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class GroupReaderDtoMapper(
-	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
-	private val participantMapper: ParticipantReaderDtoMapper,
-): IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
-	override fun toDto(model: GroupModel): GroupReaderDto {
-		return GroupReaderDto(
-			members = participantMapper.toDtoList(model.members),
-		).apply {
-			id = model.id
-			status = Optional.ofNullable(model.status)
-				.map { availabilityStatusMapper.toDto(it, GROUP, model.startAvailability, model.endAvailability) }
-				.orElse(null)
-			name = model.name
-			startAvailability = model.startAvailability
-			endAvailability = model.endAvailability
-			membersCount = model.membersCount
-			insideMembersCount = model.insideMembersCount
-			outsideMembersCount = model.outsideMembersCount
-			visible = model.visible
-			creation = model.creation
-			lastEdition = model.lastEdition
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [StatusLabelMappingHelper::class, ParticipantReaderDtoMapper::class])
+interface GroupReaderDtoMapper: IGenericReaderDtoMapper<GroupModel, GroupReaderDto> {
+	@Mapping(target = "status", source = "model", qualifiedByName = ["groupStatus"])
+	@Mapping(target = "copy", ignore = true)
+	@Mapping(target = "onSiteMembersCount", ignore = true)
+	@Mapping(target = "inMembersCount", ignore = true)
+	@Mapping(target = "outMembersCount", ignore = true)
+	@Mapping(target = "overdueMembersCount", ignore = true)
+	override fun toDto(model: GroupModel): GroupReaderDto
 }

@@ -1,28 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_FORM_ASK_PREFIX
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_NAME_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
-import fr.laucoin.registry.backend.domain.service.support.ITranslateService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectOptionsReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ProjectOptionsReaderDtoMapper(
-	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<ProjectOptionEnum, ProjectOptionsReaderDto> {
-	override fun toDto(model: ProjectOptionEnum): ProjectOptionsReaderDto {
-		return ProjectOptionsReaderDto(
-			value = model,
-			label = translateService.getMessage(code = "$PROJECT_OPTION_NAME_PREFIX$model"),
-			ask = translateService.getMessage(code = "$PROJECT_OPTION_FORM_ASK_PREFIX$model"),
-			preRequired = model.requiredOptions.map {
-				LabelDto(
-					it.name,
-					translateService.getMessage(code = "$PROJECT_OPTION_NAME_PREFIX$it")
-				)
-			}
-		)
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [LabelMappingHelper::class, ProjectOptionLabelReaderDtoMapper::class])
+interface ProjectOptionsReaderDtoMapper: IGenericReaderDtoMapper<ProjectOptionEnum, ProjectOptionsReaderDto> {
+	@Mapping(target = "value", source = "model")
+	@Mapping(target = "label", source = "model", qualifiedByName = ["projectOptionNameLabel"])
+	@Mapping(target = "ask", source = "model", qualifiedByName = ["projectOptionAskLabel"])
+	@Mapping(target = "preRequired", source = "model.requiredOptions")
+	override fun toDto(model: ProjectOptionEnum): ProjectOptionsReaderDto
 }

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ALERT_CRITICALITY_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum.REINFORCED
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
@@ -13,7 +14,7 @@ import org.mockito.kotlin.whenever
 
 class AlertCriticalityReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper: AlertCriticalityReaderDtoMapper = AlertCriticalityReaderDtoMapper(translateService)
+	private val mapper: AlertCriticalityReaderDtoMapper = AlertCriticalityReaderDtoMapperImpl(LabelMappingHelper(translateService))
 
 	@Test
 	fun `Should toDto convert criticality to LabelDto`() {
