@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
@@ -378,16 +379,16 @@ class ParticipantService(
 		error(RegistryException(UNPROCESSABLE_CONTENT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(count)))
 	}
 
-	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->
-		movementPort.countAllByParticipantId(
-			participantToUpdate.projectId!!,
-			participantToUpdate.id!!,
-			MovementSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The participant {} already linked to movement(s)", participantToUpdate.id)
-				handle.error(RegistryException(CONFLICT, error))
-			} else handle.next(participantToUpdate)
-		}
+	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { rejectIfLinkedToMovement(it, error) }
+
+	private fun rejectIfLinkedToMovement(participant: ParticipantModel, error: String): Mono<ParticipantModel> {
+		return movementPort.countAllByParticipantId(participant.projectId!!, participant.id!!, MovementSearchParamModel())
+			.handle { count, sink -> sink.nextOrError(participant, linkedToMovementError(participant, count, error)) }
+	}
+
+	private fun linkedToMovementError(participant: ParticipantModel, count: Long, error: String): RegistryException? {
+		if (count <= 0) return null
+		log.warn("The participant {} already linked to movement(s)", participant.id)
+		return RegistryException(CONFLICT, error)
 	}
 }

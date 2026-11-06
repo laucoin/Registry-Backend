@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -166,17 +167,17 @@ class VehicleService(
 		port.update(it.apply { update(currentUser, now()) })
 	}
 
-	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { vehicleToUpdate ->
-		movementPort.countAllByVehicleId(
-			vehicleToUpdate.projectId!!,
-			vehicleToUpdate.id!!,
-			MovementSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The vehicle {} already linked to movement(s)", vehicleToUpdate.id)
-				handle.error(RegistryException(CONFLICT, error))
-			} else handle.next(vehicleToUpdate)
-		}
+	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { rejectIfLinkedToMovement(it, error) }
+
+	private fun rejectIfLinkedToMovement(vehicle: VehicleModel, error: String): Mono<VehicleModel> {
+		return movementPort.countAllByVehicleId(vehicle.projectId!!, vehicle.id!!, MovementSearchParamModel())
+			.handle { count, sink -> sink.nextOrError(vehicle, linkedToMovementError(vehicle, count, error)) }
+	}
+
+	private fun linkedToMovementError(vehicle: VehicleModel, count: Long, error: String): RegistryException? {
+		if (count <= 0) return null
+		log.warn("The vehicle {} already linked to movement(s)", vehicle.id)
+		return RegistryException(CONFLICT, error)
 	}
 
 	private fun VehicleModel.withContentOf(vehicle: VehicleModel): VehicleModel = apply {

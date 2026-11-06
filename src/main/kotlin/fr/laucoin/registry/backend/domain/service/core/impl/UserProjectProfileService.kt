@@ -60,12 +60,14 @@ class UserProjectProfileService(
 	}
 
 	private fun Mono<ProjectProfileModel>.withFavorite(userId: UUID): Mono<ProjectProfileModel> =
-		flatMap { profile ->
-			val projectId = profile.project?.id ?: return@flatMap Mono.just(profile)
-			favoritePort.findFavoriteProjectIds(userId, listOf(projectId))
-				.hasElements()
-				.map { profile.apply { project?.favorite = it } }
-		}
+		flatMap { attachFavorite(userId, it) }
+
+	private fun attachFavorite(userId: UUID, profile: ProjectProfileModel): Mono<ProjectProfileModel> {
+		val projectId = profile.project?.id ?: return Mono.just(profile)
+		return favoritePort.findFavoriteProjectIds(userId, listOf(projectId))
+			.hasElements()
+			.map { profile.apply { project?.favorite = it } }
+	}
 
 	private fun Mono<PageModel<ProjectProfileModel>>.withFavorites(userId: UUID): Mono<PageModel<ProjectProfileModel>> =
 		flatMap { attachFavorites(userId, it) }

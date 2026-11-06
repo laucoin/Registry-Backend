@@ -28,7 +28,7 @@ object ReactiveExt {
 		}
 	}
 
-	fun <T : Any> SynchronousSink<T>.nextOrError(value: T, error: RegistryException?) {
+	fun <T : Any> SynchronousSink<T>.nextOrError(value: T, error: Throwable?) {
 		if (error == null) next(value) else error(error)
 	}
 

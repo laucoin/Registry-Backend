@@ -106,17 +106,17 @@ class MovementService(
 		val previousParticipantIds = oldMovement.participantIds()
 		return participants.lock((previousParticipantIds + movement.participantIds()).distinct())
 			.then(persistence.lock(oldMovement.id!!))
-			.then(Mono.fromCallable {
-				oldMovement.apply {
-					dateTime = movement.dateTime
-					reason = movement.reason
-					activity = movement.activity
-					content = movement.content
-				}
-			})
+			.then(Mono.fromCallable { oldMovement.withContentOf(movement) })
 			.flatMap(persistence::archive)
 			.updateMovement(currentUser)
 			.flatMap { participants.refreshEffectiveDates(it, previousParticipantIds) }
+	}
+
+	private fun MovementModel.withContentOf(movement: MovementModel): MovementModel = apply {
+		dateTime = movement.dateTime
+		reason = movement.reason
+		activity = movement.activity
+		content = movement.content
 	}
 
 	private fun Mono<MovementModel>.updateMovement(currentUser: CurrentUserModel) = flatMap {

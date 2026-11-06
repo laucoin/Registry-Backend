@@ -246,11 +246,8 @@ class MovementModelPostgresRepository(
 		return Mono.zip(
 			repository.findById(projectId, id, isVisible).map(mapper::toModel),
 			findContent(projectId, listOf(id)).collectList()
-				.handle<List<MovementContentModel>> { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
-		).map {
-			it.t1.content = it.t2
-			it.t1
-		}
+				.map { it.firstOrNull()?.second ?: emptyList() }
+		).map { it.t1.apply { content = it.t2 } }
 	}
 
 	override fun create(element: MovementModel): Mono<MovementModel> {
@@ -268,23 +265,27 @@ class MovementModelPostgresRepository(
 	}
 
 	fun Mono<MovementModel>.saveNewContent(element: MovementModel): Mono<MovementModel> {
-		return flatMap { movement ->
-			val newContent = movement.getNewContent(element)
-			if (newContent.isEmpty()) return@flatMap Mono.just(movement)
-			contentRepository.saveAll(newContent.map { contentMapper.toEntity(movement.id!!, it) })
-				.map(contentMapper::toModel)
-				.collectList()
-				.map { movement.apply { content = content.plus(it) } }
-		}
+		return flatMap { addNewContent(it, element) }
+	}
+
+	private fun addNewContent(movement: MovementModel, element: MovementModel): Mono<MovementModel> {
+		val newContent = movement.getNewContent(element)
+		if (newContent.isEmpty()) return Mono.just(movement)
+		return contentRepository.saveAll(newContent.map { contentMapper.toEntity(movement.id!!, it) })
+			.map(contentMapper::toModel)
+			.collectList()
+			.map { movement.apply { content = content.plus(it) } }
 	}
 
 	fun Mono<MovementModel>.removeDeletedContent(element: MovementModel): Mono<MovementModel> {
-		return flatMap { movement ->
-			val removedIds = movement.getOldContentIds(element)
-			if (removedIds.isEmpty()) return@flatMap Mono.just(movement)
-			contentRepository.deleteAllById(removedIds)
-				.then(Mono.fromCallable { movement.apply { content = content.filter { !removedIds.contains(it.id) } } })
-		}
+		return flatMap { dropRemovedContent(it, element) }
+	}
+
+	private fun dropRemovedContent(movement: MovementModel, element: MovementModel): Mono<MovementModel> {
+		val removedIds = movement.getOldContentIds(element)
+		if (removedIds.isEmpty()) return Mono.just(movement)
+		return contentRepository.deleteAllById(removedIds)
+			.then(Mono.fromCallable { movement.apply { content = content.filter { !removedIds.contains(it.id) } } })
 	}
 
 	private fun save(element: MovementModel): Mono<MovementModel> {
