@@ -18,6 +18,8 @@ import fr.laucoin.registry.backend.domain.model.PlannedMovementModel
 import fr.laucoin.registry.backend.domain.model.ProjectStatusModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleStatusModel
+import fr.laucoin.registry.backend.domain.service.core.IMovementQueryService
+import fr.laucoin.registry.backend.domain.service.core.IMovementSearchService
 import fr.laucoin.registry.backend.domain.service.core.IMovementService
 import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import java.time.LocalDate
@@ -34,14 +36,18 @@ import reactor.util.function.Tuple2
  * Limites : Ne porte aucune règle métier ; elles restent dans le service.
  */
 @Service
-class MovementUseCase(private val service: IMovementService) : IMovementUseCase {
+class MovementUseCase(
+	private val queryService: IMovementQueryService,
+	private val searchService: IMovementSearchService,
+	private val service: IMovementService,
+) : IMovementUseCase {
 	override fun findMovementsPage(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>> {
-		return service.findMovementsPage(currentUser, projectId, pageable, searchParams)
+		return queryService.findMovementsPage(currentUser, projectId, pageable, searchParams)
 	}
 
 	override fun findCurrentMovementsPage(
@@ -50,25 +56,25 @@ class MovementUseCase(private val service: IMovementService) : IMovementUseCase 
 		pageable: PageableModel,
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>> {
-		return service.findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)
+		return queryService.findCurrentMovementsPage(currentUser, projectId, pageable, searchParams)
 	}
 
 	override fun findMovementsContent(
 		projectId: UUID,
 		movementIds: List<UUID>,
 	): Flux<Pair<UUID, List<MovementContentModel>>> {
-		return service.findMovementsContent(projectId, movementIds)
+		return queryService.findMovementsContent(projectId, movementIds)
 	}
 
 	override fun findCurrentMovementsContent(
 		projectId: UUID,
 		movementIds: List<UUID>,
 	): Flux<Pair<UUID, List<MovementContentModel>>> {
-		return service.findCurrentMovementsContent(projectId, movementIds)
+		return queryService.findCurrentMovementsContent(projectId, movementIds)
 	}
 
 	override fun findMovementById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel> {
-		return service.findMovementById(projectId, id, isVisible)
+		return queryService.findMovementById(projectId, id, isVisible)
 	}
 
 	override fun searchParticipantsAndGroupsByText(
@@ -78,18 +84,18 @@ class MovementUseCase(private val service: IMovementService) : IMovementUseCase 
 		at: ZonedDateTime,
 		all: Boolean,
 	): Mono<Tuple2<List<ParticipantModel>, List<GroupModel>>> {
-		return service.searchParticipantsAndGroupsByText(projectId, type, query, at, all)
+		return searchService.searchParticipantsAndGroupsByText(projectId, type, query, at, all)
 	}
 
 	override fun searchVehiclesByText(projectId: UUID, query: String?): Flux<VehicleModel> {
-		return service.searchVehiclesByText(projectId, query)
+		return searchService.searchVehiclesByText(projectId, query)
 	}
 
 	override fun searchReasonsByText(
 		contentType: ParticipantTypeEnum,
 		type: MovementTypeEnum,
 	): Flux<MovementReasonEnum> {
-		return service.searchReasonsByText(contentType, type)
+		return searchService.searchReasonsByText(contentType, type)
 	}
 
 	override fun searchActivitiesByText(
@@ -97,7 +103,7 @@ class MovementUseCase(private val service: IMovementService) : IMovementUseCase 
 		contentType: ParticipantTypeEnum,
 		query: String?,
 	): Flux<ActivityModel> {
-		return service.searchActivitiesByText(projectId, contentType, query)
+		return searchService.searchActivitiesByText(projectId, contentType, query)
 	}
 
 	override fun findMovementCommunicationsPage(
@@ -106,7 +112,7 @@ class MovementUseCase(private val service: IMovementService) : IMovementUseCase 
 		pageable: PageableModel,
 		searchParams: CommunicationSearchParamModel,
 	): Mono<PageModel<CommunicationModel>> {
-		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
+		return queryService.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
 	}
 
 	override fun findPlannedMovements(
@@ -114,15 +120,15 @@ class MovementUseCase(private val service: IMovementService) : IMovementUseCase 
 		type: MovementTypeEnum,
 		date: LocalDate?,
 	): Flux<PlannedMovementModel> {
-		return service.findPlannedMovements(projectId, type, date)
+		return searchService.findPlannedMovements(projectId, type, date)
 	}
 
 	override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusModel> {
-		return service.findParticipantsStatus(projectId)
+		return queryService.findParticipantsStatus(projectId)
 	}
 
 	override fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusModel> {
-		return service.findVehiclesStatus(projectId)
+		return queryService.findVehiclesStatus(projectId)
 	}
 
 	override fun createMovement(
