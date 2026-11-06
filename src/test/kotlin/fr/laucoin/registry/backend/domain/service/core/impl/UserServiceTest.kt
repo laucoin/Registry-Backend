@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import org.springframework.dao.DataIntegrityViolationException
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
+import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
@@ -57,9 +60,10 @@ class UserServiceTest {
 	private val lastAdministrator: LastAdministratorHelper = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
+	private val featureService: IFeatureService = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val service = UserService(
-		port, lastAdministrator, transactionalOperator, roleService, principalCache, Clock.systemUTC()
+		port, lastAdministrator, transactionalOperator, roleService, featureService, principalCache, Clock.systemUTC()
 	)
 
 	init {
@@ -279,6 +283,69 @@ class UserServiceTest {
 		assertEquals(USER_ROLE, result.role)
 		assertEquals(null, result.oidcId)
 		assertEquals(null, result.lastLogin)
+	}
+
+	@Test
+	fun `Should resolveUsersByEmail return the known users by normalized email without creating any user`() {
+		// Arrange
+		val user = UserModel().apply { id = UUID.randomUUID(); email = "john@doe.fr" }
+		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.just(user))
+
+		// Act
+		val result = service.resolveUsersByEmail(listOf("john@doe.fr")).block()
+
+		// Assert
+		assertEquals(mapOf("john@doe.fr" to user), result)
+		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should resolveUsersByEmail create a pending user for an unknown email when invite by email is enabled`() {
+		// Arrange
+		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
+		whenever(roleService.getDefaultUserRole()).thenReturn(USER_ROLE)
+		whenever(port.create(any())).thenAnswer { Mono.just(it.getArgument<UserModel>(0)) }
+
+		// Act
+		val result = service.resolveUsersByEmail(listOf("new@sgdf.fr")).block()
+
+		// Assert
+		assertEquals(setOf("new@sgdf.fr"), result?.keys)
+		assertEquals(null, result?.getValue("new@sgdf.fr")?.oidcId)
+		verify(port).create(any())
+	}
+
+	@Test
+	fun `Should resolveUsersByEmail not create anything for an unknown email when invite by email is disabled`() {
+		// Arrange
+		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(false)
+
+		// Act
+		val result = service.resolveUsersByEmail(listOf("new@sgdf.fr")).block()
+
+		// Assert
+		assertEquals(emptyMap<String, UserModel>(), result)
+		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should resolveUsersByEmail throw a conflict when the pending user is concurrently created`() {
+		// Arrange
+		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
+		whenever(roleService.getDefaultUserRole()).thenReturn(USER_ROLE)
+		whenever(port.create(any())).thenReturn(Mono.error(DataIntegrityViolationException("duplicate")))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.resolveUsersByEmail(listOf("new@sgdf.fr")).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(CONFLICT, result.status)
+		assertEquals(CONCURRENT_UPDATE_CONFLICT, result.message)
 	}
 
 	@Test

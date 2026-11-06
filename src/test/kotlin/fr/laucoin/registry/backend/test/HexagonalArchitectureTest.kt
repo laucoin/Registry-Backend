@@ -298,13 +298,12 @@ class HexagonalArchitectureTest {
 		.check(classes)
 
 	@ArchTest
-	fun `Core services should not depend on another core service`(classes: JavaClasses) = freeze(
-		classes()
-			.that()
-			.resideInAPackage("$CORE..")
-			.should(notDependOnAnotherServiceOf(CORE))
-			.allowEmptyShould(true)
-	).check(classes)
+	fun `Core services should not depend on another core service`(classes: JavaClasses) = classes()
+		.that()
+		.resideInAPackage("$CORE..")
+		.should(notDependOnAnotherServiceOf(CORE))
+		.allowEmptyShould(true)
+		.check(classes)
 
 	@ArchTest
 	fun `UseCases should not depend on another UseCase`(classes: JavaClasses) = classes()

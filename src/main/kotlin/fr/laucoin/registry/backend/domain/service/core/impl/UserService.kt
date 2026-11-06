@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import org.springframework.dao.DataIntegrityViolationException
+import fr.laucoin.registry.backend.domain.service.support.IFeatureService
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_BLOCK_LAST_APPLICATION_ADMINISTRATOR
@@ -46,6 +49,7 @@ class UserService(
 	private val lastAdministrator: LastAdministratorHelper,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
+	private val featureService: IFeatureService,
 	private val principalCache: IPrincipalCacheService,
 	clock: Clock,
 ) : ApplicationListener<ContextRefreshedEvent>, IUserService, GenericService(clock) {
@@ -96,6 +100,25 @@ class UserService(
 		user.create(serviceAccount, now())
 
 		return port.create(user)
+	}
+
+	override fun resolveUsersByEmail(emails: List<String>): Mono<Map<String, UserModel>> {
+		return findUsersByEmails(emails)
+			.collectList()
+			.flatMap { found -> withPendingUsers(emails, found.associateBy { it.email!!.toNormalizedEmail() }) }
+	}
+
+	private fun withPendingUsers(emails: List<String>, known: Map<String, UserModel>): Mono<Map<String, UserModel>> {
+		val unknown = emails.filterNot { known.containsKey(it) }
+		if (unknown.isEmpty() || !featureService.isInviteByEmailEnabled()) return Mono.just(known)
+
+		return Flux.fromIterable(unknown)
+			.concatMap(::createPendingUser)
+			.onErrorMap(DataIntegrityViolationException::class.java) {
+				RegistryException(CONFLICT, CONCURRENT_UPDATE_CONFLICT)
+			}
+			.collectList()
+			.map { created -> known + created.associateBy { it.email!!.toNormalizedEmail() } }
 	}
 
 	override fun serviceAccount(): UserModel = serviceAccount
