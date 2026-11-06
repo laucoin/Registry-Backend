@@ -6,6 +6,7 @@ import java.util.Properties
 plugins {
 	kotlin("jvm") version "2.4.21"
 	kotlin("plugin.spring") version "2.4.21"
+	kotlin("kapt") version "2.4.21"
 	id("org.springframework.boot") version "4.1.2"
 	id("io.spring.dependency-management") version "1.1.7"
 	id("org.jetbrains.kotlinx.kover") version "0.9.11"
@@ -23,6 +24,7 @@ val apacheTextVersion = "1.15.0"
 val swaggerVersion = "3.2.0"
 val caffeineVersion = "3.3.1"
 val scramVersion = "3.4"
+val mapstructVersion = "1.6.3"
 
 // Tests 🧪
 val mockWebServer = "5.5.1"
@@ -67,6 +69,10 @@ dependencies {
 	// Documentation 📚
 	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
+	// Mapping 🔁
+	implementation("org.mapstruct:mapstruct:$mapstructVersion")
+	kapt("org.mapstruct:mapstruct-processor:$mapstructVersion")
+
 	// Données 💾
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -93,6 +99,14 @@ dependencies {
 	constraints {
 		runtimeOnly("com.ongres.scram:scram-client:$scramVersion") { because("GHSA-p9jg-fcr6-3mhf") }
 		runtimeOnly("com.ongres.scram:scram-common:$scramVersion") { because("GHSA-p9jg-fcr6-3mhf") }
+	}
+}
+
+kapt {
+	arguments {
+		arg("mapstruct.defaultComponentModel", "spring")
+		arg("mapstruct.unmappedTargetPolicy", "ERROR")
+		arg("mapstruct.suppressGeneratorTimestamp", "true")
 	}
 }
 
