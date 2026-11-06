@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.helper
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -22,23 +23,17 @@ class ProjectDateHelper(private val port: IProjectPort) {
 
 	fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID> {
 		return findProject(id)
-			.handle { project, handle ->
-				if (project.isNotInRange(dateTime)) {
-					log.warn(
-						"Failed to editing, date {} is out of project range [{}, {}]",
-						dateTime,
-						project.begin,
-						project.end,
-					)
-					handle.error(
-						RegistryException(
-							status = UNPROCESSABLE_CONTENT,
-							code = errorCode,
-							args = arrayListOf(dateTime.toString(), project.begin.toString(), project.end.toString()),
-						)
-					)
-				} else handle.next(id)
-			}
+			.handle { project, sink -> sink.nextOrError(id, dateOutOfRange(project, dateTime, errorCode)) }
+	}
+
+	private fun dateOutOfRange(project: ProjectModel, dateTime: CustomDateTimeModel?, errorCode: String): RegistryException? {
+		if (!project.isNotInRange(dateTime)) return null
+		log.warn("Failed to editing, date {} is out of project range [{}, {}]", dateTime, project.begin, project.end)
+		return RegistryException(
+			status = UNPROCESSABLE_CONTENT,
+			code = errorCode,
+			args = arrayListOf(dateTime.toString(), project.begin.toString(), project.end.toString()),
+		)
 	}
 
 	fun validateDateTimes(
@@ -48,11 +43,17 @@ class ProjectDateHelper(private val port: IProjectPort) {
 		errorCode: String,
 	): Mono<UUID> {
 		return findProject(id)
-			.handle { project, handle ->
-				if (project.isNotInRange(start) || project.isNotInRange(end)) {
-					handle.error(outOfRange(project, start, end, errorCode))
-				} else handle.next(id)
-			}
+			.handle { project, sink -> sink.nextOrError(id, rangeError(project, start, end, errorCode)) }
+	}
+
+	private fun rangeError(
+		project: ProjectModel,
+		start: CustomDateTimeModel?,
+		end: CustomDateTimeModel?,
+		errorCode: String,
+	): RegistryException? {
+		if (!project.isNotInRange(start) && !project.isNotInRange(end)) return null
+		return outOfRange(project, start, end, errorCode)
 	}
 
 	private fun findProject(id: UUID): Mono<ProjectModel> {

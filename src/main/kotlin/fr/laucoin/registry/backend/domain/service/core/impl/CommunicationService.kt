@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
@@ -130,13 +131,7 @@ class CommunicationService(
 			.flatMap { findCommunicationById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(communication, it) }
 			.flatMap { validateNoAlertConflict(currentUser, communication, it) }
-			.map {
-				it.apply {
-					dateTime = communication.dateTime
-					movement = communication.movement
-					message = communication.message
-				}
-			}
+			.map { it.withContentOf(communication) }
 			.archiveCurrentState()
 			.updateCommunication(currentUser)
 			.`as`(transactionalOperator::transactional)
@@ -208,10 +203,13 @@ class CommunicationService(
 			.switchIfEmpty {
 				Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
 			}
-			.handle { movement, handle ->
-				val error = movementConflict(movement, communication)
-				if (error != null) handle.error(error) else handle.next(communicationToReturn)
-			}
+			.handle { movement, sink -> sink.nextOrError(communicationToReturn, movementConflict(movement, communication)) }
+	}
+
+	private fun CommunicationModel.withContentOf(communication: CommunicationModel): CommunicationModel = apply {
+		dateTime = communication.dateTime
+		movement = communication.movement
+		message = communication.message
 	}
 
 	private fun movementConflict(movement: MovementModel, communication: CommunicationModel): RegistryException? = when {
@@ -245,10 +243,7 @@ class CommunicationService(
 				.switchIfEmpty {
 					Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
 				}
-				.handle { alert, handle ->
-					val error = alertConflict(alert, communication)
-					if (error != null) handle.error(error) else handle.next(communicationToReturn)
-				}
+				.handle { alert, sink -> sink.nextOrError(communicationToReturn, alertConflict(alert, communication)) }
 		}
 	}
 

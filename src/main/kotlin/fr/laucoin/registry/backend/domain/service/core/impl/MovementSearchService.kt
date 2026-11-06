@@ -77,17 +77,19 @@ class MovementSearchService(
 
 		return groupPort.findWithLimit(feature.searched.maxGroupResult, projectId, groupSearch)
 			.collectList()
-			.flatMap { groups ->
-				groupPort.findContent(
-					projectId,
-					groups.mapNotNull(GroupModel::id),
-					isVisible = true,
-					isAvailable = if (all) null else true,
-				)
-					.filter { (_, members) -> members.isNotEmpty() }
-					.collectList()
-					.flatMap { contents -> withMembersStatus(projectId, groups, contents) }
-			}
+			.flatMap { withContents(projectId, it, all) }
+	}
+
+	private fun withContents(projectId: UUID, groups: List<GroupModel>, all: Boolean): Mono<List<GroupModel>> {
+		return groupPort.findContent(
+			projectId,
+			groups.mapNotNull(GroupModel::id),
+			isVisible = true,
+			isAvailable = if (all) null else true,
+		)
+			.filter { (_, members) -> members.isNotEmpty() }
+			.collectList()
+			.flatMap { contents -> withMembersStatus(projectId, groups, contents) }
 	}
 
 	private fun withMembersStatus(
@@ -99,12 +101,14 @@ class MovementSearchService(
 
 		return participantPort.findAllByIds(projectId, memberIds, isVisible = true)
 			.collectMap { it.id!! }
-			.map { detailed ->
-				contents.map { (groupId, members) ->
-					groups.first { it.id == groupId }.apply { this.members = members.map { detailed[it.id] ?: it } }
-				}
-			}
+			.map { detailed -> contents.map { (groupId, members) -> groups.withMembers(groupId, members, detailed) } }
 	}
+
+	private fun List<GroupModel>.withMembers(
+		groupId: UUID,
+		members: List<ParticipantModel>,
+		detailed: Map<UUID, ParticipantModel>,
+	): GroupModel = first { it.id == groupId }.apply { this.members = members.map { detailed[it.id] ?: it } }
 
 	override fun searchVehiclesByText(projectId: UUID, query: String?): Flux<VehicleModel> {
 		return vehiclePort.findWithLimit(

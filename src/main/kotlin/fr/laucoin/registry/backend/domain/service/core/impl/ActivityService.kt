@@ -90,16 +90,7 @@ class ActivityService(
 			ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
 			.flatMap { findActivityById(projectId, id, isVisible = null) }
-			.map {
-				it.apply {
-					name = activity.name
-					description = activity.description
-					duration = activity.duration
-					allowedParticipants = activity.allowedParticipants
-					startAvailability = activity.startAvailability
-					endAvailability = activity.endAvailability
-				}
-			}
+			.map { it.withContentOf(activity) }
 			.updateActivity(currentUser)
 	}
 
@@ -144,5 +135,14 @@ class ActivityService(
 				handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
 			} else handle.next(activityToUpdate)
 		}
+	}
+
+	private fun ActivityModel.withContentOf(activity: ActivityModel): ActivityModel = apply {
+		name = activity.name
+		description = activity.description
+		duration = activity.duration
+		allowedParticipants = activity.allowedParticipants
+		startAvailability = activity.startAvailability
+		endAvailability = activity.endAvailability
 	}
 }

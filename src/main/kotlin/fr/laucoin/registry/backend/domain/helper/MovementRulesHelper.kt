@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.helper
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.model.MovementFeatureModel
 import org.springframework.stereotype.Component
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
@@ -63,17 +64,13 @@ class MovementRulesHelper(
 				to = movement.dateTime,
 			)
 			communicationPort.countAllByMovementId(movement.projectId!!, oldMovement.id!!, params)
-				.handle { it, handle ->
-					if (it > 0L) handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME,
-							arrayListOf(it)
-						)
-					)
-					else handle.next(oldMovement)
-				}
+				.handle { count, sink -> sink.nextOrError(oldMovement, communicationConflict(count)) }
 		} else Mono.just(oldMovement)
+	}
+
+	private fun communicationConflict(count: Long): RegistryException? {
+		if (count <= 0L) return null
+		return RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME, arrayListOf(count))
 	}
 
 	fun validateUpdatableFields(movement: MovementModel, newMovement: MovementModel): Mono<MovementModel> =

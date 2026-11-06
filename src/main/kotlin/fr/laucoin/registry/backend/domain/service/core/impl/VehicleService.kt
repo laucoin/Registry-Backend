@@ -132,15 +132,7 @@ class VehicleService(
 			VEHICLE_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
 			.flatMap { findVehicleById(projectId, id, isVisible = null) }
-			.map {
-				it.apply {
-					licensePlate = vehicle.licensePlate
-					model = vehicle.model
-					brand = vehicle.brand
-					startAvailability = vehicle.startAvailability
-					endAvailability = vehicle.endAvailability
-				}
-			}
+			.map { it.withContentOf(vehicle) }
 			.updateVehicle(currentUser)
 	}
 
@@ -185,5 +177,13 @@ class VehicleService(
 				handle.error(RegistryException(CONFLICT, error))
 			} else handle.next(vehicleToUpdate)
 		}
+	}
+
+	private fun VehicleModel.withContentOf(vehicle: VehicleModel): VehicleModel = apply {
+		licensePlate = vehicle.licensePlate
+		model = vehicle.model
+		brand = vehicle.brand
+		startAvailability = vehicle.startAvailability
+		endAvailability = vehicle.endAvailability
 	}
 }

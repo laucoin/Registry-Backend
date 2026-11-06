@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.SynchronousSink
 
 /**
  * Objectif : Gère les projets, leurs options, compteurs et favoris.
@@ -81,50 +82,65 @@ class ProjectService(
 	}
 
 	private fun Mono<ProjectModel>.withCurrentUserProfile(currentUser: CurrentUserModel): Mono<ProjectModel> =
-		flatMap<ProjectModel> { project ->
-			profilePort.findProjectProfilesByUserIdAndProjectIds(
-				currentUser.id!!,
-				listOf(project.id!!),
-				ProjectProfileSearchParamModel(isVisible = null)
-			)
-				.collectList()
-				.mapNotNull { profiles -> profiles.maxByOrNull { it.priority() } }
-				.map { project.apply { profile = it } }
-				.defaultIfEmpty(project)
-		}
+		flatMap { attachCurrentUserProfile(currentUser, it) }
+
+	private fun attachCurrentUserProfile(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
+		return profilePort.findProjectProfilesByUserIdAndProjectIds(
+			currentUser.id!!,
+			listOf(project.id!!),
+			ProjectProfileSearchParamModel(isVisible = null)
+		)
+			.collectList()
+			.mapNotNull { profiles -> profiles.maxByOrNull { it.priority() } }
+			.map { project.apply { profile = it } }
+			.defaultIfEmpty(project)
+	}
 
 	private fun Mono<PageModel<ProjectModel>>.withCurrentUserProfiles(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> =
-		flatMap<PageModel<ProjectModel>> { page ->
-			profilePort.findProjectProfilesByUserIdAndProjectIds(
-				currentUser.id!!,
-				page.content.mapNotNull { it.id },
-				ProjectProfileSearchParamModel(isVisible = null)
-			)
-				.collectList()
-				.map { found -> found.groupBy { it.projectId!! }.mapValues { (_, list) -> list.maxBy { it.priority() } } }
-				.map { profiles ->
-					page.content.forEach { it.profile = profiles[it.id] }
-					page
-				}
-		}
+		flatMap { attachCurrentUserProfiles(currentUser, it) }
+
+	private fun attachCurrentUserProfiles(
+		currentUser: CurrentUserModel,
+		page: PageModel<ProjectModel>,
+	): Mono<PageModel<ProjectModel>> {
+		return profilePort.findProjectProfilesByUserIdAndProjectIds(
+			currentUser.id!!,
+			page.content.mapNotNull { it.id },
+			ProjectProfileSearchParamModel(isVisible = null)
+		)
+			.collectList()
+			.map { found -> found.groupBy { it.projectId!! }.mapValues { (_, list) -> list.maxBy { it.priority() } } }
+			.map { page.withProfiles(it) }
+	}
+
+	private fun PageModel<ProjectModel>.withProfiles(profiles: Map<UUID, ProjectProfileModel>): PageModel<ProjectModel> {
+		content.forEach { it.profile = profiles[it.id] }
+		return this
+	}
 
 	private fun Mono<ProjectModel>.withFavorite(currentUser: CurrentUserModel): Mono<ProjectModel> =
-		flatMap { project ->
-			favoritePort.findFavoriteProjectIds(currentUser.id!!, listOf(project.id!!))
-				.hasElements()
-				.map { project.apply { favorite = it } }
-		}
+		flatMap { attachFavorite(currentUser, it) }
+
+	private fun attachFavorite(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
+		return favoritePort.findFavoriteProjectIds(currentUser.id!!, listOf(project.id!!))
+			.hasElements()
+			.map { project.apply { favorite = it } }
+	}
 
 	private fun Mono<PageModel<ProjectModel>>.withFavorites(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> =
-		flatMap { page ->
-			favoritePort.findFavoriteProjectIds(currentUser.id!!, page.content.mapNotNull { it.id })
-				.collectList()
-				.map { it.toSet() }
-				.map { favoriteIds ->
-					page.content.forEach { it.favorite = it.id in favoriteIds }
-					page
-				}
-		}
+		flatMap { attachFavorites(currentUser, it) }
+
+	private fun attachFavorites(currentUser: CurrentUserModel, page: PageModel<ProjectModel>): Mono<PageModel<ProjectModel>> {
+		return favoritePort.findFavoriteProjectIds(currentUser.id!!, page.content.mapNotNull { it.id })
+			.collectList()
+			.map { it.toSet() }
+			.map { page.withFavorites(it) }
+	}
+
+	private fun PageModel<ProjectModel>.withFavorites(favoriteIds: Set<UUID>): PageModel<ProjectModel> {
+		content.forEach { it.favorite = it.id in favoriteIds }
+		return this
+	}
 
 	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return findProjectById(id, isVisible = null)
@@ -151,29 +167,26 @@ class ProjectService(
 	override fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel> {
 		return findProjectById(id, isVisible = null)
 			.validateDates(project)
-			.map {
-				it.apply {
-					name = project.name
-					begin = project.begin
-					end = project.end
-					options = project.options
-				}
-			}
+			.map { it.applyUpdateOf(project) }
 			.updateProject(currentUser)
 	}
 
-	private fun Mono<ProjectModel>.updateProject(currentUser: CurrentUserModel) = flatMap { project ->
-		port.update(project.apply { update(currentUser, now()) })
-			.flatMap { updated ->
-				profilePort.findOidcIdsByProjectId(project.id!!)
-					.collectList()
-					.doOnNext { principalCache.invalidateAll(it) }
-					.thenReturn(updated)
-			}
+	private fun ProjectModel.applyUpdateOf(project: ProjectModel): ProjectModel = apply {
+		name = project.name
+		begin = project.begin
+		end = project.end
+		options = project.options
+	}
+
+	private fun Mono<ProjectModel>.updateProject(currentUser: CurrentUserModel) = flatMap { persistUpdate(currentUser, it) }
+
+	private fun persistUpdate(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
+		return port.update(project.apply { update(currentUser, now()) })
+			.flatMap { invalidateProjectMembers(it.id!!).thenReturn(it) }
 			.withCurrentUserProfile(currentUser)
 			.withFavorite(currentUser)
 			.`as`(transactionalOperator::transactional)
-			.flatMap { updated -> invalidateProjectMembers(updated.id!!).thenReturn(updated) }
+			.flatMap { invalidateProjectMembers(it.id!!).thenReturn(it) }
 	}
 
 	private fun invalidateProjectMembers(projectId: UUID): Mono<List<UUID>> {
@@ -184,20 +197,23 @@ class ProjectService(
 
 	private fun Mono<ProjectModel>.validateDates(project: ProjectModel): Mono<ProjectModel> = flatMap {
 		if (project.begin.asStartIsAfterOther(it.begin) || project.end.asEndIsBeforeOther(it.end)) {
-			port.validDateTime(
-				it.id!!,
-				project.begin?.toZonedDateTime(OffsetTime.MIN),
-				project.end?.toZonedDateTime(OffsetTime.MAX)
-			)
-				.handle { valid, handle ->
-					if (!valid) {
-						log.warn("Failed, {} is out of project range [{}, {}]", it, it.begin, it.end)
-						handle.error(
-							RegistryException(CONFLICT, PROJECT_DATE_CONFLICT_WITH_ELEMENTS, arrayListOf(it.name))
-						)
-					} else handle.next(it)
-				}
+			validateDatesAgainstElements(it, project)
 		} else Mono.just(it)
+	}
+
+	private fun validateDatesAgainstElements(existing: ProjectModel, project: ProjectModel): Mono<ProjectModel> {
+		return port.validDateTime(
+			existing.id!!,
+			project.begin?.toZonedDateTime(OffsetTime.MIN),
+			project.end?.toZonedDateTime(OffsetTime.MAX)
+		)
+			.handle { valid, sink -> sink.nextIfValid(valid, existing) }
+	}
+
+	private fun SynchronousSink<ProjectModel>.nextIfValid(valid: Boolean, existing: ProjectModel) {
+		if (valid) return next(existing)
+		log.warn("Failed, {} is out of project range [{}, {}]", existing, existing.begin, existing.end)
+		error(RegistryException(CONFLICT, PROJECT_DATE_CONFLICT_WITH_ELEMENTS, arrayListOf(existing.name)))
 	}
 
 	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
@@ -214,12 +230,13 @@ class ProjectService(
 
 	override fun deleteProjectById(id: UUID): Mono<Unit> {
 		return findProjectById(id, isVisible = null)
-			.flatMap {
-				profilePort.findOidcIdsByProjectId(id).collectList()
-					.flatMap { oidcIds ->
-						port.deleteById(id).doOnSuccess { _ -> principalCache.invalidateAll(oidcIds) }
-					}
-			}
+			.flatMap { deleteAndInvalidate(id) }
+	}
+
+	private fun deleteAndInvalidate(id: UUID): Mono<Unit> {
+		return profilePort.findOidcIdsByProjectId(id)
+			.collectList()
+			.flatMap { oidcIds -> port.deleteById(id).doOnSuccess { principalCache.invalidateAll(oidcIds) } }
 	}
 
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {

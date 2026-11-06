@@ -1,5 +1,9 @@
 package fr.laucoin.registry.backend.domain.helper
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
+import fr.laucoin.registry.backend.domain.model.ActivityModel
+import fr.laucoin.registry.backend.domain.model.VehicleModel
+import reactor.core.publisher.SynchronousSink
 import org.springframework.stereotype.Component
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
@@ -85,10 +89,7 @@ class MovementContentHelper(
 	): Mono<MovementModel> {
 		return participantPort.findAllByIds(projectId, newParticipantIds, isVisible = null)
 			.collectList()
-			.handle { found, handle ->
-				val error = participantsError(found, newParticipantIds, driverIds)
-				if (error != null) handle.error(error) else handle.next(oldMovement)
-			}
+			.handle { found, sink -> sink.nextOrError(oldMovement, participantsError(found, newParticipantIds, driverIds)) }
 	}
 
 	private fun participantsError(
@@ -115,25 +116,21 @@ class MovementContentHelper(
 	): Mono<MovementModel> {
 		return vehiclePort.findAllByIds(projectId, newVehicleIds, isVisible = null)
 			.collectList()
-			.handle { it, handle ->
-				when {
-					it.size != newVehicleIds.size -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT,
-						)
-					)
+			.handle { vehicles, sink -> sink.nextIfVehiclesUsable(vehicles, newVehicleIds, movement) }
+	}
 
-					it.any { m -> m.isNotVisible() } -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							MOVEMENT_VEHICLES_NOT_VISIBLE,
-						)
-					)
+	private fun SynchronousSink<MovementModel>.nextIfVehiclesUsable(
+		vehicles: List<VehicleModel>,
+		newVehicleIds: List<UUID>,
+		movement: MovementModel,
+	) {
+		when {
+			vehicles.size != newVehicleIds.size ->
+				error(RegistryException(NOT_FOUND, MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT))
 
-					else -> handle.next(movement)
-				}
-			}
+			vehicles.any { it.isNotVisible() } -> error(RegistryException(NOT_FOUND, MOVEMENT_VEHICLES_NOT_VISIBLE))
+			else -> next(movement)
+		}
 	}
 
 	fun validateActivity(movement: MovementModel, oldMovement: MovementModel? = null): Mono<MovementModel> {
@@ -142,15 +139,12 @@ class MovementContentHelper(
 		)
 		else activityPort.findById(movement.projectId!!, movement.activity!!.id!!, isVisible = null)
 			.switchIfEmpty { Mono.error(RegistryException(NOT_FOUND, MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT)) }
-			.handle { it, handle ->
-				if (it.isNotVisible()) handle.error(
-					RegistryException(
-						NOT_FOUND,
-						MOVEMENT_ACTIVITY_NOT_VISIBLE,
-					)
-				)
-				else handle.next(oldMovement ?: movement)
-			}
+			.handle { activity, sink -> sink.nextIfActivityVisible(activity, oldMovement ?: movement) }
+	}
+
+	private fun SynchronousSink<MovementModel>.nextIfActivityVisible(activity: ActivityModel, movement: MovementModel) {
+		if (activity.isNotVisible()) error(RegistryException(NOT_FOUND, MOVEMENT_ACTIVITY_NOT_VISIBLE))
+		else next(movement)
 	}
 
 	fun validateNoLaterMovementForLastDeparture(movement: MovementModel): Mono<MovementModel> {
@@ -158,12 +152,11 @@ class MovementContentHelper(
 
 		return participantPort.findAllByIds(movement.projectId!!, movement.participantIds(), isVisible = true)
 			.collectList()
-			.handle { found, handle ->
-				if (found.any { it.lastMovement?.isAfter(movement.dateTime) == true }) {
-					handle.error(RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS))
-				} else {
-					handle.next(movement)
-				}
-			}
+			.handle { found, sink -> sink.nextIfNoLaterMovement(found, movement) }
+	}
+
+	private fun SynchronousSink<MovementModel>.nextIfNoLaterMovement(found: List<ParticipantModel>, movement: MovementModel) {
+		if (found.none { it.lastMovement?.isAfter(movement.dateTime) == true }) return next(movement)
+		error(RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS))
 	}
 }

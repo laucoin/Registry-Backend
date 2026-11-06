@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_ALREADY_ADDED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
@@ -157,18 +158,7 @@ class GroupService(
 	): Mono<Pair<List<UUID>, List<UUID>>> {
 		return findLockedGroup(projectId, id)
 			.map { Pair(it, it.getNewMemberIds(memberIds)) }
-			.handle { it, handle ->
-				if (it.second.isEmpty()) {
-					handle.error(
-						RegistryException(
-							UNPROCESSABLE_CONTENT,
-							GROUP_MEMBERS_ALREADY_ADDED,
-						)
-					)
-				} else {
-					handle.next(it)
-				}
-			}
+			.handle { pair, sink -> sink.nextOrError(pair, alreadyAddedError(pair.second)) }
 			.flatMap { (group, newMemberIds) ->
 				validateMembers(projectId, group, newMemberIds)
 					.map { _ -> newMemberIds.map { ParticipantModel().apply { this.id = it } } }
@@ -187,20 +177,23 @@ class GroupService(
 	): Mono<GroupModel> {
 		return findLockedGroup(projectId, id)
 			.map { it.apply { members = members.filter { m -> m.id != memberId } } }
-			.handle { it, handle ->
-				if (it.members.isEmpty()) {
-					handle.error(
-						RegistryException(
-							CONFLICT,
-							GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED,
-						)
-					)
-				} else {
-					handle.next(it)
-				}
-			}
+			.handle { group, sink -> sink.nextOrError(group, lastMemberError(group)) }
 			.updateGroup(currentUser)
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun alreadyAddedError(newMemberIds: List<UUID>): RegistryException? {
+		return if (newMemberIds.isEmpty()) RegistryException(UNPROCESSABLE_CONTENT, GROUP_MEMBERS_ALREADY_ADDED) else null
+	}
+
+	private fun lastMemberError(group: GroupModel): RegistryException? {
+		return if (group.members.isEmpty()) RegistryException(CONFLICT, GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED) else null
+	}
+
+	private fun membersError(members: List<ParticipantModel>, newMemberIds: List<UUID>): RegistryException? = when {
+		members.size != newMemberIds.size -> RegistryException(NOT_FOUND, GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT)
+		members.any(ParticipantModel::isNotUsable) -> RegistryException(NOT_FOUND, GROUP_MEMBERS_NOT_VISIBLE)
+		else -> null
 	}
 
 	private fun Mono<GroupModel>.updateGroup(currentUser: CurrentUserModel) = flatMap {
@@ -211,25 +204,7 @@ class GroupService(
 		return participantPort.findAllByIds(projectId, newMemberIds, isVisible = null)
 			.filter { it.type == REGISTERED }
 			.collectList()
-			.handle { it, handle ->
-				when {
-					it.size != newMemberIds.size -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT,
-						)
-					)
-
-					it.any(ParticipantModel::isNotUsable) -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							GROUP_MEMBERS_NOT_VISIBLE,
-						)
-					)
-
-					else -> handle.next(group)
-				}
-			}
+			.handle { members, sink -> sink.nextOrError(group, membersError(members, newMemberIds)) }
 	}
 
 	override fun disableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel> {

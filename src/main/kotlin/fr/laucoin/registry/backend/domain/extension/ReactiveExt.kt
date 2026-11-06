@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.extension
 
+import reactor.core.publisher.SynchronousSink
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -25,6 +26,10 @@ object ReactiveExt {
 				args = arrayListOf(identifier.toString()),
 			)
 		}
+	}
+
+	fun <T : Any> SynchronousSink<T>.nextOrError(value: T, error: RegistryException?) {
+		if (error == null) next(value) else error(error)
 	}
 
 	fun <E : Any, T> Flux<E>.toPageModel(

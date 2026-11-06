@@ -139,10 +139,7 @@ class GroupV2Controller(
 	): Mono<ResponseEntity<AddedGroupMembersReaderDto>> {
 		return service.addMembersToGroupById(currentUser, projectId, id, memberIds)
 			.map(addedGroupMembersReaderMapper::toDto)
-			.map {
-				val status = if (it.notAddedMemberIds.isEmpty()) OK else MULTI_STATUS
-				ResponseEntity.status(status).body(it)
-			}
+			.map { responseOf(it) }
 	}
 
 	override fun removeMemberFromGroupById(
@@ -172,5 +169,10 @@ class GroupV2Controller(
 
 	override fun deleteGroupById(projectId: UUID, id: UUID): Mono<Unit> {
 		return service.deleteGroupById(projectId, id)
+	}
+
+	private fun responseOf(dto: AddedGroupMembersReaderDto): ResponseEntity<AddedGroupMembersReaderDto> {
+		val status = if (dto.notAddedMemberIds.isEmpty()) OK else MULTI_STATUS
+		return ResponseEntity.status(status).body(dto)
 	}
 }

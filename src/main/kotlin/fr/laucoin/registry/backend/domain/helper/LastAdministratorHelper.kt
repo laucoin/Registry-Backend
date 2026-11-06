@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.helper
 
+import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.model.GenericModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
@@ -27,12 +29,17 @@ class LastAdministratorHelper(private val port: IProjectProfilePort) {
 		return port.lockLevel0ProjectProfilesByUserId(userId)
 			.then(Mono.defer { port.findLevel0ProjectProfileRoleByUserId(userId, isVisible = true).collectList() })
 			.map { counts -> counts.filter { c -> projectId == null || c.project!!.id == projectId } }
-			.handle { it, handle ->
-				val projects = it.filter { p -> (p.level0 ?: 0) <= 1 }
-				if (projects.isNotEmpty()) {
-					log.warn("The user {} is the last administrator of {} project(s)", userId, it.size)
-					handle.error(RegistryException(CONFLICT, error, arrayListOf(projects.first().project!!.name)))
-				} else handle.next(result)
-			}
+			.handle { counts, sink -> sink.nextOrError(result, lastAdministratorError(userId, counts, error)) }
+	}
+
+	private fun lastAdministratorError(
+		userId: UUID,
+		counts: List<ProjectProfileRoleCountModel>,
+		error: String,
+	): RegistryException? {
+		val projects = counts.filter { (it.level0 ?: 0) <= 1 }
+		if (projects.isEmpty()) return null
+		log.warn("The user {} is the last administrator of {} project(s)", userId, counts.size)
+		return RegistryException(CONFLICT, error, arrayListOf(projects.first().project!!.name))
 	}
 }

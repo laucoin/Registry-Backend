@@ -80,15 +80,22 @@ class MovementService(
 			.flatMap { rules.validateUpdatableFields(it, movement) }
 			.flatMap { rules.validateIsAlterable(it, MOVEMENT_CANNOT_BE_UPDATED) }
 			.flatMap { rules.validateNoCommunicationConflict(movement, it) }
-			.flatMap { oldMovement ->
-				Mono.zip(
-					content.validateActivity(movement, oldMovement),
-					participants.saveGuestsIfNecessary(currentUser, movement, oldMovement, newGuests),
-				).thenReturn(oldMovement)
-			}
+			.flatMap { validateActivityAndGuests(currentUser, movement, it, newGuests) }
 			.flatMap { content.validateUpdatedContent(projectId, it, movement).thenReturn(it) }
 			.flatMap { applyUpdate(currentUser, it, movement) }
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun validateActivityAndGuests(
+		currentUser: CurrentUserModel,
+		movement: MovementModel,
+		oldMovement: MovementModel,
+		newGuests: List<ParticipantModel>,
+	): Mono<MovementModel> {
+		return Mono.zip(
+			content.validateActivity(movement, oldMovement),
+			participants.saveGuestsIfNecessary(currentUser, movement, oldMovement, newGuests),
+		).thenReturn(oldMovement)
 	}
 
 	private fun applyUpdate(

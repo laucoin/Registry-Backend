@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import org.springframework.security.oauth2.jwt.Jwt
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -70,15 +71,19 @@ class SecurityV2Controller(
 
 	private fun recordLogin(token: TokenModel): Mono<Void> {
 		return jwtDecoder.decode(token.accessToken)
-			.flatMap { jwt ->
-				val oidcId = jwt.getClaimAsUUID(userIdKey)
-				if (oidcId != null) userService.recordLoginByOidcId(oidcId) else Mono.empty()
-			}
-			.onErrorResume {
-				log.warn("Failed to record last login after token issuance", it)
-				Mono.empty()
-			}
+			.flatMap { recordLoginOf(it) }
+			.onErrorResume { skipLoginRecord(it) }
 			.then()
+	}
+
+	private fun recordLoginOf(jwt: Jwt): Mono<Void> {
+		val oidcId = jwt.getClaimAsUUID(userIdKey)
+		return if (oidcId != null) userService.recordLoginByOidcId(oidcId) else Mono.empty()
+	}
+
+	private fun skipLoginRecord(error: Throwable): Mono<Void> {
+		log.warn("Failed to record last login after token issuance", error)
+		return Mono.empty()
 	}
 
 	override fun findCurrentUser(currentUser: CurrentUserModel): Mono<CurrentUserReaderDto> {

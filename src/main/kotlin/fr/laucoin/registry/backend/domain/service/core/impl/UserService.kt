@@ -170,10 +170,7 @@ class UserService(
 	override fun recordLoginByOidcId(oidcId: UUID): Mono<Void> {
 		return port.findByOidcId(oidcId, isVisible = null)
 			.filter { isNotServiceAccount(it) }
-			.flatMap {
-				it.lastLogin = now()
-				updateUser(serviceAccount, it)
-			}
+			.flatMap { updateUser(serviceAccount, it.apply { lastLogin = now() }) }
 			.then()
 	}
 
@@ -195,10 +192,7 @@ class UserService(
 		return findUserByIdWithEligibleRole(assignableRoles, id, isVisible = true)
 			.validateRole(currentUser, assignableRoles, role, USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN)
 			.validateNotLastRoleLevel0(USER_UPDATE_LAST_APPLICATION_ADMINISTRATOR_ROLE)
-			.flatMap {
-				it.role = role
-				updateUser(currentUser, it)
-			}
+			.flatMap { updateUser(currentUser, it.apply { this.role = role }) }
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -295,12 +289,17 @@ class UserService(
 		port.lockLevel0Users()
 			.then(Mono.defer { port.findByRoleLevel(roleLevel = 0, isVisible = true).collectList() })
 			.map { administrators -> administrators.any { userToUpdate.id != it.id } }
-			.flatMap { hasOtherAdministrator ->
-				if (!hasOtherAdministrator) {
-					log.warn("The user {} is the last administrator of the application", userToUpdate.id)
-					Mono.error(RegistryException(CONFLICT, error))
-				} else Mono.just(userToUpdate)
-			}
+			.flatMap { rejectIfLastAdministrator(it, userToUpdate, error) }
+	}
+
+	private fun rejectIfLastAdministrator(
+		hasOtherAdministrator: Boolean,
+		userToUpdate: UserModel,
+		error: String,
+	): Mono<UserModel> {
+		if (hasOtherAdministrator) return Mono.just(userToUpdate)
+		log.warn("The user {} is the last administrator of the application", userToUpdate.id)
+		return Mono.error(RegistryException(CONFLICT, error))
 	}
 
 	private fun Mono<UserModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
