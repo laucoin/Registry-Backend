@@ -80,9 +80,10 @@ class UserProjectProfileServiceTest {
 		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.empty())
 
 		// Act
-		service.findProjectProfilesPage(defaultProjectId, pageable, params).block()
+		val result = service.findProjectProfilesPage(defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findProjectProfilesPageByUserId(defaultProjectId, pageable, params)
 	}
 
@@ -242,9 +243,10 @@ class UserProjectProfileServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.updateUserProjectProfileStatusById(currentUser(), defaultProjectProfileId, ACCEPTED).block()
+		val result = service.updateUserProjectProfileStatusById(currentUser(), defaultProjectProfileId, ACCEPTED).block()
 
 		// Assert
+		assertEquals(profile, result)
 		verify(port).update(any())
 		verify(port).findProjectProfileByUserIdAndId(currentUser().id!!, defaultProjectProfileId, isVisible = true)
 		verify(principalCache).invalidate(currentUser().oidcId)

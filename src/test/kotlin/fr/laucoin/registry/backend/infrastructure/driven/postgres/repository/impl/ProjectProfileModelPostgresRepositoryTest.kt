@@ -447,6 +447,7 @@ class ProjectProfileModelPostgresRepositoryTest : TestContext() {
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_project_profile", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 

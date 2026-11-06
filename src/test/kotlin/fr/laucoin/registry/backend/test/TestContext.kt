@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.test
 
+import java.util.UUID
+import org.springframework.r2dbc.core.DatabaseClient
+import org.springframework.beans.factory.annotation.Autowired
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.CsrfTokenService.Companion.HEADER_NAME
 import org.junit.jupiter.api.extension.ExtendWith
@@ -26,6 +29,14 @@ import org.springframework.test.web.reactive.server.WebTestClient
 @Import(TestContext.WebTestClientSecurityConfiguration::class)
 @ContextConfiguration(initializers = [TestContainerDatabase::class])
 class TestContext {
+	@Autowired
+	private lateinit var testDatabase: DatabaseClient
+
+	/** Indique si la ligne existe encore dans la table donnée ; sert à vérifier l'effet réel d'une suppression. */
+	protected fun rowExists(table: String, id: UUID): Boolean {
+		return testDatabase.sql("SELECT COUNT(*) AS total FROM $table WHERE id = :id").bind("id", id)
+			.map { row -> row.get("total", java.lang.Long::class.java)!!.toLong() }.one().block()!! > 0
+	}
 
 	/**
 	 * Spring Boot 4 a supprimé l'auto-configuration qui appliquait [springSecurity] au mock

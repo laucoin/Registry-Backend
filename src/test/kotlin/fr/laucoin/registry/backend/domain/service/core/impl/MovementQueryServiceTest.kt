@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import org.springframework.http.HttpStatus.FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
@@ -80,9 +81,10 @@ class MovementQueryServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findMovementsPage(currentUser(), defaultProjectId, pageable, params).block()
+		val result = service.findMovementsPage(currentUser(), defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
@@ -126,11 +128,12 @@ class MovementQueryServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findMovementsPage(
+		val result = service.findMovementsPage(
 			currentUser(buildAuthority(REGISTRY_PROJECT_OPTION_ACTIVITY)), defaultProjectId, pageable, params,
 		).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
@@ -144,52 +147,59 @@ class MovementQueryServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findCurrentMovementsPage(currentUser(), defaultProjectId, pageable, params).block()
+		val result = service.findCurrentMovementsPage(currentUser(), defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findCurrentPage(defaultProjectId, pageable, params)
 	}
 
 	@Test
 	fun `Should findMovementsContent call port findContent`() {
 		// Arrange
+		val expected = Pair(defaultMovementId, emptyList<MovementContentModel>())
 		val ids = listOf(defaultMovementId)
 
 		whenever(port.findContent(any(), any()))
-			.thenReturn(Flux.just(Pair(defaultMovementId, emptyList())))
+			.thenReturn(Flux.just(expected))
 
 		// Act
-		service.findMovementsContent(defaultProjectId, ids).collectList().block()
+		val result = service.findMovementsContent(defaultProjectId, ids).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findContent(defaultProjectId, ids)
 	}
 
 	@Test
 	fun `Should findCurrentMovementsContent call port findCurrentContent`() {
 		// Arrange
+		val expected = Pair(defaultMovementId, emptyList<MovementContentModel>())
 		val ids = listOf(defaultMovementId)
 
 		whenever(port.findCurrentContent(any(), any()))
-			.thenReturn(Flux.just(Pair(defaultMovementId, emptyList())))
+			.thenReturn(Flux.just(expected))
 
 		// Act
-		service.findCurrentMovementsContent(defaultProjectId, ids).collectList().block()
+		val result = service.findCurrentMovementsContent(defaultProjectId, ids).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findCurrentContent(defaultProjectId, ids)
 	}
 
 	@Test
 	fun `Should findMovementById call port findById`() {
 		// Arrange
+		val expected = defaultMovement()
 		val onlyVisible = true
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultMovement()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findMovementById(defaultProjectId, defaultMovementId, onlyVisible).block()
+		val result = service.findMovementById(defaultProjectId, defaultMovementId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultMovementId, onlyVisible)
 	}
 
@@ -224,9 +234,10 @@ class MovementQueryServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findMovementCommunicationsPage(defaultProjectId, defaultMovementId, pageable, params).block()
+		val result = service.findMovementCommunicationsPage(defaultProjectId, defaultMovementId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(communicationPort).findPageByMovementId(defaultProjectId, defaultMovementId, pageable, params)
 	}
 

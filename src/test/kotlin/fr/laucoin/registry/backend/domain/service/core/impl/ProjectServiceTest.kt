@@ -151,9 +151,10 @@ class ProjectServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), pageable, withProfile, params).block()
+		val result = service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), pageable, withProfile, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(pageable, params)
 		verify(port, never()).findPage(any(), any(), any())
 	}
@@ -196,9 +197,10 @@ class ProjectServiceTest {
 		whenever(favoritePort.findFavoriteProjectIds(any(), any())).thenReturn(Flux.empty())
 
 		// Act
-		service.findProjectsPage(currentUser(), PageableModel(0, 10), null, params).block()
+		val result = service.findProjectsPage(currentUser(), PageableModel(0, 10), null, params).block()
 
 		// Assert
+		assertEquals(PageModel(PageableModel(0, 10), totalElements = 0, emptyList<Any>()), result)
 		verify(port).findPage(eq(listOf(defaultProjectId)), any(), eq(params))
 	}
 
@@ -214,9 +216,10 @@ class ProjectServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), pageable, null, params).block()
+		val result = service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), pageable, null, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(emptyList(), pageable, params)
 		verify(port, never()).findPage(any(), any())
 	}
@@ -234,9 +237,10 @@ class ProjectServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findProjectsPage(currentUser(), pageable, withProfile, params).block()
+		val result = service.findProjectsPage(currentUser(), pageable, withProfile, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(emptyList(), pageable, params)
 		verify(port, never()).findPage(any(), any())
 	}
@@ -373,13 +377,15 @@ class ProjectServiceTest {
 	@Test
 	fun `Should addFavoriteProject call port add once the project exists`() {
 		// Arrange
+		val expected = Unit
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
-		whenever(favoritePort.add(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(favoritePort.add(any(), any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.addFavoriteProject(currentUser(), defaultProjectId).block()
+		val result = service.addFavoriteProject(currentUser(), defaultProjectId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, isVisible = null)
 		verify(favoritePort).add(currentUser().id!!, defaultProjectId)
 	}
@@ -402,12 +408,14 @@ class ProjectServiceTest {
 	@Test
 	fun `Should removeFavoriteProject call port remove`() {
 		// Arrange
-		whenever(favoritePort.remove(any(), any())).thenReturn(Mono.just(Unit))
+		val expected = Unit
+		whenever(favoritePort.remove(any(), any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.removeFavoriteProject(currentUser(), defaultProjectId).block()
+		val result = service.removeFavoriteProject(currentUser(), defaultProjectId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(favoritePort).remove(currentUser().id!!, defaultProjectId)
 	}
 
@@ -494,14 +502,16 @@ class ProjectServiceTest {
 	@Test
 	fun `Should findProjectById call port findById`() {
 		// Arrange
+		val expected = defaultProject()
 		val onlyVisible = true
 
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findProjectById(defaultProjectId, onlyVisible).block()
+		val result = service.findProjectById(defaultProjectId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, onlyVisible)
 	}
 
@@ -616,14 +626,16 @@ class ProjectServiceTest {
 	@Test
 	fun `Should disableProjectById call existing project and call port update`() {
 		// Arrange
+		val expected = defaultProject()
 		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultProject()))
-		whenever(port.update(any())).thenReturn(Mono.just(defaultProject()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
 
 		// Act
-		service.disableProjectById(currentUser(), defaultProjectId).block()
+		val result = service.disableProjectById(currentUser(), defaultProjectId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, isVisible = true)
 		verify(port).update(defaultProject().apply { visible = false })
 		verify(transactionalOperator).transactional(any<Mono<*>>())
@@ -638,9 +650,10 @@ class ProjectServiceTest {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
 
 		// Act
-		service.enableProjectById(currentUser(), defaultProjectId).block()
+		val result = service.enableProjectById(currentUser(), defaultProjectId).block()
 
 		// Assert
+		assertEquals(project, result)
 		verify(port).findById(defaultProjectId, isVisible = false)
 		verify(port).update(defaultProject())
 		verify(transactionalOperator).transactional(any<Mono<*>>())
@@ -671,9 +684,10 @@ class ProjectServiceTest {
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeProjectsIfNecessary(date, false).collectList().block()
+		val result = service.purgeProjectsIfNecessary(date, false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(uuid1, uuid2), result)
 		verify(port).findProjectsEligibleForPurge(date)
 		verify(port).deleteById(uuid1)
 		verify(port).deleteById(uuid2)
@@ -682,14 +696,16 @@ class ProjectServiceTest {
 	@Test
 	fun `Should purgeProjectsIfNecessary call project eligible for purge, and not call port deleteById because of dryRun`() {
 		// Arrange
+		val expected = UUID.randomUUID()
 		val date = LocalDate.EPOCH
 
-		whenever(port.findProjectsEligibleForPurge(any())).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(port.findProjectsEligibleForPurge(any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeProjectsIfNecessary(date, true).collectList().block()
+		val result = service.purgeProjectsIfNecessary(date, true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findProjectsEligibleForPurge(date)
 		verify(port, never()).deleteById(any())
 	}

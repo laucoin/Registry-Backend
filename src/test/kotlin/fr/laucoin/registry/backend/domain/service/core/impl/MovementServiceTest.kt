@@ -322,25 +322,28 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(currentUser(), movement).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(port).create(any())
 	}
 
 	@Test
 	fun `Should createMovement with registered participant`() {
 		// Arrange
+		val expected = defaultMovement()
 		val participantContent = MovementContentModel().apply { participant = defaultParticipant() }
 		val movement = defaultMovement().apply { contentType = REGISTERED; content = listOf(participantContent) }
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
-		whenever(port.create(any())).thenReturn(Mono.just(defaultMovement()))
+		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(currentUser(), movement).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(port).create(any())
@@ -377,6 +380,7 @@ class MovementServiceTest {
 	@Test
 	fun `Should createMovement with guest participant`() {
 		// Arrange
+		val expected = defaultMovement()
 		val guest = defaultParticipant().apply { id = null; }
 		val movement = defaultMovement().apply { type = IN; contentType = GUEST }
 
@@ -384,12 +388,13 @@ class MovementServiceTest {
 		whenever(participantPort.findAllByIds(any(), eq(listOf(defaultParticipantId)), anyOrNull()))
 			.thenReturn(Flux.just(defaultParticipant()))
 		whenever(participantPort.saveAllGuest(any())).thenReturn(Flux.just(defaultParticipant()))
-		whenever(port.create(any())).thenReturn(Mono.just(defaultMovement()))
+		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.createMovement(currentUser(), movement, listOf(guest)).block()
+		val result = service.createMovement(currentUser(), movement, listOf(guest)).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(participantPort).findAllByIds(defaultProjectId, emptyList(), isVisible = null)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(participantPort).saveAllGuest(any())
@@ -399,6 +404,7 @@ class MovementServiceTest {
 	@Test
 	fun `Should createMovement linked to an activity`() {
 		// Arrange
+		val expected = defaultMovement()
 		val participantContent = MovementContentModel().apply { participant = defaultParticipant() }
 		val movement = defaultMovement().apply {
 			contentType = REGISTERED; content = listOf(participantContent); activity = defaultActivity()
@@ -406,12 +412,13 @@ class MovementServiceTest {
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
 		whenever(activityPort.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
-		whenever(port.create(any())).thenReturn(Mono.just(defaultMovement()))
+		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(currentUser(), movement).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(activityPort).findById(defaultProjectId, defaultActivityId, isVisible = null)
 		verify(port).create(any())
@@ -450,18 +457,20 @@ class MovementServiceTest {
 	@Test
 	fun `Should createMovement linked to a vehicle`() {
 		// Arrange
+		val expected = defaultMovement()
 		val driver = defaultParticipant().apply { birthday = LocalDate.EPOCH }
 		val participantContent = MovementContentModel().apply { participant = driver; vehicle = defaultVehicle() }
 		val movement = defaultMovement().apply { contentType = REGISTERED; content = listOf(participantContent) }
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(driver))
 		whenever(vehiclePort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultVehicle()))
-		whenever(port.create(any())).thenReturn(Mono.just(defaultMovement()))
+		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(currentUser(), movement).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(vehiclePort).findAllByIds(defaultProjectId, listOf(defaultVehicleId), isVisible = null)
 		verify(port).create(any())
@@ -512,9 +521,10 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(currentUser(), movement).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
@@ -537,9 +547,10 @@ class MovementServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.createMovement(currentUser(), movement).block()
+		val result = service.createMovement(currentUser(), movement).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
 		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
@@ -708,9 +719,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
 
 		// Act
-		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+		val result = service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
+		assertEquals(updatedMovement, result)
 		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
 		verify(communicationPort).countAllByMovementId(defaultProjectId, defaultMovementId, expectedCommunicationSearch)
 		verify(port).update(any())
@@ -775,9 +787,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
 
 		// Act
-		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
+		val result = service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, updatedMovement).block()
 
 		// Assert
+		assertEquals(updatedMovement, result)
 		verify(participantPort).lockByIds(listOf(previousParticipantId, defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(previousParticipantId, defaultParticipantId))
 	}
@@ -790,9 +803,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, movement).block()
+		val result = service.updateMovementById(currentUser(), defaultProjectId, defaultMovementId, movement).block()
 
 		// Assert
+		assertEquals(movement, result)
 		val order = inOrder(rowLockPort, historyPort, port)
 		order.verify(rowLockPort).lock(MOVEMENT, defaultMovementId)
 		order.verify(historyPort).archiveMovement(defaultMovementId)
@@ -807,9 +821,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+		val result = service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(historyPort, never()).archiveMovement(any())
 	}
 
@@ -825,9 +840,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+		val result = service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 	}
@@ -845,9 +861,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+		val result = service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(participantPort).lockByIds(listOf(defaultParticipantId))
 		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 	}
@@ -881,9 +898,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+		val result = service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = true)
 		verify(port).update(movement.apply { visible = false })
 	}
@@ -916,9 +934,10 @@ class MovementServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+		val result = service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
+		assertEquals(movement, result)
 		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = false)
 		verify(port).update(movement.apply { visible = true })
 	}
@@ -988,9 +1007,10 @@ class MovementServiceTest {
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeMovementsIfNecessary(date, false).collectList().block()
+		val result = service.purgeMovementsIfNecessary(date, false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(uuid1, uuid2), result)
 		verify(port).findOlderThanAndUncommentedSince(date)
 		verify(port).deleteById(uuid1)
 		verify(port).deleteById(uuid2)
@@ -999,14 +1019,16 @@ class MovementServiceTest {
 	@Test
 	fun `Should purgeMovementsIfNecessary call older and uncommented movement since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
+		val expected = UUID.randomUUID()
 		val date = LocalDate.EPOCH
 
-		whenever(port.findOlderThanAndUncommentedSince(any())).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(port.findOlderThanAndUncommentedSince(any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeMovementsIfNecessary(date, true).collectList().block()
+		val result = service.purgeMovementsIfNecessary(date, true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findOlderThanAndUncommentedSince(date)
 		verify(port, never()).deleteById(any())
 	}

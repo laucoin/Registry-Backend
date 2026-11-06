@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -270,6 +271,7 @@ class ActivityModelPostgresRepositoryTest : TestContext() {
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_activity", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

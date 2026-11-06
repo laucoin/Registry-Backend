@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
@@ -170,6 +171,7 @@ class CommunicationModelPostgresRepositoryTest : TestContext() {
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_communication", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

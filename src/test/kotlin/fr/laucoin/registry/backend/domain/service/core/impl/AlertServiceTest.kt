@@ -93,9 +93,10 @@ class AlertServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findAlertsPage(currentUser(), defaultProjectId, pageable, params).block()
+		val result = service.findAlertsPage(currentUser(), defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
@@ -116,14 +117,16 @@ class AlertServiceTest {
 	@Test
 	fun `Should findAlertById call port findById`() {
 		// Arrange
+		val expected = defaultAlert()
 		val onlyVisible = true
 
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultAlert()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findAlertById(defaultProjectId, defaultAlertId, onlyVisible).block()
+		val result = service.findAlertById(defaultProjectId, defaultAlertId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultAlertId, onlyVisible)
 	}
 
@@ -158,24 +161,28 @@ class AlertServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findAlertCommunicationsPage(defaultProjectId, defaultAlertId, pageable, params).block()
+		val result = service.findAlertCommunicationsPage(defaultProjectId, defaultAlertId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(communicationPort).findPageByAlertId(defaultProjectId, defaultAlertId, pageable, params)
 	}
 
 	@Test
 	fun `Should createAlert check date and call port create`() {
 		// Arrange
+		val createdCommunication = defaultCommunication()
 		val alert = defaultAlert().apply { communications = listOf(CommunicationModel()) }
 
 		whenever(port.create(any())).thenReturn(Mono.just(alert))
-		whenever(communicationPort.create(any())).thenReturn(Mono.just(defaultCommunication()))
+		whenever(communicationPort.create(any())).thenReturn(Mono.just(createdCommunication))
 
 		// Act
-		service.createAlert(currentUser(), alert).block()
+		val result = service.createAlert(currentUser(), alert).block()
 
 		// Assert
+		assertEquals(alert, result)
+		assertEquals(listOf(createdCommunication), result?.communications)
 		verify(projectDates).validateDateTime(
 			defaultProjectId,
 			CustomDateTimeModel(alert.dateTime),
@@ -273,9 +280,10 @@ class AlertServiceTest {
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(alert))
 
 		// Act
-		service.findAlertForUser(currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_RESTORE)), defaultProjectId, defaultAlertId).block()
+		val result = service.findAlertForUser(currentUser(buildAuthority(REGISTRY_PROJECT_ALERT_RESTORE)), defaultProjectId, defaultAlertId).block()
 
 		// Assert
+		assertEquals(alert, result)
 		verify(port).findById(defaultProjectId, defaultAlertId, null)
 	}
 
@@ -314,9 +322,10 @@ class AlertServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(updatedAlert))
 
 		// Act
-		service.updateAlertById(currentUser(), defaultProjectId, defaultAlertId, updatedAlert).block()
+		val result = service.updateAlertById(currentUser(), defaultProjectId, defaultAlertId, updatedAlert).block()
 
 		// Assert
+		assertEquals(updatedAlert, result)
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = null)
 		verify(communicationPort).countAllByAlertId(defaultProjectId, defaultAlertId, expectedCommunicationSearch)
 		verify(port).update(any())
@@ -330,9 +339,10 @@ class AlertServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(alert))
 
 		// Act
-		service.updateAlertById(currentUser(), defaultProjectId, defaultAlertId, alert).block()
+		val result = service.updateAlertById(currentUser(), defaultProjectId, defaultAlertId, alert).block()
 
 		// Assert
+		assertEquals(alert, result)
 		val order = inOrder(rowLockPort, historyPort, port)
 		order.verify(rowLockPort).lock(ALERT, defaultAlertId)
 		order.verify(historyPort).archiveAlert(defaultAlertId)
@@ -405,9 +415,10 @@ class AlertServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(alert))
 
 		// Act
-		service.updateAlertStatusById(currentUser(), defaultProjectId, defaultAlertId, RESOLVED).block()
+		val result = service.updateAlertStatusById(currentUser(), defaultProjectId, defaultAlertId, RESOLVED).block()
 
 		// Assert
+		assertEquals(alert, result)
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = null)
 		verify(port).update(alert.apply { status = RESOLVED })
 	}
@@ -415,13 +426,15 @@ class AlertServiceTest {
 	@Test
 	fun `Should disableAlertById call existing alert and call port update`() {
 		// Arrange
+		val expected = defaultAlert()
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultAlert()))
-		whenever(port.update(any())).thenReturn(Mono.just(defaultAlert()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.disableAlertById(currentUser(), defaultProjectId, defaultAlertId).block()
+		val result = service.disableAlertById(currentUser(), defaultProjectId, defaultAlertId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = true)
 		verify(port).update(defaultAlert().apply { visible = false })
 	}
@@ -435,9 +448,10 @@ class AlertServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(alert))
 
 		// Act
-		service.enableAlertById(currentUser(), defaultProjectId, defaultAlertId).block()
+		val result = service.enableAlertById(currentUser(), defaultProjectId, defaultAlertId).block()
 
 		// Assert
+		assertEquals(alert, result)
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = false)
 		verify(port).update(defaultAlert())
 	}
@@ -490,9 +504,10 @@ verify(rowLockPort).lock(ALERT, defaultAlertId)
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeAlertsIfNecessary(date, false).collectList().block()
+		val result = service.purgeAlertsIfNecessary(date, false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(alertId1, alertId2), result)
 		verify(port).findOlderThanAndUncommentedSince(date)
 		verify(port).deleteById(alertId1)
 		verify(port).deleteById(alertId2)
@@ -501,14 +516,16 @@ verify(rowLockPort).lock(ALERT, defaultAlertId)
 	@Test
 	fun `Should purgeAlertsIfNecessary call unused alert since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
+		val expected = defaultAlertId
 		val date = LocalDate.EPOCH
 
-		whenever(port.findOlderThanAndUncommentedSince(any())).thenReturn(Flux.just(defaultAlertId))
+		whenever(port.findOlderThanAndUncommentedSince(any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeAlertsIfNecessary(date, true).collectList().block()
+		val result = service.purgeAlertsIfNecessary(date, true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findOlderThanAndUncommentedSince(date)
 		verify(port, never()).deleteById(any())
 	}
