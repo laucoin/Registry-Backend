@@ -9,7 +9,6 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
-import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
@@ -48,12 +47,11 @@ import kotlin.test.assertEquals
 
 class TokenConverterServiceTest {
 	private val roleService: IRoleService = mock()
-	private val userService: IUserService = mock()
 	private val userUseCase: IUserUseCase = mock()
 	private val profilePort: IProjectProfilePort = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val service = TokenConverterService(
-		userService, userUseCase, profilePort, roleService, principalCache, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY, EMAIL_VERIFIED_KEY
+		userUseCase, profilePort, roleService, principalCache, USER_ID_KEY, EMAIL_KEY, FIRST_NAME_KEY, LAST_NAME_KEY, EMAIL_VERIFIED_KEY
 	)
 
 	private val jwt = mock<Jwt>()
@@ -127,7 +125,7 @@ class TokenConverterServiceTest {
 		assertEquals(AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN, result.message)
 
 		verifyNoInteractions(roleService)
-		verifyNoInteractions(userService)
+		verifyNoInteractions(userUseCase)
 		verifyNoInteractions(profilePort)
 	}
 
@@ -142,7 +140,7 @@ class TokenConverterServiceTest {
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 
 		val currentUser = currentUser().apply { visible = userVisible }
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser))
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -154,7 +152,7 @@ class TokenConverterServiceTest {
 		assertEquals(expectedMessage, result.message)
 
 		verifyNoInteractions(roleService)
-		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userUseCase).findUserByOidcId(defaultUserOidcId, isVisible = null)
 		verifyNoInteractions(profilePort)
 	}
 
@@ -172,12 +170,12 @@ class TokenConverterServiceTest {
 		val projectRole = ProjectProfileRoleModel(defaultProjectId, projectOptions, projectIsVisible, PROJECT_ROLE)
 
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.justOrEmpty(oidcDatabaseUser))
-		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.justOrEmpty(oidcDatabaseUser))
+		whenever(userUseCase.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
 		whenever(userUseCase.createUser(any(), any(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(currentUser().apply { role = USER_ROLE }))
 
-		whenever(userService.updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull()))
+		whenever(userUseCase.updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(currentUser().apply { role = USER_ROLE }))
 
 		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.just(projectRole))
@@ -188,11 +186,11 @@ class TokenConverterServiceTest {
 		service.convert(jwt).block()
 
 		// Assert
-		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userUseCase).findUserByOidcId(defaultUserOidcId, isVisible = null)
 		verify(userUseCase, times(expectedUserCreation))
 			.createUser(defaultUserOidcId, currentUser.email!!, currentUser.firstName, currentUser.lastName)
 
-		verify(userService, times(expectedUserUpdate)).updateUserIfPersonalDataChanged(
+		verify(userUseCase, times(expectedUserUpdate)).updateUserIfPersonalDataChanged(
 			any(), eq(currentUser.email!!), eq(currentUser.firstName), eq(currentUser.lastName)
 		)
 
@@ -205,8 +203,8 @@ class TokenConverterServiceTest {
 	fun `Should throw when multiple users already exist with the email`() {
 		// Arrange
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(userService.findUserByEmail(any(), anyOrNull()))
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userUseCase.findUserByEmail(any(), anyOrNull()))
 			.thenReturn(Flux.just(CurrentUserModel(), CurrentUserModel()))
 
 		// Act
@@ -218,10 +216,10 @@ class TokenConverterServiceTest {
 		assertEquals(CONFLICT, result.status)
 		assertEquals(AUTH_EMAIL_ALREADY_USED, result.code)
 
-		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userUseCase).findUserByOidcId(defaultUserOidcId, isVisible = null)
 		verify(userUseCase, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
-		verify(userService, never()).linkUserToOidcId(any(), any())
-		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+		verify(userUseCase, never()).linkUserToOidcId(any(), any())
+		verify(userUseCase, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
 		verifyNoInteractions(profilePort)
 		verifyNoInteractions(roleService)
 	}
@@ -231,10 +229,10 @@ class TokenConverterServiceTest {
 		// Arrange
 		val existingUser = currentUser().apply { role = USER_ROLE; oidcId = null }
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userUseCase.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
 		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(true)
-		whenever(userService.linkUserToOidcId(any(), any())).thenReturn(Mono.just(existingUser))
+		whenever(userUseCase.linkUserToOidcId(any(), any())).thenReturn(Mono.just(existingUser))
 
 		whenever(profilePort.findProjectProfilesRolesByUserId(any())).thenReturn(Flux.empty())
 		whenever(roleService.getAuthoritiesByUserRole(anyOrNull())).thenReturn(emptyList())
@@ -243,10 +241,10 @@ class TokenConverterServiceTest {
 		service.convert(jwt).block()
 
 		// Assert
-		verify(userService).findUserByOidcId(defaultUserOidcId, isVisible = null)
-		verify(userService).linkUserToOidcId(existingUser, defaultUserOidcId)
+		verify(userUseCase).findUserByOidcId(defaultUserOidcId, isVisible = null)
+		verify(userUseCase).linkUserToOidcId(existingUser, defaultUserOidcId)
 		verify(userUseCase, never()).createUser(any(), any(), anyOrNull(), anyOrNull())
-		verify(userService, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
+		verify(userUseCase, never()).updateUserIfPersonalDataChanged(any(), any(), anyOrNull(), anyOrNull())
 	}
 
 	@Test
@@ -255,15 +253,15 @@ class TokenConverterServiceTest {
 		val existingUser = currentUser().apply { role = USER_ROLE }
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(false)
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userUseCase.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
 
 		// Act
 		val error = assertThrows(JwtConversionException::class.java) { service.convert(jwt).block() }
 
 		// Assert
 		assertEquals(CONFLICT, error.status)
-		verify(userService, never()).linkUserToOidcId(any(), any())
+		verify(userUseCase, never()).linkUserToOidcId(any(), any())
 	}
 
 	@Test
@@ -272,23 +270,23 @@ class TokenConverterServiceTest {
 		val existingUser = currentUser().apply { role = USER_ROLE; oidcId = UUID.randomUUID() }
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
 		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(true)
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userUseCase.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(existingUser))
 
 		// Act
 		val error = assertThrows(JwtConversionException::class.java) { service.convert(jwt).block() }
 
 		// Assert
 		assertEquals(CONFLICT, error.status)
-		verify(userService, never()).linkUserToOidcId(any(), any())
+		verify(userUseCase, never()).linkUserToOidcId(any(), any())
 	}
 
 	@Test
 	fun `Should convert map a duplicate email race to a clean conflict error`() {
 		// Arrange
 		whenever(jwt.hasClaim(any())).thenCallRealMethod()
-		whenever(userService.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(userService.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userUseCase.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.empty())
 		whenever(userUseCase.createUser(any(), any(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.error(DataIntegrityViolationException("duplicate key value violates unique constraint")))
 

@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.service.support.IFeatureService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertCriticalityMetadataReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.FeaturesReaderDto
@@ -49,7 +49,7 @@ class MetadataControllerTest: TestContext() {
 	private lateinit var alertCriticalityMetadataReaderMapper: AlertCriticalityMetadataReaderDtoMapper
 
 	@MockitoBean
-	private lateinit var projectService: IProjectService
+	private lateinit var projectService: IProjectUseCase
 
 	@MockitoBean
 	private lateinit var projectOptionsReaderMapper: ProjectOptionsReaderDtoMapper

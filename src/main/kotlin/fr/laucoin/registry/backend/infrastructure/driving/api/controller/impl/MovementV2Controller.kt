@@ -17,7 +17,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.service.core.IMovementService
+import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
@@ -60,7 +60,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
  */
 @RestController
 class MovementV2Controller(
-	private val service: IMovementService,
+	private val service: IMovementUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: MovementReaderDtoMapper,
 	private val plannedReaderMapper: PlannedMovementReaderDtoMapper,

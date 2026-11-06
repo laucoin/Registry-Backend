@@ -29,7 +29,6 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CreatedProjectProfilesReaderDto
@@ -83,9 +82,6 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 class ProjectProfileControllerTest : TestContext() {
-	@MockitoBean
-	private lateinit var service: IProjectProfileService
-
 	@MockitoBean
 	private lateinit var useCase: IProjectProfileUseCase
 
@@ -209,7 +205,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
 		val searchParams = ProjectProfileSearchParamModel(status = ProfileStatusEnum.ACCEPTED, isVisible = false)
-		whenever(service.findProjectProfilesPage(any(), any(), any()))
+		whenever(useCase.findProjectProfilesPage(any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
@@ -230,7 +226,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.body<PageModel<*>>(OK)
-		verify(service).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
+		verify(useCase).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
 	}
 
 	@Test
@@ -238,7 +234,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
 		val searchParams = ProjectProfileSearchParamModel(isVisible = true)
-		whenever(service.findProjectProfilesPage(any(), any(), any()))
+		whenever(useCase.findProjectProfilesPage(any(), any(), any()))
 			.thenReturn(Mono.just(PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
@@ -253,7 +249,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.body<PageModel<*>>(OK)
-		verify(service).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
+		verify(useCase).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
 	}
 
 	@ParameterizedTest
@@ -278,7 +274,7 @@ class ProjectProfileControllerTest : TestContext() {
 			at = at?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
-		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(useCase.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
 		)
@@ -307,7 +303,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
+		verify(useCase).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -342,7 +338,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, expectedMessage)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -356,7 +352,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
@@ -369,7 +365,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
 
-		verify(service).findProjectProfileById(defaultProjectId, uuid, isVisible = true)
+		verify(useCase).findProjectProfileById(defaultProjectId, uuid, isVisible = true)
 	}
 
 	@Test
@@ -377,7 +373,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
@@ -390,7 +386,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
 
-		verify(service).findProjectProfileById(defaultProjectId, uuid, isVisible = null)
+		verify(useCase).findProjectProfileById(defaultProjectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -405,7 +401,7 @@ class ProjectProfileControllerTest : TestContext() {
 		val searched = "John"
 		val user = UserModel()
 
-		whenever(service.searchUsers(anyOrNull())).thenReturn(Flux.just(user))
+		whenever(useCase.searchUsers(anyOrNull())).thenReturn(Flux.just(user))
 		whenever(partialUserReaderMapper.toDto(any())).thenReturn(PartialUserReaderDto())
 
 		// Act
@@ -420,7 +416,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(service).searchUsers(searched)
+		verify(useCase).searchUsers(searched)
 		verifyNoInteractions(readerMapper)
 		verify(partialUserReaderMapper).toDto(any())
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -432,7 +428,7 @@ class ProjectProfileControllerTest : TestContext() {
 	@Test
 	fun `Should getAssignableProjectProfileRoles return 200`() {
 		// Arrange
-		whenever(service.getAssignableProjectRoles(any(), any())).thenReturn(Flux.just("role"))
+		whenever(useCase.getAssignableProjectRoles(any(), any())).thenReturn(Flux.just("role"))
 		whenever(projectProfileRoleReaderMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
@@ -451,7 +447,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).getAssignableProjectRoles(any(), eq(defaultProjectId))
+		verify(useCase).getAssignableProjectRoles(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -552,7 +548,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -562,7 +558,7 @@ class ProjectProfileControllerTest : TestContext() {
 		val profile = ProjectProfileWriterDto(role = "ROLE")
 
 		whenever(
-			service.updateProjectProfileById(
+			useCase.updateProjectProfileById(
 				any(),
 				any(),
 				any(),
@@ -588,7 +584,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verify(writerMapper).toModel(profile, defaultProjectId)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
+		verify(useCase).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@Test
@@ -598,7 +594,7 @@ class ProjectProfileControllerTest : TestContext() {
 		val profile = ProjectProfileWriterDto(role = "ROLE")
 
 		whenever(
-			service.updateProjectProfileById(
+			useCase.updateProjectProfileById(
 				any(),
 				any(),
 				any(),
@@ -607,7 +603,7 @@ class ProjectProfileControllerTest : TestContext() {
 		).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
-		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
 			Mono.just(ProjectProfileModel().apply {
 				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
 			}),
@@ -630,7 +626,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verify(writerMapper).toModel(profile, defaultProjectId)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
+		verify(useCase).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@Test
@@ -640,7 +636,7 @@ class ProjectProfileControllerTest : TestContext() {
 		val profile = ProjectProfileWriterDto(role = "ROLE")
 
 		whenever(
-			service.updateProjectProfileById(
+			useCase.updateProjectProfileById(
 				any(),
 				any(),
 				any(),
@@ -648,7 +644,7 @@ class ProjectProfileControllerTest : TestContext() {
 			)
 		).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
-		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
 			Mono.just(ProjectProfileModel().apply {
 				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
 			}),
@@ -666,7 +662,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Assert
 		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
 
-		verify(service, never()).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
+		verify(useCase, never()).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -694,7 +690,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -702,7 +698,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
+		whenever(useCase.blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				ProjectProfileModel()
 			)
@@ -724,7 +720,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
+		verify(useCase).blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -732,7 +728,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
+		whenever(useCase.unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				ProjectProfileModel()
 			)
@@ -754,7 +750,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
+		verify(useCase).unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -762,7 +758,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.empty())
+		whenever(useCase.deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
@@ -779,7 +775,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
+		verify(useCase).deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -787,7 +783,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
-		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(useCase.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
 		)
@@ -802,7 +798,7 @@ class ProjectProfileControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findProjectProfilesPage(
+		verify(useCase).findProjectProfilesPage(
 			defaultProjectId,
 			pageable,
 			ProjectProfileSearchParamModel(query = null, role = "PROJECT_ADMINISTRATOR"),
@@ -824,7 +820,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -842,7 +838,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -860,7 +856,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -874,7 +870,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -892,7 +888,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -910,7 +906,7 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -924,6 +920,6 @@ class ProjectProfileControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 }

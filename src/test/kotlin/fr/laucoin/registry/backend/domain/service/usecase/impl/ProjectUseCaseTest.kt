@@ -1,5 +1,14 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import org.junit.jupiter.api.Assertions.assertSame
+import reactor.core.publisher.Flux
+import java.util.UUID
+import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.ProjectModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
@@ -84,5 +93,165 @@ class ProjectUseCaseTest {
 		assertEquals("boom", result.message)
 		verify(principalCache, never()).invalidate(any())
 		verify(projectService, never()).findProjectWithProfileById(any(), any())
+	}
+
+	@Test
+	fun `Should findProjectsPage delegate to the service`() {
+		// Arrange
+		val currentUser: CurrentUserModel = mock()
+		val pageable: PageableModel = mock()
+		val withProfile: Boolean? = null
+		val searchParams: ProjectSearchParamModel = mock()
+		val expected: Mono<PageModel<ProjectModel>> = Mono.empty()
+		whenever(projectService.findProjectsPage(currentUser, pageable, withProfile, searchParams)).thenReturn(expected)
+
+		// Act
+		val result = useCase.findProjectsPage(currentUser, pageable, withProfile, searchParams)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).findProjectsPage(currentUser, pageable, withProfile, searchParams)
+	}
+
+	@Test
+	fun `Should findProjectById delegate to the service`() {
+		// Arrange
+		val id: UUID = UUID.randomUUID()
+		val isVisible: Boolean? = null
+		val expected: Mono<ProjectModel> = Mono.empty()
+		whenever(projectService.findProjectById(id, isVisible)).thenReturn(expected)
+
+		// Act
+		val result = useCase.findProjectById(id, isVisible)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).findProjectById(id, isVisible)
+	}
+
+	@Test
+	fun `Should findProjectWithProfileById delegate to the service`() {
+		// Arrange
+		val currentUser: CurrentUserModel = mock()
+		val id: UUID = UUID.randomUUID()
+		val expected: Mono<ProjectModel> = Mono.empty()
+		whenever(projectService.findProjectWithProfileById(currentUser, id)).thenReturn(expected)
+
+		// Act
+		val result = useCase.findProjectWithProfileById(currentUser, id)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).findProjectWithProfileById(currentUser, id)
+	}
+
+	@Test
+	fun `Should availableProjectOptions delegate to the service`() {
+		// Arrange
+		val expected: Flux<ProjectOptionEnum> = Flux.empty()
+		whenever(projectService.availableProjectOptions()).thenReturn(expected)
+
+		// Act
+		val result = useCase.availableProjectOptions()
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).availableProjectOptions()
+	}
+
+	@Test
+	fun `Should updateProjectById delegate to the service`() {
+		// Arrange
+		val currentUser: CurrentUserModel = mock()
+		val id: UUID = UUID.randomUUID()
+		val project: ProjectModel = mock()
+		val expected: Mono<ProjectModel> = Mono.empty()
+		whenever(projectService.updateProjectById(currentUser, id, project)).thenReturn(expected)
+
+		// Act
+		val result = useCase.updateProjectById(currentUser, id, project)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).updateProjectById(currentUser, id, project)
+	}
+
+	@Test
+	fun `Should disableProjectById delegate to the service`() {
+		// Arrange
+		val currentUser: CurrentUserModel = mock()
+		val id: UUID = UUID.randomUUID()
+		val expected: Mono<ProjectModel> = Mono.empty()
+		whenever(projectService.disableProjectById(currentUser, id)).thenReturn(expected)
+
+		// Act
+		val result = useCase.disableProjectById(currentUser, id)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).disableProjectById(currentUser, id)
+	}
+
+	@Test
+	fun `Should enableProjectById delegate to the service`() {
+		// Arrange
+		val currentUser: CurrentUserModel = mock()
+		val id: UUID = UUID.randomUUID()
+		val expected: Mono<ProjectModel> = Mono.empty()
+		whenever(projectService.enableProjectById(currentUser, id)).thenReturn(expected)
+
+		// Act
+		val result = useCase.enableProjectById(currentUser, id)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).enableProjectById(currentUser, id)
+	}
+
+	@Test
+	fun `Should addFavoriteProject delegate to the service`() {
+		// Arrange
+		val currentUser: CurrentUserModel = mock()
+		val id: UUID = UUID.randomUUID()
+		val expected: Mono<Unit> = Mono.empty()
+		whenever(projectService.addFavoriteProject(currentUser, id)).thenReturn(expected)
+
+		// Act
+		val result = useCase.addFavoriteProject(currentUser, id)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).addFavoriteProject(currentUser, id)
+	}
+
+	@Test
+	fun `Should removeFavoriteProject delegate to the service`() {
+		// Arrange
+		val currentUser: CurrentUserModel = mock()
+		val id: UUID = UUID.randomUUID()
+		val expected: Mono<Unit> = Mono.empty()
+		whenever(projectService.removeFavoriteProject(currentUser, id)).thenReturn(expected)
+
+		// Act
+		val result = useCase.removeFavoriteProject(currentUser, id)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).removeFavoriteProject(currentUser, id)
+	}
+
+	@Test
+	fun `Should deleteProjectById delegate to the service`() {
+		// Arrange
+		val id: UUID = UUID.randomUUID()
+		val expected: Mono<Unit> = Mono.empty()
+		whenever(projectService.deleteProjectById(id)).thenReturn(expected)
+
+		// Act
+		val result = useCase.deleteProjectById(id)
+
+		// Assert
+		assertSame(expected, result)
+		verify(projectService).deleteProjectById(id)
 	}
 }

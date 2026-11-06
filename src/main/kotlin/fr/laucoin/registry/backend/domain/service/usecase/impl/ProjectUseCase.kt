@@ -1,5 +1,11 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import reactor.core.publisher.Flux
+import java.util.UUID
+import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.service.core.IProjectService
@@ -33,5 +39,54 @@ class ProjectUseCase(
 	private fun createAdministratorProfile(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
 		return profileService.createUserProjectProfileFromProject(currentUser, project)
 			.thenReturn(project)
+	}
+
+	override fun findProjectsPage(
+		currentUser: CurrentUserModel,
+		pageable: PageableModel,
+		withProfile: Boolean?,
+		searchParams: ProjectSearchParamModel,
+	): Mono<PageModel<ProjectModel>> {
+		return projectService.findProjectsPage(currentUser, pageable, withProfile, searchParams)
+	}
+
+	override fun findProjectById(id: UUID, isVisible: Boolean?): Mono<ProjectModel> {
+		return projectService.findProjectById(id, isVisible)
+	}
+
+	override fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
+		return projectService.findProjectWithProfileById(currentUser, id)
+	}
+
+	override fun availableProjectOptions(): Flux<ProjectOptionEnum> {
+		return projectService.availableProjectOptions()
+	}
+
+	override fun updateProjectById(
+		currentUser: CurrentUserModel,
+		id: UUID,
+		project: ProjectModel,
+	): Mono<ProjectModel> {
+		return projectService.updateProjectById(currentUser, id, project)
+	}
+
+	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
+		return projectService.disableProjectById(currentUser, id)
+	}
+
+	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
+		return projectService.enableProjectById(currentUser, id)
+	}
+
+	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return projectService.addFavoriteProject(currentUser, id)
+	}
+
+	override fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return projectService.removeFavoriteProject(currentUser, id)
+	}
+
+	override fun deleteProjectById(id: UUID): Mono<Unit> {
+		return projectService.deleteProjectById(id)
 	}
 }

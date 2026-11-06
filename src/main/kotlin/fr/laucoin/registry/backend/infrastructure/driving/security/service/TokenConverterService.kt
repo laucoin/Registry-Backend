@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
-import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
@@ -34,7 +33,6 @@ import reactor.kotlin.core.publisher.switchIfEmpty
  */
 @Component
 class TokenConverterService(
-	private val userService: IUserService,
 	private val userUseCase: IUserUseCase,
 	private val profilePort: IProjectProfilePort,
 	private val roleService: IRoleService,
@@ -72,7 +70,7 @@ class TokenConverterService(
 	private fun resolveCurrentUser(
 		oidcId: UUID, email: String, emailVerified: Boolean, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> =
-		userService.findUserByOidcId(oidcId, isVisible = null)
+		userUseCase.findUserByOidcId(oidcId, isVisible = null)
 			.throwOnBlockedUser()
 			.updateUserIfPersonalDataChanged(email, firstName, lastName)
 			.createNewUserOnNotFound(oidcId, email, emailVerified, firstName, lastName)
@@ -88,7 +86,7 @@ class TokenConverterService(
 	private fun Mono<CurrentUserModel>.updateUserIfPersonalDataChanged(
 		email: String, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> = flatMap { user ->
-		userService.updateUserIfPersonalDataChanged(user, email, firstName, lastName)
+		userUseCase.updateUserIfPersonalDataChanged(user, email, firstName, lastName)
 			.map { user }
 	}
 
@@ -96,7 +94,7 @@ class TokenConverterService(
 		oidcId: UUID, email: String, emailVerified: Boolean, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> = switchIfEmpty {
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
-		userService.findUserByEmail(email, isVisible = null)
+		userUseCase.findUserByEmail(email, isVisible = null)
 			.collectList()
 			.flatMap { matches -> provisionFromEmailMatches(matches, oidcId, email, emailVerified, firstName, lastName) }
 			.onErrorMap(DataIntegrityViolationException::class.java) {
@@ -120,7 +118,7 @@ class TokenConverterService(
 
 			matches.size == 1 && emailVerified && matches.first().oidcId == null -> {
 				log.info("Linking existing user with the given email to OIDC ID \"{}\"", oidcId)
-				userService.linkUserToOidcId(matches.first(), oidcId)
+				userUseCase.linkUserToOidcId(matches.first(), oidcId)
 			}
 
 			else -> {

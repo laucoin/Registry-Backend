@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.support.IAuditService
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
@@ -25,7 +25,7 @@ class AuditReadIntegrationTest : TestContext() {
 	private lateinit var auditService: IAuditService
 
 	@MockitoBean
-	private lateinit var userService: IUserService
+	private lateinit var userService: IUserUseCase
 
 	@Autowired
 	private lateinit var webClient: WebTestClient

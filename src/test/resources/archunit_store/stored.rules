@@ -1,3 +1,0 @@
-#
-#Fri Nov 06 10:15:38 UTC 2026
-no\ classes\ that\ reside\ in\ a\ package\ 'fr.laucoin.registry.backend.infrastructure.driving..'\ should\ depend\ on\ classes\ that\ reside\ in\ a\ package\ 'fr.laucoin.registry.backend.domain.service.core..'=6bf3b90a-3bf1-4101-961c-cccabec21b9b

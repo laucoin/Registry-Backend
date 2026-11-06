@@ -33,7 +33,7 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.service.core.IAlertService
+import fr.laucoin.registry.backend.domain.service.usecase.IAlertUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertStatisticsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
@@ -86,7 +86,7 @@ import java.util.stream.Stream
 
 class AlertControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var service: IAlertService
+	private lateinit var service: IAlertUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: AlertReaderDtoMapper

@@ -8,7 +8,6 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectProfileV2Controller
@@ -42,7 +41,6 @@ import reactor.core.publisher.Mono
  */
 @RestController
 class ProjectProfileV2Controller(
-	private val service: IProjectProfileService,
 	private val useCase: IProjectProfileUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
@@ -72,21 +70,21 @@ class ProjectProfileV2Controller(
 			isVisible = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PROFILE_RESTORE),
 		)
 
-		return service.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return useCase.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun findProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ProjectProfileReaderDto> {
 		val visibility = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_PROFILE_RESTORE)
 
-		return service.findProjectProfileById(projectId, id, isVisible = visibility).map(readerMapper::toDto)
+		return useCase.findProjectProfileById(projectId, id, isVisible = visibility).map(readerMapper::toDto)
 	}
 
 	override fun searchUsers(projectId: UUID, query: String?): Flux<PartialUserReaderDto> {
-		return service.searchUsers(query).map(partialUserReaderMapper::toDto)
+		return useCase.searchUsers(query).map(partialUserReaderMapper::toDto)
 	}
 
 	override fun getAssignableProjectProfileRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<LabelDto> {
-		return service.getAssignableProjectRoles(currentUser, projectId).map(projectProfileRoleReaderMapper::toDto)
+		return useCase.getAssignableProjectRoles(currentUser, projectId).map(projectProfileRoleReaderMapper::toDto)
 	}
 
 	override fun createProjectProfiles(
@@ -116,8 +114,8 @@ class ProjectProfileV2Controller(
 			LockableResourceEnum.PROJECT_PROFILE,
 			id,
 			exchange.expectedLastEditions(),
-			current = { service.findProjectProfileById(projectId, id, isVisible = null) },
-			action = { service.updateProjectProfileById(currentUser, projectId, id, profileModel) },
+			current = { useCase.findProjectProfileById(projectId, id, isVisible = null) },
+			action = { useCase.updateProjectProfileById(currentUser, projectId, id, profileModel) },
 		).map(readerMapper::toDto)
 	}
 
@@ -126,7 +124,7 @@ class ProjectProfileV2Controller(
 		projectId: UUID,
 		id: UUID,
 	): Mono<ProjectProfileReaderDto> {
-		return service.blockProjectProfileById(currentUser, projectId, id).map(readerMapper::toDto)
+		return useCase.blockProjectProfileById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun unblockProjectProfileById(
@@ -134,10 +132,10 @@ class ProjectProfileV2Controller(
 		projectId: UUID,
 		id: UUID,
 	): Mono<ProjectProfileReaderDto> {
-		return service.unblockProjectProfileById(currentUser, projectId, id).map(readerMapper::toDto)
+		return useCase.unblockProjectProfileById(currentUser, projectId, id).map(readerMapper::toDto)
 	}
 
 	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
-		return service.deleteProjectProfileById(currentUser, projectId, id)
+		return useCase.deleteProjectProfileById(currentUser, projectId, id)
 	}
 }

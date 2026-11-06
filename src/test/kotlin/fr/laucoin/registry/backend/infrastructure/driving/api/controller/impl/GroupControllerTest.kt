@@ -28,7 +28,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
-import fr.laucoin.registry.backend.domain.service.core.IGroupService
+import fr.laucoin.registry.backend.domain.service.usecase.IGroupUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AddedGroupMembersReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupWithoutMemberReaderDto
@@ -82,7 +82,7 @@ import java.util.stream.Stream
 
 class GroupControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var service: IGroupService
+	private lateinit var service: IGroupUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: GroupReaderDtoMapper

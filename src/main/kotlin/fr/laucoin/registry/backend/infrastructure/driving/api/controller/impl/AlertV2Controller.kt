@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.service.core.IAlertService
+import fr.laucoin.registry.backend.domain.service.usecase.IAlertUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IAlertV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertStatisticsReaderDto
@@ -40,7 +40,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
  */
 @RestController
 class AlertV2Controller(
-	private val service: IAlertService,
+	private val service: IAlertUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: AlertReaderDtoMapper,
 	private val statisticsReaderMapper: AlertStatisticsReaderDtoMapper,

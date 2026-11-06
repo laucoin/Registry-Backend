@@ -17,7 +17,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserExportModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
-import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
@@ -58,7 +58,7 @@ import reactor.core.publisher.Mono
 
 class UserControllerTest: TestContext() {
 	@MockitoBean
-	private lateinit var service: IUserService
+	private lateinit var service: IUserUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: UserReaderDtoMapper

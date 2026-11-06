@@ -9,7 +9,6 @@ import com.tngtech.archunit.junit.ArchTest
 import com.tngtech.archunit.lang.ArchCondition
 import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
-import com.tngtech.archunit.library.freeze.FreezingArchRule.freeze
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import org.springframework.stereotype.Repository
@@ -344,15 +343,14 @@ class HexagonalArchitectureTest {
 		.check(classes)
 
 	@ArchTest
-	fun `Infrastructure driving should not depend on core services`(classes: JavaClasses) = freeze(
-		noClasses()
-			.that()
-			.resideInAPackage("$INFRASTRUCTURE.driving..")
-			.should()
-			.dependOnClassesThat()
-			.resideInAPackage("$CORE..")
-			.allowEmptyShould(true)
-	).check(classes)
+	fun `Infrastructure driving should not depend on core services`(classes: JavaClasses) = noClasses()
+		.that()
+		.resideInAPackage("$INFRASTRUCTURE.driving..")
+		.should()
+		.dependOnClassesThat()
+		.resideInAPackage("$CORE..")
+		.allowEmptyShould(true)
+		.check(classes)
 
 	@ArchTest
 	fun `Domain helper should not depend on services, infrastructure or config`(classes: JavaClasses) = noClasses()

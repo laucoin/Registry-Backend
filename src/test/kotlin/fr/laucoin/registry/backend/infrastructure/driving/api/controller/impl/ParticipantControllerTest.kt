@@ -39,7 +39,7 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.core.IParticipantService
+import fr.laucoin.registry.backend.domain.service.usecase.IParticipantUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -97,7 +97,7 @@ import java.util.stream.Stream
 
 class ParticipantControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var service: IParticipantService
+	private lateinit var service: IParticipantUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: ParticipantReaderDtoMapper

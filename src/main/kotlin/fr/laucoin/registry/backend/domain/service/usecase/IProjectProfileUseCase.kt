@@ -1,5 +1,10 @@
 package fr.laucoin.registry.backend.domain.service.usecase
 
+import reactor.core.publisher.Flux
+import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import java.util.UUID
@@ -16,4 +21,30 @@ interface IProjectProfileUseCase {
 		projectId: UUID,
 		profiles: List<ProjectProfileModel>,
 	): Mono<Pair<List<String>, List<String>>>
+
+	fun findProjectProfilesPage(
+		projectId: UUID,
+		pageable: PageableModel,
+		searchParams: ProjectProfileSearchParamModel,
+	): Mono<PageModel<ProjectProfileModel>>
+	fun findProjectProfileById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ProjectProfileModel>
+	fun searchUsers(query: String?): Flux<UserModel>
+	fun getAssignableProjectRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<String>
+	fun updateProjectProfileById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		profile: ProjectProfileModel,
+	): Mono<ProjectProfileModel>
+	fun blockProjectProfileById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+	): Mono<ProjectProfileModel>
+	fun unblockProjectProfileById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+	): Mono<ProjectProfileModel>
+	fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit>
 }

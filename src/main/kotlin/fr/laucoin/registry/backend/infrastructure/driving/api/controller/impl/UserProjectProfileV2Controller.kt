@@ -6,8 +6,8 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
-import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IUserProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserProjectProfileV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserInvitationReaderDto
@@ -25,8 +25,8 @@ import java.util.UUID
  */
 @RestController
 class UserProjectProfileV2Controller(
-	private val service: IUserProjectProfileService,
-	private val projectService: IProjectService,
+	private val service: IUserProjectProfileUseCase,
+	private val projectService: IProjectUseCase,
 	private val readerMapper: UserInvitationReaderDtoMapper,
 	private val projectReaderMapper: ProjectWithProfileReaderDtoMapper,
 ) : IUserProjectProfileV2Controller {

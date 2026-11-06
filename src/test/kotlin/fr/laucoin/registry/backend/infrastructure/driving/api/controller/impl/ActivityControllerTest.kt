@@ -40,7 +40,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.SortModel
-import fr.laucoin.registry.backend.domain.service.core.IActivityService
+import fr.laucoin.registry.backend.domain.service.usecase.IActivityUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityStatisticsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -94,7 +94,7 @@ import kotlin.time.Duration.Companion.minutes
 
 class ActivityControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var service: IActivityService
+	private lateinit var service: IActivityUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: ActivityReaderDtoMapper
