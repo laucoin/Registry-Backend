@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AuditOutcomeEnum.RATE_LIMI
 import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
 import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.service.IAuditService
+import fr.laucoin.registry.backend.domain.service.support.IAuditService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.SlidingWindowCounter
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder

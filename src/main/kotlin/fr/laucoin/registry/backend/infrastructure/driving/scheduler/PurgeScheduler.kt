@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.scheduler
 
-import fr.laucoin.registry.backend.domain.service.IPurgeService
+import fr.laucoin.registry.backend.domain.service.usecase.IPurgeUseCase
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -14,24 +14,24 @@ import reactor.core.publisher.Mono
  */
 @Component
 class PurgeScheduler(
-	private val purgeService: IPurgeService,
+	private val purgeUseCase: IPurgeUseCase,
 ) {
 	@Scheduled(cron = $$"${registry.feature.purge.users.cron}")
-	fun purgeUsers() = launch("users", purgeService.purgeUsers(dateThreshold = null, dryRun = false))
+	fun purgeUsers() = launch("users", purgeUseCase.purgeUsers(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.cron}")
-	fun purgeProjects() = launch("projects", purgeService.purgeProjects(dateThreshold = null, dryRun = false))
+	fun purgeProjects() = launch("projects", purgeUseCase.purgeProjects(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.content.cron}")
 	fun purgeProjectsContents() =
-		launch("projects contents", purgeService.purgeProjectsContents(dateThreshold = null, dryRun = false))
+		launch("projects contents", purgeUseCase.purgeProjectsContents(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.configuration.cron}")
 	fun purgeProjectsConfigurations() =
-		launch("projects configurations", purgeService.purgeProjectsConfigurations(dateThreshold = null, dryRun = false))
+		launch("projects configurations", purgeUseCase.purgeProjectsConfigurations(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.audit.cron}")
-	fun purgeAudits() = launch("audits", purgeService.purgeAudits(dateThreshold = null, dryRun = false))
+	fun purgeAudits() = launch("audits", purgeUseCase.purgeAudits(dateThreshold = null, dryRun = false))
 
 	private fun launch(job: String, purge: Publisher<*>) {
 		Mono.from(purge)

@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Vehicle
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleStatusReaderDtoMapper
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
-import fr.laucoin.registry.backend.domain.service.IConcurrencyService
+import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
@@ -17,7 +17,7 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.service.IMovementService
+import fr.laucoin.registry.backend.domain.service.core.IMovementService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto

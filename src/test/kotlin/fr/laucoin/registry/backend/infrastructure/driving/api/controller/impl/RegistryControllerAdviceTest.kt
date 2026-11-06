@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import io.r2dbc.spi.R2dbcNonTransientResourceException
 import java.util.Locale
 import org.junit.jupiter.api.Assertions.assertEquals

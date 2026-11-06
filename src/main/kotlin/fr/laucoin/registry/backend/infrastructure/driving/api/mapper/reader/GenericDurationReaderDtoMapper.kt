@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.DURATION_PREFIX
-import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import java.time.Duration
 import java.time.LocalTime
 

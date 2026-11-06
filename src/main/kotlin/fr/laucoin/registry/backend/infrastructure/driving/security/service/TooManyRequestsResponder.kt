@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.service
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_MESSAGE_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ERROR_TITLE_PREFIX
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.ErrorDto
 import java.util.Locale
 import org.springframework.http.HttpHeaders.RETRY_AFTER

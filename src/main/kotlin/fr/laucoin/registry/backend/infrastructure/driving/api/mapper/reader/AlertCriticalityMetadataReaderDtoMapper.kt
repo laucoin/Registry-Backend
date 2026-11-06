@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ALERT_CRITICALITY_RULE_KEY
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ALERT_CRITICALITY_RULE_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertCriticalityMetadataReaderDto
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component

@@ -7,10 +7,10 @@ import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
-import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
-import fr.laucoin.registry.backend.domain.service.IRoleService
-import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.domain.service.impl.LoggerService
+import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
+import fr.laucoin.registry.backend.domain.service.support.IRoleService
+import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.convert.converter.Converter

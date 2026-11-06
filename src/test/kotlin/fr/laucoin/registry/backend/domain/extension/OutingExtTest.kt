@@ -1,18 +1,18 @@
 package fr.laucoin.registry.backend.domain.extension
 
 import org.junit.jupiter.api.Test
-import fr.laucoin.registry.backend.domain.model.TimelineWindowModel
-import fr.laucoin.registry.backend.domain.extension.OutingExt.usageRate
-import fr.laucoin.registry.backend.domain.extension.OutingExt.outSeconds
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.SHOPPING
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
+import fr.laucoin.registry.backend.domain.extension.OutingExt.outSeconds
 import fr.laucoin.registry.backend.domain.extension.OutingExt.toOutings
+import fr.laucoin.registry.backend.domain.extension.OutingExt.usageRate
 import fr.laucoin.registry.backend.domain.model.MovementEventModel
 import fr.laucoin.registry.backend.domain.model.OutingModel
+import fr.laucoin.registry.backend.domain.model.TimelineWindowModel
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 import java.util.stream.Stream

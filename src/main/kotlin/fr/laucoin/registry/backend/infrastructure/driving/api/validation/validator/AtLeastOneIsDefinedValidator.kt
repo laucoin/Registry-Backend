@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
 
-import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.AtLeastOneIsDefined
 import fr.laucoin.registry.backend.domain.extension.ListExt.isIterable
 import fr.laucoin.registry.backend.domain.extension.ListExt.isNotEmpty
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.AtLeastOneIsDefined
 import jakarta.validation.ConstraintValidatorContext
 import java.util.Objects
 

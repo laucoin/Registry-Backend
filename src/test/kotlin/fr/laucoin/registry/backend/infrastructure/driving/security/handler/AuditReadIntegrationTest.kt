@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.IAuditService
-import fr.laucoin.registry.backend.domain.service.IUserService
+import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.support.IAuditService
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder

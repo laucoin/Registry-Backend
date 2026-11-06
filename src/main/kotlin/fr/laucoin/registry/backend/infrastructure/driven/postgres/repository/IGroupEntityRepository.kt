@@ -10,8 +10,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.G
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.DATE_IN_GROUP_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_INSIDE_MEMBERS_JOIN
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_MEMBER_USER_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_MEMBERS_JOIN
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_MEMBER_USER_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_ON_SITE_MEMBERS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_PRESENCE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.GROUP_SORT

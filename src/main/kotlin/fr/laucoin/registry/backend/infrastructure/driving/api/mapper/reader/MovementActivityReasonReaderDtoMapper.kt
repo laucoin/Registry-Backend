@@ -4,7 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.model.ActivityModel
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
 import org.springframework.stereotype.Component
 

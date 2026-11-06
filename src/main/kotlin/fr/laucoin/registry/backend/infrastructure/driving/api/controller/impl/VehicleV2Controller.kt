@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
-import fr.laucoin.registry.backend.domain.service.IConcurrencyService
+import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
-import fr.laucoin.registry.backend.domain.service.IVehicleService
+import fr.laucoin.registry.backend.domain.service.core.IVehicleService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IVehicleV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto

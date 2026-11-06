@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.SlidingWindowCounter
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
 import java.time.Clock

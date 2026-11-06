@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.config
 
-import fr.laucoin.registry.backend.domain.service.IAuditReadService
-import fr.laucoin.registry.backend.domain.service.IAuditService
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.IAuditReadService
+import fr.laucoin.registry.backend.domain.service.support.IAuditService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuditReadHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthorizationErrorHandler

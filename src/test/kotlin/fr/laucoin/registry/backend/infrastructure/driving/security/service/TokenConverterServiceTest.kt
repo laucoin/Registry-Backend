@@ -9,9 +9,9 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.JwtConversionException
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
-import fr.laucoin.registry.backend.domain.service.IPrincipalCacheService
-import fr.laucoin.registry.backend.domain.service.IRoleService
-import fr.laucoin.registry.backend.domain.service.IUserService
+import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
+import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
 import fr.laucoin.registry.backend.test.ModelExt.defaultUserOidcId

@@ -2,12 +2,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MIN
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MIN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
@@ -18,6 +12,12 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_U
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_PROJECT_C
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_DEFAULT
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MIN
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_DEFAULT
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MIN
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel

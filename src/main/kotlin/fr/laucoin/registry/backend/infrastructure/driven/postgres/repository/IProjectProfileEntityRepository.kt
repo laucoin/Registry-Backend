@@ -18,10 +18,10 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.ROLE_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.DATES_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.DATE_IN_PROJECT_PROFILE_DATES_RANGE_CLAUSE
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_PROJECT_SORT
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_ROLE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.JOIN_USER
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.LINKED_USER_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_PROJECT_SORT
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_ROLE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_STATUS_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_TEXT_PROJECT_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileQueries.PROJECT_PROFILE_TEXT_USER_SEARCH_CLAUSE

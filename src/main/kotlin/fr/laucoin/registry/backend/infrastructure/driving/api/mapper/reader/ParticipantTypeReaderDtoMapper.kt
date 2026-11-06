@@ -2,7 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PARTICIPANT_TYPE_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import org.springframework.stereotype.Component
 

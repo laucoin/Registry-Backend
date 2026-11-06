@@ -6,7 +6,7 @@ import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.ProjectCountsModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID

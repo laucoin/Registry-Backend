@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
-import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.ACTIVITY
 import java.util.Optional
 import org.springframework.stereotype.Component
 

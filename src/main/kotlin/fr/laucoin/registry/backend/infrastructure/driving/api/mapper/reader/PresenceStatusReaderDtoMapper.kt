@@ -9,7 +9,7 @@ import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OVERDUE
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import org.springframework.stereotype.Component
 import java.time.Clock

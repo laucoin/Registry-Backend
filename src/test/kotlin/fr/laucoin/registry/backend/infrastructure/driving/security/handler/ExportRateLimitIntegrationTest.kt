@@ -2,8 +2,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
 import fr.laucoin.registry.backend.domain.model.UserExportModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.IAuditService
-import fr.laucoin.registry.backend.domain.service.IExportService
+import fr.laucoin.registry.backend.domain.service.support.IAuditService
+import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
@@ -24,7 +24,7 @@ import reactor.core.publisher.Mono
 @TestPropertySource(properties = ["registry.security.rate-limit.export.capacity=2"])
 class ExportRateLimitIntegrationTest : TestContext() {
 	@MockitoBean
-	private lateinit var exportService: IExportService
+	private lateinit var exportUseCase: IExportUseCase
 
 	@MockitoBean
 	private lateinit var auditService: IAuditService
@@ -36,7 +36,7 @@ class ExportRateLimitIntegrationTest : TestContext() {
 	fun `Should export answer 429 and audit the refusal once the user exceeded the capacity`() {
 		// Arrange
 		val export = UserExportModel(ZonedDateTime.now(ZoneOffset.UTC), UserModel(), null, emptyList(), emptyList())
-		whenever(exportService.exportUser(any(), any(), any())).thenReturn(Mono.just(export))
+		whenever(exportUseCase.exportUser(any(), any(), any())).thenReturn(Mono.just(export))
 		val client = webClient.authenticate()
 		val uri = uriBuilder("/api/v2/users/current/export", emptyList(), emptyList())
 

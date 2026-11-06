@@ -3,8 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
-import fr.laucoin.registry.backend.domain.service.IFeatureService
-import fr.laucoin.registry.backend.domain.service.IProjectService
+import fr.laucoin.registry.backend.domain.service.support.IFeatureService
+import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertCriticalityMetadataReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.FeaturesReaderDto

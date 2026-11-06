@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.service.IPreferencesService
+import fr.laucoin.registry.backend.domain.service.core.IPreferencesService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPreferencesV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PreferenceReaderDtoMapper

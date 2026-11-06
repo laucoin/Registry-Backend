@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertStatisticsEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_CRITICALITY_CLAUSE
@@ -17,6 +16,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.A
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_LAST_COMMUNICATION
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_SEARCH
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_STATISTICS
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertStatisticsEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
