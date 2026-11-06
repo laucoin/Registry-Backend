@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import com.fasterxml.jackson.annotation.JsonIgnore
 import java.time.Clock
 import java.time.LocalDate
@@ -14,7 +15,7 @@ import java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME
 import java.util.Objects
 
 
-data class CustomDateTimeModel(
+data class CustomDateTimeModel @Default constructor(
 	var date: LocalDate,
 	var time: OffsetTime? = null,
 ) {

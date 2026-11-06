@@ -1,25 +1,23 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
-import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
-import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.IdReferenceDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ParticipantMovementWriterDtoMapper(
-	private val contentMapper: ParticipantMovementContentWriterDtoMapper
-): IGenericProjectWriterDtoMapper<MovementModel, ParticipantMovementWriterDto> {
-	override fun toModel(dto: ParticipantMovementWriterDto, projectId: UUID): MovementModel {
-		return MovementModel(contentType = REGISTERED).apply {
-			dateTime = dto.dateTime!!
-			type = dto.type
-			reason = dto.reason
-			activity = Optional.ofNullable(dto.activityId).map { ActivityModel().apply { id = it } }.orElse(null)
-			content = dto.content!!.map(contentMapper::toModel)
-			this.projectId = projectId
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [ParticipantMovementContentWriterDtoMapper::class, IdReferenceDtoMapper::class])
+interface ParticipantMovementWriterDtoMapper: IGenericProjectWriterDtoMapper<MovementModel, ParticipantMovementWriterDto> {
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "contentType", constant = "REGISTERED")
+	@Mapping(target = "dateTime", source = "dto.dateTime")
+	@Mapping(target = "type", source = "dto.type")
+	@Mapping(target = "reason", source = "dto.reason")
+	@Mapping(target = "activity", source = "dto.activityId")
+	@Mapping(target = "content", source = "dto.content")
+	@Mapping(target = "projectId", source = "projectId")
+	override fun toModel(dto: ParticipantMovementWriterDto, projectId: UUID): MovementModel
 }

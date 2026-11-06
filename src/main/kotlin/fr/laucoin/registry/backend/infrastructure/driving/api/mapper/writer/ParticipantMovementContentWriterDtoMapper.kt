@@ -1,20 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
-import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.VehicleModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.IdReferenceDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto.ParticipantMovementContentWriterDto
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ParticipantMovementContentWriterDtoMapper:
-	IGenericWriterDtoMapper<MovementContentModel, ParticipantMovementContentWriterDto> {
-	override fun toModel(dto: ParticipantMovementContentWriterDto): MovementContentModel {
-		return MovementContentModel().apply {
-			poolName = dto.poolName
-			participant = ParticipantModel().apply { id = dto.participantId }
-			vehicle = Optional.ofNullable(dto.vehicleId).map { VehicleModel().apply { id = it } }.orElse(null)
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [IdReferenceDtoMapper::class])
+interface ParticipantMovementContentWriterDtoMapper: IGenericWriterDtoMapper<MovementContentModel, ParticipantMovementContentWriterDto> {
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "poolName", source = "dto.poolName")
+	@Mapping(target = "participant", source = "dto.participantId")
+	@Mapping(target = "vehicle", source = "dto.vehicleId")
+	override fun toModel(dto: ParticipantMovementContentWriterDto): MovementContentModel
 }

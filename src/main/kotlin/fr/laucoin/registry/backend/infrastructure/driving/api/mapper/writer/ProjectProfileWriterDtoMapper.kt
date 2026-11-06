@@ -1,21 +1,19 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfileWriterDto
-import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfileWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ProjectProfileWriterDtoMapper(
-	private val customDateTimeMapper: CustomDateTimeWriterDtoMapper,
-): IGenericProjectWriterDtoMapper<ProjectProfileModel, ProjectProfileWriterDto> {
-	override fun toModel(dto: ProjectProfileWriterDto, projectId: UUID): ProjectProfileModel {
-		return ProjectProfileModel().apply {
-			role = dto.role
-			startAccess = Optional.ofNullable(dto.startAccess).map(customDateTimeMapper::toModel).orElse(null)
-			endAccess = Optional.ofNullable(dto.endAccess).map(customDateTimeMapper::toModel).orElse(null)
-			this.projectId = projectId
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [CustomDateTimeWriterDtoMapper::class])
+interface ProjectProfileWriterDtoMapper: IGenericProjectWriterDtoMapper<ProjectProfileModel, ProjectProfileWriterDto> {
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "role", source = "dto.role")
+	@Mapping(target = "startAccess", source = "dto.startAccess")
+	@Mapping(target = "endAccess", source = "dto.endAccess")
+	@Mapping(target = "projectId", source = "projectId")
+	override fun toModel(dto: ProjectProfileWriterDto, projectId: UUID): ProjectProfileModel
 }

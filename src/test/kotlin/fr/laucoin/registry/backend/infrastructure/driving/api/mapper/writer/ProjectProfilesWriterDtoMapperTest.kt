@@ -7,7 +7,7 @@ import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
 class ProjectProfilesWriterDtoMapperTest {
-	private val mapper = ProjectProfilesWriterDtoMapper(CustomDateTimeWriterDtoMapper())
+	private val mapper = ProjectProfilesWriterDtoMapperImpl(CustomDateTimeWriterDtoMapperImpl())
 
 	@Test
 	fun `Should toModels normalize the emails and remove the duplicates`() {

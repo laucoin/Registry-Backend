@@ -1,33 +1,25 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
-import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
-import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
-import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.IdReferenceDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ParticipantWriterDtoMapper(
-	private val customDateTimeMapper: CustomDateTimeWriterDtoMapper,
-): IGenericProjectWriterDtoMapper<ParticipantModel, ParticipantWriterDto> {
-	override fun toModel(dto: ParticipantWriterDto, projectId: UUID): ParticipantModel {
-		return ParticipantModel().apply {
-			firstName = dto.firstName
-			lastName = dto.lastName
-			birthday = dto.birthday
-			type = REGISTERED
-			startAvailability =
-				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
-			endAvailability =
-				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
-			user = Optional.ofNullable(dto.userId).map { UserModel().apply { id = it } }.orElse(null)
-			groups =
-				Optional.ofNullable(dto.groupIds).map { groups -> groups.map { GroupModel().apply { id = it } } }
-					.orElse(emptyList())
-			this.projectId = projectId
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [CustomDateTimeWriterDtoMapper::class, IdReferenceDtoMapper::class])
+interface ParticipantWriterDtoMapper: IGenericProjectWriterDtoMapper<ParticipantModel, ParticipantWriterDto> {
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "firstName", source = "dto.firstName")
+	@Mapping(target = "lastName", source = "dto.lastName")
+	@Mapping(target = "birthday", source = "dto.birthday")
+	@Mapping(target = "type", constant = "REGISTERED")
+	@Mapping(target = "startAvailability", source = "dto.startAvailability")
+	@Mapping(target = "endAvailability", source = "dto.endAvailability")
+	@Mapping(target = "user", source = "dto.userId")
+	@Mapping(target = "groups", source = "dto.groupIds")
+	@Mapping(target = "projectId", source = "projectId")
+	override fun toModel(dto: ParticipantWriterDto, projectId: UUID): ParticipantModel
 }
