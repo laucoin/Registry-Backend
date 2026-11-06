@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
@@ -22,8 +21,6 @@ import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
-import fr.laucoin.registry.backend.domain.service.core.IUserService
-import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
@@ -42,7 +39,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -64,15 +60,13 @@ class ProjectProfileServiceTest {
 	private val principalCache: IPrincipalCacheService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val maxUser: Int = 1
-	private val userService: IUserService = mock()
-	private val featureService: IFeatureService = mock()
 	private val rowLockPort: IRowLockPort = mock()
 	init {
 		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
 	}
 
 	private val service = ProjectProfileService(
-		lastAdministrator, port, roleService, userPort, userService, featureService, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
+		lastAdministrator, port, roleService, userPort, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
 	)
 
 	init {
@@ -244,8 +238,6 @@ class ProjectProfileServiceTest {
 	) {
 		// Arrange
 		val profiles = existingUsers.map { invitation(it.email!!) }
-		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.fromIterable(existingUsers))
-		whenever(featureService.isInviteByEmailEnabled()).thenReturn(false)
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
@@ -254,21 +246,32 @@ class ProjectProfileServiceTest {
 		whenever(port.saveAll(any())).thenAnswer { Flux.fromIterable(it.getArgument<List<ProjectProfileModel>>(0)) }
 
 		// Act
-		val result = service.createProjectProfiles(currentUser(), defaultProjectId, profiles).block()
+		val result = service
+			.createProjectProfiles(currentUser(), defaultProjectId, profiles, existingUsers.associateBy { it.email!! })
+			.block()
 
 		// Assert
 		assertEquals(expectedCreatedEmails, result?.first)
 		assertEquals(existingUsers.mapNotNull { it.email }.minus(expectedCreatedEmails.toSet()), result?.second)
-		verify(userService, never()).createPendingUser(any())
 	}
 
 	@Test
-	fun `Should createProjectProfiles create a pending user for an unknown email when invite by email is enabled`() {
+	fun `Should createProjectProfiles not save anything for an email without resolved user`() {
+		// Arrange
+		val profiles = listOf(invitation("new@sgdf.fr"))
+
+		// Act
+		val result = service.createProjectProfiles(currentUser(), defaultProjectId, profiles, emptyMap()).block()
+
+		// Assert
+		assertEquals(Pair(emptyList<String>(), listOf("new@sgdf.fr")), result)
+		verify(port, never()).saveAll(any())
+	}
+
+	@Test
+	fun `Should createProjectProfiles save the profile of a pending user created by the invitation`() {
 		// Arrange
 		val pending = invitedUser("new@sgdf.fr")
-		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.empty())
-		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
-		whenever(userService.createPendingUser("new@sgdf.fr")).thenReturn(Mono.just(pending))
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
@@ -277,45 +280,13 @@ class ProjectProfileServiceTest {
 		whenever(port.saveAll(any())).thenAnswer { Flux.fromIterable(it.getArgument<List<ProjectProfileModel>>(0)) }
 
 		// Act
-		val result = service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("new@sgdf.fr"))).block()
+		val result = service
+			.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("new@sgdf.fr")), mapOf("new@sgdf.fr" to pending))
+			.block()
 
 		// Assert
 		assertEquals(Pair(listOf("new@sgdf.fr"), emptyList<String>()), result)
-		verify(userService).createPendingUser("new@sgdf.fr")
 		verify(port).saveAll(any())
-	}
-
-	@Test
-	fun `Should createProjectProfiles not create anything for an unknown email when invite by email is disabled`() {
-		// Arrange
-		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.empty())
-		whenever(featureService.isInviteByEmailEnabled()).thenReturn(false)
-
-		// Act
-		val result = service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("new@sgdf.fr"))).block()
-
-		// Assert
-		assertEquals(Pair(emptyList<String>(), listOf("new@sgdf.fr")), result)
-		verify(userService, never()).createPendingUser(any())
-		verify(port, never()).saveAll(any())
-	}
-
-	@Test
-	fun `Should createProjectProfiles throw a conflict when the pending user is concurrently created`() {
-		// Arrange
-		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.empty())
-		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
-		whenever(userService.createPendingUser(any())).thenReturn(Mono.error(DataIntegrityViolationException("duplicate")))
-
-		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createProjectProfiles(currentUser(), defaultProjectId, listOf(invitation("new@sgdf.fr"))).block()
-		}) as RegistryException
-
-		// Assert
-		assertEquals(CONFLICT, result.status)
-		assertEquals(CONCURRENT_UPDATE_CONFLICT, result.message)
-		verify(port, never()).saveAll(any())
 	}
 
 	@Test
@@ -326,7 +297,6 @@ class ProjectProfileServiceTest {
 			startAccess = CustomDateTimeModel(LocalDate.EPOCH)
 			endAccess = CustomDateTimeModel(LocalDate.EPOCH)
 		}
-		whenever(userService.findUsersByEmails(any())).thenReturn(Flux.just(user))
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull()
@@ -335,7 +305,7 @@ class ProjectProfileServiceTest {
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.createProjectProfiles(currentUser(), defaultProjectId, listOf(profile)).block()
+			service.createProjectProfiles(currentUser(), defaultProjectId, listOf(profile), mapOf(user.email!! to user)).block()
 		}) as RegistryException
 
 		// Assert

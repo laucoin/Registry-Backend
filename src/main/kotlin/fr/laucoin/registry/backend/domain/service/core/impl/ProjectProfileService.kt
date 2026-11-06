@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
@@ -9,7 +8,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileErro
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
-import fr.laucoin.registry.backend.domain.extension.StringExt.toNormalizedEmail
 import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -24,16 +22,12 @@ import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
-import fr.laucoin.registry.backend.domain.service.core.IUserService
-import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import java.time.Clock
 import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.dao.DataIntegrityViolationException
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -51,8 +45,6 @@ class ProjectProfileService(
 	private val port: IProjectProfilePort,
 	private val roleService: IRoleService,
 	private val userPort: IUserPort,
-	private val userService: IUserService,
-	private val featureService: IFeatureService,
 	private val principalCache: IPrincipalCacheService,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
@@ -103,34 +95,13 @@ class ProjectProfileService(
 	override fun createProjectProfiles(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		profiles: List<ProjectProfileModel>
+		profiles: List<ProjectProfileModel>,
+		users: Map<String, UserModel>,
 	): Mono<Pair<List<String>, List<String>>> {
 		val emails = profiles.map { it.user!!.email!! }
 
-		return rowLockPort.lock(PROJECT, projectId)
-			.then(Mono.defer { resolveUsersByEmail(emails) })
-			.flatMap { users -> saveAllowedProfiles(currentUser, projectId, profiles, users) }
+		return saveAllowedProfiles(currentUser, projectId, profiles, users)
 			.map { created -> Pair(created, emails.minus(created.toSet())) }
-			.`as`(transactionalOperator::transactional)
-	}
-
-	private fun resolveUsersByEmail(emails: List<String>): Mono<Map<String, UserModel>> {
-		return userService.findUsersByEmails(emails)
-			.collectList()
-			.flatMap { found -> withPendingUsers(emails, found.associateBy { it.email!!.toNormalizedEmail() }) }
-	}
-
-	private fun withPendingUsers(emails: List<String>, known: Map<String, UserModel>): Mono<Map<String, UserModel>> {
-		val unknown = emails.filterNot { known.containsKey(it) }
-		if (unknown.isEmpty() || !featureService.isInviteByEmailEnabled()) return Mono.just(known)
-
-		return Flux.fromIterable(unknown)
-			.concatMap(userService::createPendingUser)
-			.onErrorMap(DataIntegrityViolationException::class.java) {
-				RegistryException(CONFLICT, CONCURRENT_UPDATE_CONFLICT)
-			}
-			.collectList()
-			.map { created -> known + created.associateBy { it.email!!.toNormalizedEmail() } }
 	}
 
 	private fun saveAllowedProfiles(

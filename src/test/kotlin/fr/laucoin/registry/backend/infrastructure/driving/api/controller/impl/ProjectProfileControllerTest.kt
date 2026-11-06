@@ -30,6 +30,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CreatedProjectProfilesReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
@@ -84,6 +85,9 @@ import kotlin.test.assertEquals
 class ProjectProfileControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IProjectProfileService
+
+	@MockitoBean
+	private lateinit var useCase: IProjectProfileUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: ProjectProfileReaderDtoMapper
@@ -454,7 +458,7 @@ class ProjectProfileControllerTest : TestContext() {
 	fun `Should createProjectProfiles return 200`() {
 		// Arrange
 		val profiles = ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = "ROLE")
-		whenever(service.createProjectProfiles(any(), any(), any())).thenReturn(
+		whenever(useCase.createProjectProfiles(any(), any(), any())).thenReturn(
 			Mono.just(Pair(listOf("invited@sgdf.fr"), emptyList()))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
@@ -482,7 +486,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(writerMapper)
 		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
 		verify(createdProjectProfilesReaderMapper).toDto(any())
-		verify(service).createProjectProfiles(any(), eq(defaultProjectId), any())
+		verify(useCase).createProjectProfiles(any(), eq(defaultProjectId), any())
 	}
 
 	@Test
@@ -492,7 +496,7 @@ class ProjectProfileControllerTest : TestContext() {
 		val email2 = "second@sgdf.fr"
 		val profiles = ProjectProfilesWriterDto(emails = listOf(email, email2), role = "ROLE")
 
-		whenever(service.createProjectProfiles(any(), any(), any())).thenReturn(
+		whenever(useCase.createProjectProfiles(any(), any(), any())).thenReturn(
 			Mono.just(Pair(listOf(email2), listOf(email)))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
@@ -522,7 +526,7 @@ class ProjectProfileControllerTest : TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
-		verify(service).createProjectProfiles(any(), eq(defaultProjectId), any())
+		verify(useCase).createProjectProfiles(any(), eq(defaultProjectId), any())
 	}
 
 	@ParameterizedTest

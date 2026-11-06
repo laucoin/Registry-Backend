@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.concurrency
 
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
@@ -19,7 +20,6 @@ import fr.laucoin.registry.backend.domain.service.core.IAlertService
 import fr.laucoin.registry.backend.domain.service.core.ICommunicationService
 import fr.laucoin.registry.backend.domain.service.core.IMovementService
 import fr.laucoin.registry.backend.domain.service.core.IParticipantService
-import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.core.IUserService
 import fr.laucoin.registry.backend.test.TestContext
 import org.junit.jupiter.api.AfterEach
@@ -50,7 +50,7 @@ class ServiceConcurrencyTest : TestContext() {
 	private lateinit var participantService: IParticipantService
 
 	@Autowired
-	private lateinit var profileService: IProjectProfileService
+	private lateinit var profileUseCase: IProjectProfileUseCase
 
 	@Autowired
 	private lateinit var activityService: IActivityService
@@ -133,7 +133,7 @@ class ServiceConcurrencyTest : TestContext() {
 		val projectId = insertProject()
 		val userId = insertUser(role = "USER")
 		val invite = {
-			profileService.createProjectProfiles(administrator(userId), projectId, listOf(invitation(projectId, userId)))
+			profileUseCase.createProjectProfiles(administrator(userId), projectId, listOf(invitation(projectId, userId)))
 		}
 
 		// Act

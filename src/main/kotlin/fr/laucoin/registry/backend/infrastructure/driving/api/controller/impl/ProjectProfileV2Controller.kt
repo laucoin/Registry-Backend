@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectProfileV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CreatedProjectProfilesReaderDto
@@ -42,6 +43,7 @@ import reactor.core.publisher.Mono
 @RestController
 class ProjectProfileV2Controller(
 	private val service: IProjectProfileService,
+	private val useCase: IProjectProfileUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
 	private val partialUserReaderMapper: PartialUserReaderDtoMapper,
@@ -94,7 +96,7 @@ class ProjectProfileV2Controller(
 	): Mono<ResponseEntity<CreatedProjectProfilesReaderDto>> {
 		val profileModels = profilesWriterMapper.toModels(profiles, projectId)
 
-		return service.createProjectProfiles(currentUser, projectId, profileModels)
+		return useCase.createProjectProfiles(currentUser, projectId, profileModels)
 			.map(createdProjectProfilesReaderMapper::toDto)
 			.map {
 				val status = if (it.notCreatedEmails.isEmpty()) OK else MULTI_STATUS
