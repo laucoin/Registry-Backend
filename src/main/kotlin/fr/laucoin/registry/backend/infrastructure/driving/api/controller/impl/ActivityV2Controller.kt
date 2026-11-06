@@ -1,9 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ActivityQueryDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ActivityMovementQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DURATION_FORMAT_FAILED
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -23,7 +24,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Acti
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityStatisticsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ActivityWriterDtoMapper
-import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -52,23 +52,14 @@ class ActivityV2Controller(
 	override fun findActivities(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		at: ZonedDateTime?,
-		minDuration: String?,
-		maxDuration: String?,
-		participants: Int?,
-		sort: String?,
+		search: ActivityQueryDto,
 	): Mono<PageModel<ActivityReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_ACTIVITY_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_ACTIVITY_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = ActivitySearchParamModel(
-			query, visibility, isAvailable, at,
-			parseDuration(minDuration), parseDuration(maxDuration), participants,
-			sort.toSortModel(ActivitySearchParamModel.SORT_FIELDS),
+			search.query, visibility, search.isAvailable, search.at,
+			parseDuration(search.minDuration), parseDuration(search.maxDuration), search.participants,
+			search.sort.toSortModel(ActivitySearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findActivitiesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
@@ -90,23 +81,17 @@ class ActivityV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Long,
-		size: Int,
-		isVisible: Boolean?,
-		type: MovementTypeEnum?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sort: String?,
+		search: ActivityMovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = MovementSearchParamModel(
 			visibility,
 			hasActivity = null,
-			type,
-			from,
-			to,
-			sort = sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
+			search.type,
+			search.from,
+			search.to,
+			sort = search.sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findActivityMovementsPage(projectId, id, pageable, searchParams)

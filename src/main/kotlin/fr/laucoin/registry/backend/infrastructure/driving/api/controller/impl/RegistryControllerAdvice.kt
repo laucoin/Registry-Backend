@@ -24,6 +24,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.validation.method.ParameterValidationResult
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.validation.FieldError
+import org.springframework.validation.ObjectError
 import org.springframework.web.bind.support.WebExchangeBindException
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.server.ResponseStatusException
@@ -59,6 +61,8 @@ class RegistryControllerAdvice(
 		exchange: ServerWebExchange,
 	): Mono<ResponseEntity<ErrorDto>> {
 		val error = exception.allErrors.first()
+		if (error.isBindingFailure()) return buildError(exchange, status = BAD_REQUEST, code = PARAMETER_TYPE_MISMATCH)
+
 		return buildError(
 			exchange,
 			status = BAD_REQUEST,
@@ -66,6 +70,8 @@ class RegistryControllerAdvice(
 			args = error.arguments?.drop(1)?.toTypedArray() ?: emptyArray(),
 		)
 	}
+
+	private fun ObjectError.isBindingFailure(): Boolean = this is FieldError && isBindingFailure
 
 	override fun handleServerWebInputException(
 		exception: ServerWebInputException,

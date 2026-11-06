@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.VehicleQueryDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ElementMovementQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -22,7 +22,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Move
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleTimelineReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.VehicleWriterDtoMapper
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
@@ -48,21 +47,13 @@ class VehicleV2Controller(
 	override fun findVehicles(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		status: PresenceStatusEnum?,
-		at: ZonedDateTime?,
-		brand: String?,
-		model: String?,
-		sort: String?,
+		search: VehicleQueryDto,
 	): Mono<PageModel<VehicleReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_VEHICLE_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_VEHICLE_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = VehicleSearchParamModel(
-			query, visibility, status, at, brand, model,
-			sort = sort.toSortModel(VehicleSearchParamModel.SORT_FIELDS),
+			search.query, visibility, search.status, search.at, search.brand, search.model,
+			sort = search.sort.toSortModel(VehicleSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findVehiclesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
@@ -84,24 +75,17 @@ class VehicleV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Long,
-		size: Int,
-		isVisible: Boolean?,
-		hasActivity: Boolean?,
-		type: MovementTypeEnum?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sort: String?,
+		search: ElementMovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = MovementSearchParamModel(
 			visibility,
-			hasActivity,
-			type,
-			from,
-			to,
-			sort = sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
+			search.hasActivity,
+			search.type,
+			search.from,
+			search.to,
+			sort = search.sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findVehicleMovementsPage(projectId, id, pageable, searchParams)
