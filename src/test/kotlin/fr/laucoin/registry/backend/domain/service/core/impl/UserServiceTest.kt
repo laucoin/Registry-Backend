@@ -256,36 +256,6 @@ class UserServiceTest {
 	}
 
 	@Test
-	fun `Should findUsersByEmails normalize the emails and ignore the service account`() {
-		// Arrange
-		val user = UserModel().apply { id = UUID.randomUUID(); email = "john@doe.fr" }
-		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.just(user, serviceAccount))
-
-		// Act
-		val result = service.findUsersByEmails(listOf(" John@Doe.FR ")).collectList().block()
-
-		// Assert
-		assertEquals(listOf(user), result)
-		verify(port).findByEmails(listOf("john@doe.fr"), null)
-	}
-
-	@Test
-	fun `Should createPendingUser create a user without OIDC ID and with a normalized email`() {
-		// Arrange
-		whenever(roleService.getDefaultUserRole()).thenReturn(USER_ROLE)
-		whenever(port.create(any())).thenAnswer { Mono.just(it.getArgument<UserModel>(0)) }
-
-		// Act
-		val result = service.createPendingUser(" John@Doe.FR ").block()
-
-		// Assert
-		assertEquals("john@doe.fr", result!!.email)
-		assertEquals(USER_ROLE, result.role)
-		assertEquals(null, result.oidcId)
-		assertEquals(null, result.lastLogin)
-	}
-
-	@Test
 	fun `Should resolveUsersByEmail return the known users by normalized email without creating any user`() {
 		// Arrange
 		val user = UserModel().apply { id = UUID.randomUUID(); email = "john@doe.fr" }
@@ -300,7 +270,21 @@ class UserServiceTest {
 	}
 
 	@Test
-	fun `Should resolveUsersByEmail create a pending user for an unknown email when invite by email is enabled`() {
+	fun `Should resolveUsersByEmail normalize the emails and ignore the service account`() {
+		// Arrange
+		val user = UserModel().apply { id = UUID.randomUUID(); email = "john@doe.fr" }
+		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.just(user, serviceAccount))
+
+		// Act
+		val result = service.resolveUsersByEmail(listOf(" John@Doe.FR ")).block()
+
+		// Assert
+		assertEquals(mapOf("john@doe.fr" to user), result)
+		verify(port).findByEmails(listOf("john@doe.fr"), null)
+	}
+
+	@Test
+	fun `Should resolveUsersByEmail create a pending user without OIDC ID and with a normalized email`() {
 		// Arrange
 		whenever(port.findByEmails(any(), anyOrNull())).thenReturn(Flux.empty())
 		whenever(featureService.isInviteByEmailEnabled()).thenReturn(true)
@@ -308,11 +292,14 @@ class UserServiceTest {
 		whenever(port.create(any())).thenAnswer { Mono.just(it.getArgument<UserModel>(0)) }
 
 		// Act
-		val result = service.resolveUsersByEmail(listOf("new@sgdf.fr")).block()
+		val result = service.resolveUsersByEmail(listOf(" John@Doe.FR ")).block()
 
 		// Assert
-		assertEquals(setOf("new@sgdf.fr"), result?.keys)
-		assertEquals(null, result?.getValue("new@sgdf.fr")?.oidcId)
+		val created = result!!.getValue("john@doe.fr")
+		assertEquals("john@doe.fr", created.email)
+		assertEquals(USER_ROLE, created.role)
+		assertEquals(null, created.oidcId)
+		assertEquals(null, created.lastLogin)
 		verify(port).create(any())
 	}
 

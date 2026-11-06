@@ -86,12 +86,12 @@ class UserService(
 			.filter { isNotServiceAccount(it) }
 	}
 
-	override fun findUsersByEmails(emails: Collection<String>): Flux<UserModel> {
+	private fun findUsersByEmails(emails: Collection<String>): Flux<UserModel> {
 		return port.findByEmails(emails.map { it.toNormalizedEmail() }, isVisible = null)
 			.filter { isNotServiceAccount(it) }
 	}
 
-	override fun createPendingUser(email: String): Mono<UserModel> {
+	private fun createPendingUser(email: String): Mono<UserModel> {
 		log.info("Saving pending user (not yet linked to an OIDC ID) in database")
 		val user = UserModel(
 			email = email.toNormalizedEmail(),
