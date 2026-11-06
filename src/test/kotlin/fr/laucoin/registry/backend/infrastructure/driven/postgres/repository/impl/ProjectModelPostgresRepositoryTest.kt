@@ -270,12 +270,16 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 
 	@Test
 	fun `Should findProjectsEligibleForPurge only select projects created before the threshold`() {
-		// Act & Assert
-		assertTrue(postgresRepository.findProjectsEligibleForPurge(LocalDate.EPOCH).collectList().block()!!.isEmpty())
-		assertTrue(
-			postgresRepository.findProjectsEligibleForPurge(LocalDate.now(ZoneOffset.UTC).plusYears(1)).collectList().block()!!
-				.isNotEmpty()
-		)
+		// Arrange
+		val future = LocalDate.now(ZoneOffset.UTC).plusYears(1)
+
+		// Act
+		val beforeCreation = postgresRepository.findProjectsEligibleForPurge(LocalDate.EPOCH).collectList().block()!!
+		val afterCreation = postgresRepository.findProjectsEligibleForPurge(future).collectList().block()!!
+
+		// Assert
+		assertTrue(beforeCreation.isEmpty())
+		assertTrue(afterCreation.isNotEmpty())
 	}
 
 	@Nested

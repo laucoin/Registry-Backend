@@ -20,8 +20,12 @@ class CsrfTokenServiceTest {
 		val exchangeA = exchangeWithAccessTokenCookie("accessToken")
 		val exchangeB = exchangeWithAccessTokenCookie("accessToken")
 
-		// Act & Assert
-		assertEquals(service.computeToken(exchangeA), service.computeToken(exchangeB))
+		// Act
+		val tokenA = service.computeToken(exchangeA)
+		val tokenB = service.computeToken(exchangeB)
+
+		// Assert
+		assertEquals(tokenA, tokenB)
 	}
 
 	@Test
@@ -30,8 +34,12 @@ class CsrfTokenServiceTest {
 		val exchangeA = exchangeWithAccessTokenCookie("accessTokenA")
 		val exchangeB = exchangeWithAccessTokenCookie("accessTokenB")
 
-		// Act & Assert
-		assertNotEquals(service.computeToken(exchangeA), service.computeToken(exchangeB))
+		// Act
+		val tokenA = service.computeToken(exchangeA)
+		val tokenB = service.computeToken(exchangeB)
+
+		// Assert
+		assertNotEquals(tokenA, tokenB)
 	}
 
 	@Test
@@ -42,8 +50,12 @@ class CsrfTokenServiceTest {
 		)
 		val cookieExchange = exchangeWithAccessTokenCookie("accessToken")
 
-		// Act & Assert
-		assertEquals(service.computeToken(cookieExchange), service.computeToken(exchange))
+		// Act
+		val cookieToken = service.computeToken(cookieExchange)
+		val headerToken = service.computeToken(exchange)
+
+		// Assert
+		assertEquals(cookieToken, headerToken)
 	}
 
 	@Test
@@ -58,8 +70,12 @@ class CsrfTokenServiceTest {
 			MockServerHttpRequest.method(GET, "/api/v2/whatever").header(AUTHORIZATION, "Bearer headerToken")
 		)
 
-		// Act & Assert
-		assertEquals(service.computeToken(headerOnlyExchange), service.computeToken(exchange))
+		// Act
+		val headerOnlyToken = service.computeToken(headerOnlyExchange)
+		val bothToken = service.computeToken(exchange)
+
+		// Assert
+		assertEquals(headerOnlyToken, bothToken)
 	}
 
 	@Test
@@ -67,8 +83,12 @@ class CsrfTokenServiceTest {
 		// Arrange
 		val exchange = MockServerWebExchange.from(MockServerHttpRequest.method(GET, "/api/v2/whatever"))
 
-		// Act & Assert
-		assertEquals(service.computeToken(exchange), service.computeToken(exchange))
+		// Act
+		val first = service.computeToken(exchange)
+		val second = service.computeToken(exchange)
+
+		// Assert
+		assertEquals(first, second)
 	}
 
 	@Test

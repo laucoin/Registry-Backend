@@ -79,12 +79,11 @@ class ParticipantPresenceStatusRepositoryTest : TestContext() {
 	@Test
 	@Order(2)
 	fun `Should derive the presence status from the effective dates and the last movement`() {
+		// Act
+		val statuses = listOf(expectedNotArrivedId, notArrivedOutOfRangeId, earlyArrivalId, outingId, departedId).map(::statusOf)
+
 		// Assert
-		assertEquals(ABSENT, statusOf(expectedNotArrivedId))
-		assertEquals(UNAVAILABLE, statusOf(notArrivedOutOfRangeId))
-		assertEquals(PRESENT, statusOf(earlyArrivalId))
-		assertEquals(ABSENT, statusOf(outingId))
-		assertEquals(UNAVAILABLE, statusOf(departedId))
+		assertEquals(listOf(ABSENT, UNAVAILABLE, PRESENT, ABSENT, UNAVAILABLE), statuses)
 	}
 
 	@Test

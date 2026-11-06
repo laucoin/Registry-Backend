@@ -13,6 +13,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -44,6 +45,12 @@ class LogHistoryIntegrationTest : TestContext() {
 			"INSERT INTO tb_user(id, oidc_id, type, first_name, last_name, email, role) VALUES (:id, :oidc, 'USER', 'History', 'Editor', :email, 'USER')",
 			"id" to editorId, "oidc" to UUID.randomUUID(), "email" to "$editorId@history.test",
 		)
+	}
+
+	@AfterEach
+	fun clean() {
+		execute("DELETE FROM tb_project WHERE id = :id", "id" to projectId)
+		execute("DELETE FROM tb_user WHERE id = :id", "id" to editorId)
 	}
 
 	@Test
