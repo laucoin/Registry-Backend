@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.service.core.IParticipantSearchService
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -23,7 +24,8 @@ import reactor.core.publisher.Mono
 
 class ParticipantUseCaseTest {
 	private val service: IParticipantService = mock()
-	private val useCase: IParticipantUseCase = ParticipantUseCase(service)
+	private val searchService: IParticipantSearchService = mock()
+	private val useCase: IParticipantUseCase = ParticipantUseCase(service, searchService)
 
 	@Test
 	fun `Should findParticipantsPage delegate to the service`() {
@@ -96,14 +98,14 @@ class ParticipantUseCaseTest {
 		val projectId: UUID = UUID.randomUUID()
 		val query: String? = null
 		val expected: Flux<UserModel> = Flux.empty()
-		whenever(service.searchUsersByText(projectId, query)).thenReturn(expected)
+		whenever(searchService.searchUsersByText(projectId, query)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchUsersByText(projectId, query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchUsersByText(projectId, query)
+		verify(searchService).searchUsersByText(projectId, query)
 	}
 
 	@Test
@@ -112,14 +114,14 @@ class ParticipantUseCaseTest {
 		val projectId: UUID = UUID.randomUUID()
 		val query: String? = null
 		val expected: Flux<GroupModel> = Flux.empty()
-		whenever(service.searchGroupsByText(projectId, query)).thenReturn(expected)
+		whenever(searchService.searchGroupsByText(projectId, query)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchGroupsByText(projectId, query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchGroupsByText(projectId, query)
+		verify(searchService).searchGroupsByText(projectId, query)
 	}
 
 	@Test

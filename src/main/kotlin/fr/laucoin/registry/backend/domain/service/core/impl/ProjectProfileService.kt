@@ -17,10 +17,8 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
-import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericProfileService
 import fr.laucoin.registry.backend.domain.service.core.IProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
@@ -28,7 +26,6 @@ import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import java.time.Clock
 import java.time.OffsetTime
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -45,13 +42,10 @@ class ProjectProfileService(
 	private val lastAdministrator: LastAdministratorHelper,
 	private val port: IProjectProfilePort,
 	private val roleService: IRoleService,
-	private val userPort: IUserPort,
 	private val principalCache: IPrincipalCacheService,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
 	clock: Clock,
-	@param:Value($$"${registry.feature.profile.searched.max-user-result}")
-	private val maxUserResult: Int,
 ): IProjectProfileService, GenericProfileService(port, clock) {
 	override fun findProjectProfilesPage(
 		projectId: UUID,
@@ -69,13 +63,6 @@ class ProjectProfileService(
 	): Mono<ProjectProfileModel> {
 		return port.findById(projectId, id, isVisible)
 			.notFoundIfEmpty(id)
-	}
-
-	override fun searchUsers(query: String?): Flux<UserModel> {
-		return userPort.findWithLimit(
-			maxUserResult,
-			UserSearchParamModel(query, isVisible = true)
-		)
 	}
 
 	override fun getAssignableProjectRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<String> {

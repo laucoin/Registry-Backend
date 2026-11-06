@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.service.core.IProjectProfileSearchService
 import org.junit.jupiter.api.Assertions.assertSame
 import reactor.core.publisher.Flux
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
@@ -30,12 +31,13 @@ import reactor.core.publisher.Mono
 import java.util.UUID
 
 class ProjectProfileUseCaseTest {
+	private val searchService: IProjectProfileSearchService = mock()
 	private val profileService: IProjectProfileService = mock()
 	private val userService: IUserService = mock()
 	private val rowLockPort: IRowLockPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val useCase: IProjectProfileUseCase =
-		ProjectProfileUseCase(profileService, userService, rowLockPort, transactionalOperator)
+		ProjectProfileUseCase(profileService, searchService, userService, rowLockPort, transactionalOperator)
 
 	private fun invitation(userEmail: String) = ProjectProfileModel().apply { user = UserModel().apply { email = userEmail } }
 
@@ -136,14 +138,14 @@ class ProjectProfileUseCaseTest {
 		// Arrange
 		val query: String? = null
 		val expected: Flux<UserModel> = Flux.empty()
-		whenever(profileService.searchUsers(query)).thenReturn(expected)
+		whenever(searchService.searchUsers(query)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchUsers(query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(profileService).searchUsers(query)
+		verify(searchService).searchUsers(query)
 	}
 
 	@Test

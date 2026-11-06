@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.service.core.IProjectProfileSearchService
 import reactor.core.publisher.Flux
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
@@ -25,6 +26,7 @@ import reactor.core.publisher.Mono
 @Service
 class ProjectProfileUseCase(
 	private val profileService: IProjectProfileService,
+	private val searchService: IProjectProfileSearchService,
 	private val userService: IUserService,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
@@ -59,7 +61,7 @@ class ProjectProfileUseCase(
 	}
 
 	override fun searchUsers(query: String?): Flux<UserModel> {
-		return profileService.searchUsers(query)
+		return searchService.searchUsers(query)
 	}
 
 	override fun getAssignableProjectRoles(currentUser: CurrentUserModel, projectId: UUID): Flux<String> {

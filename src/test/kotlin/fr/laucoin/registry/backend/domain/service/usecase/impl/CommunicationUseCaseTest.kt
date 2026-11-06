@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.service.core.ICommunicationSearchService
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -17,7 +18,8 @@ import reactor.core.publisher.Mono
 
 class CommunicationUseCaseTest {
 	private val service: ICommunicationService = mock()
-	private val useCase: ICommunicationUseCase = CommunicationUseCase(service)
+	private val searchService: ICommunicationSearchService = mock()
+	private val useCase: ICommunicationUseCase = CommunicationUseCase(service, searchService)
 
 	@Test
 	fun `Should findCommunicationById delegate to the service`() {
@@ -42,14 +44,14 @@ class CommunicationUseCaseTest {
 		val projectId: UUID = UUID.randomUUID()
 		val query: String? = null
 		val expected: Flux<MovementModel> = Flux.empty()
-		whenever(service.searchOutMovementWithActivityByText(projectId, query)).thenReturn(expected)
+		whenever(searchService.searchOutMovementWithActivityByText(projectId, query)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchOutMovementWithActivityByText(projectId, query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchOutMovementWithActivityByText(projectId, query)
+		verify(searchService).searchOutMovementWithActivityByText(projectId, query)
 	}
 
 	@Test
@@ -58,14 +60,14 @@ class CommunicationUseCaseTest {
 		val projectId: UUID = UUID.randomUUID()
 		val query: String? = null
 		val expected: Flux<AlertModel> = Flux.empty()
-		whenever(service.searchAlertByText(projectId, query)).thenReturn(expected)
+		whenever(searchService.searchAlertByText(projectId, query)).thenReturn(expected)
 
 		// Act
 		val result = useCase.searchAlertByText(projectId, query)
 
 		// Assert
 		assertSame(expected, result)
-		verify(service).searchAlertByText(projectId, query)
+		verify(searchService).searchAlertByText(projectId, query)
 	}
 
 	@Test

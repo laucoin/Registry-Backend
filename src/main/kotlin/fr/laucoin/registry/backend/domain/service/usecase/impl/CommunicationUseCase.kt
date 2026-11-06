@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.service.core.ICommunicationSearchService
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -13,21 +14,24 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Point d'entrée des communications pour la couche REST.
- * Périmètre : Délègue chaque opération au service Communication sans logique propre.
+ * Périmètre : Délègue chaque opération aux services Communication et recherche Communication sans logique propre.
  * Limites : Ne porte aucune règle métier ; elles restent dans le service.
  */
 @Service
-class CommunicationUseCase(private val service: ICommunicationService) : ICommunicationUseCase {
+class CommunicationUseCase(
+	private val service: ICommunicationService,
+	private val searchService: ICommunicationSearchService,
+) : ICommunicationUseCase {
 	override fun findCommunicationById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<CommunicationModel> {
 		return service.findCommunicationById(projectId, id, isVisible)
 	}
 
 	override fun searchOutMovementWithActivityByText(projectId: UUID, query: String?): Flux<MovementModel> {
-		return service.searchOutMovementWithActivityByText(projectId, query)
+		return searchService.searchOutMovementWithActivityByText(projectId, query)
 	}
 
 	override fun searchAlertByText(projectId: UUID, query: String?): Flux<AlertModel> {
-		return service.searchAlertByText(projectId, query)
+		return searchService.searchAlertByText(projectId, query)
 	}
 
 	override fun createCommunication(
