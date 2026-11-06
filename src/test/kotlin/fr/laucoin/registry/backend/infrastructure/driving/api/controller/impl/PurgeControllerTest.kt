@@ -5,7 +5,9 @@ import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
 import fr.laucoin.registry.backend.domain.model.ProjectConfigurationPurgeModel
 import fr.laucoin.registry.backend.domain.model.ProjectContentPurgeModel
-import fr.laucoin.registry.backend.domain.service.usecase.IPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IPlatformPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectConfigurationPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectContentPurgeUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectContentPurgeReaderDto
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
@@ -36,7 +38,13 @@ import java.util.UUID
 
 class PurgeControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var purgeUseCase: IPurgeUseCase
+	private lateinit var platform: IPlatformPurgeUseCase
+
+	@MockitoBean
+	private lateinit var content: IProjectContentPurgeUseCase
+
+	@MockitoBean
+	private lateinit var configuration: IProjectConfigurationPurgeUseCase
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
@@ -48,7 +56,7 @@ class PurgeControllerTest : TestContext() {
 	@Test
 	fun `Should purgeUsersIfNecessary should return 200`() {
 		// Arrange
-		whenever(purgeUseCase.purgeUsers(any(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeUsers(any(), any())).thenReturn(Flux.empty())
 
 		// Act
 		val result = webClient
@@ -69,14 +77,14 @@ class PurgeControllerTest : TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(purgeUseCase).purgeUsers(any(), any())
+		verify(platform).purgeUsers(any(), any())
 	}
 
 	@Test
 	fun `Should purgeUsersIfNecessary report at most 1000 identifiers`() {
 		// Arrange
 		val ids = List(PURGE_REPORTED_IDS_MAX + 1) { UUID.randomUUID() }
-		whenever(purgeUseCase.purgeUsers(anyOrNull(), any())).thenReturn(Flux.fromIterable(ids))
+		whenever(platform.purgeUsers(anyOrNull(), any())).thenReturn(Flux.fromIterable(ids))
 
 		// Act
 		val result = webClient
@@ -93,7 +101,7 @@ class PurgeControllerTest : TestContext() {
 	@Test
 	fun `Should purgeProjectsIfNecessary should return 200`() {
 		// Arrange
-		whenever(purgeUseCase.purgeProjects(any(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeProjects(any(), any())).thenReturn(Flux.empty())
 
 		// Act
 		val result = webClient
@@ -114,13 +122,13 @@ class PurgeControllerTest : TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(purgeUseCase).purgeProjects(any(), any())
+		verify(platform).purgeProjects(any(), any())
 	}
 
 	@Test
 	fun `Should purgeProjectsContentsIfNecessary should return 200`() {
 		// Arrange
-		whenever(purgeUseCase.purgeProjectsContents(any(), any()))
+		whenever(content.purgeProjectsContents(any(), any()))
 			.thenReturn(Mono.just(ProjectContentPurgeModel(listOf(UUID.randomUUID()), emptyList(), emptyList())))
 
 		// Act
@@ -142,13 +150,13 @@ class PurgeControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectContentPurgeReaderDto>(OK)
 
-		verify(purgeUseCase).purgeProjectsContents(any(), any())
+		verify(content).purgeProjectsContents(any(), any())
 	}
 
 	@Test
 	fun `Should purgeProjectsConfigurationsIfNecessary should return 200`() {
 		// Arrange
-		whenever(purgeUseCase.purgeProjectsConfigurations(any(), any()))
+		whenever(configuration.purgeProjectsConfigurations(any(), any()))
 			.thenReturn(Mono.just(ProjectConfigurationPurgeModel(emptyList(), emptyList(), emptyList(), emptyList())))
 
 		// Act
@@ -170,7 +178,7 @@ class PurgeControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectConfigurationPurgeReaderDto>(OK)
 
-		verify(purgeUseCase).purgeProjectsConfigurations(any(), any())
+		verify(configuration).purgeProjectsConfigurations(any(), any())
 	}
 
 	@ParameterizedTest
@@ -198,7 +206,7 @@ class PurgeControllerTest : TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, PURGE_DATE_THRESHOLD_IN_FUTURE)
 
-		verifyNoInteractions(purgeUseCase)
+		verifyNoInteractions(platform, content, configuration)
 
 	}
 
@@ -213,7 +221,7 @@ class PurgeControllerTest : TestContext() {
 		// Arrange
 		val threshold = LocalDate.now(ZoneOffset.UTC).plusDays(daysFromToday)
 
-		whenever(purgeUseCase.purgeUsers(any(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeUsers(any(), any())).thenReturn(Flux.empty())
 
 		// Act
 		val result = webClient
@@ -234,13 +242,13 @@ class PurgeControllerTest : TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(purgeUseCase).purgeUsers(threshold, true)
+		verify(platform).purgeUsers(threshold, true)
 	}
 
 	@Test
 	fun `Should purgeAuditsIfNecessary return 200 with the count and default to a dry run`() {
 		// Arrange
-		whenever(purgeUseCase.purgeAudits(anyOrNull(), any())).thenReturn(Mono.just(4L))
+		whenever(platform.purgeAudits(anyOrNull(), any())).thenReturn(Mono.just(4L))
 
 		// Act
 		val result = webClient.authenticate(REGISTRY_JOB_C).post()
@@ -250,7 +258,7 @@ class PurgeControllerTest : TestContext() {
 		// Assert
 		result.expectStatus().isOk
 			.expectBody().jsonPath("$.count").isEqualTo(4)
-		verify(purgeUseCase).purgeAudits(null, true)
+		verify(platform).purgeAudits(null, true)
 	}
 
 	@Test
@@ -262,6 +270,6 @@ class PurgeControllerTest : TestContext() {
 
 		// Assert
 		result.expectStatus().isForbidden
-		verifyNoInteractions(purgeUseCase)
+		verifyNoInteractions(platform, content, configuration)
 	}
 }
