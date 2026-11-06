@@ -6,6 +6,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.UserError.USER_ROLE_BLANK
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
@@ -100,6 +101,10 @@ class UserControllerTest: TestContext() {
 		@JvmStatic
 		fun `Should updateUserRole return 200`(): Stream<Arguments> = Stream.of(
 			Arguments.of("ROLE_USER"),
+		)
+
+		@JvmStatic
+		fun `Should updateUserRole return 400 without a role`(): Stream<Arguments> = Stream.of(
 			Arguments.of(null),
 		)
 	}
@@ -252,6 +257,25 @@ class UserControllerTest: TestContext() {
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(userRoleReaderMapper)
 		verify(service).updateUserRoleById(any(), eq(uuid), eq(role))
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should updateUserRole return 400 without a role`(role: String?) {
+		// Arrange
+		val uuid = UUID.randomUUID()
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_U)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(uuid), emptyList()))
+			.bodyValue(UserRoleWriterDto(role))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, USER_ROLE_BLANK)
+		verifyNoInteractions(service)
 	}
 
 	@Test

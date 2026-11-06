@@ -85,15 +85,23 @@ class UserServiceTest {
 			Arguments.of(1, USER_ROLE, 0),
 			Arguments.of(0, USER_ROLE, 1),
 			Arguments.of(null, USER_ROLE, 0),
-			Arguments.of(1, null, 0),
-			Arguments.of(0, null, 1),
-			Arguments.of(null, null, 0),
 		)
 
 		@JvmStatic
 		fun `Should updateUserRoleById throw RegistryException`(): Stream<Arguments> {
 			val uuid = UUID.randomUUID()
 			return Stream.of(
+				Arguments.of(
+					1,
+					listOf(USER_ROLE),
+					null,
+					UserModel().apply { id = uuid; role = USER_ROLE },
+					emptyArray<UserModel>(),
+					FORBIDDEN,
+					USER_ASSIGNS_ROLE_HIGHER_THAN_ITS_OWN,
+					0,
+					0,
+				),
 				Arguments.of(
 					1,
 					listOf(USER_ROLE),
