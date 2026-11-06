@@ -1,19 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.MovementQueryDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.CommunicationQueryDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectStatusReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleStatusReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectStatusReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleStatusReaderDtoMapper
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
-import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -21,38 +11,23 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementV2Controller
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PlannedMovementReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
-import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LabelSearchExt.matchesQuery
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementActivityReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementContentReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PlannedMovementReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReasonReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestMovementWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantMovementWriterDtoMapper
-import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_RESTORE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_RESTORE
 
 /**
@@ -65,18 +40,10 @@ class MovementV2Controller(
 	private val service: IMovementUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: MovementReaderDtoMapper,
-	private val plannedReaderMapper: PlannedMovementReaderDtoMapper,
 	private val readerContentMapper: MovementContentReaderDtoMapper,
-	private val reasonReaderMapper: MovementReasonReaderDtoMapper,
-	private val activityReasonReaderMapper: MovementActivityReasonReaderDtoMapper,
-	private val communicationReaderMapper: CommunicationReaderDtoMapper,
-	private val movementParticipantsAndGroupsMapper: MovementParticipantsAndGroupsReaderDtoMapper,
-	private val vehiclesMapper: VehicleReaderDtoMapper,
 	private val writerMapper: ParticipantMovementWriterDtoMapper,
 	private val guestMovementWriterMapper: GuestMovementWriterDtoMapper,
 	private val guestWriterMapper: GuestWriterDtoMapper,
-	private val projectStatusMapper: ProjectStatusReaderDtoMapper,
-	private val vehicleStatusMapper: VehicleStatusReaderDtoMapper,
 ): IMovementV2Controller {
 
 	override fun findMovements(
@@ -139,76 +106,6 @@ class MovementV2Controller(
 
 	override fun findMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementReaderDto> {
 		return service.findMovementById(projectId, id, isVisible = currentUser.visibilityFor(null, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)).map(readerMapper::toDto)
-	}
-
-	override fun searchReasonsAndActivities(
-		projectId: UUID,
-		type: MovementTypeEnum,
-		contentType: ParticipantTypeEnum,
-		query: String?,
-	): Flux<MovementReasonsReaderDto> {
-		return service.searchActivitiesByText(projectId, contentType, query)
-			.map(activityReasonReaderMapper::toDto)
-			.mergeWith(searchReasons(query, type, contentType))
-	}
-
-	private fun searchReasons(
-		query: String?,
-		type: MovementTypeEnum,
-		contentType: ParticipantTypeEnum,
-	): Flux<MovementReasonsReaderDto> {
-		return service.searchReasonsByText(contentType, type)
-			.map(reasonReaderMapper::toDto)
-			.filter { it.label.matchesQuery(query) }
-	}
-
-	override fun searchParticipantsAndGroups(
-		projectId: UUID,
-		contentType: ParticipantTypeEnum,
-		query: String?,
-		at: ZonedDateTime,
-		all: Boolean,
-	): Mono<MovementParticipantsAndGroupsReaderDto> {
-		return service.searchParticipantsAndGroupsByText(projectId, contentType, query, at, all)
-			.map { Pair(it.t1, it.t2) }
-			.map(movementParticipantsAndGroupsMapper::toDto)
-	}
-
-	override fun searchVehicles(projectId: UUID, query: String?): Flux<VehicleReaderDto> {
-		return service.searchVehiclesByText(projectId, query).map(vehiclesMapper::toDto)
-	}
-
-	override fun findPlannedArrivals(projectId: UUID, date: LocalDate?): Flux<PlannedMovementReaderDto> {
-		return service.findPlannedMovements(projectId, IN, date).map(plannedReaderMapper::toDto)
-	}
-
-	override fun findPlannedDepartures(projectId: UUID, date: LocalDate?): Flux<PlannedMovementReaderDto> {
-		return service.findPlannedMovements(projectId, OUT, date).map(plannedReaderMapper::toDto)
-	}
-
-	override fun findMovementCommunications(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		search: CommunicationQueryDto,
-	): Mono<PageModel<CommunicationReaderDto>> {
-		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = CommunicationSearchParamModel(
-			search.query, visibility, search.from, search.to,
-			sort = search.sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
-		)
-
-		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
-			.map(communicationReaderMapper::toDtoPage)
-	}
-
-	override fun findParticipantsStatus(projectId: UUID): Mono<ProjectStatusReaderDto> {
-		return service.findParticipantsStatus(projectId).map(projectStatusMapper::toDto)
-	}
-
-	override fun findVehiclesStatus(projectId: UUID): Mono<VehicleStatusReaderDto> {
-		return service.findVehiclesStatus(projectId).map(vehicleStatusMapper::toDto)
 	}
 
 	override fun createMovement(
