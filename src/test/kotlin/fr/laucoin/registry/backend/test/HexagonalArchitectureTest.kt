@@ -283,7 +283,7 @@ class HexagonalArchitectureTest {
 		.resideInAPackage("$INFRASTRUCTURE.driving.api.mapper..")
 		.and().areTopLevelClasses()
 		.should()
-		.haveSimpleNameEndingWith("DtoMapper")
+		.haveNameMatching(".*DtoMapper(Impl|Config)?")
 		.check(classes)
 
 	@ArchTest

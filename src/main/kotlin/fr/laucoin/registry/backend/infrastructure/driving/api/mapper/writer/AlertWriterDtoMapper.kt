@@ -1,21 +1,19 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
 import fr.laucoin.registry.backend.domain.model.AlertModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
 import java.util.UUID
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class AlertWriterDtoMapper: IGenericProjectWriterDtoMapper<AlertModel, AlertWriterDto> {
-	override fun toModel(
-		dto: AlertWriterDto,
-		projectId: UUID
-	): AlertModel {
-		return AlertModel().apply {
-			title = dto.title
-			dateTime = dto.dateTime!!
-			status = dto.status
-			this.projectId = projectId
-		}
-	}
+@Mapper(config = DtoMapperConfig::class)
+interface AlertWriterDtoMapper: IGenericProjectWriterDtoMapper<AlertModel, AlertWriterDto> {
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "title", source = "dto.title")
+	@Mapping(target = "dateTime", source = "dto.dateTime")
+	@Mapping(target = "status", source = "dto.status")
+	@Mapping(target = "projectId", source = "projectId")
+	override fun toModel(dto: AlertWriterDto, projectId: UUID): AlertModel
 }
