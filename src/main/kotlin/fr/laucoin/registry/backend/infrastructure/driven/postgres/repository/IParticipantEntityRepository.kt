@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.Parti
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LINKED_PROJECT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupContentEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
@@ -45,6 +46,9 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.partici
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_GROUPS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantQueries.WITH_PARTICIPANT_LAST_MOVEMENT_ALL_PROJECTS
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_STATUS
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileFields.PROJECT_PROFILE_USER_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_CLAUSE
@@ -149,6 +153,17 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		isVisible: Boolean?,
 		c: ParticipantCriteria,
 	): Flux<ParticipantEntity>
+
+	@Query(
+		"""
+        SELECT EXISTS (
+            SELECT 1 FROM $PROJECT_PROFILE_TABLE p
+            WHERE p.$LINKED_PROJECT_ID = :projectId AND p.$PROJECT_PROFILE_USER_ID = :userId
+            AND p.$VISIBLE IS TRUE AND p.$PROJECT_PROFILE_STATUS IN ('ACCEPTED', 'INVITED')
+        )
+        """
+	)
+	fun isProjectMember(projectId: UUID, userId: UUID): Mono<Boolean>
 
 	@Query(
 		"""

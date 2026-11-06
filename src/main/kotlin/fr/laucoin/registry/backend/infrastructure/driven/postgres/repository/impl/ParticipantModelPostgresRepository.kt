@@ -137,6 +137,10 @@ class ParticipantModelPostgresRepository(
 		return repository.findByUserId(projectId, userId, ParticipantCriteria(at = null)).map(mapper::toModel)
 	}
 
+	override fun isProjectMember(projectId: UUID, userId: UUID): Mono<Boolean> {
+		return repository.isProjectMember(projectId, userId)
+	}
+
 	override fun findAllByUserId(userId: UUID): Flux<ParticipantModel> {
 		return repository.findAllByUserId(userId).map(mapper::toModel)
 	}

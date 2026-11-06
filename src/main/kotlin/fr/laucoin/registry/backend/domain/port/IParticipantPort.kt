@@ -34,6 +34,7 @@ interface IParticipantPort {
 
 	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ParticipantModel>
 	fun findByUserId(projectId: UUID, userId: UUID): Flux<ParticipantModel>
+	fun isProjectMember(projectId: UUID, userId: UUID): Mono<Boolean>
 	fun findAllByUserId(userId: UUID): Flux<ParticipantModel>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: ParticipantSearchParamModel): Flux<ParticipantModel>
 	fun findPlannedOnOwnDate(

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_USER_NOT_PROJECT_MEMBER
 import reactor.test.StepVerifier
 import java.time.ZonedDateTime
 import java.time.ZoneOffset
@@ -88,6 +89,7 @@ class ParticipantServiceTest {
 	@BeforeEach
 	fun setUp() {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
+		whenever(port.isProjectMember(any(), any())).thenReturn(Mono.just(true))
 	}
 
 	@Test
@@ -446,6 +448,46 @@ class ParticipantServiceTest {
 		verify(port).findByUserId(defaultProjectId, participant.user?.id ?: UUID.randomUUID())
 		verify(groupPort, never()).findAllByIds(any(), any(), anyOrNull())
 		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should createParticipant refuse to link a user without any profile on the project`() {
+		// Arrange
+		val participant = defaultParticipant().apply { user = defaultUser() }
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.isProjectMember(any(), any())).thenReturn(Mono.just(false))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.createParticipant(currentUser(), participant).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
+		assertEquals(PARTICIPANT_USER_NOT_PROJECT_MEMBER, result.code)
+		verify(port).isProjectMember(defaultProjectId, participant.user!!.id!!)
+		verify(port, never()).create(any())
+	}
+
+	@Test
+	fun `Should updateParticipantById refuse to link a user without any profile on the project`() {
+		// Arrange
+		val existing = defaultParticipant()
+		val participant = defaultParticipant().apply { user = defaultUser() }
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(existing))
+		whenever(port.isProjectMember(any(), any())).thenReturn(Mono.just(false))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateParticipantById(currentUser(), defaultProjectId, existing.id!!, participant).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(PARTICIPANT_USER_NOT_PROJECT_MEMBER, result.code)
+		verify(port, never()).update(any())
 	}
 
 	@Test
