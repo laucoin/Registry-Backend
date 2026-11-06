@@ -1,18 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.UserQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRoleWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.UserQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserRoleReaderDtoMapper
@@ -33,23 +32,14 @@ import reactor.core.publisher.Mono
 class UserV2Controller(
 	private val service: IUserUseCase,
 	private val readerMapper: UserReaderDtoMapper,
+	private val queryMapper: UserQueryDtoMapper,
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
 	private val exportUseCase: IExportUseCase,
 	private val exportMapper: ExportReaderDtoMapper,
 	private val clientContextService: ClientContextService,
 ): IUserV2Controller {
-	override fun findUsers(
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		role: String?,
-		sort: String?,
-	): Mono<PageModel<UserReaderDto>> {
-		val pageable = PageableModel(page * size, size)
-		val searchParams = UserSearchParamModel(query, isVisible, role, sort = sort.toSortModel(UserSearchParamModel.SORT_FIELDS))
-
-		return service.findUsersPage(pageable, searchParams).map(readerMapper::toDtoPage)
+	override fun findUsers(search: UserQueryDto): Mono<PageModel<UserReaderDto>> {
+		return service.findUsersPage(queryMapper.toPageable(search), queryMapper.toSearchParams(search)).map(readerMapper::toDtoPage)
 	}
 
 	override fun findUserById(id: UUID): Mono<UserReaderDto> {

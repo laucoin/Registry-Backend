@@ -1,42 +1,23 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_D
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_R
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_RESTORE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_USER_U
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MIN
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MIN
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.ROLE_PATTERN
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.USER_ROLE_MAX
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.UserQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.UserRoleWriterDto
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Max
-import jakarta.validation.constraints.Min
-import jakarta.validation.constraints.Pattern
-import jakarta.validation.constraints.Size
 import java.util.UUID
+import org.springdoc.core.annotations.ParameterObject
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.ResponseEntity
 import org.springframework.http.server.reactive.ServerHttpRequest
@@ -49,7 +30,6 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -68,21 +48,7 @@ interface IUserV2Controller {
 	)
 	@PreAuthorize("hasAuthority('$REGISTRY_USER_R')")
 	@GetMapping
-	fun findUsers(
-		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
-		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
-		@Parameter(description = "Text matched against the user first name, last name and email")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
-		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
-		@RequestParam(required = false) isVisible: Boolean?,
-		@Parameter(description = "Exact role of the users, as listed by the assignable roles endpoint")
-		@RequestParam(required = false)
-		@Valid
-		@Size(max = USER_ROLE_MAX, message = PARAMETER_TOO_LONG)
-		@Pattern(regexp = ROLE_PATTERN, message = PARAMETER_FORMAT_INVALID) role: String?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: firstName, lastName, email, role, birthday, lastLogin")
-		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
-	): Mono<PageModel<UserReaderDto>>
+	fun findUsers(@Valid @ParameterObject search: UserQueryDto): Mono<PageModel<UserReaderDto>>
 
 	@Operation(
 		summary = "Find User",

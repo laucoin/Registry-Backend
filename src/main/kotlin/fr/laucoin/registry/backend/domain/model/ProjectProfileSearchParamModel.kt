@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import java.time.ZonedDateTime
@@ -15,6 +16,7 @@ data class ProjectProfileSearchParamModel(
 ) {
 	var query: String? = null
 
+	@Default
 	constructor(
 		query: String? = null,
 		isAvailable: Boolean? = null,

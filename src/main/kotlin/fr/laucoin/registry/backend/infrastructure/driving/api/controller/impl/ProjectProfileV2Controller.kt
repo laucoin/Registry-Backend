@@ -3,11 +3,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ProjectProfileQueryDto
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_RESTORE
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectProfileV2Controller
@@ -16,6 +13,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Project
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfileWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectProfilesWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.ProjectProfileQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CreatedProjectProfilesReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfileWriterDtoMapper
@@ -38,6 +36,7 @@ class ProjectProfileV2Controller(
 	private val useCase: IProjectProfileUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectProfileReaderDtoMapper,
+	private val queryMapper: ProjectProfileQueryDtoMapper,
 	private val createdProjectProfilesReaderMapper: CreatedProjectProfilesReaderDtoMapper,
 	private val writerMapper: ProjectProfileWriterDtoMapper,
 	private val profilesWriterMapper: ProjectProfilesWriterDtoMapper,
@@ -47,14 +46,10 @@ class ProjectProfileV2Controller(
 		projectId: UUID,
 		search: ProjectProfileQueryDto,
 	): Mono<PageModel<ProjectProfileReaderDto>> {
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = ProjectProfileSearchParamModel(
-			search.query, search.isAvailable, search.status, search.at, search.role,
-			sort = search.sort.toSortModel(ProjectProfileSearchParamModel.SORT_FIELDS),
-			isVisible = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_PROFILE_RESTORE),
-		)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_PROFILE_RESTORE)
+		val searchParams = queryMapper.toSearchParams(search, visibility)
 
-		return useCase.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return useCase.findProjectProfilesPage(projectId, queryMapper.toPageable(search), searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun findProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ProjectProfileReaderDto> {
