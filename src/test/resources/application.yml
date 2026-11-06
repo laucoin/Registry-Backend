@@ -133,6 +133,10 @@ registry:
         capacity: 1000
         window-seconds: 3600
         max-tracked-users: 10000
+      user-search:
+        capacity: 1000
+        window-seconds: 60
+        max-tracked-users: 10000
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}

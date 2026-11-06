@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.service.support.IAuditService
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.ExportRateLimitHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.UserSearchRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
 import org.springframework.core.annotation.Order
@@ -16,7 +17,7 @@ import tools.jackson.databind.ObjectMapper
 import java.time.Clock
 
 /**
- * Objectif : Limite le débit des appels d'authentification et des exports de données personnelles.
+ * Objectif : Limite le débit des appels d'authentification, des exports de données personnelles et de la recherche d'utilisateurs.
  * Périmètre : Ajoute les filtres de limitation, avec les capacités et fenêtres de la configuration typée.
  * Limites : Ne mesure rien hors des filtres qu'il ajoute.
  */
@@ -35,6 +36,7 @@ class RateLimitChainCustomizer(
 		return http
 			.addFilterBefore(authenticationRateLimit(), FIRST)
 			.addFilterAfter(exportRateLimit(), AUTHENTICATION)
+			.addFilterAfter(userSearchRateLimit(), AUTHENTICATION)
 	}
 
 	private fun authenticationRateLimit() = AuthenticationRateLimitHandler(
@@ -54,6 +56,14 @@ class RateLimitChainCustomizer(
 		rateLimits.export.capacity,
 		rateLimits.export.windowSeconds,
 		rateLimits.export.maxTrackedUsers,
+	)
+
+	private fun userSearchRateLimit() = UserSearchRateLimitHandler(
+		tooManyRequestsResponder(),
+		clock,
+		rateLimits.userSearch.capacity,
+		rateLimits.userSearch.windowSeconds,
+		rateLimits.userSearch.maxTrackedUsers,
 	)
 
 	private fun tooManyRequestsResponder() =
