@@ -24,12 +24,12 @@ class AtLeastOneIsDefinedValidator: GenericValidator<AtLeastOneIsDefined, Any>()
 		val firstValue = extractValue(firstField, value)
 		val secondValue = extractValue(secondField, value)
 
-		val firstValueIsIterable = (firstValue.isIterable() || Objects.isNull(firstValue))
-		val secondValueIsIterable = (secondValue.isIterable() || Objects.isNull(secondValue))
-		return if (firstValueIsIterable && secondValueIsIterable) {
-			firstValue.isNotEmpty() || secondValue.isNotEmpty()
-		} else {
-			Objects.nonNull(firstValue) || Objects.nonNull(secondValue)
+		if (firstValue.isIterableOrNull() && secondValue.isIterableOrNull()) {
+			return firstValue.isNotEmpty() || secondValue.isNotEmpty()
 		}
+
+		return Objects.nonNull(firstValue) || Objects.nonNull(secondValue)
 	}
+
+	private fun Any?.isIterableOrNull(): Boolean = isIterable() || Objects.isNull(this)
 }

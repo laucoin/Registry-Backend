@@ -9,7 +9,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementReason
 import jakarta.validation.ConstraintValidatorContext
-import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 
@@ -28,20 +27,22 @@ class MovementReasonValidator: GenericValidator<MovementReason, Any>() {
 	}
 
 	override fun isValid(value: Any, context: ConstraintValidatorContext): Boolean {
-		val type: MovementTypeEnum? = Optional.ofNullable(extractValue("type", value))
-			.map { MovementTypeEnum.valueOf(it.toString()) }
-			.orElse(null)
-		val reason: MovementReasonEnum? = Optional.ofNullable(extractValue("reason", value))
-			.map { MovementReasonEnum.valueOf(it.toString()) }
-			.orElse(null)
-		val activityId: UUID? = extractActivityValue(value)
+		val type: MovementTypeEnum = extractEnum<MovementTypeEnum>("type", value) ?: return true
+		val reason: MovementReasonEnum? = extractEnum<MovementReasonEnum>("reason", value)
 
+		return isCoherent(type, reason, extractActivityValue(value))
+	}
+
+	private fun isCoherent(type: MovementTypeEnum, reason: MovementReasonEnum?, activityId: UUID?): Boolean {
 		return when {
-			Objects.isNull(type) -> true
-			Objects.isNull(reason) && participantType === GUEST -> type === OUT
-			Objects.isNull(reason) && Objects.isNull(activityId) && participantType === REGISTERED -> type === IN
-			else -> Objects.nonNull(activityId) || (reason!!.type == type && reason.participantType == participantType)
+			reason == null && participantType === GUEST -> type === OUT
+			reason == null && activityId == null && participantType === REGISTERED -> type === IN
+			else -> activityId != null || (reason!!.type == type && reason.participantType == participantType)
 		}
+	}
+
+	private inline fun <reified T : Enum<T>> extractEnum(field: String, value: Any): T? {
+		return extractValue(field, value)?.let { enumValueOf<T>(it.toString()) }
 	}
 
 	private fun extractActivityValue(value: Any): UUID? {

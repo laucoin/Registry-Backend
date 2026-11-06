@@ -4,7 +4,6 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.COMPARING_WRONG_PA
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MinUpperMax
 import jakarta.validation.ConstraintValidatorContext
-import java.util.Objects
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 
 /**
@@ -25,14 +24,22 @@ class MinUpperMaxValidator: GenericValidator<MinUpperMax, Any>() {
 		val startValue = extractValue(startField, value)
 		val endValue = extractValue(endField, value)
 
-		return when {
-			startValue is Int && endValue is Int -> startValue <= endValue
-			startValue is Double && endValue is Double -> startValue <= endValue
-			startValue is Float && endValue is Float -> startValue <= endValue
-			startValue is Long && endValue is Long -> startValue <= endValue
-			Objects.isNull(startValue) || Objects.isNull(endValue) -> true
-			else -> throw unsupportedTypes(startValue, endValue)
+		if (startValue == null || endValue == null) return true
+
+		return isOrdered(startValue, endValue)
+	}
+
+	private fun isOrdered(startValue: Any, endValue: Any): Boolean {
+		if (startValue::class != endValue::class || startValue::class !in SUPPORTED_TYPES) {
+			throw unsupportedTypes(startValue, endValue)
 		}
+
+		@Suppress("UNCHECKED_CAST")
+		return (startValue as Comparable<Any>) <= endValue
+	}
+
+	private companion object {
+		val SUPPORTED_TYPES = setOf(Int::class, Double::class, Float::class, Long::class)
 	}
 
 	private fun unsupportedTypes(startValue: Any?, endValue: Any?): RegistryException {
