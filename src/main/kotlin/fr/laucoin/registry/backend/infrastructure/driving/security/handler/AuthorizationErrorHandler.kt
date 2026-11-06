@@ -60,15 +60,14 @@ class AuthorizationErrorHandler(
 	}
 
 	@Bean
-	fun unauthorizedHandler(): ServerAuthenticationEntryPoint = ServerAuthenticationEntryPoint { exchange, _ ->
-		val response = exchange.response
-		response.writeWith(buildBody(exchange, response, UNAUTHORIZED, NOT_AUTHENTICATED))
-	}
+	fun unauthorizedHandler(): ServerAuthenticationEntryPoint = ServerAuthenticationEntryPoint { exchange, _ -> writeError(exchange, UNAUTHORIZED, NOT_AUTHENTICATED) }
 
 	@Bean
-	fun accessDeniedHandler(): ServerAccessDeniedHandler = ServerAccessDeniedHandler { exchange, _ ->
+	fun accessDeniedHandler(): ServerAccessDeniedHandler = ServerAccessDeniedHandler { exchange, _ -> writeError(exchange, FORBIDDEN, NOT_ENOUGH_PERMISSION) }
+
+	private fun writeError(exchange: ServerWebExchange, status: HttpStatus, errorCode: String): Mono<Void> {
 		val response = exchange.response
-		response.writeWith(buildBody(exchange, response, FORBIDDEN, NOT_ENOUGH_PERMISSION))
+		return response.writeWith(buildBody(exchange, response, status, errorCode))
 	}
 
 	private fun buildBody(

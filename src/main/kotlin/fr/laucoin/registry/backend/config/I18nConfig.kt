@@ -23,35 +23,30 @@ class I18nConfig(
 ) {
 
 	init {
+		Locale.setDefault(defaultLocale)
 		Hooks.enableAutomaticContextPropagation()
 		ContextRegistry.getInstance().registerThreadLocalAccessor(LocaleContextThreadLocalAccessor())
 	}
 
 	@Bean(name = ["messagesSource"])
-	fun messagesSource(): MessageSource {
-		Locale.setDefault(defaultLocale)
-		val messageSource = ReloadableResourceBundleMessageSource()
-		messageSource.setBasename("classpath:i18n/messages")
-		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
-		messageSource.setDefaultLocale(defaultLocale)
-		return messageSource
-	}
+	fun messagesSource(): MessageSource = messageSource("classpath:i18n/messages")
 
 	@Bean(name = ["errorsSource"])
-	fun errorsSource(): MessageSource {
-		Locale.setDefault(defaultLocale)
-		val messageSource = ReloadableResourceBundleMessageSource()
-		messageSource.setBasename("classpath:i18n/errors")
-		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
-		messageSource.setDefaultLocale(defaultLocale)
-		return messageSource
-	}
+	fun errorsSource(): MessageSource = messageSource("classpath:i18n/errors")
 
 	@Bean
 	fun localeContextResolver(): AcceptHeaderLocaleContextResolver {
 		val resolver = AcceptHeaderLocaleContextResolver()
 		resolver.setSupportedLocales(supportedLocales)
-		resolver.defaultLocale = Locale.getDefault()
+		resolver.defaultLocale = defaultLocale
 		return resolver
+	}
+
+	private fun messageSource(basename: String): MessageSource {
+		val messageSource = ReloadableResourceBundleMessageSource()
+		messageSource.setBasename(basename)
+		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
+		messageSource.setDefaultLocale(defaultLocale)
+		return messageSource
 	}
 }

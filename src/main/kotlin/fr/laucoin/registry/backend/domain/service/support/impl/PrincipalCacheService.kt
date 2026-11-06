@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import java.time.Duration
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 /**
  * Objectif : Met en cache les principals résolus à partir d'un JWT.
@@ -26,7 +27,11 @@ class PrincipalCacheService(
 		.buildAsync()
 
 	override fun get(oidcId: UUID, loader: () -> Mono<CurrentUserModel>): Mono<CurrentUserModel> {
-		return Mono.fromFuture { cache.get(oidcId) { _, _ -> loader().orFailWhenEmpty().toFuture().thenApply { checkNotNull(it) } } }
+		return Mono.fromFuture { cache.get(oidcId) { _, _ -> load(loader) } }
+	}
+
+	private fun load(loader: () -> Mono<CurrentUserModel>): CompletableFuture<CurrentUserModel> {
+		return loader().orFailWhenEmpty().toFuture().thenApply { checkNotNull(it) }
 	}
 
 	private fun Mono<CurrentUserModel>.orFailWhenEmpty(): Mono<CurrentUserModel> {
