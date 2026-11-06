@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.RoleModel
 import fr.laucoin.registry.backend.domain.port.IRolePort
+import fr.laucoin.registry.backend.domain.service.LoggerService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener

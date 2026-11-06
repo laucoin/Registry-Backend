@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.domain.service.support.impl
 
 import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.port.IAuditPort
+import fr.laucoin.registry.backend.domain.service.LoggerService
 import fr.laucoin.registry.backend.domain.service.support.IAuditService
 import java.time.Duration
 import java.time.LocalDate

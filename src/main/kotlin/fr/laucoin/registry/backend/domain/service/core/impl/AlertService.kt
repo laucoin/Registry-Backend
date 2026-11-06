@@ -12,6 +12,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRES
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ALERT
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
+import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel

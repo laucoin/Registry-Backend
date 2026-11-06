@@ -14,7 +14,9 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
+import fr.laucoin.registry.backend.domain.helper.ActivityOptionHelper.requireActivityOption
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
+import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel

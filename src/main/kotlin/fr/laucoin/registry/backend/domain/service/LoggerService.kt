@@ -1,4 +1,4 @@
-package fr.laucoin.registry.backend.domain.service.support.impl
+package fr.laucoin.registry.backend.domain.service
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

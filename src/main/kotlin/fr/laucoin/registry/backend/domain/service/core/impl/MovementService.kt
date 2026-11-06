@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.helper.MovementContentHelper
 import fr.laucoin.registry.backend.domain.helper.MovementParticipantHelper
 import fr.laucoin.registry.backend.domain.helper.MovementPersistenceHelper
 import fr.laucoin.registry.backend.domain.helper.MovementRulesHelper
+import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
