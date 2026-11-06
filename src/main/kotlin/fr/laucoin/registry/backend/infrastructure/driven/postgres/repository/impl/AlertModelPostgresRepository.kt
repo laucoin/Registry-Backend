@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.AlertCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
@@ -42,18 +44,22 @@ class AlertModelPostgresRepository(
 	): Mono<PageModel<AlertModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.query,
-			searchParams.status,
-			searchParams.criticality,
-			reinforcedAfterHours,
-			highAfterHours,
 			searchParams.isVisible,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			AlertCriteria(
+				query = searchParams.query,
+				status = searchParams.status,
+				criticality = searchParams.criticality,
+				reinforcedAfterHours = reinforcedAfterHours,
+				highAfterHours = highAfterHours,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, AlertEntity::fullCount, mapper::toModel)
 	}
 
@@ -64,12 +70,14 @@ class AlertModelPostgresRepository(
 	): Flux<AlertModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.query,
-			searchParams.status,
 			searchParams.isVisible,
-			searchParams.from,
-			searchParams.to,
-			limit,
+			AlertCriteria(
+				query = searchParams.query,
+				status = searchParams.status,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 
@@ -90,8 +98,10 @@ class AlertModelPostgresRepository(
 			projectId,
 			id,
 			isVisible,
-			reinforcedAfterHours,
-			highAfterHours,
+			AlertCriteria(
+				reinforcedAfterHours = reinforcedAfterHours,
+				highAfterHours = highAfterHours,
+			),
 		).map(mapper::toModel)
 	}
 
@@ -105,7 +115,15 @@ class AlertModelPostgresRepository(
 
 	private fun save(element: AlertModel): Mono<AlertModel> {
 		return repository.save(mapper.toEntity(element))
-			.flatMap { repository.findById(it.projectId!!, it.id!!, null, reinforcedAfterHours, highAfterHours) }
+			.flatMap { repository.findById(
+				it.projectId!!,
+				it.id!!,
+				null,
+				AlertCriteria(
+					reinforcedAfterHours = reinforcedAfterHours,
+					highAfterHours = highAfterHours,
+				),
+			) }
 			.map(mapper::toModel)
 	}
 

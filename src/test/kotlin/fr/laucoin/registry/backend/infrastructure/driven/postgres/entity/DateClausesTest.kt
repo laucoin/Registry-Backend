@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.entity
 
+import fr.laucoin.registry.backend.test.withNamedParameters
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_DATE_IN_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationQueries.COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupQueries.DATE_IN_GROUP_DATES_RANGE_CLAUSE
@@ -74,7 +75,7 @@ class DateClausesTest : TestContext() {
 			INSTANTS.stream().map { (at, expected) ->
 				dynamicTest("${resource.name} at $at") {
 					// Arrange
-					val spec = databaseClient.sql(windowQuery(resource)).let {
+					val spec = databaseClient.sql(windowQuery(resource).withNamedParameters()).let {
 						if (at == null) it.bindNull("at", ZonedDateTime::class.java) else it.bind("at", at)
 					}
 
@@ -95,7 +96,7 @@ class DateClausesTest : TestContext() {
 				dynamicTest("$name from $from to $to") {
 					// Arrange
 					val sql = "SELECT 1 FROM (SELECT TIMESTAMP WITH TIME ZONE '2024-05-01 10:00:00+02' AS date_time) t WHERE $clause"
-					val spec = databaseClient.sql(sql)
+					val spec = databaseClient.sql(sql.withNamedParameters())
 						.let { if (from == null) it.bindNull("from", ZonedDateTime::class.java) else it.bind("from", from) }
 						.let { if (to == null) it.bindNull("to", ZonedDateTime::class.java) else it.bind("to", to) }
 
@@ -121,7 +122,7 @@ class DateClausesTest : TestContext() {
 
 	private fun matches(resource: WindowResource, fixture: String, at: ZonedDateTime): Boolean {
 		val sql = "SELECT 1 FROM ($fixture) t ${resource.extraJoin} WHERE ${resource.clause}"
-		return databaseClient.sql(sql).bind("at", at).fetch().all().collectList().block()!!.isNotEmpty()
+		return databaseClient.sql(sql.withNamedParameters()).bind("at", at).fetch().all().collectList().block()!!.isNotEmpty()
 	}
 
 	private fun fixtureOf(resource: WindowResource, startDate: String, startTime: String, endDate: String, endTime: String): String {
@@ -182,7 +183,7 @@ class DateClausesTest : TestContext() {
 				val sql = "SELECT 1 FROM ($fixture) t CROSS JOIN (SELECT ${groups.second} AS groups, ${groups.third} AS available_groups_on_date) fg WHERE ${participants.clause}"
 
 				// Act
-				val result = databaseClient.sql(sql).bind("at", parse("2024-05-01T12:00:00Z")).fetch().all().collectList().block()!!
+				val result = databaseClient.sql(sql.withNamedParameters()).bind("at", parse("2024-05-01T12:00:00Z")).fetch().all().collectList().block()!!
 
 				// Assert
 				assertEquals(expected, result.isNotEmpty())

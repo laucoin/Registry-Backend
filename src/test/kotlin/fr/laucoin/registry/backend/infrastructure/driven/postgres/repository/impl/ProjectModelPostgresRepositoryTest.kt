@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ProjectCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
@@ -87,16 +89,16 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		assertEquals(1, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
-			query = null,
-			isVisible = null,
-			hiddenReadableIds = listOf(UUID(0, 0)),
-			at = null,
-			isFavorite = null,
-			userId = null,
-			sortField = null,
-			isDescending = null,
-			limit = pageable.limit,
-			offset = pageable.offset,
+			null,
+			listOf(UUID(0, 0)),
+			null,
+			ProjectCriteria(query = null, at = null, isFavorite = null),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper).toModel(any())
 	}
@@ -112,16 +114,11 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		// Assert
 		assertEquals(0L, result?.totalElements)
 		verify(postgresRepository).findAll(
-			query = null,
-			isVisible = null,
-			hiddenReadableIds = listOf(UUID(0, 0)),
-			at = null,
-			isFavorite = true,
-			userId = params.userId,
-			sortField = null,
-			isDescending = null,
-			limit = 10,
-			offset = 0,
+			null,
+			listOf(UUID(0, 0)),
+			params.userId,
+			ProjectCriteria(query = null, at = null, isFavorite = true),
+			PageQuery(sortField = null, isDescending = null, limit = 10, offset = 0),
 		)
 	}
 
@@ -138,16 +135,11 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		assertEquals(0L, result?.totalElements)
 		verify(postgresRepository).findAllInProjectIds(
 			ids,
-			query = null,
-			isVisible = null,
-			hiddenReadableIds = listOf(UUID(0, 0)),
-			at = null,
-			isFavorite = true,
-			userId = params.userId,
-			sortField = null,
-			isDescending = null,
-			limit = 10,
-			offset = 0,
+			null,
+			listOf(UUID(0, 0)),
+			params.userId,
+			ProjectCriteria(query = null, at = null, isFavorite = true),
+			PageQuery(sortField = null, isDescending = null, limit = 10, offset = 0),
 		)
 	}
 
@@ -169,16 +161,16 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAllInProjectIds(
 			ids,
-			query = null,
-			isVisible = null,
-			hiddenReadableIds = listOf(UUID(0, 0)),
-			at = null,
-			isFavorite = null,
-			userId = null,
-			sortField = null,
-			isDescending = null,
-			limit = pageable.limit,
-			offset = pageable.offset,
+			null,
+			listOf(UUID(0, 0)),
+			null,
+			ProjectCriteria(query = null, at = null, isFavorite = null),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper).toModel(any())
 	}

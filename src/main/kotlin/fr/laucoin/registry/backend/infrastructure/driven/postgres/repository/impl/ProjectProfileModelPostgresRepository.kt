@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ProjectProfileCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
@@ -42,16 +44,20 @@ class ProjectProfileModelPostgresRepository(
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByUserId(
 			userId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
-			searchParams.at,
-			searchParams.role,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			ProjectProfileCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				status = searchParams.status,
+				at = searchParams.at,
+				role = searchParams.role,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, ProjectProfileEntity::fullCount, mapper::toModel)
 	}
 
@@ -62,16 +68,20 @@ class ProjectProfileModelPostgresRepository(
 	): Mono<PageModel<ProjectProfileModel>> {
 		return repository.findByProjectId(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
-			searchParams.at,
-			searchParams.role,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			ProjectProfileCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				status = searchParams.status,
+				at = searchParams.at,
+				role = searchParams.role,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, ProjectProfileEntity::fullCount, mapper::toModel)
 	}
 
@@ -88,18 +98,17 @@ class ProjectProfileModelPostgresRepository(
 			projectId,
 			userIds,
 			profileIdToExclude,
-			status,
 			from,
-			to
+			to,
+			ProjectProfileCriteria(status = status),
 		)
 	}
 
 	override fun findProjectProfilesRolesByUserId(userId: UUID): Flux<ProjectProfileRoleModel> {
 		return repository.findAllRolesByUserId(
 			userId,
-			isVisible = true,
-			isAvailable = true,
-			status = listOf(ACCEPTED),
+			true,
+			ProjectProfileCriteria(isAvailable = true, status = listOf(ACCEPTED)),
 		).map(roleMapper::toModel)
 	}
 
@@ -132,8 +141,7 @@ class ProjectProfileModelPostgresRepository(
 			projectId,
 			userId,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
+			ProjectProfileCriteria(isAvailable = searchParams.isAvailable, status = searchParams.status),
 		)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
@@ -149,8 +157,7 @@ class ProjectProfileModelPostgresRepository(
 			userId,
 			projectIds,
 			searchParams.isVisible,
-			searchParams.isAvailable,
-			searchParams.status,
+			ProjectProfileCriteria(isAvailable = searchParams.isAvailable, status = searchParams.status),
 		).map(mapper::toModel)
 	}
 

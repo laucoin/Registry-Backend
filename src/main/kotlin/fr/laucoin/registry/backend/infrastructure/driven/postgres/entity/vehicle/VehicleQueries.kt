@@ -47,22 +47,22 @@ object VehicleQueries {
 
 	const val SELECT_VEHICLE_SEARCH = """
         CASE
-            WHEN :query IS NULL THEN 1
-            ELSE word_similarity(:query, t.search_text)
+            WHEN :#{#c.query} IS NULL THEN 1
+            ELSE word_similarity(:#{#c.query}, t.search_text)
         END AS similarity_score
     """
 
-	const val VEHICLE_TEXT_SEARCH_CLAUSE = "(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
+	const val VEHICLE_TEXT_SEARCH_CLAUSE = "(:#{#c.query} IS NULL OR word_similarity(:#{#c.query}, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
 
 	const val VEHICLE_BRAND_CLAUSE =
-		"(CAST(:brand AS TEXT) IS NULL OR LOWER(UNACCENT(t.$VEHICLE_BRAND)) = LOWER(UNACCENT(CAST(:brand AS TEXT))))"
+		"(CAST(:#{#c.brand} AS TEXT) IS NULL OR LOWER(UNACCENT(t.$VEHICLE_BRAND)) = LOWER(UNACCENT(CAST(:#{#c.brand} AS TEXT))))"
 
 	const val VEHICLE_MODEL_CLAUSE =
-		"(CAST(:model AS TEXT) IS NULL OR LOWER(UNACCENT(t.$VEHICLE_MODEL)) = LOWER(UNACCENT(CAST(:model AS TEXT))))"
+		"(CAST(:#{#c.model} AS TEXT) IS NULL OR LOWER(UNACCENT(t.$VEHICLE_MODEL)) = LOWER(UNACCENT(CAST(:#{#c.model} AS TEXT))))"
 
 	const val VEHICLE_AVAILABILITY_CLAUSE = """
         (
-            :isAvailable IS NULL OR :isAvailable = (
+            :#{#c.isAvailable} IS NULL OR :#{#c.isAvailable} = (
                 (
                     (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{now} AS TIMESTAMPTZ)
                 ) AND
@@ -74,31 +74,31 @@ object VehicleQueries {
     """
 
 	const val VEHICLE_PRESENCE_CLAUSE =
-		"(:isPresent IS NULL OR :isPresent != (last_movement.type IS NULL OR last_movement.type = 'OUT'))"
+		"(:#{#c.isPresent} IS NULL OR :#{#c.isPresent} != (last_movement.type IS NULL OR last_movement.type = 'OUT'))"
 
 	const val DATE_IN_VEHICLE_DATES_RANGE_CLAUSE = """
         (
-            :at IS NULL OR (
+            :#{#c.at} IS NULL OR (
                 (
-                    (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:at AS TIMESTAMPTZ)
+                    (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{#c.at} AS TIMESTAMPTZ)
                 ) AND
                 (
-                    (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:at AS TIMESTAMPTZ)
+                    (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{#c.at} AS TIMESTAMPTZ)
                 )
             )
         )
     """
 
 	const val VEHICLE_SORT = """
-        CASE WHEN CAST(:sortField AS TEXT) = 'licensePlate' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$VEHICLE_LICENSE_PLATE END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'licensePlate' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$VEHICLE_LICENSE_PLATE END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'brand' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$VEHICLE_BRAND END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'brand' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$VEHICLE_BRAND END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'model' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$VEHICLE_MODEL END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'model' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$VEHICLE_MODEL END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'startAvailability' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'startAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'endAvailability' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'licensePlate' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$VEHICLE_LICENSE_PLATE END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'licensePlate' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$VEHICLE_LICENSE_PLATE END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'brand' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$VEHICLE_BRAND END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'brand' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$VEHICLE_BRAND END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'model' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$VEHICLE_MODEL END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'model' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$VEHICLE_MODEL END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'startAvailability' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'startAvailability' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$VEHICLE_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'endAvailability' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'endAvailability' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN (COALESCE(t.$VEHICLE_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$VEHICLE_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) END DESC NULLS LAST,
     """
 }

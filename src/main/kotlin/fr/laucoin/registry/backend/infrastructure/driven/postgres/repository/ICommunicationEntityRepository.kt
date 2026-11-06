@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.CommunicationCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
@@ -22,7 +24,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -43,14 +44,14 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND t.$COMMUNICATION_MOVEMENT_ID IN (:movementIds)
         ORDER BY t.$COMMUNICATION_DATE_TIME DESC
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findAllByMovementIdsWithLimit(
 		projectId: UUID,
 		movementIds: List<UUID>,
 		isVisible: Boolean?,
-		limit: Int,
+		page: PageQuery,
 	): Flux<CommunicationEntity>
 
 	@Query(
@@ -59,20 +60,15 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$COMMUNICATION_MOVEMENT_ID = :movementId AND $VISIBLE_CLAUSE AND $COMMUNICATION_TEXT_SEARCH_CLAUSE AND $COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $COMMUNICATION_SORT similarity_score DESC, t.$COMMUNICATION_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAllByMovementId(
 		projectId: UUID,
 		movementId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: CommunicationCriteria,
+		page: PageQuery,
 	): Flux<CommunicationEntity>
 
 	@Query(
@@ -85,10 +81,8 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
 	fun countAllByMovementId(
 		projectId: UUID,
 		movementId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
+		c: CommunicationCriteria,
 	): Mono<Long>
 
 	@Query(
@@ -97,14 +91,14 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND t.$COMMUNICATION_ALERT_ID IN (:alertIds)
         ORDER BY t.$COMMUNICATION_DATE_TIME DESC
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findAllByAlertIdsWithLimit(
 		projectId: UUID,
 		alertIds: List<UUID>,
 		isVisible: Boolean?,
-		limit: Int,
+		page: PageQuery,
 	): Flux<CommunicationEntity>
 
 	@Query(
@@ -113,20 +107,15 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
         FROM $COMMUNICATION_TABLE t $MOVEMENT_JOIN $ALERT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$COMMUNICATION_ALERT_ID = :alertId AND $VISIBLE_CLAUSE AND $COMMUNICATION_TEXT_SEARCH_CLAUSE AND $COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $COMMUNICATION_SORT similarity_score DESC, t.$COMMUNICATION_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAllByAlertId(
 		projectId: UUID,
 		alertId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: CommunicationCriteria,
+		page: PageQuery,
 	): Flux<CommunicationEntity>
 
 	@Query(
@@ -139,10 +128,8 @@ interface ICommunicationEntityRepository: ReactiveCrudRepository<CommunicationEn
 	fun countAllByAlertId(
 		projectId: UUID,
 		alertId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
+		c: CommunicationCriteria,
 	): Mono<Long>
 
 	@Query(

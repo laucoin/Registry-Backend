@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ParticipantCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.GroupCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -41,16 +44,20 @@ class GroupModelPostgresRepository(
 	): Mono<PageModel<GroupModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isPresent,
-			searchParams.at,
 			searchParams.memberUserId,
-			searchParams.hasOnSiteMembers,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			GroupCriteria(
+				query = searchParams.query,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+				hasOnSiteMembers = searchParams.hasOnSiteMembers,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, GroupEntity::fullCount, mapper::toModel)
 			.flatMap { withOnSiteCounts(projectId, it) }
 	}
@@ -58,7 +65,7 @@ class GroupModelPostgresRepository(
 	private fun withOnSiteCounts(projectId: UUID, page: PageModel<GroupModel>): Mono<PageModel<GroupModel>> {
 		val ids = page.content.mapNotNull { it.id }
 		if (ids.isEmpty()) return Mono.just(page)
-		return contentRepository.findOnSiteCounts(projectId, ids, at = null)
+		return contentRepository.findOnSiteCounts(projectId, ids, ParticipantCriteria())
 			.collectMap { it.groupId!! }
 			.map { counts -> applyOnSiteCounts(page, counts) }
 	}
@@ -105,11 +112,13 @@ class GroupModelPostgresRepository(
 	override fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.query,
 			searchParams.isVisible,
-			searchParams.isPresent,
-			searchParams.at,
-			limit,
+			GroupCriteria(
+				query = searchParams.query,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 

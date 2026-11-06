@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ActivityCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -85,17 +87,21 @@ class ActivityModelPostgresRepositoryTest : TestContext() {
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
 			defaultProjectId,
-			query = null,
-			isVisible = null,
-			isAvailable = null,
-			at = null,
-			minDuration = null,
-			maxDuration = null,
-			participants = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			ActivityCriteria(
+				query = null,
+				isAvailable = null,
+				at = null,
+				minDuration = null,
+				maxDuration = null,
+				participants = null,
+			),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -169,14 +175,16 @@ class ActivityModelPostgresRepositoryTest : TestContext() {
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
 			defaultProjectId,
-			query = null,
-			isVisible = null,
-			isAvailable = null,
-			at = null,
-			minDuration = null,
-			maxDuration = null,
-			participants = null,
-			size,
+			null,
+			ActivityCriteria(
+				query = null,
+				isAvailable = null,
+				at = null,
+				minDuration = null,
+				maxDuration = null,
+				participants = null,
+			),
+			PageQuery(limit = size),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

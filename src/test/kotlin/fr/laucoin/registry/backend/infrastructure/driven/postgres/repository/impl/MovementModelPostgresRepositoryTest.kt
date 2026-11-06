@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.MovementCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
@@ -97,16 +99,15 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 		assertEquals(6, result.totalPages)
 		verify(postgresRepository).findAll(
 			defaultProjectId,
-			isVisible = null,
-			hasActivity = null,
-			activityId = null,
-			type = listOf(IN, OUT),
-			from = null,
-			to = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			null,
+			MovementCriteria(hasActivity = null, type = listOf(IN, OUT), from = null, to = null),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -171,15 +172,14 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findAllByParticipantId(
 			defaultProjectId,
 			defaultParticipantId,
-			isVisible = null,
-			hasActivity = null,
-			type = listOf(IN, OUT),
-			from = null,
-			to = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			MovementCriteria(hasActivity = null, type = listOf(IN, OUT), from = null, to = null),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -200,15 +200,14 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findAllByVehicleId(
 			defaultProjectId,
 			defaultVehicleId,
-			isVisible = null,
-			hasActivity = null,
-			type = listOf(IN, OUT),
-			from = null,
-			to = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			MovementCriteria(hasActivity = null, type = listOf(IN, OUT), from = null, to = null),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 	}
 
@@ -228,14 +227,14 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).findAllByActivityId(
 			defaultProjectId,
 			defaultActivityId,
-			isVisible = null,
-			type = listOf(IN, OUT),
-			from = null,
-			to = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			MovementCriteria(type = listOf(IN, OUT), from = null, to = null),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 	}
 
@@ -287,11 +286,8 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).countAllByParticipantId(
 			defaultProjectId,
 			defaultParticipantId,
-			isVisible = null,
-			hasActivity = null,
-			type = listOf(IN, OUT),
-			from = null,
-			to = null,
+			null,
+			MovementCriteria(hasActivity = null, type = listOf(IN, OUT), from = null, to = null),
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -307,11 +303,8 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).countAllByVehicleId(
 			defaultProjectId,
 			defaultVehicleId,
-			isVisible = null,
-			hasActivity = null,
-			type = listOf(IN, OUT),
-			from = null,
-			to = null,
+			null,
+			MovementCriteria(hasActivity = null, type = listOf(IN, OUT), from = null, to = null),
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -327,10 +320,8 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 		verify(postgresRepository).countAllByActivityId(
 			defaultProjectId,
 			defaultActivityId,
-			isVisible = null,
-			type = listOf(IN, OUT),
-			from = null,
-			to = null,
+			null,
+			MovementCriteria(type = listOf(IN, OUT), from = null, to = null),
 		)
 		verify(mapper, never()).toModel(any())
 	}

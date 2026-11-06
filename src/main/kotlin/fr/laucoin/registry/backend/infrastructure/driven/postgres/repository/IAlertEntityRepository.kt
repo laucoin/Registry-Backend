@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
-import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
-import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.AlertCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_TABLE
@@ -32,7 +32,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -53,23 +52,14 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN $ALERT_LAST_COMMUNICATION_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_CRITICALITY_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $ALERT_SORT similarity_score DESC, t.$ALERT_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		query: String?,
-		status: List<AlertStatusEnum>?,
-		criticality: AlertCriticalityEnum?,
-		reinforcedAfterHours: Long,
-		highAfterHours: Long,
 		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: AlertCriteria,
+		page: PageQuery,
 	): Flux<AlertEntity>
 
 	@Query(
@@ -78,17 +68,14 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ALERT_DATE_TIME DESC
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		query: String?,
-		status: List<AlertStatusEnum>?,
 		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		limit: Int,
+		c: AlertCriteria,
+		page: PageQuery,
 	): Flux<AlertEntity>
 
 
@@ -103,8 +90,7 @@ interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 		projectId: UUID,
 		id: UUID,
 		isVisible: Boolean?,
-		reinforcedAfterHours: Long,
-		highAfterHours: Long,
+		c: AlertCriteria,
 	): Mono<AlertEntity>
 
 	@Query(

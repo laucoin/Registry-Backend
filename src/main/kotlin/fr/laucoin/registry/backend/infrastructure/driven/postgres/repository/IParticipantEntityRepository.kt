@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
-import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ParticipantCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.CREATED_AT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
@@ -53,7 +53,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Modifying
 import org.springframework.data.r2dbc.repository.Query
@@ -80,27 +79,14 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_ON_SITE_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         ORDER BY $PARTICIPANT_SORT similarity_score DESC, t.$PARTICIPANT_LAST_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		query: String?,
-		isMajor: Boolean?,
-		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: PresenceStatusEnum?,
-		presence: PresenceStatusEnum?,
-		at: ZonedDateTime?,
-		hasUser: Boolean?,
-		isOnSite: Boolean?,
-		birthdayFrom: LocalDate?,
-		birthdayTo: LocalDate?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: ParticipantCriteria,
+		page: PageQuery,
 	): Flux<ParticipantEntity>
 
 	@Query(
@@ -113,18 +99,8 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 	)
 	fun countAll(
 		projectId: UUID,
-		query: String?,
-		isMajor: Boolean?,
-		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: PresenceStatusEnum?,
-		presence: PresenceStatusEnum?,
-		at: ZonedDateTime?,
-		hasUser: Boolean?,
-		isOnSite: Boolean?,
-		birthdayFrom: LocalDate?,
-		birthdayTo: LocalDate?,
+		c: ParticipantCriteria,
 	): Mono<Long>
 
 	@Query(
@@ -135,28 +111,15 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         INNER JOIN $GROUP_CONTENT_TABLE ON t.id = $GROUP_CONTENT_TABLE.$GROUP_CONTENT_PARTICIPANT_ID AND $GROUP_CONTENT_TABLE.$GROUP_CONTENT_GROUP_ID = :groupId
         WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE AND $PARTICIPANT_USER_LINK_CLAUSE AND $PARTICIPANT_ON_SITE_CLAUSE AND $PARTICIPANT_BIRTHDAY_CLAUSE
         ORDER BY $PARTICIPANT_SORT similarity_score DESC, t.$PARTICIPANT_LAST_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAllByGroupId(
 		projectId: UUID,
 		groupId: UUID,
-		query: String?,
-		isMajor: Boolean?,
-		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: PresenceStatusEnum?,
-		presence: PresenceStatusEnum?,
-		at: ZonedDateTime?,
-		hasUser: Boolean?,
-		isOnSite: Boolean?,
-		birthdayFrom: LocalDate?,
-		birthdayTo: LocalDate?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: ParticipantCriteria,
+		page: PageQuery,
 	): Flux<ParticipantEntity>
 
 	@Query(
@@ -184,7 +147,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		projectId: UUID,
 		ids: List<UUID>,
 		isVisible: Boolean?,
-		at: ZonedDateTime?
+		c: ParticipantCriteria,
 	): Flux<ParticipantEntity>
 
 	@Query(
@@ -196,7 +159,11 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         LIMIT $MAX_UNPAGINATED_RESULT
         """
 	)
-	fun findByUserId(projectId: UUID, userId: UUID, at: ZonedDateTime?): Flux<ParticipantEntity>
+	fun findByUserId(
+		projectId: UUID,
+		userId: UUID,
+		c: ParticipantCriteria,
+	): Flux<ParticipantEntity>
 
 	@Query(
 		"""
@@ -215,20 +182,14 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         FROM $PARTICIPANT_TABLE t $USER_JOIN $LAST_MOVEMENT_JOIN $GROUPS_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $PARTICIPANT_TEXT_SEARCH_CLAUSE AND $PARTICIPANT_MAJOR_CLAUSE AND $PARTICIPANT_TYPE_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_AVAILABILITY_CLAUSE AND $PARTICIPANT_STATUS_CLAUSE AND $PARTICIPANT_PRESENCE_CLAUSE AND $DATE_IN_PARTICIPANT_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$PARTICIPANT_LAST_NAME
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		query: String?,
-		isMajor: Boolean?,
-		type: ParticipantTypeEnum?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		status: PresenceStatusEnum?,
-		presence: PresenceStatusEnum?,
-		at: ZonedDateTime?,
-		limit: Int,
+		c: ParticipantCriteria,
+		page: PageQuery,
 	): Flux<ParticipantEntity>
 
 	@Query(
@@ -243,7 +204,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		projectId: UUID,
 		id: UUID,
 		isVisible: Boolean?,
-		at: ZonedDateTime?
+		c: ParticipantCriteria,
 	): Mono<ParticipantEntity>
 
 	@Query(
@@ -252,7 +213,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         SELECT t.$ID FROM $PARTICIPANT_TABLE t $LAST_MOVEMENT_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_PLANNED_ELIGIBLE_CLAUSE AND $PARTICIPANT_OWN_PLANNED_DATE_CLAUSE
         ORDER BY t.$PARTICIPANT_LAST_NAME, t.$ID
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findIdsPlannedOnOwnDate(
@@ -260,7 +221,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		isVisible: Boolean?,
 		isArrival: Boolean,
 		day: LocalDate,
-		limit: Int,
+		page: PageQuery,
 	): Flux<UUID>
 
 	@Query(
@@ -273,7 +234,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $PARTICIPANT_PLANNED_ELIGIBLE_CLAUSE AND $PARTICIPANT_WITHOUT_OWN_PLANNED_DATE_CLAUSE
             AND $GROUP_PLANNED_DATE_CLAUSE AND $GROUP_DRIVES_PARTICIPANT_PLANNED_DATE_CLAUSE
         ORDER BY t.$ID, g.$GROUP_NAME
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findGroupContentsPlannedOnGroupDate(
@@ -281,7 +242,7 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
 		isVisible: Boolean?,
 		isArrival: Boolean,
 		day: LocalDate,
-		limit: Int,
+		page: PageQuery,
 	): Flux<GroupContentEntity>
 
 	@Query("SELECT t.$ID FROM $PARTICIPANT_TABLE t WHERE t.$ID IN (:ids) ORDER BY t.$ID FOR UPDATE OF t")

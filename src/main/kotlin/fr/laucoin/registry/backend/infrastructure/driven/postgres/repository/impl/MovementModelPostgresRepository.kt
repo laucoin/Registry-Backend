@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.MovementCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.helper.MovementContentPostgresHelper
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -47,15 +49,19 @@ class MovementModelPostgresRepository(
 		return repository.findAll(
 			projectId,
 			searchParams.isVisible,
-			searchParams.hasActivity,
 			searchParams.activityId,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			MovementCriteria(
+				hasActivity = searchParams.hasActivity,
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
@@ -67,15 +73,19 @@ class MovementModelPostgresRepository(
 		return repository.findCurrent(
 			projectId,
 			searchParams.isVisible,
-			searchParams.hasActivity,
 			searchParams.activityId,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			MovementCriteria(
+				hasActivity = searchParams.hasActivity,
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
@@ -112,14 +122,18 @@ class MovementModelPostgresRepository(
 			projectId,
 			participantId,
 			searchParams.isVisible,
-			searchParams.hasActivity,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			MovementCriteria(
+				hasActivity = searchParams.hasActivity,
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
@@ -133,14 +147,18 @@ class MovementModelPostgresRepository(
 			projectId,
 			vehicleId,
 			searchParams.isVisible,
-			searchParams.hasActivity,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			MovementCriteria(
+				hasActivity = searchParams.hasActivity,
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
@@ -154,13 +172,17 @@ class MovementModelPostgresRepository(
 			projectId,
 			activityId,
 			searchParams.isVisible,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
-			searchParams.sort?.field,
-			searchParams.sort?.isDescending,
-			pageable.limit,
-			pageable.offset,
+			MovementCriteria(
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		).toPageModel(pageable, clock, MovementEntity::fullCount, mapper::toModel)
 	}
 
@@ -175,7 +197,7 @@ class MovementModelPostgresRepository(
 			searchParams.isVisible,
 			searchParams.isAvailable,
 			searchParams.at,
-			limit,
+			PageQuery(limit = limit),
 		).map { mapper.toModel(it) }
 	}
 
@@ -188,10 +210,12 @@ class MovementModelPostgresRepository(
 			projectId,
 			participantId,
 			searchParams.isVisible,
-			searchParams.hasActivity,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
+			MovementCriteria(
+				hasActivity = searchParams.hasActivity,
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
 		)
 	}
 
@@ -204,10 +228,12 @@ class MovementModelPostgresRepository(
 			projectId,
 			vehicleId,
 			searchParams.isVisible,
-			searchParams.hasActivity,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
+			MovementCriteria(
+				hasActivity = searchParams.hasActivity,
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
 		)
 	}
 
@@ -220,9 +246,11 @@ class MovementModelPostgresRepository(
 			projectId,
 			activityId,
 			searchParams.isVisible,
-			searchParams.type,
-			searchParams.from,
-			searchParams.to,
+			MovementCriteria(
+				type = searchParams.type,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
 		)
 	}
 

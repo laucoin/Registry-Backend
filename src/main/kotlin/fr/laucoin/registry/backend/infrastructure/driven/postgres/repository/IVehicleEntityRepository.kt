@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.VehicleCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
@@ -26,7 +28,6 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -48,22 +49,14 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE AND $VEHICLE_BRAND_CLAUSE AND $VEHICLE_MODEL_CLAUSE
         ORDER BY $VEHICLE_SORT similarity_score DESC, t.$VEHICLE_BRAND, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		isPresent: Boolean?,
-		at: ZonedDateTime?,
-		brand: String?,
-		model: String?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: VehicleCriteria,
+		page: PageQuery,
 	): Flux<VehicleEntity>
 
 	@Query(
@@ -76,13 +69,8 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
 	)
 	fun countAll(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		isPresent: Boolean?,
-		at: ZonedDateTime?,
-		brand: String?,
-		model: String?,
+		c: VehicleCriteria,
 	): Mono<Long>
 
 	@Query(
@@ -103,19 +91,14 @@ interface IVehicleEntityRepository: ReactiveCrudRepository<VehicleEntity, UUID> 
         FROM $VEHICLE_TABLE t $LAST_MOVEMENT_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VEHICLE_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $VEHICLE_AVAILABILITY_CLAUSE AND $VEHICLE_PRESENCE_CLAUSE AND $DATE_IN_VEHICLE_DATES_RANGE_CLAUSE AND $VEHICLE_BRAND_CLAUSE AND $VEHICLE_MODEL_CLAUSE
         ORDER BY similarity_score DESC, t.$VEHICLE_BRAND
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		query: String?,
 		isVisible: Boolean?,
-		isAvailable: Boolean?,
-		isPresent: Boolean?,
-		at: ZonedDateTime?,
-		brand: String?,
-		model: String?,
-		limit: Int,
+		c: VehicleCriteria,
+		page: PageQuery,
 	): Flux<VehicleEntity>
 
 	@Query(

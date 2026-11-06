@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.GroupCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -105,16 +107,15 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
 			defaultProjectId,
-			query = null,
-			isVisible = null,
-			isPresent = null,
-			at = null,
-			memberUserId = null,
-			hasOnSiteMembers = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			null,
+			GroupCriteria(query = null, isPresent = null, at = null, hasOnSiteMembers = null),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -209,11 +210,9 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
 			defaultProjectId,
-			query = null,
-			isVisible = null,
-			isPresent = null,
-			at = null,
-			size,
+			null,
+			GroupCriteria(query = null, isPresent = null, at = null),
+			PageQuery(limit = size),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

@@ -23,16 +23,16 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 object AlertQueries {
 	const val SELECT_ALERT_SEARCH = """
         CASE
-            WHEN :query IS NULL THEN 1
-            ELSE word_similarity(:query, t.search_text)
+            WHEN :#{#c.query} IS NULL THEN 1
+            ELSE word_similarity(:#{#c.query}, t.search_text)
         END AS similarity_score
     """
 
 	const val ALERT_CRITICALITY_EXPRESSION = """
         CASE
             WHEN t.$ALERT_STATUS <> 'IN_PROGRESS' THEN NULL
-            WHEN t.$ALERT_DATE_TIME <= CAST(:#{now} AS TIMESTAMPTZ) - (:highAfterHours * INTERVAL '1 hour') THEN 'HIGH'
-            WHEN t.$ALERT_DATE_TIME <= CAST(:#{now} AS TIMESTAMPTZ) - (:reinforcedAfterHours * INTERVAL '1 hour') THEN 'REINFORCED'
+            WHEN t.$ALERT_DATE_TIME <= CAST(:#{now} AS TIMESTAMPTZ) - (:#{#c.highAfterHours} * INTERVAL '1 hour') THEN 'HIGH'
+            WHEN t.$ALERT_DATE_TIME <= CAST(:#{now} AS TIMESTAMPTZ) - (:#{#c.reinforcedAfterHours} * INTERVAL '1 hour') THEN 'REINFORCED'
             ELSE 'RECENT'
         END
     """
@@ -55,7 +55,7 @@ object AlertQueries {
 
 	const val SELECT_ALERT_CRITICALITY = "$ALERT_CRITICALITY_EXPRESSION AS $ALERT_CRITICALITY"
 
-	const val ALERT_CRITICALITY_CLAUSE = "(:criticality IS NULL OR $ALERT_CRITICALITY_EXPRESSION = :criticality)"
+	const val ALERT_CRITICALITY_CLAUSE = "(:#{#c.criticality} IS NULL OR $ALERT_CRITICALITY_EXPRESSION = :#{#c.criticality})"
 
 	const val ALERT_RESOLUTION_JOIN = """
         LEFT JOIN LATERAL (
@@ -76,26 +76,26 @@ object AlertQueries {
             FILTER (WHERE t.$ALERT_STATUS = 'RESOLVED' AND r.resolved_at IS NOT NULL) AS DOUBLE PRECISION) AS $ALERT_AVERAGE_RESOLUTION_SECONDS
     """
 
-	const val ALERT_TEXT_SEARCH_CLAUSE = "(:query IS NULL OR word_similarity(:query, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
-	const val ALERT_STATUS_SEARCH_CLAUSE = "(t.$ALERT_STATUS IN (:status))"
+	const val ALERT_TEXT_SEARCH_CLAUSE = "(:#{#c.query} IS NULL OR word_similarity(:#{#c.query}, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
+	const val ALERT_STATUS_SEARCH_CLAUSE = "(t.$ALERT_STATUS IN (:#{#c.status}))"
 
 	const val ALERT_DATE_IN_DATES_RANGE_CLAUSE = """
         (
-            COALESCE(:from, '-infinity'::TIMESTAMP) <= t.$ALERT_DATE_TIME AND
-            COALESCE(:to, '+infinity'::TIMESTAMP) >= t.$ALERT_DATE_TIME
+            COALESCE(:#{#c.from}, '-infinity'::TIMESTAMP) <= t.$ALERT_DATE_TIME AND
+            COALESCE(:#{#c.to}, '+infinity'::TIMESTAMP) >= t.$ALERT_DATE_TIME
         )
     """
 
 	const val ALERT_SORT = """
-        CASE WHEN CAST(:sortField AS TEXT) = 'title' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_TITLE END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'title' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_TITLE END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'dateTime' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'status' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_STATUS END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'status' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_STATUS END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'criticality' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN $ALERT_CRITICALITY_RANK END ASC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'criticality' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN $ALERT_CRITICALITY_RANK END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'criticality' AND NOT COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END DESC NULLS LAST,
-        CASE WHEN CAST(:sortField AS TEXT) = 'criticality' AND COALESCE(CAST(:isDescending AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'title' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_TITLE END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'title' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_TITLE END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'status' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_STATUS END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'status' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_STATUS END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'criticality' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN $ALERT_CRITICALITY_RANK END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'criticality' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN $ALERT_CRITICALITY_RANK END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'criticality' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'criticality' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$ALERT_DATE_TIME END ASC NULLS LAST,
     """
 }

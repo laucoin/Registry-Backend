@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.MovementCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
@@ -68,21 +69,15 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         FROM $MOVEMENT_TABLE t $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_LINKED_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
 		projectId: UUID,
 		isVisible: Boolean?,
-		hasActivity: Boolean?,
 		activityId: UUID?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: MovementCriteria,
+		page: PageQuery,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -94,21 +89,15 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
             WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_LINKED_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ) t
         ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findCurrent(
 		projectId: UUID,
 		isVisible: Boolean?,
-		hasActivity: Boolean?,
 		activityId: UUID?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: MovementCriteria,
+		page: PageQuery,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -118,21 +107,15 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID = :participantId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAllByParticipantId(
 		projectId: UUID,
 		participantId: UUID,
 		isVisible: Boolean?,
-		hasActivity: Boolean?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: MovementCriteria,
+		page: PageQuery,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -172,10 +155,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		projectId: UUID,
 		participantId: UUID,
 		isVisible: Boolean?,
-		hasActivity: Boolean?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?
+		c: MovementCriteria,
 	): Mono<Long>
 
 	@Query(
@@ -185,21 +165,15 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_VEHICLE_ID = :vehicleId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_ACTIVITY_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAllByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,
 		isVisible: Boolean?,
-		hasActivity: Boolean?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: MovementCriteria,
+		page: PageQuery,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -214,10 +188,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		projectId: UUID,
 		vehicleId: UUID,
 		isVisible: Boolean?,
-		hasActivity: Boolean?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?
+		c: MovementCriteria,
 	): Mono<Long>
 
 	@Query(
@@ -226,20 +197,15 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         FROM $MOVEMENT_TABLE t $ACTIVITY_JOIN $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND t.$MOVEMENT_ACTIVITY_ID = :activityId AND $VISIBLE_CLAUSE AND $MOVEMENT_TYPE_CLAUSE AND $MOVEMENT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY $MOVEMENT_SORT t.$MOVEMENT_DATE_TIME DESC, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAllByActivityId(
 		projectId: UUID,
 		activityId: UUID,
 		isVisible: Boolean?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sortField: String?,
-		isDescending: Boolean?,
-		limit: Int,
-		offset: Long,
+		c: MovementCriteria,
+		page: PageQuery,
 	): Flux<MovementEntity>
 
 	@Query(
@@ -253,9 +219,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		projectId: UUID,
 		activityId: UUID,
 		isVisible: Boolean?,
-		type: List<MovementTypeEnum>,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?
+		c: MovementCriteria,
 	): Mono<Long>
 
 	@Query(
@@ -265,7 +229,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
         WHERE $PROJECT_CLAUSE AND $ACTIVITY_MOVEMENT_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $ACTIVITY_MOVEMENT_AVAILABILITY_CLAUSE AND $DATE_IN_ACTIVITY_MOVEMENT_DATES_RANGE_CLAUSE
         GROUP BY $GROUP_BY_MOVEMENT
         ORDER BY similarity_score DESC, $MOVEMENT_ACTIVITY_NAME
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findByActivityWithLimit(
@@ -274,7 +238,7 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 		isVisible: Boolean?,
 		isAvailable: Boolean?,
 		at: ZonedDateTime?,
-		limit: Int,
+		page: PageQuery,
 	): Flux<MovementEntity>
 
 	@Query(

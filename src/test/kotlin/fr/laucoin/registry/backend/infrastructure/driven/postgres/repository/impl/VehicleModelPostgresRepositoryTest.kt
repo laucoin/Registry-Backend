@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.VehicleCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
 import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
@@ -80,17 +82,21 @@ class VehicleModelPostgresRepositoryTest : TestContext() {
 		assertEquals(2, result.totalPages)
 		verify(postgresRepository).findAll(
 			defaultProjectId,
-			query = null,
-			isVisible = null,
-			isAvailable = null,
-			isPresent = null,
-			at = null,
-			brand = null,
-			model = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			null,
+			VehicleCriteria(
+				query = null,
+				isAvailable = null,
+				isPresent = null,
+				at = null,
+				brand = null,
+				model = null,
+			),
+			PageQuery(
+				sortField = null,
+				isDescending = null,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -185,14 +191,16 @@ class VehicleModelPostgresRepositoryTest : TestContext() {
 		assertEquals(size, result.size)
 		verify(postgresRepository).findWithLimit(
 			defaultProjectId,
-			query = null,
-			isVisible = null,
-			isAvailable = null,
-			isPresent = null,
-			at = null,
-			brand = null,
-			model = null,
-			size,
+			null,
+			VehicleCriteria(
+				query = null,
+				isAvailable = null,
+				isPresent = null,
+				at = null,
+				brand = null,
+				model = null,
+			),
+			PageQuery(limit = size),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
