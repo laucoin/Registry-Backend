@@ -4,6 +4,8 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.UserCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUserEntityRepository
@@ -61,13 +63,9 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		assertEquals(5, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
-			query = null,
 			isVisible = null,
-			role = null,
-			sortField = null,
-			isDescending = null,
-			pageable.limit,
-			pageable.offset,
+			c = UserCriteria(),
+			page = PageQuery(limit = pageable.limit, offset = pageable.offset),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
@@ -102,10 +100,9 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		assertEquals(5, result.size)
 		verify(postgresRepository).findWithLimit(
-			query = null,
 			isVisible = null,
-			memberOfProjectId = null,
-			size,
+			c = UserCriteria(),
+			page = PageQuery(limit = size),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}

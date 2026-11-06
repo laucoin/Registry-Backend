@@ -39,7 +39,7 @@ class LastAdministratorHelper(private val port: IProjectProfilePort) {
 	): RegistryException? {
 		val projects = counts.filter { (it.level0 ?: 0) <= 1 }
 		if (projects.isEmpty()) return null
-		log.warn("The user {} is the last administrator of {} project(s)", userId, counts.size)
+		log.warn("The user {} is the last administrator of {} project(s)", userId, projects.size)
 		return RegistryException(CONFLICT, error, arrayListOf(projects.first().project!!.name))
 	}
 }

@@ -30,6 +30,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.UserCriteria
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
@@ -50,22 +52,20 @@ interface IUserEntityRepository: ReactiveCrudRepository<UserEntity, UUID> {
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_SERVICE_ACCOUNT AND $LINKED_TO_IDP AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $USER_ROLE_CLAUSE
         ORDER BY $USER_SORT similarity_score DESC, t.$USER_LAST_NAME, t.$ID
-        LIMIT :limit OFFSET :offset
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
-	fun findAll(query: String?, isVisible: Boolean?, role: String?, sortField: String?,
-		isDescending: Boolean?,
-		limit: Int, offset: Long): Flux<UserEntity>
+	fun findAll(isVisible: Boolean?, c: UserCriteria, page: PageQuery): Flux<UserEntity>
 
 	@Query(
 		"""
         SELECT t.*, $SELECT_USER_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR FROM $USER_TABLE t $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $NOT_SERVICE_ACCOUNT AND $LINKED_TO_IDP AND $USER_TEXT_SEARCH_CLAUSE AND $VISIBLE_CLAUSE AND $USER_PROJECT_MEMBER_CLAUSE
         ORDER BY similarity_score DESC, t.$USER_LAST_NAME
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
-	fun findWithLimit(query: String?, isVisible: Boolean?, memberOfProjectId: UUID?, limit: Int): Flux<UserEntity>
+	fun findWithLimit(isVisible: Boolean?, c: UserCriteria, page: PageQuery): Flux<UserEntity>
 
 	@Query(
 		"""

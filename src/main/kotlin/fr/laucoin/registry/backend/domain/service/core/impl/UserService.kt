@@ -37,7 +37,6 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Clock
 import java.time.LocalDate
-import java.util.Objects
 import java.util.UUID
 
 /**
@@ -204,7 +203,7 @@ class UserService(
 		isVisible: Boolean?
 	): Mono<UserModel> {
 		return findUserById(id, isVisible)
-			.filter { Objects.isNull(it.role) || assignableRoles.contains(it.role) }
+			.filter { it.role == null || it.role in assignableRoles }
 			.notFoundIfEmpty(id)
 	}
 
@@ -275,7 +274,7 @@ class UserService(
 
 	private fun validateNotLastAdministrator(userToUpdate: UserModel, error: String): Mono<UserModel> {
 		val roleLevel = roleService.getLevelByUserRole(userToUpdate.role)
-		if (Objects.isNull(roleLevel) || roleLevel!! > 0) return Mono.just(userToUpdate)
+		if (roleLevel == null || roleLevel > 0) return Mono.just(userToUpdate)
 
 		return port.lockLevel0Users()
 			.then(Mono.defer { port.findByRoleLevel(roleLevel = 0, isVisible = true).collectList() })
