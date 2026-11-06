@@ -1,35 +1,30 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
-import org.springframework.stereotype.Component
-import java.time.Clock
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class GroupEntityMapper(private val clock: Clock): IEntityMapper<GroupModel, GroupEntity> {
-	override fun toModel(entity: GroupEntity): GroupModel {
-		return GroupModel().apply {
-			name = entity.name
-			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
-			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
-			status = buildStatus(clock)
-			membersCount = entity.members
-			insideMembersCount = entity.insideMembers
-			outsideMembersCount = entity.outsideMembers
-		}.fillWithProjectAndEntity(entity)
-	}
+@Mapper(config = PostgresMapperConfig::class)
+interface GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
+	@IgnoreModelAudit
+	@AvailabilityDatesToModel
+	@Mapping(target = "status", ignore = true)
+	@Mapping(target = "membersCount", source = "members")
+	@Mapping(target = "insideMembersCount", source = "insideMembers")
+	@Mapping(target = "outsideMembersCount", source = "outsideMembers")
+	@Mapping(target = "onSiteMembersCount", ignore = true)
+	@Mapping(target = "inMembersCount", ignore = true)
+	@Mapping(target = "outMembersCount", ignore = true)
+	@Mapping(target = "overdueMembersCount", ignore = true)
+	@Mapping(target = "members", ignore = true)
+	override fun toModel(entity: GroupEntity): GroupModel
 
-	override fun toEntity(model: GroupModel): GroupEntity {
-		return GroupEntity().apply {
-			name = model.name
-			startAvailabilityDate = model.startAvailability?.date
-			startAvailabilityTime = model.startAvailability?.time
-			endAvailabilityDate = model.endAvailability?.date
-			endAvailabilityTime = model.endAvailability?.time
-		}.fillWithProjectAndModel(model)
-	}
+	@IgnoreEntityAudit
+	@AvailabilityDatesToEntity
+	@Mapping(target = "members", ignore = true)
+	@Mapping(target = "insideMembers", ignore = true)
+	@Mapping(target = "outsideMembers", ignore = true)
+	override fun toEntity(model: GroupModel): GroupEntity
 }

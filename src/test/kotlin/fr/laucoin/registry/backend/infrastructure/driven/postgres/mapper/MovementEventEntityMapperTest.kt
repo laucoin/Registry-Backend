@@ -10,7 +10,7 @@ import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
 class MovementEventEntityMapperTest {
-	private val mapper = MovementEventEntityMapper()
+	private val mapper = MovementEventEntityMapperImpl()
 	private val dateTime = ZonedDateTime.of(2026, 7, 1, 9, 0, 0, 0, UTC)
 
 	@Test

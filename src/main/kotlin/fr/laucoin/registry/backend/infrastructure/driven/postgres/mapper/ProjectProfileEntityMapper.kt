@@ -1,71 +1,40 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
-import java.time.Clock
-import java.util.Objects
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.helper.ProjectProfileMappingHelper
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ProjectProfileEntityMapper(
-	private val userMapper: UserEntityMapper,
-	private val clock: Clock,
-): IEntityMapper<ProjectProfileModel, ProjectProfileEntity> {
-	override fun toModel(entity: ProjectProfileEntity): ProjectProfileModel {
-		return ProjectProfileModel().apply {
-			user = mapUserEntity(entity)
-			project = mapProject(entity)
-			role = entity.role
-			startAccess = mapCustomDateTime(entity.startAccessDate, entity.startAccessTime)
-			endAccess = mapCustomDateTime(entity.endAccessDate, entity.endAccessTime)
-			status = entity.status
-			availabilityStatus = buildStatus(clock)
-		}.fillWithProjectAndEntity(entity)
-	}
+@Mapper(config = PostgresMapperConfig::class, uses = [ProjectProfileMappingHelper::class])
+interface ProjectProfileEntityMapper: IEntityMapper<ProjectProfileModel, ProjectProfileEntity> {
+	@IgnoreModelAudit
+	@Mapping(target = "user", source = "entity", qualifiedByName = ["userOf"])
+	@Mapping(target = "project", expression = "java(entity.getProjectName() == null ? null : toProject(entity))")
+	@Mapping(target = "startAccess", expression = "java(mapCustomDateTime(entity.getStartAccessDate(), entity.getStartAccessTime()))")
+	@Mapping(target = "endAccess", expression = "java(mapCustomDateTime(entity.getEndAccessDate(), entity.getEndAccessTime()))")
+	@Mapping(target = "availabilityStatus", ignore = true)
+	override fun toModel(entity: ProjectProfileEntity): ProjectProfileModel
 
-	private fun mapProject(entity: ProjectProfileEntity): ProjectModel? {
-		if (Objects.isNull(entity.projectName)) return null
-		return ProjectModel().apply {
-			id = entity.projectId
-			name = entity.projectName
-			begin = mapCustomDateTime(entity.projectStartDate, entity.projectStartTime)
-			end = mapCustomDateTime(entity.projectEndDate, entity.projectEndTime)
-			options = entity.projectOptions
-		}
-	}
+	@BeanMapping(ignoreByDefault = true)
+	@KeepGenericProjectColumns
+	@Mapping(target = "userId", source = "user.id")
+	@Mapping(target = "role", source = "role")
+	@Mapping(target = "status", source = "status")
+	@Mapping(target = "startAccessDate", source = "startAccess.date")
+	@Mapping(target = "startAccessTime", source = "startAccess.time")
+	@Mapping(target = "endAccessDate", source = "endAccess.date")
+	@Mapping(target = "endAccessTime", source = "endAccess.time")
+	override fun toEntity(model: ProjectProfileModel): ProjectProfileEntity
 
-	private fun mapUserEntity(entity: ProjectProfileEntity): UserModel? {
-		return Optional.ofNullable(entity.userId).map {
-			userMapper.toModel(
-				UserEntity().apply {
-					id = it
-					oidcId = entity.userOidcId
-					firstName = entity.userFirstName
-					lastName = entity.userLastName
-					email = entity.userEmail
-					lastLogin = entity.userLastLogin
-				}
-			)
-		}.orElse(null)
-	}
-
-	override fun toEntity(model: ProjectProfileModel): ProjectProfileEntity {
-		return ProjectProfileEntity().apply {
-			userId = model.user?.id
-			role = model.role
-			status = model.status
-			startAccessDate = model.startAccess?.date
-			startAccessTime = model.startAccess?.time
-			endAccessDate = model.endAccess?.date
-			endAccessTime = model.endAccess?.time
-		}.fillWithProjectAndModel(model)
-	}
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "id", source = "projectId")
+	@Mapping(target = "name", source = "projectName")
+	@Mapping(target = "begin", expression = "java(mapCustomDateTime(entity.getProjectStartDate(), entity.getProjectStartTime()))")
+	@Mapping(target = "end", expression = "java(mapCustomDateTime(entity.getProjectEndDate(), entity.getProjectEndTime()))")
+	@Mapping(target = "options", source = "projectOptions")
+	fun toProject(entity: ProjectProfileEntity): ProjectModel
 }

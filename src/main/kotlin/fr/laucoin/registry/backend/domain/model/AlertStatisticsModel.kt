@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.model
 
-data class AlertStatisticsModel(
+import fr.laucoin.registry.backend.domain.annotation.Default
+data class AlertStatisticsModel @Default constructor(
 	val resolvedCount: Long = 0,
 	val canceledCount: Long = 0,
 	val averageResolutionSeconds: Long? = null,

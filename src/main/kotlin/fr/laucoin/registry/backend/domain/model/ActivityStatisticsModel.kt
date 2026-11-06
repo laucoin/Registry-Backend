@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.model
 
-data class ActivityStatisticsModel(
+import fr.laucoin.registry.backend.domain.annotation.Default
+data class ActivityStatisticsModel @Default constructor(
 	val participantCount: Long = 0,
 	val projectParticipantCount: Long = 0,
 	val movementSeconds: Long = 0,

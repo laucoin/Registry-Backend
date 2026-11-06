@@ -1,53 +1,32 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
-import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
-import fr.laucoin.registry.backend.domain.model.ProjectCountsModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithModel
-import org.springframework.stereotype.Component
-import java.time.Clock
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ProjectEntityMapper(private val clock: Clock): IEntityMapper<ProjectModel, ProjectEntity> {
-	override fun toModel(entity: ProjectEntity): ProjectModel {
-		return ProjectModel().apply {
-			name = entity.name
-			begin = mapCustomDateTime(entity.beginDate, entity.beginTime)
-			end = mapCustomDateTime(entity.endDate, entity.endTime)
-			status = buildStatus(clock)
-			options = entity.options
-			counts = toCounts(entity)
-		}.fillWithEntity(entity)
-	}
+@Mapper(config = PostgresMapperConfig::class)
+interface ProjectEntityMapper: IEntityMapper<ProjectModel, ProjectEntity> {
+	@IgnoreModelAudit
+	@Mapping(target = "begin", expression = "java(mapCustomDateTime(entity.getBeginDate(), entity.getBeginTime()))")
+	@Mapping(target = "end", expression = "java(mapCustomDateTime(entity.getEndDate(), entity.getEndTime()))")
+	@Mapping(target = "status", ignore = true)
+	@Mapping(target = "profile", ignore = true)
+	@Mapping(target = "favorite", ignore = true)
+	@Mapping(target = "counts", ignore = true)
+	override fun toModel(entity: ProjectEntity): ProjectModel
 
-	private fun toCounts(entity: ProjectEntity): ProjectCountsModel? {
-		val participants = entity.participants ?: return null
-		return ProjectCountsModel(
-			participants = participants,
-			groups = entity.groups ?: 0,
-			acceptedProfiles = entity.acceptedProfiles ?: 0,
-			vehicles = entity.countIfEnabled(ProjectOptionEnum.VEHICLE, entity.vehicles),
-			activities = entity.countIfEnabled(ProjectOptionEnum.ACTIVITY, entity.activities),
-			activeAlerts = entity.countIfEnabled(ProjectOptionEnum.ALERT, entity.activeAlerts),
-		)
-	}
-
-	private fun ProjectEntity.countIfEnabled(option: ProjectOptionEnum, count: Long?): Long? {
-		return count.takeIf { option in options.orEmpty() }
-	}
-
-	override fun toEntity(model: ProjectModel): ProjectEntity {
-		return ProjectEntity().apply {
-			name = model.name
-			beginDate = model.begin?.date
-			beginTime = model.begin?.time
-			endDate = model.end?.date
-			endTime = model.end?.time
-			options = model.options
-		}.fillWithModel(model)
-	}
+	@IgnoreEntityAudit
+	@Mapping(target = "beginDate", source = "begin.date")
+	@Mapping(target = "beginTime", source = "begin.time")
+	@Mapping(target = "endDate", source = "end.date")
+	@Mapping(target = "endTime", source = "end.time")
+	@Mapping(target = "participants", ignore = true)
+	@Mapping(target = "groups", ignore = true)
+	@Mapping(target = "acceptedProfiles", ignore = true)
+	@Mapping(target = "vehicles", ignore = true)
+	@Mapping(target = "activities", ignore = true)
+	@Mapping(target = "activeAlerts", ignore = true)
+	override fun toEntity(model: ProjectModel): ProjectEntity
 }

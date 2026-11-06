@@ -2,16 +2,16 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
 import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertStatisticsEntity
-import org.springframework.stereotype.Component
 import kotlin.math.roundToLong
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
+import org.mapstruct.Named
 
-@Component
-class AlertStatisticsEntityMapper {
-	fun toModel(entity: AlertStatisticsEntity): AlertStatisticsModel {
-		return AlertStatisticsModel(
-			resolvedCount = entity.resolvedCount ?: 0,
-			canceledCount = entity.canceledCount ?: 0,
-			averageResolutionSeconds = entity.averageResolutionSeconds?.roundToLong(),
-		)
-	}
+@Mapper(config = PostgresMapperConfig::class)
+interface AlertStatisticsEntityMapper {
+	@Mapping(target = "averageResolutionSeconds", qualifiedByName = ["roundedSeconds"])
+	fun toModel(entity: AlertStatisticsEntity): AlertStatisticsModel
+
+	@Named("roundedSeconds")
+	fun roundedSeconds(seconds: Double): Long = seconds.roundToLong()
 }
