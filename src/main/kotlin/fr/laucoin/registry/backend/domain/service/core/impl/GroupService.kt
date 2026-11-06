@@ -11,6 +11,7 @@ import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.GroupFeatureModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -24,7 +25,6 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IGroupService
 import java.time.Clock
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
@@ -45,8 +45,7 @@ class GroupService(
 	private val participantPort: IParticipantPort,
 	private val transactionalOperator: TransactionalOperator,
 	clock: Clock,
-	@param:Value($$"${registry.feature.group.searched.max-participant-result}")
-	private val maxParticipantResult: Int,
+	private val feature: GroupFeatureModel,
 ): IGroupService, GenericService(clock) {
 	override fun findGroupsPage(
 		projectId: UUID,
@@ -93,7 +92,7 @@ class GroupService(
 
 	override fun searchParticipantsByText(projectId: UUID, query: String?): Flux<ParticipantModel> {
 		return participantPort.findWithLimit(
-			maxParticipantResult,
+			feature.searched.maxParticipantResult,
 			projectId,
 			ParticipantSearchParamModel(type = REGISTERED, isVisible = true).apply {
 				this.query = query

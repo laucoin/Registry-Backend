@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.domain.model.GroupFeatureModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -55,7 +56,7 @@ class GroupServiceTest {
 	private val participantPort: IParticipantPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IGroupService =
-		GroupService(projectDates, port, participantPort, transactionalOperator, Clock.systemUTC(), MAX_PARTICIPANTS)
+		GroupService(projectDates, port, participantPort, transactionalOperator, Clock.systemUTC(), GroupFeatureModel(GroupFeatureModel.Searched(MAX_PARTICIPANTS)))
 
 	@BeforeEach
 	fun setUp() {
