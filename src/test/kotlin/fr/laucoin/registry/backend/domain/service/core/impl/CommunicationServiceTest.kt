@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.helper.CommunicationConflictHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
@@ -20,9 +21,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
-import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -84,8 +83,8 @@ class CommunicationServiceTest {
 	private val rowLockPort: IRowLockPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: ICommunicationService = CommunicationService(
-		projectDates, port, historyPort, rowLockPort, transactionalOperator, movementPort, alertPort,
-		Clock.systemUTC(), MAX_ACTIVITIES, MAX_ALERTS
+		projectDates, port, historyPort, rowLockPort, transactionalOperator, CommunicationConflictHelper(movementPort, alertPort),
+		Clock.systemUTC()
 	)
 
 	@BeforeEach
@@ -96,8 +95,6 @@ class CommunicationServiceTest {
 	}
 
 	private companion object {
-		private const val MAX_ACTIVITIES = 1
-		private const val MAX_ALERTS = 2
 		private val past = ZonedDateTime.now(ZoneOffset.UTC).minusDays(10L)
 		private val now = ZonedDateTime.now(ZoneOffset.UTC)
 
@@ -257,45 +254,6 @@ class CommunicationServiceTest {
 		assertEquals(defaultCommunicationId.toString(), result.args?.first())
 
 		verify(port).findById(defaultProjectId, defaultCommunicationId, onlyVisible)
-	}
-
-	@Test
-	fun `Should searchOutMovementWithActivityByText call port findActivityWithLimit`() {
-		// Arrange
-		val query = "search"
-		val search = ActivitySearchParamModel(
-			query = query,
-			isVisible = true,
-			isAvailable = true,
-			at = null,
-		)
-
-		whenever(movementPort.findActivityWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultMovement()))
-
-		// Act
-		service.searchOutMovementWithActivityByText(defaultProjectId, query).collectList().block()
-
-		// Assert
-		verify(movementPort).findActivityWithLimit(MAX_ACTIVITIES, defaultProjectId, search)
-	}
-
-	@Test
-	fun `Should searchAlertByText call port findWithLimit`() {
-		// Arrange
-		val query = "search"
-		val search = AlertSearchParamModel(
-			query = query,
-			isVisible = true,
-			status = IN_PROGRESS,
-		)
-
-		whenever(alertPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultAlert()))
-
-		// Act
-		service.searchAlertByText(defaultProjectId, query).collectList().block()
-
-		// Assert
-		verify(alertPort).findWithLimit(MAX_ALERTS, defaultProjectId, search)
 	}
 
 	@ParameterizedTest

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.service.core.IParticipantSearchService
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
@@ -19,11 +20,14 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Point d'entrée des participants pour la couche REST.
- * Périmètre : Délègue chaque opération au service Participant sans logique propre.
+ * Périmètre : Délègue chaque opération aux services Participant et recherche Participant sans logique propre.
  * Limites : Ne porte aucune règle métier ; elles restent dans le service.
  */
 @Service
-class ParticipantUseCase(private val service: IParticipantService) : IParticipantUseCase {
+class ParticipantUseCase(
+	private val service: IParticipantService,
+	private val searchService: IParticipantSearchService,
+) : IParticipantUseCase {
 	override fun findParticipantsPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -45,11 +49,11 @@ class ParticipantUseCase(private val service: IParticipantService) : IParticipan
 	}
 
 	override fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel> {
-		return service.searchUsersByText(projectId, query)
+		return searchService.searchUsersByText(projectId, query)
 	}
 
 	override fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel> {
-		return service.searchGroupsByText(projectId, query)
+		return searchService.searchGroupsByText(projectId, query)
 	}
 
 	override fun findParticipantMovementsPage(

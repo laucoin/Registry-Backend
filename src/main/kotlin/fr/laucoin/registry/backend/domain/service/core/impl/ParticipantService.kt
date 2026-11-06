@@ -1,6 +1,10 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
+import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
+import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
+import fr.laucoin.registry.backend.domain.extension.OutingExt.toOutings
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_GROUPS_NOT_VISIBLE
@@ -10,14 +14,9 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
-import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
-import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
-import fr.laucoin.registry.backend.domain.extension.OutingExt.toOutings
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
-import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.OutingModel
@@ -28,20 +27,16 @@ import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TimelineRangeModel
-import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
-import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IParticipantService
 import java.time.Clock
 import java.time.LocalDate
 import java.util.Objects
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
@@ -60,16 +55,11 @@ import reactor.core.publisher.SynchronousSink
 class ParticipantService(
 	private val projectDates: ProjectDateHelper,
 	private val port: IParticipantPort,
-	private val userPort: IUserPort,
 	private val movementPort: IMovementPort,
 	private val groupPort: IGroupPort,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
 	clock: Clock,
-	@param:Value($$"${registry.feature.participant.searched.max-user-result}")
-	private val maxUserResult: Int,
-	@param:Value($$"${registry.feature.participant.searched.max-group-result}")
-	private val maxGroupResult: Int,
 ): IParticipantService, GenericService(clock) {
 	override fun findParticipantsPage(
 		projectId: UUID,
@@ -118,21 +108,6 @@ class ParticipantService(
 		if (participant.startAvailability == null && participant.endAvailability == null) return emptyList()
 
 		return listOf(TimelineRangeModel(participant.startAvailability, participant.endAvailability))
-	}
-
-	override fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel> {
-		return userPort.findWithLimit(
-			maxUserResult,
-			UserSearchParamModel(query, isVisible = true).apply { memberOfProjectId = projectId },
-		)
-	}
-
-	override fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel> {
-		return groupPort.findWithLimit(
-			maxGroupResult,
-			projectId,
-			GroupSearchParamModel(query, isVisible = true),
-		)
 	}
 
 	override fun findParticipantMovementsPage(

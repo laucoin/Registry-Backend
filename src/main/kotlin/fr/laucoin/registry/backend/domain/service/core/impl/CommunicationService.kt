@@ -1,51 +1,24 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_ALERT_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_MOVEMENT_TYPE_NOT_OUT
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_ALERT
-import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
-import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.COMMUNICATION
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
-import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.CommunicationConflictHelper
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.CommunicationError.COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
+import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
-import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
-import fr.laucoin.registry.backend.domain.model.AlertModel
-import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
-import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationHistoryPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
-import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.ICommunicationService
 import java.time.Clock
-import java.util.Objects
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus.FORBIDDEN
-import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.switchIfEmpty
 
 /**
  * Objectif : Gère les communications rattachées à une alerte.
@@ -59,13 +32,8 @@ class CommunicationService(
 	private val historyPort: ICommunicationHistoryPort,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
-	private val movementPort: IMovementPort,
-	private val alertPort: IAlertPort,
+	private val conflicts: CommunicationConflictHelper,
 	clock: Clock,
-	@param:Value($$"${registry.feature.communication.searched.max-activity-result}")
-	private val maxActivityResult: Int,
-	@param:Value($$"${registry.feature.communication.searched.max-alert-result}")
-	private val maxAlertResult: Int,
 ): ICommunicationService, GenericService(clock) {
 	override fun findCommunicationById(
 		projectId: UUID,
@@ -73,37 +41,6 @@ class CommunicationService(
 		isVisible: Boolean?
 	): Mono<CommunicationModel> {
 		return port.findById(projectId, id, isVisible).notFoundIfEmpty(id)
-	}
-
-	override fun searchOutMovementWithActivityByText(
-		projectId: UUID,
-		query: String?
-	): Flux<MovementModel> {
-		return movementPort.findActivityWithLimit(
-			maxActivityResult,
-			projectId,
-			ActivitySearchParamModel(
-				query = query,
-				isVisible = true,
-				isAvailable = true,
-				at = null,
-			)
-		)
-	}
-
-	override fun searchAlertByText(
-		projectId: UUID,
-		query: String?
-	): Flux<AlertModel> {
-		return alertPort.findWithLimit(
-			maxAlertResult,
-			projectId,
-			AlertSearchParamModel(
-				query,
-				isVisible = true,
-				status = AlertStatusEnum.IN_PROGRESS,
-			)
-		)
 	}
 
 	override fun createCommunication(
@@ -115,8 +52,8 @@ class CommunicationService(
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateNoMovementConflict(communication) }
-			.flatMap { validateNoAlertConflict(currentUser, communication) }
+			.flatMap { conflicts.validateNoMovementConflict(communication) }
+			.flatMap { conflicts.validateNoAlertConflict(currentUser, communication) }
 			.flatMap { port.create(communication.apply { create(currentUser, now()) }) }
 	}
 
@@ -129,8 +66,8 @@ class CommunicationService(
 		return validateCommunicationDate(communication)
 			.flatMap { rowLockPort.lock(COMMUNICATION, id) }
 			.flatMap { findCommunicationById(projectId, id, isVisible = null) }
-			.flatMap { validateNoMovementConflict(communication, it) }
-			.flatMap { validateNoAlertConflict(currentUser, communication, it) }
+			.flatMap { conflicts.validateNoMovementConflict(communication, it) }
+			.flatMap { conflicts.validateNoAlertConflict(currentUser, communication, it) }
 			.map { it.withContentOf(communication) }
 			.archiveCurrentState()
 			.updateCommunication(currentUser)
@@ -192,70 +129,9 @@ class CommunicationService(
 		port.update(it.apply { update(currentUser, now()) })
 	}
 
-	private fun validateNoMovementConflict(
-		communication: CommunicationModel,
-		oldCommunication: CommunicationModel? = null
-	): Mono<CommunicationModel> {
-		val communicationToReturn = oldCommunication ?: communication
-		return if (Objects.isNull(communication.movement) || communication.movement!!.id == oldCommunication?.movement?.id)
-			Mono.just(communicationToReturn)
-		else movementPort.findById(communication.projectId!!, communication.movement!!.id!!, isVisible = null)
-			.switchIfEmpty {
-				Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
-			}
-			.handle { movement, sink -> sink.nextOrError(communicationToReturn, movementConflict(movement, communication)) }
-	}
-
 	private fun CommunicationModel.withContentOf(communication: CommunicationModel): CommunicationModel = apply {
 		dateTime = communication.dateTime
 		movement = communication.movement
 		message = communication.message
-	}
-
-	private fun movementConflict(movement: MovementModel, communication: CommunicationModel): RegistryException? = when {
-		movement.isNotVisible() -> RegistryException(NOT_FOUND, COMMUNICATION_MOVEMENT_NOT_VISIBLE)
-
-		movement.dateTime.isAfter(communication.dateTime) ->
-			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_IS_AFTER_COMMUNICATION)
-
-		movement.contentType !== REGISTERED ->
-			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_CONTENT_TYPE_NOT_REGISTERED)
-
-		movement.type !== OUT -> RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_MOVEMENT_TYPE_NOT_OUT)
-
-		else -> null
-	}
-
-	private fun validateNoAlertConflict(
-		currentUser: CurrentUserModel,
-		communication: CommunicationModel,
-		oldCommunication: CommunicationModel? = null
-	): Mono<CommunicationModel> {
-		val communicationToReturn = oldCommunication ?: communication
-		return if (Objects.isNull(communication.alert) || communication.alert!!.id == oldCommunication?.alert?.id)
-			Mono.just(communicationToReturn)
-		else {
-			if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
-				return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
-			}
-
-			alertPort.findById(communication.projectId!!, communication.alert!!.id!!, isVisible = null)
-				.switchIfEmpty {
-					Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
-				}
-				.handle { alert, sink -> sink.nextOrError(communicationToReturn, alertConflict(alert, communication)) }
-		}
-	}
-
-	private fun alertConflict(alert: AlertModel, communication: CommunicationModel): RegistryException? = when {
-		alert.isNotVisible() -> RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_VISIBLE)
-
-		alert.dateTime.isAfter(communication.dateTime) ->
-			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_ALERT_IS_AFTER_COMMUNICATION)
-
-		alert.status !== AlertStatusEnum.IN_PROGRESS ->
-			RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_ALERT_IS_NOT_COMPATIBLE_WITH_COMMUNICATION_CREATION)
-
-		else -> null
 	}
 }

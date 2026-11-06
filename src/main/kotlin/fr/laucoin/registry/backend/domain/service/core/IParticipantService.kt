@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core
 
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -9,7 +8,6 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ParticipantTimelineModel
-import fr.laucoin.registry.backend.domain.model.UserModel
 import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
@@ -33,8 +31,6 @@ interface IParticipantService {
 	fun findParticipantTimeline(projectId: UUID, id: UUID): Mono<ParticipantTimelineModel>
 
 	fun findParticipantById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ParticipantModel>
-	fun searchUsersByText(projectId: UUID, query: String?): Flux<UserModel>
-	fun searchGroupsByText(projectId: UUID, query: String?): Flux<GroupModel>
 
 	fun findParticipantMovementsPage(
 		currentUser: CurrentUserModel,

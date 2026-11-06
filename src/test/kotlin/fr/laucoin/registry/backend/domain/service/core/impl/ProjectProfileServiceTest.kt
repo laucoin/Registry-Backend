@@ -16,10 +16,8 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
-import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.helper.LastAdministratorHelper
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
@@ -56,17 +54,15 @@ class ProjectProfileServiceTest {
 	private val port: IProjectProfilePort = mock()
 	private val lastAdministrator: LastAdministratorHelper = mock()
 	private val roleService: IRoleService = mock()
-	private val userPort: IUserPort = mock()
 	private val principalCache: IPrincipalCacheService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
-	private val maxUser: Int = 1
 	private val rowLockPort: IRowLockPort = mock()
 	init {
 		whenever(rowLockPort.lock(any(), any())).thenReturn(Mono.just(Unit))
 	}
 
 	private val service = ProjectProfileService(
-		lastAdministrator, port, roleService, userPort, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC(), maxUser
+		lastAdministrator, port, roleService, principalCache, rowLockPort, transactionalOperator, Clock.systemUTC()
 	)
 
 	init {
@@ -158,19 +154,6 @@ class ProjectProfileServiceTest {
 		assertEquals(defaultProjectProfileId.toString(), result.args?.first())
 
 		verify(port).findById(defaultProjectId, defaultProjectProfileId, onlyVisible)
-	}
-
-	@Test
-	fun `Should searchUsers call port findWithLimit`() {
-		// Arrange
-		val text = "text"
-		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.empty())
-
-		// Act
-		service.searchUsers(text).blockFirst()
-
-		// Assert
-		verify(userPort).findWithLimit(eq(maxUser), eq(UserSearchParamModel(text, isVisible = true)))
 	}
 
 	@Test

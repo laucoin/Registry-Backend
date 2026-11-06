@@ -11,7 +11,6 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.SHOPPING
-import org.mockito.kotlin.argThat
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.mockito.kotlin.verifyNoInteractions
@@ -27,22 +26,18 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
-import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
-import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.core.IParticipantService
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.test.ModelExt.defaultGroup
-import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
 import fr.laucoin.registry.backend.test.ModelExt.defaultParticipant
 import fr.laucoin.registry.backend.test.ModelExt.defaultParticipantId
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
@@ -78,7 +73,6 @@ import java.util.stream.Stream
 class ParticipantServiceTest {
 	private val port: IParticipantPort = mock()
 	private val projectDates: ProjectDateHelper = mock()
-	private val userPort: IUserPort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val groupPort: IGroupPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
@@ -88,7 +82,7 @@ class ParticipantServiceTest {
 	}
 
 	private val service: IParticipantService = ParticipantService(
-		projectDates, port, userPort, movementPort, groupPort, rowLockPort, transactionalOperator, Clock.systemUTC(), MAX_USERS, MAX_GROUPS
+		projectDates, port, movementPort, groupPort, rowLockPort, transactionalOperator, Clock.systemUTC()
 	)
 
 	@BeforeEach
@@ -174,8 +168,6 @@ class ParticipantServiceTest {
 	}
 
 	private companion object {
-		private const val MAX_USERS = 1
-		private const val MAX_GROUPS = 2
 
 		private val past = CustomDateTimeModel(LocalDate.of(2025, 9, 1))
 		private val now = CustomDateTimeModel(LocalDate.of(2025, 9, 26))
@@ -357,36 +349,6 @@ class ParticipantServiceTest {
 		assertEquals(defaultParticipantId.toString(), result.args?.first())
 
 		verify(port).findById(defaultProjectId, defaultParticipantId, onlyVisible)
-	}
-
-	@Test
-	fun `Should searchUsers call userPort findWithLimit`() {
-		// Arrange
-		val query = "text"
-		val expectedSearch = UserSearchParamModel(query, isVisible = true)
-
-		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.empty())
-
-		// Act
-		service.searchUsersByText(defaultProjectId, query).blockFirst()
-
-		// Assert
-		verify(userPort).findWithLimit(eq(MAX_USERS), argThat { this == expectedSearch && memberOfProjectId == defaultProjectId })
-	}
-
-	@Test
-	fun `Should searchGroups call groupPort findWithLimit`() {
-		// Arrange
-		val query = "text"
-		val expectedSearch = GroupSearchParamModel(query, isVisible = true)
-
-		whenever(groupPort.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
-
-		// Act
-		service.searchGroupsByText(defaultProjectId, query).blockFirst()
-
-		// Assert
-		verify(groupPort).findWithLimit(MAX_GROUPS, defaultProjectId, expectedSearch)
 	}
 
 	@Test
