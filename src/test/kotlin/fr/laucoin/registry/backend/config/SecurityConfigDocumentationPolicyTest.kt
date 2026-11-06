@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.config
 
-import fr.laucoin.registry.backend.config.SecurityConfig.Companion.apiOrigin
-import fr.laucoin.registry.backend.config.SecurityConfig.Companion.documentationContentSecurityPolicy
+import fr.laucoin.registry.backend.config.DocumentationSecurityConfig.Companion.apiOrigin
+import fr.laucoin.registry.backend.config.DocumentationSecurityConfig.Companion.documentationContentSecurityPolicy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
