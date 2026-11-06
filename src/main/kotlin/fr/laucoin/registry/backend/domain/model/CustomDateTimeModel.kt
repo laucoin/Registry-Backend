@@ -88,9 +88,7 @@ data class CustomDateTimeModel @Default constructor(
 	}
 
 	fun plusHours(hours: Long): CustomDateTimeModel {
-		if (Objects.nonNull(time)) {
-			time = time!!.plusHours(hours)
-		}
-		return this
+		val shifted = time?.atDate(date)?.plusHours(hours) ?: return copy()
+		return CustomDateTimeModel(shifted.toLocalDate(), shifted.toOffsetTime())
 	}
 }
