@@ -18,8 +18,9 @@ class GroupWriterDtoMapper(
 				Optional.ofNullable(dto.startAvailability).map(customDateTimeMapper::toModel).orElse(null)
 			endAvailability =
 				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
-			membersUnchanged = dto.members == null
-			members = dto.members.orEmpty().map { ParticipantModel().apply { id = it } }
+			endAvailability =
+				Optional.ofNullable(dto.endAvailability).map(customDateTimeMapper::toModel).orElse(null)
+			members = dto.members!!.map { ParticipantModel().apply { id = it } }
 			this.projectId = projectId
 		}
 	}

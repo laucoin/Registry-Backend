@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_ALREADY_ADDED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
@@ -20,9 +21,9 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.IGroupService
 import fr.laucoin.registry.backend.domain.service.IProjectService
 import java.time.Clock
-import java.time.LocalDate
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
@@ -105,7 +106,7 @@ class GroupService(
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateNewMembersOfCreation(group) }
+			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
 			.flatMap { port.create(group.apply { create(currentUser, now()) }) }
 	}
 
@@ -128,12 +129,6 @@ class GroupService(
 			.`as`(transactionalOperator::transactional)
 	}
 
-	private fun validateNewMembersOfCreation(group: GroupModel): Mono<GroupModel> {
-		val memberIds = group.members.mapNotNull { it.id }
-		return if (memberIds.isEmpty()) Mono.just(group)
-		else validateMembers(group.projectId!!, group, memberIds)
-	}
-
 	private fun validateNewMembers(projectId: UUID, existing: GroupModel, group: GroupModel): Mono<GroupModel> {
 		val newMemberIds: List<UUID> = existing.getNewMemberIds(group)
 		return if (newMemberIds.isEmpty()) Mono.just(existing)
@@ -145,7 +140,7 @@ class GroupService(
 			name = group.name
 			startAvailability = group.startAvailability
 			endAvailability = group.endAvailability
-			if (!group.membersUnchanged) members = group.members
+			members = group.members
 		}
 	}
 
@@ -192,6 +187,18 @@ class GroupService(
 	): Mono<GroupModel> {
 		return findLockedGroup(projectId, id)
 			.map { it.apply { members = members.filter { m -> m.id != memberId } } }
+			.handle { it, handle ->
+				if (it.members.isEmpty()) {
+					handle.error(
+						RegistryException(
+							CONFLICT,
+							GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED,
+						)
+					)
+				} else {
+					handle.next(it)
+				}
+			}
 			.updateGroup(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
@@ -262,11 +269,10 @@ class GroupService(
 
 	override fun purgeEmptyGroups(
 		participantToExclude: List<UUID>,
-		dateThreshold: LocalDate,
 		dryRun: Boolean
 	): Flux<UUID> {
-		log.info("Purging empty groups unused since {}", dateThreshold)
-		return port.findEmpty(participantToExclude, dateThreshold)
+		log.info("Purging empty groups")
+		return port.findEmpty(participantToExclude)
 			.purgeEach("group", dryRun, port::deleteById)
 	}
 }

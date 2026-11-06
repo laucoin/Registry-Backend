@@ -108,9 +108,9 @@ object GroupQueries {
     """
 
 	const val SELECT_MEMBERS_COUNTS = """
-        COALESCE(members.$GROUP_MEMBERS_COUNT, 0) as $GROUP_MEMBERS_COUNT,
+        members.$GROUP_MEMBERS_COUNT,
         CASE WHEN inside_members.$GROUP_INSIDE_MEMBERS_COUNT IS NULL THEN 0 ELSE inside_members.$GROUP_INSIDE_MEMBERS_COUNT END as $GROUP_INSIDE_MEMBERS_COUNT,
-        COALESCE(members.$GROUP_MEMBERS_COUNT, 0) - CASE WHEN inside_members.$GROUP_INSIDE_MEMBERS_COUNT IS NULL THEN 0 ELSE inside_members.$GROUP_INSIDE_MEMBERS_COUNT END as $GROUP_OUTSIDE_MEMBERS_COUNT
+        members.$GROUP_MEMBERS_COUNT - CASE WHEN inside_members.$GROUP_INSIDE_MEMBERS_COUNT IS NULL THEN 0 ELSE inside_members.$GROUP_INSIDE_MEMBERS_COUNT END as $GROUP_OUTSIDE_MEMBERS_COUNT
     """
 
 	const val GROUP_INSIDE_MEMBERS_JOIN = """
@@ -128,7 +128,7 @@ object GroupQueries {
     """
 
 	const val GROUP_MEMBERS_JOIN = """
-        LEFT JOIN members ON members.$GROUP_CONTENT_GROUP_ID = t.$ID
+        INNER JOIN members ON members.$GROUP_CONTENT_GROUP_ID = t.$ID
     """
 
 	const val SELECT_CONTENT_TO_CONTENT = """

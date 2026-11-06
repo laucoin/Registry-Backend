@@ -304,7 +304,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 		}
 
 		@Test
-		@Order(3)
+		@Order(2)
 		fun `Should update call repository save and add member in group`() {
 			// Arrange
 			val group = GroupModel().apply {
@@ -332,7 +332,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 		}
 
 		@Test
-		@Order(4)
+		@Order(3)
 		fun `Should update call repository save and remove member in group`() {
 			// Arrange
 			val group = GroupModel().apply {
@@ -360,25 +360,7 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 		}
 
 		@Test
-		@Order(2)
-		fun `Should findByIdWithContent find a group that has no member`() {
-			// Act
-			val result = repository.findByIdWithContent(
-				defaultProjectId,
-				uuid,
-				isVisible = null,
-				memberIsVisible = null,
-				memberIsAvailable = null
-			).block()
-
-			// Assert
-			assertNotNull(result)
-			assertEquals(0, result.members.size)
-			assertEquals(0L, result.membersCount)
-		}
-
-		@Test
-		@Order(5)
+		@Order(4)
 		fun `Should deleteById call repository deleteById`() {
 			// Act
 			repository.deleteById(uuid).block()

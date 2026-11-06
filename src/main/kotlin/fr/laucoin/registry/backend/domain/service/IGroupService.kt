@@ -7,7 +7,6 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import java.time.LocalDate
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -61,5 +60,5 @@ interface IGroupService {
 	fun disableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel>
 	fun enableGroupById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<GroupModel>
 	fun deleteGroupById(projectId: UUID, id: UUID): Mono<Unit>
-	fun purgeEmptyGroups(participantToExclude: List<UUID>, dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
+	fun purgeEmptyGroups(participantToExclude: List<UUID>, dryRun: Boolean): Flux<UUID>
 }
