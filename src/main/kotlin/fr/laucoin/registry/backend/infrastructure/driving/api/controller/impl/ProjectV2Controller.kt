@@ -2,11 +2,8 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ProjectQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectV2Controller
@@ -14,6 +11,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Project
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.ProjectQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
 import java.util.UUID
@@ -33,21 +31,14 @@ class ProjectV2Controller(
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectWithProfileReaderDtoMapper,
 	private val writerMapper: ProjectWriterDtoMapper,
+	private val queryMapper: ProjectQueryDtoMapper,
 ): IProjectV2Controller {
 	override fun findProjects(
 		currentUser: CurrentUserModel,
 		search: ProjectQueryDto,
 	): Mono<PageModel<ProjectWithProfileReaderDto>> {
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = ProjectSearchParamModel(
-			query = search.query,
-			isVisible = search.isVisible,
-			at = search.at,
-			sort = search.sort.toSortModel(ProjectSearchParamModel.SORT_FIELDS),
-			isFavorite = search.isFavorite,
-		)
-
-		return useCase.findProjectsPage(currentUser, pageable, search.withProfile, searchParams).map(readerMapper::toDtoPage)
+		val pageable = queryMapper.toPageable(search)
+		return useCase.findProjectsPage(currentUser, pageable, search.withProfile, queryMapper.toSearchParams(search)).map(readerMapper::toDtoPage)
 	}
 
 	override fun findProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {

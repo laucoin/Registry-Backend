@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.helper.ProjectProfileFavoriteHelper
+import fr.laucoin.registry.backend.domain.helper.ProjectFavoriteHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
@@ -33,7 +33,7 @@ import java.util.UUID
 @Service
 class UserProjectProfileService(
 	private val port: IProjectProfilePort,
-	private val favorites: ProjectProfileFavoriteHelper,
+	private val favorites: ProjectFavoriteHelper,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
 	private val lastAdministrator: LastAdministratorHelper,
@@ -56,10 +56,10 @@ class UserProjectProfileService(
 	}
 
 	private fun Mono<ProjectProfileModel>.withFavorite(userId: UUID): Mono<ProjectProfileModel> =
-		flatMap { favorites.withFavorite(userId, it) }
+		flatMap { favorites.markFavorites(userId, listOfNotNull(it.project)).thenReturn(it) }
 
 	private fun Mono<PageModel<ProjectProfileModel>>.withFavorites(userId: UUID): Mono<PageModel<ProjectProfileModel>> =
-		flatMap { favorites.withFavorites(userId, it) }
+		flatMap { favorites.markFavorites(userId, it.content.mapNotNull { profile -> profile.project }).thenReturn(it) }
 
 	override fun createUserProjectProfileFromProject(
 		currentUser: CurrentUserModel,

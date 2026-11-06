@@ -28,7 +28,7 @@ class ProjectDateHelper(private val port: IProjectPort) {
 
 	private fun dateOutOfRange(project: ProjectModel, dateTime: CustomDateTimeModel?, errorCode: String): RegistryException? {
 		if (!project.isNotInRange(dateTime)) return null
-		log.warn("Failed to editing, date {} is out of project range [{}, {}]", dateTime, project.begin, project.end)
+		log.warn("Edition refused, date {} is out of the project range [{}, {}]", dateTime, project.begin, project.end)
 		return RegistryException(
 			status = UNPROCESSABLE_CONTENT,
 			code = errorCode,

@@ -1,6 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.helper.ProjectProfileFavoriteHelper
+import fr.laucoin.registry.backend.domain.helper.ProjectFavoriteHelper
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -54,7 +54,7 @@ class UserProjectProfileServiceTest {
 	private val clock: Clock = Clock.fixed(Instant.parse("2030-01-01T10:00:00Z"), ZoneOffset.UTC)
 
 	private val service: IUserProjectProfileService = UserProjectProfileService(
-		port, ProjectProfileFavoriteHelper(favoritePort), roleService, principalCache, LastAdministratorHelper(port), transactionalOperator, clock
+		port, ProjectFavoriteHelper(favoritePort), roleService, principalCache, LastAdministratorHelper(port), transactionalOperator, clock
 	)
 
 	init {

@@ -38,17 +38,8 @@ class ProjectModelPostgresRepository(
 			searchParams.isVisible,
 			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
 			searchParams.userId,
-			ProjectCriteria(
-				query = searchParams.query,
-				at = searchParams.at,
-				isFavorite = searchParams.isFavorite,
-			),
-			PageQuery(
-				sortField = searchParams.sort?.field,
-				isDescending = searchParams.sort?.isDescending,
-				limit = pageable.limit,
-				offset = pageable.offset,
-			),
+			criteriaOf(searchParams),
+			pageQueryOf(pageable, searchParams),
 		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 
@@ -66,17 +57,8 @@ class ProjectModelPostgresRepository(
 			searchParams.isVisible,
 			searchParams.hiddenReadableIds.ifEmpty { NO_PROJECT_ID },
 			searchParams.userId,
-			ProjectCriteria(
-				query = searchParams.query,
-				at = searchParams.at,
-				isFavorite = searchParams.isFavorite,
-			),
-			PageQuery(
-				sortField = searchParams.sort?.field,
-				isDescending = searchParams.sort?.isDescending,
-				limit = pageable.limit,
-				offset = pageable.offset,
-			),
+			criteriaOf(searchParams),
+			pageQueryOf(pageable, searchParams),
 		).toPageModel(pageable, clock, ProjectEntity::fullCount, mapper::toModel)
 	}
 
@@ -92,7 +74,6 @@ class ProjectModelPostgresRepository(
 	override fun findById(id: UUID, isVisible: Boolean?): Mono<ProjectModel> {
 		return repository.findById(id, isVisible)
 			.map(mapper::toModel)
-			.switchIfEmpty(Mono.empty())
 	}
 
 	override fun create(element: ProjectModel): Mono<ProjectModel> {
@@ -118,6 +99,19 @@ class ProjectModelPostgresRepository(
 	override fun deleteById(id: UUID): Mono<Unit> {
 		return repository.deleteById(id).thenReturn(Unit)
 	}
+
+	private fun criteriaOf(searchParams: ProjectSearchParamModel) = ProjectCriteria(
+		query = searchParams.query,
+		at = searchParams.at,
+		isFavorite = searchParams.isFavorite,
+	)
+
+	private fun pageQueryOf(pageable: PageableModel, searchParams: ProjectSearchParamModel) = PageQuery(
+		sortField = searchParams.sort?.field,
+		isDescending = searchParams.sort?.isDescending,
+		limit = pageable.limit,
+		offset = pageable.offset,
+	)
 
 	private companion object {
 		val NO_PROJECT_ID = listOf(UUID(0, 0))

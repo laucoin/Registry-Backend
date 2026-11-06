@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.helper.ProjectFavoriteHelper
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import org.springframework.http.HttpStatus.FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
@@ -20,7 +21,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
@@ -39,7 +39,7 @@ import reactor.core.publisher.Mono
 import reactor.core.publisher.SynchronousSink
 
 /**
- * Objectif : Gère les projets, leurs options, compteurs et favoris.
+ * Objectif : Gère les projets, leurs options, compteurs et favoris (via le helper des favoris).
  * Périmètre : Cycle de vie du projet.
  * Limites : Ne gère pas les profils de projet au-delà du profil initial.
  */
@@ -47,7 +47,7 @@ import reactor.core.publisher.SynchronousSink
 class ProjectService(
 	private val port: IProjectPort,
 	private val profilePort: IProjectProfilePort,
-	private val favoritePort: IProjectFavoritePort,
+	private val favorites: ProjectFavoriteHelper,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
@@ -65,15 +65,12 @@ class ProjectService(
 			return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
 		}
 
-		searchParams.userId = currentUser.id
-		searchParams.hiddenReadableIds = currentUser.projectIdsWith(REGISTRY_PROJECT_RESTORE)
-		return (if (!(withProfile ?: true)) {
-			port.findPage(pageable, searchParams)
-		} else port.findPage(
-			roleService.getProjectIdsFromCurrentUserProfiles(currentUser),
-			pageable,
-			searchParams
-		)).withCurrentUserProfiles(currentUser).withFavorites(currentUser)
+		val viewerParams = searchParams.forViewer(currentUser.id, currentUser.projectIdsWith(REGISTRY_PROJECT_RESTORE))
+		val onlyWithProfile = withProfile ?: true
+		val page = if (onlyWithProfile) {
+			port.findPage(roleService.getProjectIdsFromCurrentUserProfiles(currentUser), pageable, viewerParams)
+		} else port.findPage(pageable, viewerParams)
+		return page.withCurrentUserProfiles(currentUser).withFavorites(currentUser)
 	}
 
 	override fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel> {
@@ -120,36 +117,18 @@ class ProjectService(
 	}
 
 	private fun Mono<ProjectModel>.withFavorite(currentUser: CurrentUserModel): Mono<ProjectModel> =
-		flatMap { attachFavorite(currentUser, it) }
-
-	private fun attachFavorite(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
-		return favoritePort.findFavoriteProjectIds(currentUser.id!!, listOf(project.id!!))
-			.hasElements()
-			.map { project.apply { favorite = it } }
-	}
+		flatMap { favorites.markFavorites(currentUser.id!!, listOf(it)).thenReturn(it) }
 
 	private fun Mono<PageModel<ProjectModel>>.withFavorites(currentUser: CurrentUserModel): Mono<PageModel<ProjectModel>> =
-		flatMap { attachFavorites(currentUser, it) }
-
-	private fun attachFavorites(currentUser: CurrentUserModel, page: PageModel<ProjectModel>): Mono<PageModel<ProjectModel>> {
-		return favoritePort.findFavoriteProjectIds(currentUser.id!!, page.content.mapNotNull { it.id })
-			.collectList()
-			.map { it.toSet() }
-			.map { page.withFavorites(it) }
-	}
-
-	private fun PageModel<ProjectModel>.withFavorites(favoriteIds: Set<UUID>): PageModel<ProjectModel> {
-		content.forEach { it.favorite = it.id in favoriteIds }
-		return this
-	}
+		flatMap { favorites.markFavorites(currentUser.id!!, it.content).thenReturn(it) }
 
 	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return findProjectById(id, isVisible = null)
-			.flatMap { favoritePort.add(currentUser.id!!, id) }
+			.flatMap { favorites.add(currentUser.id!!, id) }
 	}
 
 	override fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
-		return favoritePort.remove(currentUser.id!!, id)
+		return favorites.remove(currentUser.id!!, id)
 	}
 
 	override fun findProjectById(id: UUID, isVisible: Boolean?): Mono<ProjectModel> {
@@ -213,7 +192,7 @@ class ProjectService(
 
 	private fun SynchronousSink<ProjectModel>.nextIfValid(valid: Boolean, existing: ProjectModel) {
 		if (valid) return next(existing)
-		log.warn("Failed, {} is out of project range [{}, {}]", existing, existing.begin, existing.end)
+		log.warn("The new dates of the project {} conflict with its elements, current range [{}, {}]", existing.id, existing.begin, existing.end)
 		error(RegistryException(CONFLICT, PROJECT_DATE_CONFLICT_WITH_ELEMENTS, arrayListOf(existing.name)))
 	}
 
