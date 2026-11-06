@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.requireOrderedRange
 import java.time.ZonedDateTime
-import java.util.Objects
 import java.util.UUID
 
 data class MovementSearchParamModel(
@@ -19,6 +19,7 @@ data class MovementSearchParamModel(
 		requireOrderedRange(from, to)
 	}
 
+	@Default
 	constructor(
 		isVisible: Boolean? = null,
 		hasActivity: Boolean? = null,
@@ -31,7 +32,7 @@ data class MovementSearchParamModel(
 		isVisible,
 		hasActivity,
 		activityId,
-		if (Objects.nonNull(type)) listOf(type!!) else MovementTypeEnum.entries.toList(),
+		if (type != null) listOf(type) else MovementTypeEnum.entries.toList(),
 		from,
 		to,
 		sort = sort,

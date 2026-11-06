@@ -4,12 +4,8 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.Particip
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ElementMovementQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.service.usecase.IParticipantUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IParticipantV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -18,6 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Partici
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.ParticipantQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantTimelineReaderDtoMapper
@@ -45,6 +42,7 @@ class ParticipantV2Controller(
 	private val timelineReaderMapper: ParticipantTimelineReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: ParticipantWriterDtoMapper,
+	private val queryMapper: ParticipantQueryDtoMapper,
 ): IParticipantV2Controller {
 	override fun findParticipants(
 		currentUser: CurrentUserModel,
@@ -52,22 +50,8 @@ class ParticipantV2Controller(
 		search: ParticipantQueryDto,
 	): Mono<PageModel<ParticipantReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = ParticipantSearchParamModel(
-			search.query,
-			search.isMajor,
-			search.type,
-			visibility,
-			search.status,
-			search.at,
-			hasUser = search.hasUser,
-			isOnSite = search.onSite,
-			birthdayFrom = search.birthdayFrom,
-			birthdayTo = search.birthdayTo,
-			sort = search.sort.toSortModel(ParticipantSearchParamModel.SORT_FIELDS),
-		)
-
-		return service.findParticipantsPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return service.findParticipantsPage(projectId, queryMapper.toPageable(search), queryMapper.toSearchParams(search, visibility))
+			.map(readerMapper::toDtoPage)
 	}
 
 	override fun findBirthdays(
@@ -95,17 +79,9 @@ class ParticipantV2Controller(
 		search: ElementMovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = MovementSearchParamModel(
-			visibility,
-			search.hasActivity,
-			search.type,
-			search.from,
-			search.to,
-			sort = search.sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
-		)
+		val searchParams = queryMapper.toMovementSearchParams(search, visibility)
 
-		return service.findParticipantMovementsPage(currentUser, projectId, id, pageable, searchParams)
+		return service.findParticipantMovementsPage(currentUser, projectId, id, queryMapper.toPageable(search), searchParams)
 			.map(movementReaderMapper::toDtoPage)
 	}
 

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -13,6 +14,7 @@ data class GroupSearchParamModel(
 ) {
 	var query: String? = null
 
+	@Default
 	constructor(
 		query: String? = null,
 		isVisible: Boolean? = null,
