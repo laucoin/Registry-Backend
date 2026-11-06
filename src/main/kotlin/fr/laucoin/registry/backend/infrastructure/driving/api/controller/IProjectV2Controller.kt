@@ -55,7 +55,7 @@ interface IProjectV2Controller {
 		summary = "Find Project",
 		description = "Find Project by ID. Only a User with a usable Profile on the Project can read it, whatever their global role.",
 	)
-	@PreAuthorize("hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
+	@PreAuthorize("hasAuthority('${UserPermissionConst.REGISTRY_PROJECT_R}') || hasPermission(#id, '${ProjectPermissionConst.REGISTRY_PROJECT_R}')")
 	@GetMapping("/{id}")
 	fun findProjectById(@AuthenticationPrincipal currentUser: CurrentUserModel, @PathVariable id: UUID): Mono<ProjectWithProfileReaderDto>
 
