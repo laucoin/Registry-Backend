@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.MovementQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -13,14 +12,12 @@ import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.GuestMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ParticipantMovementWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.MovementQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementContentReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestMovementWriterDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GuestWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ParticipantMovementWriterDtoMapper
 import java.util.UUID
 import org.springframework.http.ResponseEntity
@@ -42,28 +39,17 @@ class MovementV2Controller(
 	private val readerMapper: MovementReaderDtoMapper,
 	private val readerContentMapper: MovementContentReaderDtoMapper,
 	private val writerMapper: ParticipantMovementWriterDtoMapper,
-	private val guestMovementWriterMapper: GuestMovementWriterDtoMapper,
-	private val guestWriterMapper: GuestWriterDtoMapper,
+	private val queryMapper: MovementQueryDtoMapper,
 ): IMovementV2Controller {
-
 	override fun findMovements(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		search: MovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = MovementSearchParamModel(
-			visibility,
-			search.hasActivity,
-			search.type,
-			search.from,
-			search.to,
-			activityId = search.activityId,
-			sort = search.sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
-		)
+		val searchParams = queryMapper.toSearchParams(search, visibility)
 
-		return movementsPage(search.isCurrent, currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return movementsPage(search.isCurrent, currentUser, projectId, queryMapper.toPageable(search), searchParams).map(readerMapper::toDtoPage)
 	}
 
 	private fun movementsPage(
@@ -133,38 +119,6 @@ class MovementV2Controller(
 			exchange.expectedLastEditions(),
 			current = { service.findMovementById(projectId, id, isVisible = null) },
 			action = { service.updateMovementById(currentUser, projectId, id, movementModel) },
-		).map(readerMapper::toDto)
-	}
-
-	override fun createGuestsMovement(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		movement: GuestMovementWriterDto,
-		exchange: ServerWebExchange,
-	): Mono<ResponseEntity<MovementReaderDto>> {
-		val movementModel = guestMovementWriterMapper.toModel(movement, projectId)
-		val newGuestModels = guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId)
-		return service.createMovement(currentUser, movementModel, newGuestModels)
-			.map(readerMapper::toDto)
-			.map { exchange.created(it, "/guests") }
-	}
-
-	override fun updateGuestsMovementById(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		movement: GuestMovementWriterDto,
-		exchange: ServerWebExchange,
-	): Mono<MovementReaderDto> {
-		val movementModel = guestMovementWriterMapper.toModel(movement, projectId)
-		val newGuestModels = guestWriterMapper.toModels(movement.guests ?: emptyList(), projectId)
-
-		return concurrencyService.updateIfUnchanged(
-			LockableResourceEnum.MOVEMENT,
-			id,
-			exchange.expectedLastEditions(),
-			current = { service.findMovementById(projectId, id, isVisible = null) },
-			action = { service.updateMovementById(currentUser, projectId, id, movementModel, newGuestModels) },
 		).map(readerMapper::toDto)
 	}
 

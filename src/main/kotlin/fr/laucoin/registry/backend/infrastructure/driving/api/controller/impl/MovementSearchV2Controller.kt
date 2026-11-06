@@ -1,25 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_RESTORE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
-import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMovementSearchV2Controller
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.CommunicationQueryDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReasonsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PlannedMovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LabelSearchExt.matchesQuery
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementActivityReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReasonReaderDtoMapper
@@ -43,7 +34,6 @@ class MovementSearchV2Controller(
 	private val plannedReaderMapper: PlannedMovementReaderDtoMapper,
 	private val reasonReaderMapper: MovementReasonReaderDtoMapper,
 	private val activityReasonReaderMapper: MovementActivityReasonReaderDtoMapper,
-	private val communicationReaderMapper: CommunicationReaderDtoMapper,
 	private val movementParticipantsAndGroupsMapper: MovementParticipantsAndGroupsReaderDtoMapper,
 	private val vehiclesMapper: VehicleReaderDtoMapper,
 ): IMovementSearchV2Controller {
@@ -90,22 +80,5 @@ class MovementSearchV2Controller(
 
 	override fun findPlannedDepartures(projectId: UUID, date: LocalDate?): Flux<PlannedMovementReaderDto> {
 		return service.findPlannedMovements(projectId, OUT, date).map(plannedReaderMapper::toDto)
-	}
-
-	override fun findMovementCommunications(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		search: CommunicationQueryDto,
-	): Mono<PageModel<CommunicationReaderDto>> {
-		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = CommunicationSearchParamModel(
-			search.query, visibility, search.from, search.to,
-			sort = search.sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
-		)
-
-		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)
-			.map(communicationReaderMapper::toDtoPage)
 	}
 }
