@@ -18,7 +18,6 @@ import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.util.Objects
 import java.util.UUID
 
 /**
@@ -59,34 +58,27 @@ class RoleService(
 		projectRoles.entries.firstOrNull { it.value.first == 0 }?.key ?: error("No level 0 project role is defined")
 
 	override fun getDefaultUserRole(): String? {
-		val roles = userRoles.filter { it.key == defaultUserRole }.keys
-		return if (roles.isEmpty()) {
-			log.warn("Default user role not found")
-			null
-		} else roles.first()
+		if (userRoles.containsKey(defaultUserRole)) return defaultUserRole
+		log.warn("Default user role not found")
+		return null
 	}
 
 	override fun getAuthoritiesByUserRole(role: String?): List<String> {
-		return if (!userRoles.containsKey(role)) {
-			log.warn("User role \"{}\" not found in \"{}\"", role, userRoles.keys)
-			emptyList()
-		} else userRoles[role]?.second ?: emptyList()
+		val authorities = userRoles[role]?.second
+		if (authorities == null) log.warn("User role \"{}\" not found in \"{}\"", role, userRoles.keys)
+		return authorities.orEmpty()
 	}
 
 	override fun getAuthoritiesByProjectRole(role: String, projectId: UUID, visibility: Boolean?): List<String> {
-		val roleAuthoritiesMapping = projectRoles[role]
-		return when {
-			Objects.isNull(roleAuthoritiesMapping) -> {
-				log.warn("Project role \"{}\" not found in \"{}\"", role, projectRoles.keys)
-				emptyList()
-			}
+		val (level, authorities) = projectRoles[role] ?: return unknownProjectRole(role)
+		if (visibility == true) return authorities.map { "${projectId}_$it" }
+		if (level != 0) return emptyList()
+		return authorities.filter { it in hiddenProjectAuthorities }.map { "${projectId}_$it" }
+	}
 
-			visibility != true && roleAuthoritiesMapping!!.first != 0 -> emptyList()
-			visibility != true ->
-				roleAuthoritiesMapping!!.second.filter { it in hiddenProjectAuthorities }.map { "${projectId}_$it" }
-
-			else -> roleAuthoritiesMapping!!.second.map { "${projectId}_$it" }
-		}
+	private fun unknownProjectRole(role: String): List<String> {
+		log.warn("Project role \"{}\" not found in \"{}\"", role, projectRoles.keys)
+		return emptyList()
 	}
 
 	override fun getOptionAuthoritiesByProject(projectId: UUID, projectOptions: List<ProjectOptionEnum>): List<String> {
@@ -108,12 +100,8 @@ class RoleService(
 	}
 
 	private fun findAssignableRoles(role: String?, roles: Map<String, Pair<Int, List<String>>>): List<String> {
-		val roleLevel: Int? = roles[role]?.first
-		if (Objects.isNull(roleLevel)) {
-			return emptyList()
-		}
-		val eligibleRoles = roles.filter { it.value.first > roleLevel!! }.keys.toMutableList()
-		eligibleRoles.add(role!!)
-		return eligibleRoles
+		if (role == null) return emptyList()
+		val roleLevel = roles[role]?.first ?: return emptyList()
+		return roles.filterValues { it.first > roleLevel }.keys.toList() + role
 	}
 }

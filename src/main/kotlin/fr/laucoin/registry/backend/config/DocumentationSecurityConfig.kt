@@ -48,11 +48,11 @@ class DocumentationSecurityConfig(
 			.build()
 	}
 
-	private fun ServerHttpSecurity.documentationContentSecurityPolicy() = headers { headerSpec ->
-		headerSpec.writer { exchange ->
-			exchange.response.headers.set(CONTENT_SECURITY_POLICY, documentationContentSecurityPolicy(exchange))
-			Mono.empty()
-		}
+	private fun ServerHttpSecurity.documentationContentSecurityPolicy() = headers { it.writer(::writeContentSecurityPolicy) }
+
+	private fun writeContentSecurityPolicy(exchange: ServerWebExchange): Mono<Void> {
+		exchange.response.headers.set(CONTENT_SECURITY_POLICY, documentationContentSecurityPolicy(exchange))
+		return Mono.empty()
 	}
 
 	private fun documentationContentSecurityPolicy(exchange: ServerWebExchange): String {

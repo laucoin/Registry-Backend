@@ -40,10 +40,12 @@ class ConcurrencyService(
 	): Mono<R> {
 		return guarded(resource, id, expectedLastEditions, current, action)
 			.timeout(updateTimeout)
-			.onErrorMap(TimeoutException::class.java) {
-				log.warn("The update of the {} {} exceeded {}", resource, id, updateTimeout)
-				RegistryException(REQUEST_TIMEOUT, REQUEST_TIMEOUT.value().toString())
-			}
+			.onErrorMap(TimeoutException::class.java) { timedOut(resource, id) }
+	}
+
+	private fun timedOut(resource: LockableResourceEnum, id: UUID): RegistryException {
+		log.warn("The update of the {} {} exceeded {}", resource, id, updateTimeout)
+		return RegistryException(REQUEST_TIMEOUT, REQUEST_TIMEOUT.value().toString())
 	}
 
 	private fun <M : GenericModel, R : Any> guarded(

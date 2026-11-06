@@ -3,7 +3,6 @@ package fr.laucoin.registry.backend.infrastructure.driving.security.service
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_IMPLEMENTED_YET
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import java.io.Serializable
-import java.util.Objects
 import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.NOT_IMPLEMENTED
@@ -45,8 +44,8 @@ class PermissionService: PermissionEvaluator {
 		throw exception
 	}
 
-	private fun hasPrivilege(authentication: Authentication?, targetId: String, permission: Any?): Boolean {
-		val invalidData = Objects.isNull(authentication) || targetId.isBlank() || permission !is String
-		return !invalidData && authentication!!.authorities.any { it.authority == "${targetId}_$permission" }
+	private fun hasPrivilege(authentication: Authentication, targetId: String, permission: Any): Boolean {
+		if (targetId.isBlank() || permission !is String) return false
+		return authentication.authorities.any { it.authority == "${targetId}_$permission" }
 	}
 }
