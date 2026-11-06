@@ -14,9 +14,13 @@ class CurrentUserModelTest {
 		// Arrange
 		val user = currentUser("${projectId}_REGISTRY_PROJECT_GROUP_D")
 
-		// Act & Assert
-		assertEquals(false, user.visibilityFor(false, projectId, "REGISTRY_PROJECT_GROUP_D"))
-		assertEquals(null, user.visibilityFor(null, projectId, "REGISTRY_PROJECT_GROUP_D"))
+		// Act
+		val requestedFalse = user.visibilityFor(false, projectId, "REGISTRY_PROJECT_GROUP_D")
+		val requestedNull = user.visibilityFor(null, projectId, "REGISTRY_PROJECT_GROUP_D")
+
+		// Assert
+		assertEquals(false, requestedFalse)
+		assertEquals(null, requestedNull)
 	}
 
 	@Test
@@ -24,10 +28,11 @@ class CurrentUserModelTest {
 		// Arrange
 		val user = currentUser("${projectId}_REGISTRY_PROJECT_GROUP_U", "${otherProjectId}_REGISTRY_PROJECT_GROUP_D")
 
-		// Act & Assert
-		assertEquals(true, user.visibilityFor(false, projectId, "REGISTRY_PROJECT_GROUP_D"))
-		assertEquals(true, user.visibilityFor(null, projectId, "REGISTRY_PROJECT_GROUP_D"))
-		assertEquals(true, user.visibilityFor(true, projectId, "REGISTRY_PROJECT_GROUP_D"))
+		// Act
+		val requested = listOf(false, null, true).map { user.visibilityFor(it, projectId, "REGISTRY_PROJECT_GROUP_D") }
+
+		// Assert
+		assertEquals(listOf(true, true, true), requested)
 	}
 
 	@Test
@@ -39,7 +44,10 @@ class CurrentUserModelTest {
 			"REGISTRY_PROJECT_D",
 		)
 
-		// Act & Assert
-		assertEquals(listOf(projectId), user.projectIdsWith("REGISTRY_PROJECT_D"))
+		// Act
+		val projectIds = user.projectIdsWith("REGISTRY_PROJECT_D")
+
+		// Assert
+		assertEquals(listOf(projectId), projectIds)
 	}
 }

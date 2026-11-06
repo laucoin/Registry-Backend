@@ -72,6 +72,9 @@ class ServiceConcurrencyTest : TestContext() {
 
 	private var demotedAdministrators: List<UUID> = emptyList()
 
+	private val insertedUsers = mutableListOf<UUID>()
+	private val insertedProjects = mutableListOf<UUID>()
+
 	@BeforeEach
 	fun isolateAdministrators() {
 		demotedAdministrators = databaseClient.sql(
@@ -81,6 +84,7 @@ class ServiceConcurrencyTest : TestContext() {
 
 	@AfterEach
 	fun restoreAdministrators() {
+		deleteInsertedRows()
 		databaseClient.sql("UPDATE tb_user SET role = 'USER' WHERE role = 'USER_ADMINISTRATOR' AND type <> 'SERVICE_ACCOUNT'")
 			.fetch().rowsUpdated().block()
 		if (demotedAdministrators.isNotEmpty()) {
@@ -166,7 +170,7 @@ class ServiceConcurrencyTest : TestContext() {
 		// Act
 		val deletion = activityService.deleteActivityById(administrator(UUID.randomUUID()), projectId, activityId)
 			.materialize().subscribeOn(Schedulers.parallel()).toFuture()
-		Thread.sleep(PENDING_DELETION_MILLIS)
+		awaitBlockedSession()
 		release.tryEmitEmpty()
 		val signal = deletion.get(TIMEOUT.toSeconds(), java.util.concurrent.TimeUnit.SECONDS)!!
 		creation.dispose()
@@ -256,8 +260,19 @@ class ServiceConcurrencyTest : TestContext() {
 		role = "PROJECT_PARTICIPANT",
 	).apply { this.projectId = projectId }
 
+	private fun deleteInsertedRows() {
+		insertedProjects.forEach { execute("DELETE FROM tb_project WHERE id = :id", it) }
+		insertedUsers.forEach { execute("DELETE FROM tb_user WHERE id = :id", it) }
+		insertedProjects.clear()
+		insertedUsers.clear()
+	}
+
+	private fun execute(sql: String, id: UUID) {
+		databaseClient.sql(sql).bind("id", id).fetch().rowsUpdated().block()
+	}
+
 	private fun insertUser(role: String): UUID {
-		val id = UUID.randomUUID()
+		val id = UUID.randomUUID().also { insertedUsers.add(it) }
 		databaseClient.sql(
 			"INSERT INTO tb_user(id, oidc_id, type, first_name, last_name, email, role) VALUES (:id, :oidc, 'USER', 'Concurrent', 'User', :email, :role)"
 		).bind("id", id).bind("oidc", UUID.randomUUID()).bind("email", "$id@concurrency.test").bind("role", role)
@@ -266,7 +281,7 @@ class ServiceConcurrencyTest : TestContext() {
 	}
 
 	private fun insertProject(): UUID {
-		val id = UUID.randomUUID()
+		val id = UUID.randomUUID().also { insertedProjects.add(it) }
 		databaseClient.sql("INSERT INTO tb_project(id, name) VALUES (:id, 'Concurrency')").bind("id", id).fetch().rowsUpdated().block()
 		return id
 	}
@@ -313,12 +328,24 @@ class ServiceConcurrencyTest : TestContext() {
 		"SELECT COUNT(*) AS total FROM tb_user WHERE role = 'USER_ADMINISTRATOR' AND visible IS TRUE AND type <> 'SERVICE_ACCOUNT'"
 	).map { row -> row.get("total", java.lang.Long::class.java)!!.toLong() }.one().block()!!
 
+	private fun awaitBlockedSession() {
+		Mono.defer { blockedSessions() }
+			.filter { it > 0 }
+			.repeatWhenEmpty(POLL_ATTEMPTS.toInt()) { it.delayElements(Duration.ofMillis(POLL_INTERVAL_MILLIS)) }
+			.block(TIMEOUT)
+	}
+
+	private fun blockedSessions(): Mono<Long> = databaseClient.sql(
+		"SELECT COUNT(*) AS total FROM pg_stat_activity WHERE wait_event_type = 'Lock'"
+	).map { row -> row.get("total", java.lang.Long::class.java)!!.toLong() }.one()
+
 	private fun count(sql: String, id: UUID): Long = databaseClient.sql(sql).bind("id", id)
 		.map { row -> row.get(0, java.lang.Long::class.java)!!.toLong() }.one().block()!!
 
 	private companion object {
 		val TIMEOUT: Duration = Duration.ofSeconds(30)
-		const val PENDING_DELETION_MILLIS = 500L
+		const val POLL_INTERVAL_MILLIS = 20L
+		const val POLL_ATTEMPTS = 500L
 		val LOG_OFFSET_DATE_TIME: OffsetDateTime = OffsetDateTime.of(2020, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC)
 		val LOG_DATE_TIME: ZonedDateTime = LOG_OFFSET_DATE_TIME.toZonedDateTime()
 	}

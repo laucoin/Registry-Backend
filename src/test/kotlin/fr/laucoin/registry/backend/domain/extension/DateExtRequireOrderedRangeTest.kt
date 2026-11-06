@@ -11,6 +11,7 @@ import java.time.ZonedDateTime.parse
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -45,8 +46,14 @@ class DateExtRequireOrderedRangeTest {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should accept ordered or open ranges`(from: ZonedDateTime?, to: ZonedDateTime?) {
-		// Act & Assert
-		assertDoesNotThrow { DateExt.requireOrderedRange(from, to) }
+		// Arrange
+		val range = from to to
+
+		// Act
+		val result = runCatching { DateExt.requireOrderedRange(range.first, range.second) }
+
+		// Assert
+		assertTrue(result.isSuccess)
 	}
 
 	@Test
@@ -61,17 +68,31 @@ class DateExtRequireOrderedRangeTest {
 
 	@Test
 	fun `Should reject inverted range when building search params`() {
-		// Act & Assert
-		assertThrows(RegistryException::class.java) { AlertSearchParamModel(query = null, from = late, to = early) }
-		assertThrows(RegistryException::class.java) { CommunicationSearchParamModel(query = null, from = late, to = early) }
-		assertThrows(RegistryException::class.java) { MovementSearchParamModel(type = null, from = late, to = early) }
+		// Arrange
+		val builders: List<() -> Any> = listOf(
+			{ AlertSearchParamModel(query = null, from = late, to = early) },
+			{ CommunicationSearchParamModel(query = null, from = late, to = early) },
+			{ MovementSearchParamModel(type = null, from = late, to = early) },
+		)
+
+		// Act
+		val failures = builders.map { runCatching { it() }.exceptionOrNull() }
+
+		// Assert
+		assertTrue(failures.all { it is RegistryException && it.code == DATE_RANGE_FROM_LATER_THAN_TO })
 	}
 
 	@ParameterizedTest
 	@MethodSource
 	fun `Should accept ordered or open date ranges`(from: LocalDate?, to: LocalDate?) {
-		// Act & Assert
-		assertDoesNotThrow { DateExt.requireOrderedRange(from, to) }
+		// Arrange
+		val range = from to to
+
+		// Act
+		val result = runCatching { DateExt.requireOrderedRange(range.first, range.second) }
+
+		// Assert
+		assertTrue(result.isSuccess)
 	}
 
 	@Test

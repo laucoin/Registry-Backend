@@ -150,21 +150,6 @@ class AuthenticationRateLimitHandlerTest {
 	}
 
 	@Test
-	fun `Should filter allow requests again once the window has elapsed`() {
-		// Arrange
-		val limiter = filter(capacity = 1, windowSeconds = 1)
-		val exchange = exchange("/api/v2/authentication/token", POST)
-
-		// Act
-		limiter.filter(exchange, chain).block()
-		Thread.sleep(1100)
-		limiter.filter(exchange, chain).block()
-
-		// Assert
-		assertEquals(2, chainCalls.get())
-	}
-
-	@Test
 	fun `Should filter accept requests again once the window has elapsed on the injected clock`() {
 		// Arrange
 		val clock = MutableClock(Instant.parse("2030-01-01T00:00:00Z"))

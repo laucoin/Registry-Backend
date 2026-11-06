@@ -100,11 +100,16 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 
 	@Test
 	fun `Should findUnusedSince only select participants created before the threshold`() {
-		// Act & Assert
-		assertTrue(postgresRepository.findUnusedSince(LocalDate.EPOCH).collectList().block()!!.isEmpty())
-		assertTrue(
-			postgresRepository.findUnusedSince(LocalDate.now(ZoneOffset.UTC).plusYears(1)).collectList().block()!!.isNotEmpty()
-		)
+		// Arrange
+		val future = LocalDate.now(ZoneOffset.UTC).plusYears(1)
+
+		// Act
+		val beforeCreation = postgresRepository.findUnusedSince(LocalDate.EPOCH).collectList().block()!!
+		val afterCreation = postgresRepository.findUnusedSince(future).collectList().block()!!
+
+		// Assert
+		assertTrue(beforeCreation.isEmpty())
+		assertTrue(afterCreation.isNotEmpty())
 	}
 
 	@Test
