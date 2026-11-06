@@ -1,7 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.handler
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
 import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.EXPORT
 import fr.laucoin.registry.backend.domain.enumeration.AuditOutcomeEnum.RATE_LIMITED
 import fr.laucoin.registry.backend.domain.enumeration.AuditResourceTypeEnum
@@ -9,8 +7,8 @@ import fr.laucoin.registry.backend.domain.model.AuditModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.service.support.IAuditService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
-import fr.laucoin.registry.backend.infrastructure.driving.security.service.SlidingWindowCounter
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
+import fr.laucoin.registry.backend.infrastructure.driving.security.service.UserRateCounters
 import java.time.Clock
 import java.time.Duration
 import java.time.ZonedDateTime
@@ -35,16 +33,13 @@ class ExportRateLimitHandler(
 	private val clientContextService: ClientContextService,
 	private val responder: TooManyRequestsResponder,
 	private val clock: Clock,
-	private val capacity: Int,
+	capacity: Int,
 	private val windowSeconds: Long,
 	maxTrackedUsers: Long,
 ) : WebFilter {
 	private val pathMatcher = AntPathMatcher()
 
-	private val counters: Cache<UUID, SlidingWindowCounter> = Caffeine.newBuilder()
-		.expireAfterAccess(Duration.ofSeconds(windowSeconds * EXPIRY_GRACE_MULTIPLIER))
-		.maximumSize(maxTrackedUsers)
-		.build()
+	private val counters = UserRateCounters(clock, capacity, Duration.ofSeconds(windowSeconds), maxTrackedUsers)
 
 	override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
 		val request = exchange.request
@@ -59,14 +54,10 @@ class ExportRateLimitHandler(
 	}
 
 	private fun limit(userId: UUID?, target: ExportTarget, exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
-		if (userId == null || consume(userId)) return chain.filter(exchange)
+		if (userId == null || counters.tryConsume(userId)) return chain.filter(exchange)
 
 		auditService.record(refusal(userId, target, exchange))
 		return responder.respond(exchange, windowSeconds)
-	}
-
-	private fun consume(userId: UUID): Boolean {
-		return counters.get(userId) { SlidingWindowCounter(clock, capacity, Duration.ofSeconds(windowSeconds)) }.tryConsume()
 	}
 
 	private fun refusal(userId: UUID, target: ExportTarget, exchange: ServerWebExchange): AuditModel {
@@ -101,6 +92,5 @@ class ExportRateLimitHandler(
 		const val PARTICIPANT_EXPORT = "/api/*/projects/{projectId}/participants/{id}/export"
 		val EXPORT_METHODS = setOf(GET, HEAD)
 		const val CURRENT = "current"
-		const val EXPIRY_GRACE_MULTIPLIER = 10L
 	}
 }
