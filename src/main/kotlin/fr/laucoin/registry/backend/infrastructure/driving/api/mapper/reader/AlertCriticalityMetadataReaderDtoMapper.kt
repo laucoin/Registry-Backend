@@ -1,19 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
+import fr.laucoin.registry.backend.domain.model.AlertCriticalityMetadataModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertCriticalityMetadataReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.helper.AlertCriticalityRuleHelper
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class AlertCriticalityMetadataReaderDtoMapper(
-	private val criticalityMapper: AlertCriticalityReaderDtoMapper,
-	private val ruleHelper: AlertCriticalityRuleHelper,
-): IGenericReaderDtoMapper<List<AlertCriticalityEnum>, AlertCriticalityMetadataReaderDto> {
-	override fun toDto(model: List<AlertCriticalityEnum>): AlertCriticalityMetadataReaderDto {
-		return AlertCriticalityMetadataReaderDto(
-			levels = model.map(criticalityMapper::toDto),
-			rule = ruleHelper.criticalityRule(model),
-		)
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [AlertCriticalityReaderDtoMapper::class, AlertCriticalityRuleHelper::class])
+interface AlertCriticalityMetadataReaderDtoMapper: IGenericReaderDtoMapper<AlertCriticalityMetadataModel, AlertCriticalityMetadataReaderDto> {
+	@Mapping(target = "levels", source = "model.levels")
+	@Mapping(target = "rule", source = "model.levels", qualifiedByName = ["criticalityRule"])
+	override fun toDto(model: AlertCriticalityMetadataModel): AlertCriticalityMetadataReaderDto
 }

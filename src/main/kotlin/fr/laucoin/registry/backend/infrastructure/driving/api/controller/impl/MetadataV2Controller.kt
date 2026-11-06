@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
+import fr.laucoin.registry.backend.domain.model.AlertCriticalityMetadataModel
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
@@ -71,7 +72,7 @@ class MetadataV2Controller(
 	}
 
 	override fun getAlertCriticality(): Mono<AlertCriticalityMetadataReaderDto> {
-		return Mono.fromSupplier { alertCriticalityMetadataReaderMapper.toDto(AlertCriticalityEnum.entries) }
+		return Mono.fromSupplier { alertCriticalityMetadataReaderMapper.toDto(AlertCriticalityMetadataModel(AlertCriticalityEnum.entries)) }
 	}
 
 	override fun getAvailableProjectOptions(): Flux<ProjectOptionsReaderDto> {

@@ -3,6 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 import fr.laucoin.registry.backend.infrastructure.driving.api.helper.AlertCriticalityRuleHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ALERT_CRITICALITY_RULE_KEY
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
+import fr.laucoin.registry.backend.domain.model.AlertCriticalityMetadataModel
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import kotlin.test.assertEquals
@@ -17,7 +18,7 @@ import org.mockito.kotlin.whenever
 class AlertCriticalityMetadataReaderDtoMapperTest {
 	private val criticalityMapper: AlertCriticalityReaderDtoMapper = mock()
 	private val translateService: ITranslateService = mock()
-	private val mapper = AlertCriticalityMetadataReaderDtoMapper(
+	private val mapper = AlertCriticalityMetadataReaderDtoMapperImpl(
 		criticalityMapper,
 		AlertCriticalityRuleHelper(translateService, 6, 18),
 	)
@@ -25,13 +26,15 @@ class AlertCriticalityMetadataReaderDtoMapperTest {
 	@Test
 	fun `Should toDto map every level and describe the rule with the configured thresholds`() {
 		// Arrange
-		whenever(criticalityMapper.toDto(any())).thenAnswer { LabelDto(it.getArgument<AlertCriticalityEnum>(0).name, "label") }
+		whenever(criticalityMapper.toDtoList(any())).thenAnswer {
+			it.getArgument<List<AlertCriticalityEnum>>(0).map { level -> LabelDto(level.name, "label") }
+		}
 		whenever(translateService.getMessage(any(), anyOrNull(), anyOrNull(), any())).thenAnswer {
 			"${it.getArgument<String>(0)}:${it.getArgument<Array<Any>>(1).joinToString(",")}"
 		}
 
 		// Act
-		val result = mapper.toDto(AlertCriticalityEnum.entries)
+		val result = mapper.toDto(AlertCriticalityMetadataModel(AlertCriticalityEnum.entries))
 
 		// Assert
 		assertEquals(AlertCriticalityEnum.entries.map { it.name }, result.levels.map { it.value })

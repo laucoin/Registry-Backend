@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.model.AlertCriticalityMetadataModel
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
@@ -158,7 +159,7 @@ class MetadataControllerTest: TestContext() {
 
 		// Assert
 		result.body<AlertCriticalityMetadataReaderDto>(OK)
-		verify(alertCriticalityMetadataReaderMapper).toDto(AlertCriticalityEnum.entries)
+		verify(alertCriticalityMetadataReaderMapper).toDto(AlertCriticalityMetadataModel(AlertCriticalityEnum.entries))
 	}
 
 	@Test

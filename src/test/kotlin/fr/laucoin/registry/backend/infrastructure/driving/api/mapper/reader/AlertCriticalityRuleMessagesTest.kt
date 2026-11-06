@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.domain.model.AlertCriticalityMetadataModel
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.test.TestContext
 import java.util.Locale
@@ -24,7 +25,7 @@ class AlertCriticalityRuleMessagesTest : TestContext() {
 		LocaleContextHolder.setLocale(Locale.ENGLISH)
 
 		// Act
-		val result = mapper.toDto(AlertCriticalityEnum.entries)
+		val result = mapper.toDto(AlertCriticalityMetadataModel(AlertCriticalityEnum.entries))
 
 		// Assert
 		assertEquals("Automatic criticality by age: recent < 6 h · reinforced 6–18 h · high > 18 h", result.rule)
@@ -36,7 +37,7 @@ class AlertCriticalityRuleMessagesTest : TestContext() {
 		LocaleContextHolder.setLocale(Locale.FRENCH)
 
 		// Act
-		val result = mapper.toDto(AlertCriticalityEnum.entries)
+		val result = mapper.toDto(AlertCriticalityMetadataModel(AlertCriticalityEnum.entries))
 
 		// Assert
 		assertEquals("Criticité automatique selon l'ancienneté : récente < 6 h · renforcée 6–18 h · élevée > 18 h", result.rule)
