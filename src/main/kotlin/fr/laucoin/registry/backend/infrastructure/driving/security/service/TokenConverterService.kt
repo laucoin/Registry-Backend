@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.service
 
+import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_OR_ID_NOT_FOUND_IN_TOKEN
@@ -132,25 +133,18 @@ class TokenConverterService(
 		it.promote(roleService.getAuthoritiesByUserRole(it.role))
 		profilePort.findProjectProfilesRolesByUserId(it.id!!)
 			.collectList()
-			.map { profiles ->
-				profiles.forEach { profile ->
-					it.promote(
-						roleService.getAuthoritiesByProjectRole(
-							profile.role!!,
-							profile.projectId!!,
-							profile.projectVisible
-						)
-					)
-					if (profile.projectVisible == true) {
-						it.promote(
-							roleService.getOptionAuthoritiesByProject(
-								profile.projectId!!,
-								projectOptions = profile.projectOptions ?: emptyList()
-							)
-						)
-					}
-				}
-				it
-			}
+			.map { profiles -> it.apply { profiles.forEach { profile -> promoteProjectAuthorities(profile) } } }
 	}
+
+	private fun CurrentUserModel.promoteProjectAuthorities(profile: ProjectProfileRoleModel) {
+		promote(roleService.getAuthoritiesByProjectRole(profile.role!!, profile.projectId!!, profile.projectVisible))
+		if (profile.projectVisible != true) return
+		promote(
+			roleService.getOptionAuthoritiesByProject(
+				profile.projectId!!,
+				projectOptions = profile.projectOptions ?: emptyList()
+			)
+		)
+	}
+
 }

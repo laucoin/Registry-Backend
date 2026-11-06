@@ -143,18 +143,20 @@ class GroupModelPostgresRepository(
 
 	override fun update(element: GroupModel): Mono<GroupModel> {
 		return save(element)
-			.flatMap {
-				findByIdWithContent(
-					element.projectId!!,
-					element.id!!,
-					isVisible = null,
-					memberIsVisible = null,
-					memberIsAvailable = null,
-				)
-			}
+			.flatMap { findWithAllMembers(element) }
 			.removeDeletedMembers(element)
 			.saveNewMembers(element)
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun findWithAllMembers(element: GroupModel): Mono<GroupModel> {
+		return findByIdWithContent(
+			element.projectId!!,
+			element.id!!,
+			isVisible = null,
+			memberIsVisible = null,
+			memberIsAvailable = null,
+		)
 	}
 
 	fun Mono<GroupModel>.saveNewMembers(element: GroupModel): Mono<GroupModel> {

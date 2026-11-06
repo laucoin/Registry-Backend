@@ -66,6 +66,22 @@ class AlertService(
 			.map { restrictToReadableFields(currentUser, it) }
 	}
 
+	private fun createInitialCommunication(alert: AlertModel, newAlert: AlertModel): Mono<AlertModel> {
+		val initialCommunication = alert.communications!!.first().apply { this.alert = newAlert }
+		return communicationPort.create(initialCommunication)
+			.map { newAlert.withInitialCommunication(it) }
+	}
+
+	private fun AlertModel.withInitialCommunication(communication: CommunicationModel): AlertModel = apply {
+		communications = listOf(communication)
+		lastCommunication = communication
+	}
+
+	private fun AlertModel.withTitleAndDateOf(alert: AlertModel): AlertModel = apply {
+		title = alert.title
+		dateTime = alert.dateTime
+	}
+
 	private fun restrictToReadableFields(currentUser: CurrentUserModel, alert: AlertModel): AlertModel {
 		if (!currentUser.hasAuthority(alert.projectId!!, REGISTRY_PROJECT_ALERT_COMMUNICATION_R)) {
 			alert.lastCommunication = null
@@ -109,15 +125,7 @@ class AlertService(
 	): Mono<AlertModel> {
 		return validateAlertDateWithProjectDates(alert)
 			.flatMap { port.create(alert) }
-			.flatMap { newAlert ->
-				val initialCommunication = alert.communications!!.first().apply { this.alert = newAlert }
-				communicationPort.create(initialCommunication)
-					.map { createdCommunication ->
-						newAlert.communications = listOf(createdCommunication)
-						newAlert.lastCommunication = createdCommunication
-						newAlert
-					}
-			}
+			.flatMap { createInitialCommunication(alert, it) }
 			.map { restrictToReadableFields(currentUser, it) }
 			.`as`(transactionalOperator::transactional)
 	}
@@ -133,12 +141,7 @@ class AlertService(
 			.flatMap { findAlertById(projectId, id, isVisible = null) }
 			.validateIsInProgress()
 			.validateAlertDateWithLinkedCommunications(alert)
-			.map {
-				it.apply {
-					this.title = alert.title
-					this.dateTime = alert.dateTime
-				}
-			}
+			.map { it.withTitleAndDateOf(alert) }
 			.archiveCurrentState()
 			.updateAlert(currentUser)
 			.`as`(transactionalOperator::transactional)
@@ -162,11 +165,7 @@ class AlertService(
 		status: AlertStatusEnum
 	): Mono<AlertModel> {
 		return findAlertById(projectId, id, isVisible = null)
-			.map {
-				it.apply {
-					this.status = status
-				}
-			}
+			.map { it.apply { this.status = status } }
 			.updateAlert(currentUser)
 	}
 

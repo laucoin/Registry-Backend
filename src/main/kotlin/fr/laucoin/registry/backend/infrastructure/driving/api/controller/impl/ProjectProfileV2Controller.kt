@@ -87,10 +87,7 @@ class ProjectProfileV2Controller(
 
 		return useCase.createProjectProfiles(currentUser, projectId, profileModels)
 			.map(createdProjectProfilesReaderMapper::toDto)
-			.map {
-				val status = if (it.notCreatedEmails.isEmpty()) OK else MULTI_STATUS
-				ResponseEntity.status(status).body(it)
-			}
+			.map { responseOf(it) }
 	}
 
 	override fun updateProjectProfile(
@@ -128,5 +125,10 @@ class ProjectProfileV2Controller(
 
 	override fun deleteProjectProfileById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return useCase.deleteProjectProfileById(currentUser, projectId, id)
+	}
+
+	private fun responseOf(dto: CreatedProjectProfilesReaderDto): ResponseEntity<CreatedProjectProfilesReaderDto> {
+		val status = if (dto.notCreatedEmails.isEmpty()) OK else MULTI_STATUS
+		return ResponseEntity.status(status).body(dto)
 	}
 }

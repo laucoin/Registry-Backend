@@ -33,14 +33,16 @@ class PreferencesService(
 ): IPreferencesService, GenericService(clock) {
 	override fun findByUser(currentUser: CurrentUserModel): Mono<PreferencesModel> {
 		return port.findByUserId(currentUser.id!!, isVisible = null)
-			.switchIfEmpty {
-				val preferences = PreferencesModel(userId = currentUser.id)
-				preferences.create(currentUser, now())
-				port.save(preferences)
-					.flatMap { port.findByUserId(currentUser.id!!, isVisible = null) }
-					.onErrorResume(DataIntegrityViolationException::class.java) {
-						port.findByUserId(currentUser.id!!, isVisible = null)
-					}
+			.switchIfEmpty { createDefault(currentUser) }
+	}
+
+	private fun createDefault(currentUser: CurrentUserModel): Mono<PreferencesModel> {
+		val preferences = PreferencesModel(userId = currentUser.id)
+		preferences.create(currentUser, now())
+		return port.save(preferences)
+			.flatMap { port.findByUserId(currentUser.id!!, isVisible = null) }
+			.onErrorResume(DataIntegrityViolationException::class.java) {
+				port.findByUserId(currentUser.id!!, isVisible = null)
 			}
 	}
 

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service
 
+import reactor.core.publisher.SynchronousSink
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
@@ -36,18 +37,13 @@ open class GenericProfileService(
 			to = endAccess,
 		)
 			.collectList()
-			.handle { conflicting, handle ->
-				if (conflicting.size == userIds.size) {
-					log.warn(
-						"Another profile already exist for the user(s) \"{}\" on the project \"{}\".",
-						userIds,
-						projectId
-					)
-					handle.error(RegistryException(CONFLICT, PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE))
-				} else {
-					handle.next(usersWithoutConflict(projectId, userIds, conflicting))
-				}
-			}
+			.handle { conflicting, sink -> sink.nextIfSomeoneIsFree(projectId, userIds, conflicting) }
+	}
+
+	private fun SynchronousSink<List<UUID>>.nextIfSomeoneIsFree(projectId: UUID, userIds: List<UUID>, conflicting: List<UUID>) {
+		if (conflicting.size != userIds.size) return next(usersWithoutConflict(projectId, userIds, conflicting))
+		log.warn("Another profile already exist for the user(s) \"{}\" on the project \"{}\".", userIds, projectId)
+		error(RegistryException(CONFLICT, PROJECT_PROFILE_ALREADY_EXIST_ON_RANGE))
 	}
 
 	private fun usersWithoutConflict(projectId: UUID, userIds: List<UUID>, conflicting: List<UUID>): List<UUID> {

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.usecase.impl
 
+import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_ENOUGH_PERMISSION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_EXPORT
 import fr.laucoin.registry.backend.domain.enumeration.AuditActionEnum.EXPORT
@@ -67,15 +68,17 @@ class ExportUseCase(
 
 		return userPort.findById(userId, isVisible = null)
 			.notFoundIfEmpty(userId)
-			.flatMap { user ->
-				Mono.zip(
-					preferencesPort.findByUserId(userId, isVisible = null).map { Optional.of(it) }
-						.defaultIfEmpty(Optional.empty()),
-					findAllProfiles(userId).collectList(),
-					findAllParticipantExports(userId, generatedAt).collectList(),
-				).map { UserExportModel(generatedAt, user, it.t1.orElse(null), it.t2, it.t3) }
-			}
+			.flatMap { buildUserExport(it, generatedAt) }
 			.doOnNext { audit(currentUser, client, AuditResourceTypeEnum.USER, userId, null, AuditOutcomeEnum.SUCCESS) }
+	}
+
+	private fun buildUserExport(user: UserModel, generatedAt: ZonedDateTime): Mono<UserExportModel> {
+		return Mono.zip(
+			preferencesPort.findByUserId(user.id!!, isVisible = null).map { Optional.of(it) }
+				.defaultIfEmpty(Optional.empty()),
+			findAllProfiles(user.id!!).collectList(),
+			findAllParticipantExports(user.id!!, generatedAt).collectList(),
+		).map { UserExportModel(generatedAt, user, it.t1.orElse(null), it.t2, it.t3) }
 	}
 
 	override fun exportParticipant(
@@ -148,8 +151,11 @@ class ExportUseCase(
 
 	private fun <T : Any> allPages(pageNumber: Int = 0, fetch: (PageableModel) -> Mono<PageModel<T>>): Flux<T> =
 		fetch(PageableModel(pageNumber.toLong() * EXPORT_PAGE_SIZE, EXPORT_PAGE_SIZE))
-			.flatMapMany { page ->
-				val next = if (pageNumber + 1 < page.totalPages) allPages(pageNumber + 1, fetch) else Flux.empty()
-				Flux.fromIterable(page.content).concatWith(next)
-			}
+			.flatMapMany { page -> Flux.fromIterable(page.content).concatWith(nextPages(page, pageNumber, fetch)) }
+
+	private fun <T : Any> nextPages(
+		page: PageModel<T>,
+		pageNumber: Int,
+		fetch: (PageableModel) -> Mono<PageModel<T>>,
+	): Flux<T> = if (pageNumber + 1 < page.totalPages) allPages(pageNumber + 1, fetch) else Flux.empty()
 }

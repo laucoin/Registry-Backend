@@ -48,10 +48,12 @@ class AuditService(
 
 	private fun write(audit: AuditModel): Mono<Unit> {
 		return port.record(audit)
-			.onErrorResume {
-				log.error("Audit event {} on {} could not be written", audit.action, audit.resourceType, it)
-				Mono.empty()
-			}
+			.onErrorResume { skipUnwritable(audit, it) }
+	}
+
+	private fun skipUnwritable(audit: AuditModel, error: Throwable): Mono<Unit> {
+		log.error("Audit event {} on {} could not be written", audit.action, audit.resourceType, error)
+		return Mono.empty()
 	}
 
 	override fun start() {

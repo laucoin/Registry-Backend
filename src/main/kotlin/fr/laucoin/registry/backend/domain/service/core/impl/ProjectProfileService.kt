@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ASSIGNS_ROLE_HIGHER_THAN_CURRENT_USER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_BLOCK_LAST_PROJECT_ADMINISTRATOR
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
@@ -153,24 +154,10 @@ class ProjectProfileService(
 	): Mono<ProjectProfileModel> {
 		return rowLockPort.lock(PROJECT, projectId)
 			.then(Mono.defer { findProjectProfileById(projectId, id, isVisible = null) })
-			.flatMap {
-				validateNoProfileConflict(
-					projectId,
-					listOf(it.user!!.id!!),
-					it.id,
-					profile.startAccess?.toZonedDateTime(OffsetTime.MIN),
-					profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
-				).map { _ -> it }
-			}
+			.flatMap { validateNoConflictForUpdate(projectId, it, profile) }
 			.validateRole(currentUser, projectId, profile)
 			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR)
-			.map {
-				it.apply {
-					role = profile.role
-					startAccess = profile.startAccess
-					endAccess = profile.endAccess
-				}
-			}
+			.map { it.withAccessOf(profile) }
 			.updateProjectProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
 			.doOnNext { principalCache.invalidate(it.user?.oidcId) }
@@ -222,10 +209,29 @@ class ProjectProfileService(
 				status = listOf(ACCEPTED),
 			)
 		)
-			.handle { it, handle ->
-				val error = roleError(currentUser, roleService.getAssignableProjectRoles(it), profileToUpdate, profile)
-				if (error != null) handle.error(error) else handle.next(profileToUpdate)
+			.handle { assigner, sink ->
+				sink.nextOrError(profileToUpdate, roleError(currentUser, roleService.getAssignableProjectRoles(assigner), profileToUpdate, profile))
 			}
+	}
+
+	private fun validateNoConflictForUpdate(
+		projectId: UUID,
+		existing: ProjectProfileModel,
+		profile: ProjectProfileModel,
+	): Mono<ProjectProfileModel> {
+		return validateNoProfileConflict(
+			projectId,
+			listOf(existing.user!!.id!!),
+			existing.id,
+			profile.startAccess?.toZonedDateTime(OffsetTime.MIN),
+			profile.endAccess?.toZonedDateTime(OffsetTime.MAX),
+		).map { existing }
+	}
+
+	private fun ProjectProfileModel.withAccessOf(profile: ProjectProfileModel): ProjectProfileModel = apply {
+		role = profile.role
+		startAccess = profile.startAccess
+		endAccess = profile.endAccess
 	}
 
 	private fun roleError(

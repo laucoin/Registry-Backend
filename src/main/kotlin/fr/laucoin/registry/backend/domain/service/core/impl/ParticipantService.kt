@@ -48,6 +48,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.SynchronousSink
 
 /**
  * Objectif : Gère les participants d'un projet.
@@ -168,33 +169,38 @@ class ParticipantService(
 			participant.endAvailability,
 			PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap {
-				if (Objects.nonNull(participant.user)) {
-					validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
-				} else Mono.just(emptyList())
-			}
-			.flatMap {
-				if (participant.groups.isNotEmpty()) {
-					validateGroups(participant.projectId!!, participant, participant.groups.mapNotNull { g -> g.id })
-				} else Mono.just(participant)
-			}
+			.flatMap { validateUserLink(participant) }
+			.flatMap { validateParticipantGroups(participant) }
 			.flatMap { port.create(participant.apply { create(currentUser, now()) }) }
+	}
+
+	private fun validateUserLink(participant: ParticipantModel): Mono<List<ParticipantModel>> {
+		return if (Objects.nonNull(participant.user)) {
+			validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
+		} else Mono.just(emptyList())
+	}
+
+	private fun validateParticipantGroups(participant: ParticipantModel): Mono<ParticipantModel> {
+		return if (participant.groups.isNotEmpty()) {
+			validateGroups(participant.projectId!!, participant, participant.groups.mapNotNull { it.id })
+		} else Mono.just(participant)
 	}
 
 	private fun validateNoParticipantForUser(projectId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
 		return port.findByUserId(projectId, userId)
 			.collectList()
-			.handle { it, handle ->
-				if (it.isNotEmpty()) {
-					val exception = RegistryException(
-						UNPROCESSABLE_CONTENT,
-						PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER,
-						arrayListOf("${it.first().firstName} ${it.first().lastName}")
-					)
-					log.warn("Attempt to link an already link user to a participant", exception)
-					handle.error(exception)
-				} else handle.next(it)
-			}
+			.handle { linked, sink -> sink.nextIfNoLinkedParticipant(linked) }
+	}
+
+	private fun SynchronousSink<List<ParticipantModel>>.nextIfNoLinkedParticipant(linked: List<ParticipantModel>) {
+		if (linked.isEmpty()) return next(linked)
+		val exception = RegistryException(
+			UNPROCESSABLE_CONTENT,
+			PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER,
+			arrayListOf("${linked.first().firstName} ${linked.first().lastName}")
+		)
+		log.warn("Attempt to link an already link user to a participant", exception)
+		error(exception)
 	}
 
 	private fun validateGroups(
@@ -204,25 +210,21 @@ class ParticipantService(
 	): Mono<ParticipantModel> {
 		return groupPort.findAllByIds(projectId, newGroupIds, isVisible = null)
 			.collectList()
-			.handle { it, handle ->
-				when {
-					it.size != newGroupIds.size -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT,
-						)
-					)
+			.handle { groups, sink -> sink.nextIfGroupsUsable(groups, newGroupIds, participant) }
+	}
 
-					it.any { m -> m.isNotVisible() } -> handle.error(
-						RegistryException(
-							NOT_FOUND,
-							PARTICIPANT_GROUPS_NOT_VISIBLE,
-						)
-					)
+	private fun SynchronousSink<ParticipantModel>.nextIfGroupsUsable(
+		groups: List<GroupModel>,
+		newGroupIds: List<UUID>,
+		participant: ParticipantModel,
+	) {
+		when {
+			groups.size != newGroupIds.size ->
+				error(RegistryException(NOT_FOUND, PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT))
 
-					else -> handle.next(participant)
-				}
-			}
+			groups.any { it.isNotVisible() } -> error(RegistryException(NOT_FOUND, PARTICIPANT_GROUPS_NOT_VISIBLE))
+			else -> next(participant)
+		}
 	}
 
 	override fun updateParticipantById(
@@ -363,14 +365,17 @@ class ParticipantService(
 		relation: String,
 	): Mono<ParticipantModel> {
 		return movementPort.countAllByParticipantId(oldParticipant.projectId!!, oldParticipant.id!!, searchParams)
-			.handle { count, handle ->
-				if (count > 0) {
-					log.warn("The participant {} already has {} movement(s) {}", oldParticipant.id, count, relation)
-					handle.error(
-						RegistryException(UNPROCESSABLE_CONTENT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(count))
-					)
-				} else handle.next(oldParticipant)
-			}
+			.handle { count, sink -> sink.nextIfNoMovement(count, oldParticipant, relation) }
+	}
+
+	private fun SynchronousSink<ParticipantModel>.nextIfNoMovement(
+		count: Long,
+		oldParticipant: ParticipantModel,
+		relation: String,
+	) {
+		if (count <= 0) return next(oldParticipant)
+		log.warn("The participant {} already has {} movement(s) {}", oldParticipant.id, count, relation)
+		error(RegistryException(UNPROCESSABLE_CONTENT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(count)))
 	}
 
 	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { participantToUpdate ->

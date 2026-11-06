@@ -68,15 +68,23 @@ class UserProjectProfileService(
 		}
 
 	private fun Mono<PageModel<ProjectProfileModel>>.withFavorites(userId: UUID): Mono<PageModel<ProjectProfileModel>> =
-		flatMap { page ->
-			favoritePort.findFavoriteProjectIds(userId, page.content.mapNotNull { it.project?.id }.distinct())
-				.collectList()
-				.map { it.toSet() }
-				.map { favoriteIds ->
-					page.content.forEach { profile -> profile.project?.let { it.favorite = it.id in favoriteIds } }
-					page
-				}
-		}
+		flatMap { attachFavorites(userId, it) }
+
+	private fun attachFavorites(
+		userId: UUID,
+		page: PageModel<ProjectProfileModel>,
+	): Mono<PageModel<ProjectProfileModel>> {
+		return favoritePort.findFavoriteProjectIds(userId, page.content.mapNotNull { it.project?.id }.distinct())
+			.collectList()
+			.map { page.withFavoriteProjects(it.toSet()) }
+	}
+
+	private fun PageModel<ProjectProfileModel>.withFavoriteProjects(
+		favoriteIds: Set<UUID>,
+	): PageModel<ProjectProfileModel> {
+		content.forEach { profile -> profile.project?.let { it.favorite = it.id in favoriteIds } }
+		return this
+	}
 
 	override fun createUserProjectProfileFromProject(
 		currentUser: CurrentUserModel,
@@ -103,11 +111,7 @@ class UserProjectProfileService(
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = true)
 			.filter { it.status == INVITED }
 			.notFoundIfEmpty(id)
-			.flatMap { profile ->
-				profile.status = status
-				profile.update(currentUser, now())
-				port.update(profile)
-			}
+			.flatMap { port.update(it.withStatus(currentUser, status)) }
 			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
@@ -148,17 +152,27 @@ class UserProjectProfileService(
 		)
 	}
 
+	private fun ProjectProfileModel.withStatus(
+		currentUser: CurrentUserModel,
+		newStatus: ProfileStatusEnum,
+	): ProjectProfileModel = apply {
+		status = newStatus
+		update(currentUser, now())
+	}
+
+	private fun validateNotLastAdministrator(profile: ProjectProfileModel): Mono<ProjectProfileModel> {
+		return lastAdministrator.validateNotLastProjectRoleLevel0(
+			profile.user!!.id!!,
+			profile.projectId!!,
+			profile,
+			PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
+		)
+	}
+
 	override fun deleteUserProjectProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
 		return port.findProjectProfileByUserIdAndId(currentUser.id!!, id, isVisible = null)
 			.notFoundIfEmpty(id)
-			.flatMap {
-				lastAdministrator.validateNotLastProjectRoleLevel0(
-					it.user!!.id!!,
-					it.projectId!!,
-					it,
-					PROJECT_PROFILE_DELETE_LAST_PROJECT_ADMINISTRATOR
-				)
-			}
+			.flatMap { validateNotLastAdministrator(it) }
 			.flatMap { port.deleteById(id) }
 			.`as`(transactionalOperator::transactional)
 			.doOnSuccess { principalCache.invalidate(currentUser.oidcId) }

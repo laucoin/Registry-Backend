@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.helper
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import org.springframework.stereotype.Component
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
@@ -51,12 +52,7 @@ class MovementParticipantHelper(
 
 		val guestsToCreate: List<ParticipantModel> = guests
 			.filter { Objects.isNull(it.id) }
-			.map {
-				it.apply {
-					startAvailability = CustomDateTimeModel(movement.dateTime)
-					create(currentUser, ZonedDateTime.now(clock))
-				}
-			}
+			.map { it.asNewGuest(currentUser, movement) }
 
 		return findGuestsToUpdate(currentUser, movement, guests)
 			.map { it.apply { addAll(guestsToCreate) } }
@@ -73,13 +69,18 @@ class MovementParticipantHelper(
 		return participantPort.findAllByIds(movement.projectId!!, guestIdsToUpdate, isVisible = null)
 			.map { existing -> refreshGuest(existing, guests.find { g -> g.id == existing.id }, movement, currentUser) }
 			.collectList()
-			.handle { it, handle ->
-				if (it.size != guestIdsToUpdate.size) handle.error(
-					RegistryException(NOT_FOUND, MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT)
-				)
-				else handle.next(it)
-			}
+			.handle { found, sink -> sink.nextOrError(found, missingGuestError(found, guestIdsToUpdate)) }
 			.switchIfEmpty { Mono.just(mutableListOf<ParticipantModel>()) }
+	}
+
+	private fun ParticipantModel.asNewGuest(currentUser: CurrentUserModel, movement: MovementModel): ParticipantModel = apply {
+		startAvailability = CustomDateTimeModel(movement.dateTime)
+		create(currentUser, ZonedDateTime.now(clock))
+	}
+
+	private fun missingGuestError(found: List<ParticipantModel>, guestIdsToUpdate: List<UUID>): RegistryException? {
+		if (found.size == guestIdsToUpdate.size) return null
+		return RegistryException(NOT_FOUND, MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT)
 	}
 
 	private fun refreshGuest(
@@ -104,9 +105,10 @@ class MovementParticipantHelper(
 	): Mono<MovementModel> {
 		return participantPort.saveAllGuest(guests)
 			.collectList()
-			.map { saved ->
-				movement.content = saved.map { p -> MovementContentModel(participant = p) }
-				oldMovement
-			}
+			.map { saved -> oldMovement.also { movement.withGuests(saved) } }
+	}
+
+	private fun MovementModel.withGuests(guests: List<ParticipantModel>) {
+		content = guests.map { MovementContentModel(participant = it) }
 	}
 }
