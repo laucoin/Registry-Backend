@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
@@ -444,6 +445,7 @@ class MovementModelPostgresRepositoryTest : TestContext() {
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_movement", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

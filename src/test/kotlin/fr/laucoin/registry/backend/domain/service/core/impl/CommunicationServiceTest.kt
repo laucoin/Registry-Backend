@@ -224,14 +224,16 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should findCommunicationById call port findById`() {
 		// Arrange
+		val expected = defaultCommunication()
 		val onlyVisible = true
 
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findCommunicationById(defaultProjectId, defaultCommunicationId, onlyVisible).block()
+		val result = service.findCommunicationById(defaultProjectId, defaultCommunicationId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultCommunicationId, onlyVisible)
 	}
 
@@ -364,9 +366,10 @@ class CommunicationServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(communication))
 
 		// Act
-		service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
+		val result = service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
 
 		// Assert
+		assertEquals(communication, result)
 		verify(projectDates).validateDateTime(
 			defaultProjectId, CustomDateTimeModel(now), COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 		)
@@ -384,9 +387,10 @@ class CommunicationServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(communication))
 
 		// Act
-		service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
+		val result = service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
 
 		// Assert
+		assertEquals(communication, result)
 		val order = inOrder(rowLockPort, historyPort, port)
 		order.verify(rowLockPort).lock(COMMUNICATION, defaultCommunicationId)
 		order.verify(historyPort).archiveCommunication(defaultCommunicationId)
@@ -434,13 +438,15 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should disableCommunicationById call existing communication and call port update`() {
 		// Arrange
+		val expected = defaultCommunication()
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
-		whenever(port.update(any())).thenReturn(Mono.just(defaultCommunication()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.disableCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId).block()
+		val result = service.disableCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = true)
 		verify(port).update(defaultCommunication().apply { visible = false })
 	}
@@ -454,9 +460,10 @@ class CommunicationServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(communication))
 
 		// Act
-		service.enableCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId).block()
+		val result = service.enableCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId).block()
 
 		// Assert
+		assertEquals(communication, result)
 		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = false)
 		verify(port).update(defaultCommunication())
 	}
@@ -487,9 +494,10 @@ class CommunicationServiceTest {
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeOrphanCommunications(movements, alerts, false).collectList().block()
+		val result = service.purgeOrphanCommunications(movements, alerts, false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(communicationId1, communicationId2), result)
 		verify(port).findOrphan(movements, alerts)
 		verify(port).deleteById(communicationId1)
 		verify(port).deleteById(communicationId2)
@@ -498,15 +506,17 @@ class CommunicationServiceTest {
 	@Test
 	fun `Should purgeOrphanCommunications call orphan communication since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
+		val expected = UUID.randomUUID()
 		val movements = listOf(UUID.randomUUID())
 		val alerts = listOf(UUID.randomUUID())
 
-		whenever(port.findOrphan(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(port.findOrphan(any(), any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeOrphanCommunications(movements, alerts, true).collectList().block()
+		val result = service.purgeOrphanCommunications(movements, alerts, true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findOrphan(movements, alerts)
 		verify(port, never()).deleteById(any())
 	}

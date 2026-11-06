@@ -113,9 +113,10 @@ class ProjectProfileServiceTest {
 		)
 
 		// Act
-		service.findProjectProfilesPage(defaultProjectId, pageable, params).block()
+		val result = service.findProjectProfilesPage(defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findProjectProfilesPageByProjectId(defaultProjectId, pageable, params)
 	}
 
@@ -130,9 +131,10 @@ class ProjectProfileServiceTest {
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.findProjectProfileById(defaultProjectId, uuid, onlyVisible).block()
+		val result = service.findProjectProfileById(defaultProjectId, uuid, onlyVisible).block()
 
 		// Assert
+		assertEquals(profile, result)
 		verify(port).findById(defaultProjectId, uuid, onlyVisible)
 	}
 
@@ -509,9 +511,10 @@ class ProjectProfileServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.blockProjectProfileById(currentUser(), defaultProjectId, uuid).block()
+		val result = service.blockProjectProfileById(currentUser(), defaultProjectId, uuid).block()
 
 		// Assert
+		assertEquals(profile, result)
 		verify(port).findById(defaultProjectId, uuid, isVisible = true)
 		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
@@ -535,9 +538,10 @@ class ProjectProfileServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(profile))
 
 		// Act
-		service.unblockProjectProfileById(currentUser(), defaultProjectId, uuid).block()
+		val result = service.unblockProjectProfileById(currentUser(), defaultProjectId, uuid).block()
 
 		// Assert
+		assertEquals(profile, result)
 		verify(port).findById(defaultProjectId, uuid, isVisible = false)
 		verify(port).update(profile.apply { visible = true })
 	}

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
@@ -288,6 +289,7 @@ class VehicleModelPostgresRepositoryTest : TestContext() {
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_vehicle", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

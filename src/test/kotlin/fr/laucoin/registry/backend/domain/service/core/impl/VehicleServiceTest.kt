@@ -75,9 +75,10 @@ class VehicleServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findVehiclesPage(defaultProjectId, pageable, params).block()
+		val result = service.findVehiclesPage(defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
@@ -162,14 +163,16 @@ class VehicleServiceTest {
 	@Test
 	fun `Should findVehicleById call port findById`() {
 		// Arrange
+		val expected = defaultVehicle()
 		val onlyVisible = true
 
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findVehicleById(defaultProjectId, defaultVehicleId, onlyVisible).block()
+		val result = service.findVehicleById(defaultProjectId, defaultVehicleId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultVehicleId, onlyVisible)
 	}
 
@@ -205,9 +208,10 @@ class VehicleServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findVehicleMovementsPage(defaultProjectId, uuid, pageable, params).block()
+		val result = service.findVehicleMovementsPage(defaultProjectId, uuid, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(movementPort).findPageByVehicleId(defaultProjectId, uuid, pageable, params)
 	}
 
@@ -222,9 +226,10 @@ class VehicleServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.createVehicle(currentUser(), vehicle).block()
+		val result = service.createVehicle(currentUser(), vehicle).block()
 
 		// Assert
+		assertEquals(vehicle, result)
 		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
@@ -247,9 +252,10 @@ class VehicleServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.updateVehicleById(currentUser(), defaultProjectId, defaultVehicleId, vehicle).block()
+		val result = service.updateVehicleById(currentUser(), defaultProjectId, defaultVehicleId, vehicle).block()
 
 		// Assert
+		assertEquals(vehicle, result)
 		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
@@ -270,9 +276,10 @@ class VehicleServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.disableVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
+		val result = service.disableVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
 
 		// Assert
+		assertEquals(vehicle, result)
 		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = true)
 		verify(port).update(vehicle.apply { visible = false })
 	}
@@ -286,9 +293,10 @@ class VehicleServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(vehicle))
 
 		// Act
-		service.enableVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
+		val result = service.enableVehicleById(currentUser(), defaultProjectId, defaultVehicleId).block()
 
 		// Assert
+		assertEquals(vehicle, result)
 		verify(port).findById(defaultProjectId, defaultVehicleId, isVisible = false)
 		verify(port).update(vehicle.apply { visible = true })
 	}
@@ -341,9 +349,10 @@ verify(rowLockPort).lock(VEHICLE, defaultVehicleId)
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeVehiclesIfNecessary(date, false).collectList().block()
+		val result = service.purgeVehiclesIfNecessary(date, false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(uuid1, uuid2), result)
 		verify(port).findUnusedSince(date)
 		verify(port).deleteById(uuid1)
 		verify(port).deleteById(uuid2)
@@ -352,14 +361,16 @@ verify(rowLockPort).lock(VEHICLE, defaultVehicleId)
 	@Test
 	fun `Should purgeVehiclesIfNecessary call unused vehicle since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
+		val expected = UUID.randomUUID()
 		val date = LocalDate.EPOCH
 
-		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeVehiclesIfNecessary(date, true).collectList().block()
+		val result = service.purgeVehiclesIfNecessary(date, true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findUnusedSince(date)
 		verify(port, never()).deleteById(any())
 	}

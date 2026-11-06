@@ -69,9 +69,10 @@ class ActivityServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findActivitiesPage(defaultProjectId, pageable, params).block()
+		val result = service.findActivitiesPage(defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
@@ -106,13 +107,15 @@ class ActivityServiceTest {
 	@Test
 	fun `Should findActivityById call port findById`() {
 		// Arrange
+		val expected = defaultActivity()
 		val onlyVisible = true
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findActivityById(defaultProjectId, defaultActivityId, onlyVisible).block()
+		val result = service.findActivityById(defaultProjectId, defaultActivityId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultActivityId, onlyVisible)
 	}
 
@@ -146,23 +149,26 @@ class ActivityServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findActivityMovementsPage(defaultProjectId, defaultActivityId, pageable, params).block()
+		val result = service.findActivityMovementsPage(defaultProjectId, defaultActivityId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(movementPort).findPageByActivityId(defaultProjectId, defaultActivityId, pageable, params)
 	}
 
 	@Test
 	fun `Should createActivity check date and call port create`() {
 		// Arrange
+		val expected = defaultActivity()
 		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
-		whenever(port.create(any())).thenReturn(Mono.just(defaultActivity()))
+		whenever(port.create(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.createActivity(currentUser(), defaultActivity()).block()
+		val result = service.createActivity(currentUser(), defaultActivity()).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
@@ -175,15 +181,17 @@ class ActivityServiceTest {
 	@Test
 	fun `Should updateActivityById check date, check existing activity, call port updateActivity`() {
 		// Arrange
+		val expected = defaultActivity()
 		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
-		whenever(port.update(any())).thenReturn(Mono.just(defaultActivity()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.updateActivityById(currentUser(), defaultProjectId, defaultActivityId, defaultActivity()).block()
+		val result = service.updateActivityById(currentUser(), defaultProjectId, defaultActivityId, defaultActivity()).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
@@ -197,13 +205,15 @@ class ActivityServiceTest {
 	@Test
 	fun `Should disableActivityById call existing activity and call port update`() {
 		// Arrange
+		val expected = defaultActivity()
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
-		whenever(port.update(any())).thenReturn(Mono.just(defaultActivity()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.disableActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
+		val result = service.disableActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = true)
 		verify(port).update(defaultActivity().apply { visible = false })
 	}
@@ -217,9 +227,10 @@ class ActivityServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(activity))
 
 		// Act
-		service.enableActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
+		val result = service.enableActivityById(currentUser(), defaultProjectId, defaultActivityId).block()
 
 		// Assert
+		assertEquals(activity, result)
 		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = false)
 		verify(port).update(defaultActivity())
 	}
@@ -272,9 +283,10 @@ verify(rowLockPort).lock(ACTIVITY, defaultActivityId)
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeActivitiesIfNecessary(date, false).collectList().block()
+		val result = service.purgeActivitiesIfNecessary(date, false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(activityId1, activityId2), result)
 		verify(port).findUnusedSince(date)
 		verify(port).deleteById(activityId1)
 		verify(port).deleteById(activityId2)
@@ -283,14 +295,16 @@ verify(rowLockPort).lock(ACTIVITY, defaultActivityId)
 	@Test
 	fun `Should purgeActivitiesIfNecessary call unused activity since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
+		val expected = defaultActivityId
 		val date = LocalDate.EPOCH
 
-		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(defaultActivityId))
+		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeActivitiesIfNecessary(date, true).collectList().block()
+		val result = service.purgeActivitiesIfNecessary(date, true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findUnusedSince(date)
 		verify(port, never()).deleteById(any())
 	}

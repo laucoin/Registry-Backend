@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -298,9 +299,10 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 	@Test
 	fun `Should findByUserId call repository findByUserId`() {
 		// Act
-		repository.findByUserId(defaultProjectId, currentUser().id!!).collectList().block()
+		val result = repository.findByUserId(defaultProjectId, currentUser().id!!).collectList().block()
 
 		// Assert
+		assertEquals(result?.map { it.id }?.distinct(), result?.map { it.id })
 		verify(postgresRepository).findByUserId(defaultProjectId, currentUser().id!!, at = null)
 		verify(mapper).toModel(any())
 	}
@@ -529,6 +531,7 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_participant", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

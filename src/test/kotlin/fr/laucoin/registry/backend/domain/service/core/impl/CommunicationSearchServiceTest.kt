@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
@@ -30,6 +31,7 @@ class CommunicationSearchServiceTest {
 	@Test
 	fun `Should searchOutMovementWithActivityByText call port findActivityWithLimit`() {
 		// Arrange
+		val expected = defaultMovement()
 		val query = "search"
 		val search = ActivitySearchParamModel(
 			query = query,
@@ -38,18 +40,20 @@ class CommunicationSearchServiceTest {
 			at = null,
 		)
 
-		whenever(movementPort.findActivityWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultMovement()))
+		whenever(movementPort.findActivityWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.searchOutMovementWithActivityByText(defaultProjectId, query).collectList().block()
+		val result = service.searchOutMovementWithActivityByText(defaultProjectId, query).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(movementPort).findActivityWithLimit(MAX_ACTIVITIES, defaultProjectId, search)
 	}
 
 	@Test
 	fun `Should searchAlertByText call port findWithLimit`() {
 		// Arrange
+		val expected = defaultAlert()
 		val query = "search"
 		val search = AlertSearchParamModel(
 			query = query,
@@ -57,12 +61,13 @@ class CommunicationSearchServiceTest {
 			status = IN_PROGRESS,
 		)
 
-		whenever(alertPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultAlert()))
+		whenever(alertPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.searchAlertByText(defaultProjectId, query).collectList().block()
+		val result = service.searchAlertByText(defaultProjectId, query).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(alertPort).findWithLimit(MAX_ALERTS, defaultProjectId, search)
 	}
 

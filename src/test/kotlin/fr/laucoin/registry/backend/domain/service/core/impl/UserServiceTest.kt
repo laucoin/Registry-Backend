@@ -159,6 +159,7 @@ class UserServiceTest {
 		service.onApplicationEvent(event)
 
 		// Assert
+		assertEquals(serviceAccount, service.serviceAccount())
 		verify(port).findServiceAccount()
 	}
 
@@ -185,23 +186,26 @@ class UserServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findUsersPage(pageable, params).block()
+		val result = service.findUsersPage(pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(pageable, params)
 	}
 
 	@Test
 	fun `Should findUserById call port findById`() {
 		// Arrange
+		val expected = defaultUser()
 		val onlyVisible = true
 
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(defaultUser()))
+		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findUserById(defaultUserId, onlyVisible).block()
+		val result = service.findUserById(defaultUserId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultUserId, onlyVisible)
 	}
 
@@ -230,28 +234,32 @@ class UserServiceTest {
 	@Test
 	fun `Should findUserByOidcId call port findByOidcId`() {
 		// Arrange
+		val expected = currentUser()
 		val onlyVisible = true
 
-		whenever(port.findByOidcId(any(), anyOrNull())).thenReturn(Mono.just(currentUser()))
+		whenever(port.findByOidcId(any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findUserByOidcId(currentUser().oidcId!!, onlyVisible).block()
+		val result = service.findUserByOidcId(currentUser().oidcId!!, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findByOidcId(currentUser().oidcId!!, onlyVisible)
 	}
 
 	@Test
 	fun `Should findUserByEmail call port findByEmail`() {
 		// Arrange
+		val expected = currentUser()
 		val onlyVisible = true
 
-		whenever(port.findByEmail(any(), anyOrNull())).thenReturn(Flux.just(currentUser()))
+		whenever(port.findByEmail(any(), anyOrNull())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.findUserByEmail(currentUser().email!!, onlyVisible).collectList().block()
+		val result = service.findUserByEmail(currentUser().email!!, onlyVisible).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findByEmail(currentUser().email!!, onlyVisible)
 	}
 
@@ -349,14 +357,15 @@ class UserServiceTest {
 	}
 
 	@Test
-	fun `Should assignableUserRoles not throw`() {
+	fun `Should assignableUserRoles return the roles assignable by the current user`() {
 		// Arrange
-		whenever(roleService.getAssignableUserRoles(any())).thenReturn(emptyList())
+		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf("USER", "USER_ADMINISTRATOR"))
 
 		// Act
-		service.assignableUserRoles(currentUser()).blockFirst()
+		val result = service.assignableUserRoles(currentUser()).collectList().block()
 
 		// Assert
+		assertEquals(listOf("USER", "USER_ADMINISTRATOR"), result)
 		verify(roleService).getAssignableUserRoles(currentUser())
 	}
 
@@ -480,6 +489,7 @@ class UserServiceTest {
 	@Test
 	fun `Should blockUserById block and return User`() {
 		// Arrange
+		val expected = UserModel()
 		val uuid = UUID.randomUUID()
 		val foundUser = defaultUser().apply { id = uuid; role = USER_ROLE }
 		val currentUser = currentUser().apply { role = USER_ROLE }
@@ -487,7 +497,7 @@ class UserServiceTest {
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
 		whenever(port.findById(any(), any())).thenReturn(Mono.just(foundUser))
 		whenever(roleService.getLevelByUserRole(anyOrNull())).thenReturn(1)
-		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 		whenever(
 			lastAdministrator.validateNotLastProjectRoleLevel0(
 				any(),
@@ -498,9 +508,10 @@ class UserServiceTest {
 		).thenReturn(Mono.just(foundUser))
 
 		// Act
-		service.blockUserById(currentUser, uuid).block()
+		val result = service.blockUserById(currentUser, uuid).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(roleService).getLevelByUserRole(USER_ROLE)
 		verify(port).update(any())
@@ -559,18 +570,20 @@ class UserServiceTest {
 	@Test
 	fun `Should unblockUserById block and return User`() {
 		// Arrange
+		val expected = UserModel()
 		val uuid = UUID.randomUUID()
 		val foundUser = UserModel().apply { id = uuid; role = USER_ROLE }
 		val currentUser = currentUser().apply { role = USER_ROLE }
 
 		whenever(roleService.getAssignableUserRoles(any())).thenReturn(listOf(USER_ROLE))
 		whenever(port.findById(any(), any())).thenReturn(Mono.just(foundUser))
-		whenever(port.update(any())).thenReturn(Mono.just(UserModel()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.unblockUserById(currentUser, defaultUserId).block()
+		val result = service.unblockUserById(currentUser, defaultUserId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(roleService).getAssignableUserRoles(currentUser)
 		verify(port).update(any())
 	}

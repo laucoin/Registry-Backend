@@ -1,5 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.model.GroupModel
+import fr.laucoin.registry.backend.domain.model.UserModel
+import org.junit.jupiter.api.Assertions.assertEquals
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ParticipantFeatureModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
@@ -31,12 +34,14 @@ class ParticipantSearchServiceTest {
 		val query = "text"
 		val expectedSearch = UserSearchParamModel(query, isVisible = true)
 
-		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.empty())
+		val user = UserModel()
+		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.just(user))
 
 		// Act
-		service.searchUsersByText(defaultProjectId, query).blockFirst()
+		val result = service.searchUsersByText(defaultProjectId, query).collectList().block()
 
 		// Assert
+		assertEquals(listOf(user), result)
 		verify(userPort).findWithLimit(eq(MAX_USERS), argThat { this == expectedSearch && memberOfProjectId == defaultProjectId })
 	}
 
@@ -46,12 +51,14 @@ class ParticipantSearchServiceTest {
 		val query = "text"
 		val expectedSearch = GroupSearchParamModel(query, isVisible = true)
 
-		whenever(groupPort.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
+		val group = GroupModel()
+		whenever(groupPort.findWithLimit(any(), any(), any())).thenReturn(Flux.just(group))
 
 		// Act
-		service.searchGroupsByText(defaultProjectId, query).blockFirst()
+		val result = service.searchGroupsByText(defaultProjectId, query).collectList().block()
 
 		// Assert
+		assertEquals(listOf(group), result)
 		verify(groupPort).findWithLimit(MAX_GROUPS, defaultProjectId, expectedSearch)
 	}
 

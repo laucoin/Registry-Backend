@@ -282,51 +282,58 @@ class ParticipantServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findParticipantsPage(defaultProjectId, pageable, params).block()
+		val result = service.findParticipantsPage(defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
 	@Test
 	fun `Should findParticipantsByIds call port findAllByIds`() {
 		// Arrange
+		val expected = defaultParticipant()
 		val onlyVisible = true
 
-		whenever(port.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(port.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.findParticipantsByIds(defaultProjectId, listOf(defaultParticipantId), onlyVisible).blockFirst()
+		val result = service.findParticipantsByIds(defaultProjectId, listOf(defaultParticipantId), onlyVisible).blockFirst()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findAllByIds(defaultProjectId, listOf(defaultParticipantId), onlyVisible)
 	}
 
 	@Test
 	fun `Should findBirthdays call port findAllByIds`() {
 		// Arrange
+		val expected = defaultParticipant()
 		val onlyVisible = true
 
-		whenever(port.findBirthdays(any(), any())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(port.findBirthdays(any(), any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.findBirthdays(defaultProjectId).blockFirst()
+		val result = service.findBirthdays(defaultProjectId).blockFirst()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findBirthdays(defaultProjectId, onlyVisible)
 	}
 
 	@Test
 	fun `Should findParticipantById call port findById`() {
 		// Arrange
+		val expected = defaultParticipant()
 		val onlyVisible = true
 
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultParticipant()))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.findParticipantById(defaultProjectId, defaultParticipantId, onlyVisible).block()
+		val result = service.findParticipantById(defaultProjectId, defaultParticipantId, onlyVisible).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findById(defaultProjectId, defaultParticipantId, onlyVisible)
 	}
 
@@ -375,12 +382,15 @@ class ParticipantServiceTest {
 		val pageable = PageableModel(0, 10)
 		val params = MovementSearchParamModel(type = IN)
 
-		whenever(movementPort.findPageByParticipantId(any(), any(), any(), any())).thenReturn(Mono.empty())
+		whenever(movementPort.findPageByParticipantId(any(), any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findParticipantMovementsPage(currentUser(), defaultProjectId, defaultParticipantId, pageable, params).block()
+		val result =
+			service.findParticipantMovementsPage(currentUser(), defaultProjectId, defaultParticipantId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(movementPort).findPageByParticipantId(defaultProjectId, defaultParticipantId, pageable, params)
 	}
 
@@ -572,9 +582,10 @@ class ParticipantServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
 		// Act
-		service.disableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
+		val result = service.disableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
 
 		// Assert
+		assertEquals(participant, result)
 		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = true)
 		verify(port).update(participant.apply { visible = false })
 	}
@@ -587,9 +598,10 @@ class ParticipantServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
 		// Act
-		service.disableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
+		val result = service.disableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
 
 		// Assert
+		assertEquals(participant, result)
 		verify(groupPort, never()).findAllByIds(any(), any(), anyOrNull())
 		verify(port).update(participant.apply { visible = false })
 	}
@@ -602,9 +614,10 @@ class ParticipantServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(participant))
 
 		// Act
-		service.enableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
+		val result = service.enableParticipantById(currentUser(), defaultProjectId, defaultParticipantId).block()
 
 		// Assert
+		assertEquals(participant, result)
 		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = false)
 		verify(port).update(defaultParticipant())
 	}
@@ -673,9 +686,10 @@ verify(rowLockPort).lock(PARTICIPANT, defaultParticipantId)
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeParticipantsIfNecessary(date, false).collectList().block()
+		val result = service.purgeParticipantsIfNecessary(date, false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(uuid1, uuid2), result)
 		verify(port).findUnusedSince(date)
 		verify(port).deleteById(uuid1)
 		verify(port).deleteById(uuid2)
@@ -684,13 +698,15 @@ verify(rowLockPort).lock(PARTICIPANT, defaultParticipantId)
 	@Test
 	fun `Should purgeParticipantsIfNecessary call unused participant since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
+		val expected = UUID.randomUUID()
 		val date = LocalDate.EPOCH
-		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(port.findUnusedSince(any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeParticipantsIfNecessary(date, true).collectList().block()
+		val result = service.purgeParticipantsIfNecessary(date, true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findUnusedSince(date)
 		verify(port, never()).deleteById(any())
 	}

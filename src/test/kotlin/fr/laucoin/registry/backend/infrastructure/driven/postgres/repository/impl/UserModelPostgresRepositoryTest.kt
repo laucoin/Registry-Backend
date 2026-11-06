@@ -316,6 +316,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_user", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

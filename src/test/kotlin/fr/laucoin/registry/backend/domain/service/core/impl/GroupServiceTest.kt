@@ -96,9 +96,10 @@ class GroupServiceTest {
 			.thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
-		service.findGroupsPage(defaultProjectId, pageable, params).block()
+		val result = service.findGroupsPage(defaultProjectId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(port).findPage(defaultProjectId, pageable, params)
 	}
 
@@ -113,9 +114,10 @@ class GroupServiceTest {
 		)
 
 		// Act
-		service.findGroupMembersPageByGroupId(defaultProjectId, defaultParticipantId, pageable, params).block()
+		val result = service.findGroupMembersPageByGroupId(defaultProjectId, defaultParticipantId, pageable, params).block()
 
 		// Assert
+		assertEquals(PageModel(1, 2, 3, 4, emptyList<Any>()), result)
 		verify(participantPort).findPageByGroupId(defaultProjectId, defaultParticipantId, pageable, params)
 	}
 
@@ -174,12 +176,14 @@ class GroupServiceTest {
 			this.query = query
 		}
 
-		whenever(participantPort.findWithLimit(any(), any(), any())).thenReturn(Flux.empty())
+		val participant = defaultParticipant()
+		whenever(participantPort.findWithLimit(any(), any(), any())).thenReturn(Flux.just(participant))
 
 		// Act
-		service.searchParticipantsByText(defaultProjectId, query).blockFirst()
+		val result = service.searchParticipantsByText(defaultProjectId, query).collectList().block()
 
 		// Assert
+		assertEquals(listOf(participant), result)
 		verify(participantPort).findWithLimit(MAX_PARTICIPANTS, defaultProjectId, expectedSearch)
 	}
 
@@ -195,9 +199,10 @@ class GroupServiceTest {
 		whenever(port.create(any())).thenReturn(Mono.just(group))
 
 		// Act
-		service.createGroup(currentUser(), group).block()
+		val result = service.createGroup(currentUser(), group).block()
 
 		// Assert
+		assertEquals(group, result)
 		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
@@ -313,9 +318,10 @@ class GroupServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(group))
 
 		// Act
-		service.addMembersToGroupById(currentUser(), defaultProjectId, defaultGroupId, updatedParticipantIds).block()
+		val result = service.addMembersToGroupById(currentUser(), defaultProjectId, defaultGroupId, updatedParticipantIds).block()
 
 		// Assert
+		assertEquals(Pair(newParticipantIds, previousParticipantIds), result)
 		verify(port).findByIdWithContent(
 			defaultProjectId,
 			defaultGroupId,
@@ -380,9 +386,10 @@ class GroupServiceTest {
 		whenever(port.update(any())).thenReturn(Mono.just(group))
 
 		// Act
-		service.removeMemberFromGroupById(currentUser(), defaultProjectId, defaultGroupId, uuid3).block()
+		val result = service.removeMemberFromGroupById(currentUser(), defaultProjectId, defaultGroupId, uuid3).block()
 
 		// Assert
+		assertEquals(group, result)
 		verify(port).lockByIds(listOf(defaultGroupId))
 		verify(port).findByIdWithContent(
 			defaultProjectId,
@@ -462,6 +469,7 @@ class GroupServiceTest {
 	@Test
 	fun `Should disableGroupById call existing group and call port updateGroup`() {
 		// Arrange
+		val expected = defaultGroup()
 		whenever(
 			port.findByIdWithContent(
 				any(),
@@ -471,12 +479,13 @@ class GroupServiceTest {
 				anyOrNull()
 			)
 		).thenReturn(Mono.just(defaultGroup()))
-		whenever(port.update(any())).thenReturn(Mono.just(defaultGroup()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.disableGroupById(currentUser(), defaultProjectId, defaultGroupId).block()
+		val result = service.disableGroupById(currentUser(), defaultProjectId, defaultGroupId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findByIdWithContent(
 			defaultProjectId,
 			defaultGroupId,
@@ -490,6 +499,7 @@ class GroupServiceTest {
 	@Test
 	fun `Should enableGroupById call existing group and call port updateGroup`() {
 		// Arrange
+		val expected = defaultGroup()
 		whenever(
 			port.findByIdWithContent(
 				any(),
@@ -499,12 +509,13 @@ class GroupServiceTest {
 				anyOrNull()
 			)
 		).thenReturn(Mono.just(defaultGroup().apply { visible = false }))
-		whenever(port.update(any())).thenReturn(Mono.just(defaultGroup()))
+		whenever(port.update(any())).thenReturn(Mono.just(expected))
 
 		// Act
-		service.enableGroupById(currentUser(), defaultProjectId, defaultGroupId).block()
+		val result = service.enableGroupById(currentUser(), defaultProjectId, defaultGroupId).block()
 
 		// Assert
+		assertEquals(expected, result)
 		verify(port).findByIdWithContent(
 			defaultProjectId,
 			defaultGroupId,
@@ -552,9 +563,10 @@ class GroupServiceTest {
 		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		service.purgeEmptyGroups(emptyList(), false).collectList().block()
+		val result = service.purgeEmptyGroups(emptyList(), false).collectList().block()
 
 		// Assert
+		assertEquals(listOf(uuid1, uuid2), result)
 		verify(port).findEmpty(emptyList())
 		verify(port).deleteById(uuid1)
 		verify(port).deleteById(uuid2)
@@ -563,12 +575,14 @@ class GroupServiceTest {
 	@Test
 	fun `Should purgeEmptyGroups call empty group since a date, and not call port deleteById because of dryRun`() {
 		// Arrange
-		whenever(port.findEmpty(any())).thenReturn(Flux.just(UUID.randomUUID()))
+		val expected = UUID.randomUUID()
+		whenever(port.findEmpty(any())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.purgeEmptyGroups(emptyList(), true).collectList().block()
+		val result = service.purgeEmptyGroups(emptyList(), true).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(port).findEmpty(emptyList())
 		verify(port, never()).deleteById(any())
 	}

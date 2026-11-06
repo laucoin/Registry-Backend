@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectCountsModel
@@ -105,9 +107,10 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		val params = ProjectSearchParamModel(query = null, isFavorite = true).apply { userId = UUID.randomUUID() }
 
 		// Act
-		port.findPage(PageableModel(0, 10), params).block()
+		val result = port.findPage(PageableModel(0, 10), params).block()
 
 		// Assert
+		assertEquals(0L, result?.totalElements)
 		verify(postgresRepository).findAll(
 			query = null,
 			isVisible = null,
@@ -129,9 +132,10 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 		val params = ProjectSearchParamModel(query = null, isFavorite = true).apply { userId = UUID.randomUUID() }
 
 		// Act
-		port.findPage(ids, PageableModel(0, 10), params).block()
+		val result = port.findPage(ids, PageableModel(0, 10), params).block()
 
 		// Assert
+		assertEquals(0L, result?.totalElements)
 		verify(postgresRepository).findAllInProjectIds(
 			ids,
 			query = null,
@@ -334,6 +338,7 @@ class ProjectModelPostgresRepositoryTest : TestContext() {
 			port.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_project", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

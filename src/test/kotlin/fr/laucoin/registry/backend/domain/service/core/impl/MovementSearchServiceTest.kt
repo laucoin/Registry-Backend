@@ -162,15 +162,17 @@ class MovementSearchServiceTest {
 			REGISTERED,
 			isVisible = true,
 		).apply { query = "searched" }
-		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		val participant = defaultParticipant()
+		whenever(participantPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(participant))
 		whenever(groupPort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.empty())
 		whenever(groupPort.findContent(any(), any(), anyOrNull(), anyOrNull())).thenReturn(Flux.empty())
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
 
 		// Act
-		service.searchParticipantsAndGroupsByText(defaultProjectId, REGISTERED, "searched", searchAt, true).block()
+		val result = service.searchParticipantsAndGroupsByText(defaultProjectId, REGISTERED, "searched", searchAt, true).block()
 
 		// Assert
+		assertEquals(listOf(participant), result?.t1)
 		verify(participantPort).findWithLimit(MAX_PARTICIPANTS, defaultProjectId, expectedParticipantSearch)
 		verify(groupPort).findContent(defaultProjectId, emptyList(), isVisible = true, isAvailable = null)
 	}
@@ -196,6 +198,7 @@ class MovementSearchServiceTest {
 	@Test
 	fun `Should searchVehiclesByText call vehicle port findWithLimit`() {
 		// Arrange
+		val expected = defaultVehicle()
 		val query = "searched"
 		val expectedVehicleSearch = VehicleSearchParamModel().apply {
 			this.query = query
@@ -203,12 +206,13 @@ class MovementSearchServiceTest {
 			this.isAvailable = true
 		}
 
-		whenever(vehiclePort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultVehicle()))
+		whenever(vehiclePort.findWithLimit(any(), any(), anyOrNull())).thenReturn(Flux.just(expected))
 
 		// Act
-		service.searchVehiclesByText(defaultProjectId, query).collectList().block()
+		val result = service.searchVehiclesByText(defaultProjectId, query).collectList().block()
 
 		// Assert
+		assertEquals(listOf(expected), result)
 		verify(vehiclePort).findWithLimit(MAX_VEHICLES, defaultProjectId, expectedVehicleSearch)
 	}
 

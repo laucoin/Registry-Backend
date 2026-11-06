@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.model.UserModel
+import org.junit.jupiter.api.Assertions.assertEquals
 import fr.laucoin.registry.backend.domain.model.ProfileFeatureModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
@@ -21,12 +23,14 @@ class ProjectProfileSearchServiceTest {
 	fun `Should searchUsers call port findWithLimit`() {
 		// Arrange
 		val text = "text"
-		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.empty())
+		val user = UserModel()
+		whenever(userPort.findWithLimit(any(), any())).thenReturn(Flux.just(user))
 
 		// Act
-		service.searchUsers(text).blockFirst()
+		val result = service.searchUsers(text).collectList().block()
 
 		// Assert
+		assertEquals(listOf(user), result)
 		verify(userPort).findWithLimit(eq(MAX_USERS), eq(UserSearchParamModel(text, isVisible = true)))
 	}
 
