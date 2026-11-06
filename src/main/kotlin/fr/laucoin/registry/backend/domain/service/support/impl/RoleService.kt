@@ -31,6 +31,9 @@ class RoleService(
 	@param:Value($$"${registry.security.default-role}")
 	private val defaultUserRole: String,
 ) : ApplicationListener<ContextRefreshedEvent>, IRoleService, LoggerService() {
+	private val hiddenProjectAuthorities =
+		setOf(REGISTRY_PROJECT_R, REGISTRY_PROJECT_U, REGISTRY_PROJECT_D, REGISTRY_PROJECT_RESTORE)
+
 	private val uuidRegex: Regex = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 	@Volatile
@@ -79,14 +82,7 @@ class RoleService(
 
 			visibility != true && roleAuthoritiesMapping!!.first != 0 -> emptyList()
 			visibility != true ->
-				roleAuthoritiesMapping!!.second.filter {
-					listOf(
-						REGISTRY_PROJECT_R,
-						REGISTRY_PROJECT_U,
-						REGISTRY_PROJECT_D,
-						REGISTRY_PROJECT_RESTORE
-					).contains(it)
-				}.map { "${projectId}_$it" }
+				roleAuthoritiesMapping!!.second.filter { it in hiddenProjectAuthorities }.map { "${projectId}_$it" }
 
 			else -> roleAuthoritiesMapping!!.second.map { "${projectId}_$it" }
 		}
