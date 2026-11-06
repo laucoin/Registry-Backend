@@ -78,18 +78,28 @@ class TokenConverterService(
 
 	private fun Mono<CurrentUserModel>.updateUserIfPersonalDataChanged(
 		email: String, firstName: String?, lastName: String?
-	): Mono<CurrentUserModel> = flatMap { user ->
-		userUseCase.updateUserIfPersonalDataChanged(user, email, firstName, lastName)
+	): Mono<CurrentUserModel> = flatMap { updatePersonalData(it, email, firstName, lastName) }
+
+	private fun updatePersonalData(
+		user: CurrentUserModel, email: String, firstName: String?, lastName: String?
+	): Mono<CurrentUserModel> {
+		return userUseCase.updateUserIfPersonalDataChanged(user, email, firstName, lastName)
 			.map { user }
 	}
 
 	private fun Mono<CurrentUserModel>.createNewUserOnNotFound(
 		oidcId: UUID, email: String, emailVerified: Boolean, firstName: String?, lastName: String?
 	): Mono<CurrentUserModel> = switchIfEmpty {
+		provisionUnknownUser(oidcId, email, emailVerified, firstName, lastName)
+	}
+
+	private fun provisionUnknownUser(
+		oidcId: UUID, email: String, emailVerified: Boolean, firstName: String?, lastName: String?
+	): Mono<CurrentUserModel> {
 		log.info("User with OIDC ID \"{}\" not found, checking if an account exist with the same email", oidcId)
-		userUseCase.findUserByEmail(email, isVisible = null)
+		return userUseCase.findUserByEmail(email, isVisible = null)
 			.collectList()
-			.flatMap { matches -> provisionFromEmailMatches(matches, oidcId, email, emailVerified, firstName, lastName) }
+			.flatMap { provisionFromEmailMatches(it, oidcId, email, emailVerified, firstName, lastName) }
 			.onErrorMap(DataIntegrityViolationException::class.java) {
 				JwtConversionException(CONFLICT, AUTH_EMAIL_ALREADY_USED, arrayListOf(email))
 			}
