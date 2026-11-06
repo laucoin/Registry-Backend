@@ -186,7 +186,8 @@ A change must not silently violate any of these:
   at startup: a change needs a migration **and** a restart. Authorities are recomputed only at token conversion — no
   mid-session revocation. (ADR 005)
 - **Authentication stays delegated — no local password store.** Only four public endpoints
-  (`/authentication/login/uri`, `/logout/uri`, `/token`, `/token/refresh`); `GET /`, Swagger/`api-docs` and
+  (`/authentication/login/uri`, `/logout/uri`, `/token`, `/token/refresh`); `GET /api/v2/metadata/**` is public only
+  while it serves static content (enums, labels, configuration flags), never database data; `GET /`, Swagger/`api-docs` and
   `/actuator/**` are permitted unauthenticated but serve content only when their feature flag is on. The JWT converter
   refuses blocked (`423`) accounts, rejects email conflicts (`409`), and JIT-provisions first-time users with the
   default `USER` role. (ADR 004)
