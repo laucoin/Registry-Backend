@@ -64,7 +64,7 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.test.ModelExt.defaultActivity
 import fr.laucoin.registry.backend.test.ModelExt.defaultActivityId
 import fr.laucoin.registry.backend.test.ModelExt.defaultGroup
@@ -114,7 +114,7 @@ import java.util.UUID
 import java.util.stream.Stream
 
 class MovementServiceTest {
-	private val projectService: IProjectService = mock()
+	private val projectDates: ProjectDateHelper = mock()
 	private val port: IMovementPort = mock()
 	private val historyPort: IMovementHistoryPort = mock()
 	private val rowLockPort: IRowLockPort = mock()
@@ -126,7 +126,7 @@ class MovementServiceTest {
 	private val transactionalOperator: TransactionalOperator = mock()
 
 	private fun buildService(clock: Clock) = MovementService(
-		projectService,
+		projectDates,
 		port,
 		historyPort,
 		rowLockPort,
@@ -289,7 +289,7 @@ class MovementServiceTest {
 	@BeforeEach
 	fun setup() {
 		whenever(
-			projectService.validateDateTime(
+			projectDates.validateDateTime(
 				any(),
 				anyOrNull(),
 				anyOrNull()

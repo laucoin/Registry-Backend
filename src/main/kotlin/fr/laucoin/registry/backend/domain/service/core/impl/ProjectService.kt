@@ -12,7 +12,6 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -33,7 +32,6 @@ import java.time.LocalDate
 import java.time.OffsetTime
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
-import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.publisher.Flux
@@ -146,56 +144,6 @@ class ProjectService(
 
 	override fun availableProjectOptions(): Flux<ProjectOptionEnum> {
 		return Flux.fromIterable(ProjectOptionEnum.entries)
-	}
-
-	override fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID> {
-		return findProjectById(id, isVisible = null)
-			.handle { it, handle ->
-				if (it.isNotInRange(dateTime)) {
-					log.warn("Failed to editing, date {} is out of project range [{}, {}]", dateTime, it.begin, it.end)
-					handle.error(
-						RegistryException(
-							status = UNPROCESSABLE_CONTENT,
-							code = errorCode,
-							args = arrayListOf(dateTime.toString(), it.begin.toString(), it.end.toString()),
-						)
-					)
-				} else handle.next(id)
-			}
-	}
-
-	override fun validateDateTimes(
-		id: UUID,
-		start: CustomDateTimeModel?,
-		end: CustomDateTimeModel?,
-		errorCode: String
-	): Mono<UUID> {
-		return findProjectById(id, isVisible = null)
-			.handle { project, handle ->
-				if (project.isNotInRange(start) || project.isNotInRange(end)) {
-					handle.error(outOfRange(project, start, end, errorCode))
-				} else handle.next(id)
-			}
-	}
-
-	private fun outOfRange(
-		project: ProjectModel,
-		start: CustomDateTimeModel?,
-		end: CustomDateTimeModel?,
-		errorCode: String,
-	): RegistryException {
-		log.warn(
-			"Failed to editing, one or more dates ({}, {}) are out of project range [{}, {}]",
-			start,
-			end,
-			project.begin,
-			project.end
-		)
-		return RegistryException(
-			status = UNPROCESSABLE_CONTENT,
-			code = errorCode,
-			args = arrayListOf(start.toString(), end.toString(), project.begin.toString(), project.end.toString()),
-		)
 	}
 
 	override fun createProject(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {

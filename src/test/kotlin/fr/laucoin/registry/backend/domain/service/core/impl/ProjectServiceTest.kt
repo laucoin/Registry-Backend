@@ -47,7 +47,6 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
@@ -55,7 +54,6 @@ import reactor.core.publisher.Mono
 import java.time.Clock
 import java.time.LocalDate
 import java.time.OffsetTime
-import java.time.ZoneOffset
 import java.util.UUID
 import java.util.stream.Stream
 
@@ -88,102 +86,6 @@ class ProjectServiceTest {
 	private companion object {
 		private val MIN_DATE = LocalDate.MIN
 		private val MAX_DATE = LocalDate.MAX
-
-		private val MIDNIGHT_PLUS_ONE_NANOSECOND = OffsetTime.of(0, 0, 0, 1, ZoneOffset.of("Z"))
-		private val MIDNIGHT_LESS_ONE_NANOSECOND = OffsetTime.of(23, 59, 59, 0, ZoneOffset.of("Z"))
-
-		@JvmStatic
-		fun `Should validateDateTime call port findById and validate the request date is in project range`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(null, null, null),
-				Arguments.of(null, null, CustomDateTimeModel(MIN_DATE)),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE), CustomDateTimeModel(MIN_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE), CustomDateTimeModel(MAX_DATE),
-				),
-				Arguments.of(CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE), CustomDateTimeModel.MIN),
-				Arguments.of(CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE), CustomDateTimeModel.MAX),
-				Arguments.of(CustomDateTimeModel.MIN, CustomDateTimeModel.MAX, CustomDateTimeModel.MIN),
-				Arguments.of(CustomDateTimeModel.MIN, CustomDateTimeModel.MAX, CustomDateTimeModel.MAX),
-			)
-		}
-
-		@JvmStatic
-		fun `Should validateDateTime call port findById and throw on invalid date`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(
-					CustomDateTimeModel(MAX_DATE), CustomDateTimeModel(MAX_DATE), CustomDateTimeModel(MIN_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE, MIDNIGHT_PLUS_ONE_NANOSECOND),
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel.MIN,
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE, MIDNIGHT_LESS_ONE_NANOSECOND),
-					CustomDateTimeModel.MAX,
-				),
-			)
-		}
-
-		@JvmStatic
-		fun `Should validateDateTimes call port findById and validate the request dates are in project range`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(null, null, null, null),
-				Arguments.of(null, null, CustomDateTimeModel(MIN_DATE), CustomDateTimeModel(MAX_DATE)),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel.MIN,
-					CustomDateTimeModel(MIN_DATE, OffsetTime.MAX),
-				),
-				Arguments.of(
-					CustomDateTimeModel.MIN, CustomDateTimeModel.MAX, CustomDateTimeModel.MIN, CustomDateTimeModel.MAX,
-				),
-			)
-		}
-
-		@JvmStatic
-		fun `Should validateDateTimes call port findById and throw on invalid dates`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MIN_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel(MAX_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE, MIDNIGHT_PLUS_ONE_NANOSECOND),
-					CustomDateTimeModel(MAX_DATE),
-					CustomDateTimeModel.MIN,
-					CustomDateTimeModel(MAX_DATE),
-				),
-				Arguments.of(
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel(MAX_DATE, MIDNIGHT_LESS_ONE_NANOSECOND),
-					CustomDateTimeModel(MIN_DATE),
-					CustomDateTimeModel.MAX,
-				),
-			)
-		}
 
 		@JvmStatic
 		fun `Should updateProjectById call port findById, validDateTime and update`(): Stream<Arguments> {
@@ -640,105 +542,6 @@ class ProjectServiceTest {
 		verifyNoInteractions(projectProfileService)
 		verifyNoInteractions(transactionalOperator)
 		verifyNoInteractions(roleService)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should validateDateTime call port findById and validate the request date is in project range`(
-		projectBeginDateTime: CustomDateTimeModel?,
-		projectEndDateTime: CustomDateTimeModel?,
-		dateTime: CustomDateTimeModel?,
-	) {
-		// Arrange
-		val project = defaultProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
-		val errorMessage = "ERROR_MESSAGE"
-
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
-
-		// Act
-		val result = service.validateDateTime(defaultProjectId, dateTime?.copy(), errorMessage).block()
-
-		// Assert
-		assertEquals(defaultProjectId, result)
-
-		verify(port).findById(defaultProjectId, isVisible = null)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should validateDateTime call port findById and throw on invalid date`(
-		projectBeginDateTime: CustomDateTimeModel?,
-		projectEndDateTime: CustomDateTimeModel?,
-		dateTime: CustomDateTimeModel?,
-	) {
-		// Arrange
-		val project = defaultProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
-		val errorMessage = "ERROR_MESSAGE"
-
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
-
-		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.validateDateTime(defaultProjectId, dateTime?.copy(), errorMessage).block()
-		}) as RegistryException
-
-		// Assert
-		assertEquals(UNPROCESSABLE_CONTENT, result.status)
-		assertEquals(errorMessage, result.message)
-		assertEquals(3, result.args?.size)
-
-		verify(port).findById(defaultProjectId, isVisible = null)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should validateDateTimes call port findById and validate the request dates are in project range`(
-		projectBeginDateTime: CustomDateTimeModel?,
-		projectEndDateTime: CustomDateTimeModel?,
-		startDateTime: CustomDateTimeModel?,
-		endDateTime: CustomDateTimeModel?,
-	) {
-		// Arrange
-		val project = defaultProject().apply { begin = projectBeginDateTime; end = projectEndDateTime }
-		val errorMessage = "ERROR_MESSAGE"
-
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
-
-		// Act
-		val result = service.validateDateTimes(defaultProjectId, startDateTime, endDateTime, errorMessage).block()
-
-		// Assert
-		assertEquals(defaultProjectId, result)
-
-		verify(port).findById(defaultProjectId, isVisible = null)
-	}
-
-	@ParameterizedTest
-	@MethodSource
-	fun `Should validateDateTimes call port findById and throw on invalid dates`(
-		projectBeginDateTime: CustomDateTimeModel?,
-		projectEndDateTime: CustomDateTimeModel?,
-		startDateTime: CustomDateTimeModel?,
-		endDateTime: CustomDateTimeModel?,
-	) {
-		// Arrange
-		val project = defaultProject().apply { begin = projectBeginDateTime?.copy(); end = projectEndDateTime?.copy() }
-		val errorMessage = "ERROR_MESSAGE"
-
-		whenever(port.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
-
-		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.validateDateTimes(defaultProjectId, startDateTime?.copy(), endDateTime?.copy(), errorMessage)
-				.block()
-		}) as RegistryException
-
-		// Assert
-		assertEquals(UNPROCESSABLE_CONTENT, result.status)
-		assertEquals(errorMessage, result.message)
-		assertEquals(4, result.args?.size)
-
-		verify(port).findById(defaultProjectId, isVisible = null)
 	}
 
 	@Test

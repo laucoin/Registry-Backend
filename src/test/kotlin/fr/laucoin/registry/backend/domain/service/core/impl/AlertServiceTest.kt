@@ -27,7 +27,7 @@ import fr.laucoin.registry.backend.domain.port.IAlertHistoryPort
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.service.core.IAlertService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.test.ModelExt.defaultAlert
 import fr.laucoin.registry.backend.test.ModelExt.defaultAlertId
 import fr.laucoin.registry.backend.test.ModelExt.defaultCommunication
@@ -60,7 +60,7 @@ import java.util.UUID
 class AlertServiceTest {
 	private val port: IAlertPort = mock()
 	private val historyPort: IAlertHistoryPort = mock()
-	private val projectService: IProjectService = mock()
+	private val projectDates: ProjectDateHelper = mock()
 	private val communicationPort: ICommunicationPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val rowLockPort: IRowLockPort = mock()
@@ -69,12 +69,12 @@ class AlertServiceTest {
 		whenever(historyPort.archiveAlert(any())).thenReturn(Mono.just(Unit))
 	}
 
-	private val service: IAlertService = AlertService(projectService, port, historyPort, communicationPort, rowLockPort, transactionalOperator, Clock.systemUTC())
+	private val service: IAlertService = AlertService(projectDates, port, historyPort, communicationPort, rowLockPort, transactionalOperator, Clock.systemUTC())
 
 	@BeforeEach
 	fun setup() {
 		whenever(
-			projectService.validateDateTime(
+			projectDates.validateDateTime(
 				any(),
 				anyOrNull(),
 				anyOrNull()
@@ -176,7 +176,7 @@ class AlertServiceTest {
 		service.createAlert(currentUser(), alert).block()
 
 		// Assert
-		verify(projectService).validateDateTime(
+		verify(projectDates).validateDateTime(
 			defaultProjectId,
 			CustomDateTimeModel(alert.dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
@@ -353,7 +353,7 @@ class AlertServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(ALERT_STATUS_IS_NOT_UPDATABLE, result.code)
 
-		verify(projectService).validateDateTime(
+		verify(projectDates).validateDateTime(
 			defaultProjectId,
 			CustomDateTimeModel(defaultAlert().dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,

@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
+import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.springframework.transaction.reactive.TransactionalOperator
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
@@ -9,6 +10,7 @@ import fr.laucoin.registry.backend.domain.extension.OutingExt.outSeconds
 import fr.laucoin.registry.backend.domain.extension.OutingExt.toOutings
 import fr.laucoin.registry.backend.domain.extension.OutingExt.usageRate
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -25,7 +27,6 @@ import fr.laucoin.registry.backend.domain.model.VehicleTimelineModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import fr.laucoin.registry.backend.domain.service.core.IVehicleService
 import java.time.Clock
 import java.time.LocalDate
@@ -43,7 +44,8 @@ import reactor.core.publisher.Mono
 @Service
 class VehicleService(
 	private val port: IVehiclePort,
-	private val projectService: IProjectService,
+	private val projectDates: ProjectDateHelper,
+	private val projectPort: IProjectPort,
 	private val movementPort: IMovementPort,
 	private val rowLockPort: IRowLockPort,
 	private val transactionalOperator: TransactionalOperator,
@@ -64,8 +66,12 @@ class VehicleService(
 
 	override fun findVehicleTimeline(projectId: UUID, id: UUID): Mono<VehicleTimelineModel> {
 		return findVehicleById(projectId, id, isVisible = null)
-			.zipWith(projectService.findProjectById(projectId, isVisible = null))
+			.zipWith(findProject(projectId))
 			.flatMap { toTimeline(it.t1, it.t2) }
+	}
+
+	private fun findProject(projectId: UUID): Mono<ProjectModel> {
+		return projectPort.findById(projectId, isVisible = null).notFoundIfEmpty(projectId)
 	}
 
 	private fun toTimeline(vehicle: VehicleModel, project: ProjectModel): Mono<VehicleTimelineModel> {
@@ -104,7 +110,7 @@ class VehicleService(
 	}
 
 	override fun createVehicle(currentUser: CurrentUserModel, vehicle: VehicleModel): Mono<VehicleModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,
@@ -119,7 +125,7 @@ class VehicleService(
 		id: UUID,
 		vehicle: VehicleModel
 	): Mono<VehicleModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			vehicle.projectId!!,
 			vehicle.startAvailability,
 			vehicle.endAvailability,

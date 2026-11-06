@@ -10,6 +10,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ALERT
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
@@ -26,7 +27,6 @@ import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IAlertService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
@@ -43,7 +43,7 @@ import reactor.core.publisher.Mono
  */
 @Service
 class AlertService(
-	private val projectService: IProjectService,
+	private val projectDates: ProjectDateHelper,
 	private val port: IAlertPort,
 	private val historyPort: IAlertHistoryPort,
 	private val communicationPort: ICommunicationPort,
@@ -96,7 +96,7 @@ class AlertService(
 	}
 
 	private fun validateAlertDateWithProjectDates(alert: AlertModel): Mono<UUID> {
-		return projectService.validateDateTime(
+		return projectDates.validateDateTime(
 			alert.projectId!!,
 			CustomDateTimeModel(alert.dateTime),
 			ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,

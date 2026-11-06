@@ -17,6 +17,7 @@ import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.COMMU
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
@@ -32,7 +33,6 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.ICommunicationService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import java.time.Clock
 import java.util.Objects
 import java.util.UUID
@@ -53,7 +53,7 @@ import reactor.kotlin.core.publisher.switchIfEmpty
  */
 @Service
 class CommunicationService(
-	private val projectService: IProjectService,
+	private val projectDates: ProjectDateHelper,
 	private val port: ICommunicationPort,
 	private val historyPort: ICommunicationHistoryPort,
 	private val rowLockPort: IRowLockPort,
@@ -109,7 +109,7 @@ class CommunicationService(
 		currentUser: CurrentUserModel,
 		communication: CommunicationModel
 	): Mono<CommunicationModel> {
-		return projectService.validateDateTime(
+		return projectDates.validateDateTime(
 			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,
@@ -143,7 +143,7 @@ class CommunicationService(
 	}
 
 	private fun validateCommunicationDate(communication: CommunicationModel): Mono<UUID> {
-		return projectService.validateDateTime(
+		return projectDates.validateDateTime(
 			communication.projectId!!,
 			CustomDateTimeModel(communication.dateTime),
 			COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE,

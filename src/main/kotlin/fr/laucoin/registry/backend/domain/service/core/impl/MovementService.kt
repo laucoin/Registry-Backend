@@ -28,6 +28,7 @@ import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
@@ -59,7 +60,6 @@ import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IMovementService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -90,7 +90,7 @@ import java.util.UUID
  */
 @Service
 class MovementService(
-	private val projectService: IProjectService,
+	private val projectDates: ProjectDateHelper,
 	private val port: IMovementPort,
 	private val historyPort: IMovementHistoryPort,
 	private val rowLockPort: IRowLockPort,
@@ -369,7 +369,7 @@ class MovementService(
 	}
 
 	private fun validateMovementDateInProject(movement: MovementModel): Mono<UUID> {
-		return projectService.validateDateTime(
+		return projectDates.validateDateTime(
 			movement.projectId!!,
 			CustomDateTimeModel(movement.dateTime),
 			MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE,

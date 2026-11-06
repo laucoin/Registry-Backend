@@ -40,7 +40,7 @@ import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.core.IParticipantService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.test.ModelExt.defaultGroup
 import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
 import fr.laucoin.registry.backend.test.ModelExt.defaultParticipant
@@ -77,7 +77,7 @@ import java.util.stream.Stream
 
 class ParticipantServiceTest {
 	private val port: IParticipantPort = mock()
-	private val projectService: IProjectService = mock()
+	private val projectDates: ProjectDateHelper = mock()
 	private val userPort: IUserPort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val groupPort: IGroupPort = mock()
@@ -88,7 +88,7 @@ class ParticipantServiceTest {
 	}
 
 	private val service: IParticipantService = ParticipantService(
-		projectService, port, userPort, movementPort, groupPort, rowLockPort, transactionalOperator, Clock.systemUTC(), MAX_USERS, MAX_GROUPS
+		projectDates, port, userPort, movementPort, groupPort, rowLockPort, transactionalOperator, Clock.systemUTC(), MAX_USERS, MAX_GROUPS
 	)
 
 	@BeforeEach
@@ -430,7 +430,7 @@ class ParticipantServiceTest {
 		expectedGroupVerification: Int,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.create(any())).thenReturn(Mono.just(participant))
 		whenever(port.findByUserId(any(), any())).thenReturn(Flux.empty())
@@ -441,7 +441,7 @@ class ParticipantServiceTest {
 		service.createParticipant(currentUser(), participant).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
 		verify(port, times(expectedUserVerification))
@@ -455,7 +455,7 @@ class ParticipantServiceTest {
 	fun `Should createParticipant check date, user and throw because participant is already linked`() {
 		// Arrange
 		val participant = defaultParticipant().apply { user = defaultUser() }
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findByUserId(any(), any())).thenReturn(Flux.just(participant))
 
@@ -468,7 +468,7 @@ class ParticipantServiceTest {
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER, result.message)
 
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(port).findByUserId(defaultProjectId, participant.user?.id ?: UUID.randomUUID())
@@ -481,7 +481,7 @@ class ParticipantServiceTest {
 		// Arrange
 		val participant = defaultParticipant().apply { groups = listOf(defaultGroup()) }
 
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.create(any())).thenReturn(Mono.just(participant))
 		whenever(port.findByUserId(any(), any())).thenReturn(Flux.empty())
@@ -496,7 +496,7 @@ class ParticipantServiceTest {
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(PARTICIPANT_GROUPS_NOT_FOUND_IN_PARTICIPANT_PROJECT, result.message)
 
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(port, never()).findByUserId(any(), any())
@@ -509,7 +509,7 @@ class ParticipantServiceTest {
 		// Arrange
 		val participant = defaultParticipant().apply { groups = listOf(defaultGroup()) }
 
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.create(any())).thenReturn(Mono.just(participant))
 		whenever(port.findByUserId(any(), any())).thenReturn(Flux.empty())
@@ -524,7 +524,7 @@ class ParticipantServiceTest {
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(PARTICIPANT_GROUPS_NOT_VISIBLE, result.message)
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(port, never()).findByUserId(any(), any())
@@ -543,7 +543,7 @@ class ParticipantServiceTest {
 		expectedMovementVerification: Int,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldParticipant))
 		whenever(port.update(any())).thenReturn(Mono.just(newParticipant))
@@ -556,7 +556,7 @@ class ParticipantServiceTest {
 		service.updateParticipantById(currentUser(), defaultProjectId, defaultParticipantId, newParticipant).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			eq(defaultProjectId), anyOrNull(), anyOrNull(), eq(PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE)
 		)
 		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = null)
@@ -578,7 +578,7 @@ class ParticipantServiceTest {
 		// Arrange
 		val movementCountOutOfRange = 1L
 
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldParticipant))
 		whenever(movementPort.countAllByParticipantId(any(), any(), any()))
@@ -594,7 +594,7 @@ class ParticipantServiceTest {
 		assertEquals(result.code, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME)
 		assertEquals(result.args, arrayListOf(movementCountOutOfRange))
 
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			eq(defaultProjectId), anyOrNull(), anyOrNull(), eq(PARTICIPANT_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE),
 		)
 		verify(port).findById(defaultProjectId, defaultParticipantId, isVisible = null)
