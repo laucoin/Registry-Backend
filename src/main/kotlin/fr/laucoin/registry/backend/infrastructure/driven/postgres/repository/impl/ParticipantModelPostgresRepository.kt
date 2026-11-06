@@ -231,27 +231,27 @@ class ParticipantModelPostgresRepository(
 	}
 
 	fun Mono<ParticipantModel>.saveNewGroups(element: ParticipantModel): Mono<ParticipantModel> {
-		return flatMap { participant ->
-			val newGroups = participant.getNewGroups(element)
-			if (newGroups.isEmpty()) return@flatMap Mono.just(participant)
-			groupContentRepository.saveAll(newGroups.map { groupContentMapper.toEntity(it.id!!, participant) })
-				.map(groupContentMapper::toModel)
-				.collectList()
-				.map { participant.apply { groups = groups.plus(newGroups) } }
-		}
+		return flatMap { addNewGroups(it, element) }
+	}
+
+	private fun addNewGroups(participant: ParticipantModel, element: ParticipantModel): Mono<ParticipantModel> {
+		val newGroups = participant.getNewGroups(element)
+		if (newGroups.isEmpty()) return Mono.just(participant)
+		return groupContentRepository.saveAll(newGroups.map { groupContentMapper.toEntity(it.id!!, participant) })
+			.map(groupContentMapper::toModel)
+			.collectList()
+			.map { participant.apply { groups = groups.plus(newGroups) } }
 	}
 
 	fun Mono<ParticipantModel>.removeDeletedGroups(element: ParticipantModel): Mono<ParticipantModel> {
-		return flatMap { participant ->
-			val removedGroups = participant.getOldGroupIds(element)
-			if (removedGroups.isEmpty()) return@flatMap Mono.just(participant)
-			groupContentRepository.deleteAllByParticipantIdAndGroupIds(participant.id!!, removedGroups)
-				.then(Mono.fromCallable {
-					participant.apply {
-						groups = groups.filter { removedGroups.contains(it.id) }
-					}
-				})
-		}
+		return flatMap { dropRemovedGroups(it, element) }
+	}
+
+	private fun dropRemovedGroups(participant: ParticipantModel, element: ParticipantModel): Mono<ParticipantModel> {
+		val removedGroups = participant.getOldGroupIds(element)
+		if (removedGroups.isEmpty()) return Mono.just(participant)
+		return groupContentRepository.deleteAllByParticipantIdAndGroupIds(participant.id!!, removedGroups)
+			.then(Mono.fromCallable { participant.apply { groups = groups.filter { removedGroups.contains(it.id) } } })
 	}
 
 	private fun save(element: ParticipantModel): Mono<ParticipantModel> {

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AlertError.ALERT_DELETE_HAS_COMMUNICATION
@@ -147,11 +148,12 @@ class AlertService(
 			.`as`(transactionalOperator::transactional)
 	}
 
-	private fun Mono<AlertModel>.validateIsInProgress(): Mono<AlertModel> = handle { it, handle ->
-		if (it.status !== IN_PROGRESS) {
-			log.warn("Only {} alert can be update", IN_PROGRESS)
-			handle.error(RegistryException(UNPROCESSABLE_CONTENT, ALERT_STATUS_IS_NOT_UPDATABLE))
-		} else handle.next(it)
+	private fun Mono<AlertModel>.validateIsInProgress(): Mono<AlertModel> = handle { alert, sink -> sink.nextOrError(alert, notInProgressError(alert)) }
+
+	private fun notInProgressError(alert: AlertModel): RegistryException? {
+		if (alert.status === IN_PROGRESS) return null
+		log.warn("Only {} alert can be update", IN_PROGRESS)
+		return RegistryException(UNPROCESSABLE_CONTENT, ALERT_STATUS_IS_NOT_UPDATABLE)
 	}
 
 	private fun Mono<AlertModel>.archiveCurrentState(): Mono<AlertModel> = flatMap {
@@ -170,29 +172,25 @@ class AlertService(
 	}
 
 	private fun Mono<AlertModel>.validateAlertDateWithLinkedCommunications(updatedAlert: AlertModel): Mono<AlertModel> =
-		flatMap { oldAlert ->
-			if (oldAlert.dateTime.isEqual(updatedAlert.dateTime)) Mono.just(oldAlert)
-			else communicationPort.countAllByAlertId(
-				oldAlert.projectId!!,
-				oldAlert.id!!,
-				CommunicationSearchParamModel(
-					query = null,
-					isVisible = null,
-					from = null,
-					to = updatedAlert.dateTime,
-				)
-			).handle { it, handle ->
-				if (it > 0L) {
-					val exception = RegistryException(
-						UNPROCESSABLE_CONTENT,
-						ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME,
-						arrayListOf(oldAlert.title)
-					)
-					log.warn("Existing communications are out the alert date", exception)
-					handle.error(exception)
-				} else handle.next(oldAlert)
-			}
-		}
+		flatMap { validateDateAgainstCommunications(it, updatedAlert) }
+
+	private fun validateDateAgainstCommunications(oldAlert: AlertModel, updatedAlert: AlertModel): Mono<AlertModel> {
+		if (oldAlert.dateTime.isEqual(updatedAlert.dateTime)) return Mono.just(oldAlert)
+		val params = CommunicationSearchParamModel(query = null, isVisible = null, from = null, to = updatedAlert.dateTime)
+		return communicationPort.countAllByAlertId(oldAlert.projectId!!, oldAlert.id!!, params)
+			.handle { count, sink -> sink.nextOrError(oldAlert, communicationOutOfDateError(oldAlert, count)) }
+	}
+
+	private fun communicationOutOfDateError(oldAlert: AlertModel, count: Long): RegistryException? {
+		if (count <= 0L) return null
+		val exception = RegistryException(
+			UNPROCESSABLE_CONTENT,
+			ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME,
+			arrayListOf(oldAlert.title)
+		)
+		log.warn("Existing communications are out the alert date", exception)
+		return exception
+	}
 
 	private fun Mono<AlertModel>.updateAlert(currentUser: CurrentUserModel) = flatMap {
 		port.update(it.apply { update(currentUser, now()) }).map { updated -> restrictToReadableFields(currentUser, updated) }
@@ -236,16 +234,16 @@ class AlertService(
 			.purgeEach("alert", dryRun, port::deleteById)
 	}
 
-	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { oldAlert ->
-		communicationPort.countAllByAlertId(
-			oldAlert.projectId!!,
-			oldAlert.id!!,
-			CommunicationSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The alert {} already linked to communication(s)", oldAlert.id)
-				handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
-			} else handle.next(oldAlert)
-		}
+	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { rejectIfLinkedToCommunication(it, error) }
+
+	private fun rejectIfLinkedToCommunication(alert: AlertModel, error: String): Mono<AlertModel> {
+		return communicationPort.countAllByAlertId(alert.projectId!!, alert.id!!, CommunicationSearchParamModel())
+			.handle { count, sink -> sink.nextOrError(alert, linkedToCommunicationError(alert, count, error)) }
+	}
+
+	private fun linkedToCommunicationError(alert: AlertModel, count: Long, error: String): RegistryException? {
+		if (count <= 0) return null
+		log.warn("The alert {} already linked to communication(s)", alert.id)
+		return RegistryException(UNPROCESSABLE_CONTENT, error)
 	}
 }

@@ -199,18 +199,19 @@ class ProjectProfileService(
 
 	private fun Mono<ProjectProfileModel>.validateRole(
 		currentUser: CurrentUserModel, projectId: UUID, profile: ProjectProfileModel
-	): Mono<ProjectProfileModel> = flatMap { profileToUpdate ->
-		port.findProjectProfileByProjectAndUserId(
-			projectId,
-			currentUser.id!!,
-			ProjectProfileSearchParamModel(
-				isVisible = true,
-				isAvailable = true,
-				status = listOf(ACCEPTED),
-			)
-		)
+	): Mono<ProjectProfileModel> = flatMap { validateRoleOf(currentUser, projectId, it, profile) }
+
+	private fun validateRoleOf(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		profileToUpdate: ProjectProfileModel,
+		profile: ProjectProfileModel,
+	): Mono<ProjectProfileModel> {
+		val searchParams = ProjectProfileSearchParamModel(isVisible = true, isAvailable = true, status = listOf(ACCEPTED))
+		return port.findProjectProfileByProjectAndUserId(projectId, currentUser.id!!, searchParams)
 			.handle { assigner, sink ->
-				sink.nextOrError(profileToUpdate, roleError(currentUser, roleService.getAssignableProjectRoles(assigner), profileToUpdate, profile))
+				val eligibleRoles = roleService.getAssignableProjectRoles(assigner)
+				sink.nextOrError(profileToUpdate, roleError(currentUser, eligibleRoles, profileToUpdate, profile))
 			}
 	}
 
@@ -257,9 +258,11 @@ class ProjectProfileService(
 		else -> null
 	}
 
-	private fun Mono<ProjectProfileModel>.updateProjectProfile(currentUser: CurrentUserModel) = flatMap { profile ->
+	private fun Mono<ProjectProfileModel>.updateProjectProfile(currentUser: CurrentUserModel) = flatMap { persistUpdate(currentUser, it) }
+
+	private fun persistUpdate(currentUser: CurrentUserModel, profile: ProjectProfileModel): Mono<ProjectProfileModel> {
 		val oidcId = profile.user?.oidcId
-		port.update(profile.apply { update(currentUser, now()) })
+		return port.update(profile.apply { update(currentUser, now()) })
 			.doOnNext { principalCache.invalidate(oidcId) }
 	}
 }

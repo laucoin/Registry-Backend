@@ -159,14 +159,22 @@ class GroupService(
 		return findLockedGroup(projectId, id)
 			.map { Pair(it, it.getNewMemberIds(memberIds)) }
 			.handle { pair, sink -> sink.nextOrError(pair, alreadyAddedError(pair.second)) }
-			.flatMap { (group, newMemberIds) ->
-				validateMembers(projectId, group, newMemberIds)
-					.map { _ -> newMemberIds.map { ParticipantModel().apply { this.id = it } } }
-					.map { group.apply { members = members.plus(it) } }
-					.updateGroup(currentUser)
-					.map { Pair(newMemberIds, memberIds.minus(newMemberIds.toSet())) }
-			}
+			.flatMap { (group, newMemberIds) -> addMembers(currentUser, projectId, group, newMemberIds, memberIds) }
 			.`as`(transactionalOperator::transactional)
+	}
+
+	private fun addMembers(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		group: GroupModel,
+		newMemberIds: List<UUID>,
+		requestedIds: List<UUID>,
+	): Mono<Pair<List<UUID>, List<UUID>>> {
+		return validateMembers(projectId, group, newMemberIds)
+			.map { newMemberIds.map { memberId -> ParticipantModel().apply { id = memberId } } }
+			.map { group.apply { members = members.plus(it) } }
+			.updateGroup(currentUser)
+			.map { Pair(newMemberIds, requestedIds.minus(newMemberIds.toSet())) }
 	}
 
 	override fun removeMemberFromGroupById(

@@ -104,19 +104,22 @@ class MovementQueryService(
 			countParticipants(projectId, isMajor = false, type = REGISTERED, presence = PresenceStatusEnum.OUT),
 			countParticipants(projectId, isMajor = null, type = GUEST, presence = PresenceStatusEnum.IN),
 		)
-			.map { (registeredPresentAdult, registeredAbsentAdult, registeredPresentMinor, registeredAbsentMinor, guestPresent) ->
-				ProjectStatusModel(
-					registered = ProjectStatusModel.ParticipantStatusModel(
-						registeredPresentMinor,
-						registeredPresentAdult,
-						registeredAbsentMinor,
-						registeredAbsentAdult,
-					),
-					guests = guestPresent,
-					lastRefresh = now(),
-				)
+			.map { (presentAdult, absentAdult, presentMinor, absentMinor, guestPresent) ->
+				toProjectStatus(presentAdult, absentAdult, presentMinor, absentMinor, guestPresent)
 			}
 	}
+
+	private fun toProjectStatus(
+		presentAdult: Long,
+		absentAdult: Long,
+		presentMinor: Long,
+		absentMinor: Long,
+		guestPresent: Long,
+	) = ProjectStatusModel(
+		registered = ProjectStatusModel.ParticipantStatusModel(presentMinor, presentAdult, absentMinor, absentAdult),
+		guests = guestPresent,
+		lastRefresh = now(),
+	)
 
 	private fun countParticipants(
 		projectId: UUID,

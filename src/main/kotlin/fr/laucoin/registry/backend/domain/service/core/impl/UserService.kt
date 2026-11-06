@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import org.springframework.dao.DataIntegrityViolationException
 import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.CONCURRENT_UPDATE_CONFLICT
@@ -273,20 +274,21 @@ class UserService(
 	}
 
 	private fun Mono<UserModel>.validateNotCurrentUser(currentUser: CurrentUserModel, error: String) =
-		handle { it, handle ->
-			if (it.id == currentUser.id) {
-				log.warn("The user {} is the current user", currentUser.id)
-				handle.error(RegistryException(FORBIDDEN, error))
-			} else handle.next(it)
-		}
+		handle<UserModel> { user, sink -> sink.nextOrError(user, currentUserError(user, currentUser, error)) }
 
-	private fun Mono<UserModel>.validateNotLastRoleLevel0(error: String) = flatMap { userToUpdate ->
+	private fun currentUserError(user: UserModel, currentUser: CurrentUserModel, error: String): RegistryException? {
+		if (user.id != currentUser.id) return null
+		log.warn("The user {} is the current user", currentUser.id)
+		return RegistryException(FORBIDDEN, error)
+	}
+
+	private fun Mono<UserModel>.validateNotLastRoleLevel0(error: String) = flatMap { validateNotLastAdministrator(it, error) }
+
+	private fun validateNotLastAdministrator(userToUpdate: UserModel, error: String): Mono<UserModel> {
 		val roleLevel = roleService.getLevelByUserRole(userToUpdate.role)
-		if (Objects.isNull(roleLevel) || roleLevel!! > 0) {
-			return@flatMap Mono.just(userToUpdate)
-		}
+		if (Objects.isNull(roleLevel) || roleLevel!! > 0) return Mono.just(userToUpdate)
 
-		port.lockLevel0Users()
+		return port.lockLevel0Users()
 			.then(Mono.defer { port.findByRoleLevel(roleLevel = 0, isVisible = true).collectList() })
 			.map { administrators -> administrators.any { userToUpdate.id != it.id } }
 			.flatMap { rejectIfLastAdministrator(it, userToUpdate, error) }
@@ -311,10 +313,16 @@ class UserService(
 		eligibleRoles: List<String>,
 		role: String?,
 		error: String,
-	) = handle { it, handle ->
-		if (Objects.nonNull(role) && !eligibleRoles.contains(role)) {
-			log.warn("The role {} is not assignable by the user {}", role, currentUser.id)
-			handle.error(RegistryException(FORBIDDEN, error, arrayListOf(role)))
-		} else handle.next(it)
+	) = handle<UserModel> { user, sink -> sink.nextOrError(user, roleError(currentUser, eligibleRoles, role, error)) }
+
+	private fun roleError(
+		currentUser: CurrentUserModel,
+		eligibleRoles: List<String>,
+		role: String?,
+		error: String,
+	): RegistryException? {
+		if (Objects.isNull(role) || eligibleRoles.contains(role)) return null
+		log.warn("The role {} is not assignable by the user {}", role, currentUser.id)
+		return RegistryException(FORBIDDEN, error, arrayListOf(role))
 	}
 }

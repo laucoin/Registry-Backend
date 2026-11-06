@@ -128,11 +128,8 @@ class GroupModelPostgresRepository(
 		return Mono.zip(
 			repository.findById(projectId, id, isVisible).map(mapper::toModel),
 			findContent(projectId, listOf(id), memberIsVisible, memberIsAvailable).collectList()
-				.handle<List<ParticipantModel>> { it, handle -> if (it.isNullOrEmpty()) handle.next(emptyList()) else handle.next(it.first().second) }
-		).map {
-			it.t1.members = it.t2
-			it.t1
-		}
+				.map { it.firstOrNull()?.second ?: emptyList() }
+		).map { it.t1.apply { members = it.t2 } }
 	}
 
 	override fun create(element: GroupModel): Mono<GroupModel> {
@@ -160,27 +157,27 @@ class GroupModelPostgresRepository(
 	}
 
 	fun Mono<GroupModel>.saveNewMembers(element: GroupModel): Mono<GroupModel> {
-		return flatMap { group ->
-			val newMembers = group.getNewMembers(element)
-			if (newMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) })
-				.map(contentMapper::toModel)
-				.collectList()
-				.map { group.apply { members = members.plus(it) } }
-		}
+		return flatMap { addNewMembers(it, element) }
+	}
+
+	private fun addNewMembers(group: GroupModel, element: GroupModel): Mono<GroupModel> {
+		val newMembers = group.getNewMembers(element)
+		if (newMembers.isEmpty()) return Mono.just(group)
+		return contentRepository.saveAll(newMembers.map { contentMapper.toEntity(group.id!!, it) })
+			.map(contentMapper::toModel)
+			.collectList()
+			.map { group.apply { members = members.plus(it) } }
 	}
 
 	fun Mono<GroupModel>.removeDeletedMembers(element: GroupModel): Mono<GroupModel> {
-		return flatMap { group ->
-			val removedMembers = group.getOldMemberIds(element)
-			if (removedMembers.isEmpty()) return@flatMap Mono.just(group)
-			contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers)
-				.then(Mono.fromCallable {
-					group.apply {
-						members = members.filter { !removedMembers.contains(it.id) }
-					}
-				})
-		}
+		return flatMap { dropRemovedMembers(it, element) }
+	}
+
+	private fun dropRemovedMembers(group: GroupModel, element: GroupModel): Mono<GroupModel> {
+		val removedMembers = group.getOldMemberIds(element)
+		if (removedMembers.isEmpty()) return Mono.just(group)
+		return contentRepository.deleteAllByGroupIdAndParticipantIds(group.id!!, removedMembers)
+			.then(Mono.fromCallable { group.apply { members = members.filter { !removedMembers.contains(it.id) } } })
 	}
 
 	private fun save(element: GroupModel): Mono<GroupModel> {

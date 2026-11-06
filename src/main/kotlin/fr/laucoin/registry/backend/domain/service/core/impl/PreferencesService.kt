@@ -50,12 +50,7 @@ class PreferencesService(
 		currentUser: CurrentUserModel,
 		theme: ThemeEnum
 	): Mono<PreferencesModel> {
-		return findByUser(currentUser).flatMap {
-			if (it.theme !== theme) {
-				it.theme = theme
-				save(currentUser, it)
-			} else Mono.just(it)
-		}
+		return findByUser(currentUser).flatMap { saveIfChanged(currentUser, it, it.theme !== theme) { it.theme = theme } }
 	}
 
 	override fun updateLanguage(
@@ -66,10 +61,7 @@ class PreferencesService(
 			?: return Mono.error(RegistryException(BAD_REQUEST, PARAMETER_FORMAT_INVALID))
 
 		return findByUser(currentUser).flatMap {
-			if (it.language != supportedLanguage) {
-				it.language = supportedLanguage
-				save(currentUser, it)
-			} else Mono.just(it)
+			saveIfChanged(currentUser, it, it.language != supportedLanguage) { it.language = supportedLanguage }
 		}
 	}
 
@@ -78,11 +70,19 @@ class PreferencesService(
 		refreshMode: RefreshModeEnum
 	): Mono<PreferencesModel> {
 		return findByUser(currentUser).flatMap {
-			if (it.refreshMode !== refreshMode) {
-				it.refreshMode = refreshMode
-				save(currentUser, it)
-			} else Mono.just(it)
+			saveIfChanged(currentUser, it, it.refreshMode !== refreshMode) { it.refreshMode = refreshMode }
 		}
+	}
+
+	private fun saveIfChanged(
+		currentUser: CurrentUserModel,
+		preferences: PreferencesModel,
+		changed: Boolean,
+		change: () -> Unit,
+	): Mono<PreferencesModel> {
+		if (!changed) return Mono.just(preferences)
+		change()
+		return save(currentUser, preferences)
 	}
 
 	private fun save(currentUser: CurrentUserModel, preferences: PreferencesModel): Mono<PreferencesModel> {

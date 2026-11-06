@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -124,17 +125,17 @@ class ActivityService(
 		port.update(it.apply { update(currentUser, now()) })
 	}
 
-	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { activityToUpdate ->
-		movementPort.countAllByActivityId(
-			activityToUpdate.projectId!!,
-			activityToUpdate.id!!,
-			MovementSearchParamModel(),
-		).handle { it, handle ->
-			if (it > 0) {
-				log.warn("The activity {} already linked to movement(s)", activityToUpdate.id)
-				handle.error(RegistryException(UNPROCESSABLE_CONTENT, error))
-			} else handle.next(activityToUpdate)
-		}
+	private fun Mono<ActivityModel>.validateHasNoMovementLinked(error: String): Mono<ActivityModel> = flatMap { rejectIfLinkedToMovement(it, error) }
+
+	private fun rejectIfLinkedToMovement(activity: ActivityModel, error: String): Mono<ActivityModel> {
+		return movementPort.countAllByActivityId(activity.projectId!!, activity.id!!, MovementSearchParamModel())
+			.handle { count, sink -> sink.nextOrError(activity, linkedToMovementError(activity, count, error)) }
+	}
+
+	private fun linkedToMovementError(activity: ActivityModel, count: Long, error: String): RegistryException? {
+		if (count <= 0) return null
+		log.warn("The activity {} already linked to movement(s)", activity.id)
+		return RegistryException(UNPROCESSABLE_CONTENT, error)
 	}
 
 	private fun ActivityModel.withContentOf(activity: ActivityModel): ActivityModel = apply {

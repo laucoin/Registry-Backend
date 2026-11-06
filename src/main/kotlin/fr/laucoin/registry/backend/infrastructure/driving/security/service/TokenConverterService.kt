@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.security.service
 
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleModel
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_BLOCKED_ACCOUNT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_EMAIL_ALREADY_USED
@@ -77,11 +78,12 @@ class TokenConverterService(
 			.createNewUserOnNotFound(oidcId, email, emailVerified, firstName, lastName)
 			.buildAuthorities()
 
-	private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { it, handle ->
-		if (it.isNotVisible()) {
-			log.warn("Signing in attempt blocked for user \"{}\" due to disabled account", it.id)
-			handle.error(JwtConversionException(LOCKED, AUTH_BLOCKED_ACCOUNT))
-		} else handle.next(it)
+	private fun Mono<CurrentUserModel>.throwOnBlockedUser(): Mono<CurrentUserModel> = handle { user, sink -> sink.nextOrError(user, blockedAccountError(user)) }
+
+	private fun blockedAccountError(user: CurrentUserModel): JwtConversionException? {
+		if (!user.isNotVisible()) return null
+		log.warn("Signing in attempt blocked for user \"{}\" due to disabled account", user.id)
+		return JwtConversionException(LOCKED, AUTH_BLOCKED_ACCOUNT)
 	}
 
 	private fun Mono<CurrentUserModel>.updateUserIfPersonalDataChanged(
