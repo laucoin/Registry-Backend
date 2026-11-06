@@ -23,7 +23,7 @@ class ProjectQueryDto(
 	val isVisible: Boolean? = null,
 	@field:Parameter(description = "Favorite filter: true keeps the favorites of the current User only, false keeps the others, omitted keeps both")
 	val isFavorite: Boolean? = null,
-	@field:Parameter(description = "Profile filter: true keeps the Projects the current User has a valid Profile on, false keeps all the Projects (requires REGISTRY_PROJECT_R authority), omitted defaults to false with the authority and true without")
+	@field:Parameter(description = "Profile filter: true keeps the Projects the current User has a valid Profile on, false keeps all the Projects (requires REGISTRY_PROJECT_R authority), omitted defaults to true")
 	val withProfile: Boolean? = null,
 	@field:Parameter(description = "Instant that must fall inside the validity window")
 	@DateTimeFormat(iso = DATE_TIME)

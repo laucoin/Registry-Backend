@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
+import fr.laucoin.registry.backend.domain.helper.ProjectFavoriteHelper
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
@@ -65,7 +66,7 @@ class ProjectServiceTest {
 	private val service: IProjectService = ProjectService(
 		port,
 		profilePort,
-		favoritePort,
+		ProjectFavoriteHelper(favoritePort),
 		transactionalOperator,
 		roleService,
 		principalCache,
@@ -164,13 +165,16 @@ class ProjectServiceTest {
 		// Arrange
 		val projectId = UUID.randomUUID()
 		val params = ProjectSearchParamModel()
+		val captor = argumentCaptor<ProjectSearchParamModel>()
 		whenever(port.findPage(any(), any())).thenReturn(Mono.just(PageModel(1, 2, 3, 4, emptyList())))
 
 		// Act
 		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R, "${projectId}_REGISTRY_PROJECT_RESTORE"), PageableModel(0, 10), false, params).block()
 
 		// Assert
-		assertEquals(listOf(projectId), params.hiddenReadableIds)
+		verify(port).findPage(any(), captor.capture())
+		assertEquals(listOf(projectId), captor.firstValue.hiddenReadableIds)
+		assertEquals(emptyList<UUID>(), params.hiddenReadableIds)
 	}
 
 	@Test
@@ -472,14 +476,16 @@ class ProjectServiceTest {
 	fun `Should findProjectsPage search the favorites of the current user`() {
 		// Arrange
 		val params = ProjectSearchParamModel(query = null, isFavorite = true)
+		val captor = argumentCaptor<ProjectSearchParamModel>()
 		whenever(port.findPage(any(), any())).thenReturn(Mono.just(PageModel(0, 10, 0, 0, emptyList())))
 
 		// Act
 		service.findProjectsPage(currentUser(REGISTRY_PROJECT_R), PageableModel(0, 10), false, params).block()
 
 		// Assert
-		assertEquals(currentUser().id, params.userId)
-		assertEquals(true, params.isFavorite)
+		verify(port).findPage(any(), captor.capture())
+		assertEquals(currentUser().id, captor.firstValue.userId)
+		assertEquals(true, captor.firstValue.isFavorite)
 	}
 
 	@Test
