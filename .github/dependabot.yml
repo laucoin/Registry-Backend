@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # ── Gradle dependencies ─────────────────────────────────────────────
+  # ── Dépendances Gradle ──────────────────────────────────────────────
   - package-ecosystem: gradle
     directory: "/"
     schedule:
@@ -8,18 +8,18 @@ updates:
       day: monday
     open-pull-requests-limit: 10
     labels: ["dependencies", "gradle"]
-    # Conventional-commit prefix so merges are picked up by semantic-release.
-    # NOTE: per your .releaserc releaseRules, `chore` => a MINOR release. Switch
-    # the prefix to `fix` if you'd rather have dependency bumps release as PATCH.
+    # Préfixe Conventional Commits pour que les merges soient pris en compte par semantic-release.
+    # NOTE : d'après les releaseRules de .releaserc, `chore` => release MINOR. Passer
+    # le préfixe à `fix` pour que les mises à jour de dépendances sortent en PATCH.
     commit-message:
       prefix: chore
       include: scope
     groups:
-      # Bundle all minor & patch bumps into one PR; majors get their own PR.
+      # Regrouper toutes les mises à jour mineures et correctifs dans une PR ; les majeures ont chacune leur PR.
       gradle-minor-patch:
         update-types: [minor, patch]
 
-  # ── Dockerfile base images ──────────────────────────────────────────
+  # ── Images de base du Dockerfile ────────────────────────────────────
   - package-ecosystem: docker
     directory: "/"
     schedule:
@@ -34,7 +34,7 @@ updates:
       docker-minor-patch:
         update-types: [minor, patch]
 
-  # ── GitHub Actions (workflows + local composite actions) ────────────
+  # ── GitHub Actions (workflows + actions composites locales) ────────
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

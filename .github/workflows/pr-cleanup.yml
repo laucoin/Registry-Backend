@@ -1,7 +1,7 @@
 name: PR Cleanup
 
-# When a PR is closed (merged or not), delete the throwaway branch image so the
-# registry doesn't accumulate one image per feature branch.
+# À la fermeture d'une PR (fusionnée ou non), supprime l'image jetable de la branche afin que le
+# registre n'accumule pas une image par branche de fonctionnalité.
 on:
   pull_request:
     branches: [main]
@@ -21,9 +21,9 @@ jobs:
           echo "value=$(echo '${{ github.head_ref }}' \
             | sed 's/[^a-zA-Z0-9._-]/-/g' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      # GHCR-SPECIFIC: deleting package versions requires a PAT with delete:packages
-      # (the built-in GITHUB_TOKEN cannot delete packages). Swap for the Harbor
-      # artifact-delete API when migrating.
+      # SPÉCIFIQUE GHCR : supprimer des versions de package exige un PAT avec delete:packages
+      # (le GITHUB_TOKEN intégré ne peut pas supprimer de packages). À remplacer par l'API
+      # artifact-delete de Harbor lors de la migration.
       - name: Delete image tagged with the branch name
         uses: actions/github-script@v9
         env:

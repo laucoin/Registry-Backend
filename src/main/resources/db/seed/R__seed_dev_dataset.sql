@@ -1,8 +1,8 @@
--- Clear all data from the database
+-- Suppression de toutes les données de la base
 TRUNCATE TABLE tb_movement_content, tb_communication, tb_movement, tb_activity, tb_vehicle, tb_group_content, tb_group, tb_participant, tb_project_profile, tb_project, tb_preferences, tb_user CASCADE;
 
--- Session-scoped helper (dropped with the connection): returns a random mock communication message.
--- Lengths range from a few characters up to the 250-character column limit.
+-- Fonction auxiliaire de session (supprimée avec la connexion) : renvoie un message de communication factice aléatoire.
+-- Les longueurs vont de quelques caractères jusqu'à la limite de 250 caractères de la colonne.
 CREATE OR REPLACE FUNCTION pg_temp.seed_message() RETURNS TEXT AS
 $fn$
 SELECT (ARRAY [
@@ -24,7 +24,7 @@ SELECT (ARRAY [
     ])[1 + FLOOR(RANDOM() * 15)::INT]
 $fn$ LANGUAGE sql VOLATILE;
 
--- Insert data related to users
+-- Insertion des données liées aux utilisateurs
 DO
 $$
     DECLARE
@@ -34,11 +34,11 @@ $$
         global_blocked_user_id    UUID = 'e68014a3-5ac0-42cf-8b85-67d6183f6d69';
         global_blocked_profile_id UUID = 'da39968a-c90f-46e1-b3dd-81988458ea0f';
     BEGIN
-        -- Insert service account
+        -- Insertion du compte de service
         INSERT INTO tb_user(type, first_name, last_name, email)
         VALUES ('SERVICE_ACCOUNT', 'Luc', 'AUCOIN', 'luc.aucoin1998@gmail.com');
 
-        -- Insert users
+        -- Insertion des utilisateurs
         INSERT INTO tb_user (id, oidc_id, type, first_name, last_name, email, role, birthday, last_login, created_by,
                              last_modified_by, visible)
         VALUES (global_admin_id, '865f44e7-1fe0-4ce4-87e5-8159f581894d', 'USER', 'Jane', 'SMITH',
@@ -57,7 +57,7 @@ $$
                 'blocked-profile@sgdf.fr', 'USER_ADMINISTRATOR', '1960-01-01', '2025-03-01 15:28:51.144372 +00:00',
                 global_blocked_profile_id, global_blocked_profile_id, TRUE);
 
-        -- Insert preferences for users
+        -- Insertion des préférences des utilisateurs
         INSERT INTO tb_preferences (user_id, created_by, last_modified_by)
         VALUES (global_admin_id, global_admin_id, global_admin_id),
                (global_coordinator_id, global_coordinator_id, global_coordinator_id),
@@ -67,7 +67,7 @@ $$
     END
 $$;
 
--- Insert projects and make them usable
+-- Insertion des projets et mise en état d'utilisation
 DO
 $$
     DECLARE
@@ -86,13 +86,13 @@ $$
         current_project_ref_date   DATE;
         current_project_ref_ts     TIMESTAMP WITH TIME ZONE;
     BEGIN
-        -- Insert projects
-        -- Options follow ProjectOptionEnum's dependencies: COMMUNICATION requires ACTIVITY,
-        -- ALERT requires ACTIVITY and COMMUNICATION.
+        -- Insertion des projets
+        -- Les options suivent les dépendances de ProjectOptionEnum : COMMUNICATION requiert ACTIVITY,
+        -- ALERT requiert ACTIVITY et COMMUNICATION.
         INSERT INTO tb_project (id, name, begin_date, begin_time, end_date, end_time, options, created_by,
                                 last_modified_by, visible)
-        -- i=3: not started yet, far in the future (so the dataset stays realistic without regenerating it every few
-        -- minutes); i=8: fully completed (both dates already in the past); i IN (5, 12): perpetual (no dates).
+        -- i=3 : pas encore commencé, très loin dans le futur (pour que le jeu de données reste réaliste sans le régénérer toutes les
+        -- quelques minutes) ; i=8 : entièrement terminé (les deux dates déjà passées) ; i IN (5, 12) : perpétuel (sans dates).
         SELECT CASE WHEN i = 1 THEN global_project_id ELSE gen_random_uuid() END,
                (ARRAY [
                    'Summer Camp',
@@ -152,8 +152,8 @@ $$
                 FROM tb_project
                 WHERE id = current_project_id;
 
-                -- "Today" clamped to the project's window: keeps begin/end-relative random spans non-negative for
-                -- a not-yet-started or already-completed project (equals CURRENT_DATE/NOW() for an ongoing one).
+                -- « Aujourd'hui » borné à la fenêtre du projet : garde positives les durées aléatoires relatives au début/à la fin pour
+                -- un projet non démarré ou déjà terminé (égal à CURRENT_DATE/NOW() pour un projet en cours).
                 current_project_ref_date =
                         LEAST(GREATEST(CURRENT_DATE, current_project_begin_date), current_project_end_date);
                 current_project_ref_ts = LEAST(GREATEST(NOW(), current_project_begin_date + current_project_begin_time),
@@ -200,13 +200,13 @@ $$
     END
 $$;
 
--- Insert favorite projects
+-- Insertion des projets favoris
 INSERT INTO tb_project_favorite (user_id, project_id)
 SELECT profile.user_id, profile.project_id
 FROM tb_project_profile profile
 WHERE ABS(HASHTEXT(profile.user_id::TEXT || profile.project_id::TEXT)) % 3 = 0;
 
--- Insert participants
+-- Insertion des participants
 DO
 $$
     DECLARE
@@ -309,7 +309,7 @@ $$
     END
 $$;
 
--- Insert groups
+-- Insertion des groupes
 DO
 $$
     DECLARE
@@ -407,7 +407,7 @@ $$
     END
 $$;
 
--- Insert vehicles
+-- Insertion des véhicules
 DO
 $$
     DECLARE
@@ -492,7 +492,7 @@ $$
     END
 $$;
 
--- Insert activities
+-- Insertion des activités
 DO
 $$
     DECLARE
@@ -587,10 +587,10 @@ $$
     END
 $$;
 
--- Insert movements for registered participants
--- Movements/content are built per-project with two set-based statements (instead of one
--- INSERT per movement and up to 30 more per movement for its content): this replaces ~120k
--- single-row statements per project with 2, which is what actually made this block slow.
+-- Insertion des mouvements des participants inscrits
+-- Mouvements et contenus sont construits par projet avec deux requêtes ensemblistes (au lieu d'un
+-- INSERT par mouvement et jusqu'à 30 de plus par mouvement pour son contenu) : cela remplace ~120k
+-- requêtes mono-ligne par projet par 2, ce qui était la vraie cause de la lenteur de ce bloc.
 DO
 $$
     DECLARE
@@ -662,9 +662,9 @@ $$
                                     ms.i % 50 != 0
                              FROM movement_specs ms
                              RETURNING id),
-                     -- vehicle_slot ranks major participants sitting on an even seat within their own movement
-                     -- (1, 2, 3...); tb_movement_content has a UNIQUE(movement_id, vehicle_id) index, so vehicles
-                     -- must be distinct within a movement, not picked independently per participant.
+                     -- vehicle_slot classe les participants majeurs assis sur une place paire au sein de leur mouvement
+                     -- (1, 2, 3...) ; tb_movement_content a un index UNIQUE(movement_id, vehicle_id), donc les véhicules
+                     -- doivent être distincts au sein d'un mouvement, et non choisis indépendamment par participant.
                      participant_picks AS (SELECT ms.movement_id,
                                                   ms.participant_number,
                                                   ms.pool_name,
@@ -710,7 +710,7 @@ $$
     END
 $$;
 
--- Insert movements for guest participants
+-- Insertion des mouvements des participants invités
 DO
 $$
     DECLARE
@@ -790,7 +790,7 @@ $$
     END
 $$;
 
--- Insert movements' communications
+-- Insertion des communications des mouvements
 DO
 $$
     DECLARE
@@ -843,7 +843,7 @@ $$
     END
 $$;
 
--- Make sure we know a communication ID
+-- S'assurer de connaître un identifiant de communication
 DO
 $$
     DECLARE
@@ -857,7 +857,7 @@ $$
     END
 $$;
 
--- Insert alerts
+-- Insertion des alertes
 DO
 $$
     DECLARE
@@ -891,7 +891,7 @@ $$
 
                         INSERT INTO tb_alert (id, title, status, project_id, created_by, last_modified_by, visible)
                         VALUES (current_alert_id,
-                                -- Title is nullable (VARCHAR(50)): every 7th alert has none.
+                                -- Le titre est nullable (VARCHAR(50)) : une alerte sur 7 n'en a pas.
                                 CASE
                                     WHEN i % 7 = 0 THEN NULL
                                     ELSE (ARRAY ['Missing child', 'Lost bag', 'Fire', 'Late bus', 'Injury',

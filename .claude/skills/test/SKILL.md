@@ -1,43 +1,67 @@
 ---
 name: test
-description: Write, extend or fix tests for the Registry backend (Kotlin, JUnit5, StepVerifier, mockito-kotlin, Testcontainers, WebTestClient). Use only when the user asks to add, write, complete or fix tests, or right before a commit when new code lacks coverage. Never write tests automatically after an edit.
+description: Generates comprehensive, robust, and non-flaky backend tests (unit tests, Testcontainers integration tests, WebTestClient) following the AAA pattern, strict role/scoped isolation security requirements, and Kover quality standards.
 ---
 
-# Write tests — Registry Backend
+# Test Writer (Backend Test Generation)
 
-Write or extend tests for the code pointed at, following these conventions.
+Generate robust, deterministic, and comprehensive tests for backend code, strictly adhering to quality invariants and
+testing standards (coverage, RBAC role isolation, AAA pattern, error handling, and zero flakiness).
 
-## Stack
+## Core Guiding Principles for Writing
 
-JUnit 5, `mockito-kotlin` (`mock()`, `whenever`, `verify`), reactor-test `StepVerifier`, Testcontainers +
-`WebTestClient` via the shared `TestContext`, ArchUnit (`HexagonalArchitectureTest`). Run `./gradlew test`; the full
-gate is `./gradlew build` (includes `koverVerify`).
+### 1. Typology & Target Technical Stack
 
-## Conventions
+- **Unit Tests (Reactive Streams & Components):**
+    - Use `StepVerifier` to validate reactive streams (Reactor).
+    - Use `mockito-kotlin` for mocking dependencies.
+- **Integration Tests (Repositories & Persistence):**
+    - Systematic use of Testcontainers to isolate and provision databases (e.g., PostgreSQL).
+- **Endpoint & Contract Tests (Security & API):**
+    - Use `WebTestClient` to test API contracts and endpoint authorization.
+- **Kover Gate:** Ensure that the generated code is fully covered to prevent any drop in overall code coverage.
 
-- Mirror the package of the class under test under `src/test/kotlin/...`; file `<Class>Test.kt`. Tabs for indentation.
-- **AAA pattern, strictly.** Every test contains exactly these comments, with no additional detail:
+### 2. Role Isolation & Security (RBAC & Scopes)
 
-  ```kotlin
-  // Arrange
-  // Act
-  // Assert
-  ```
+- **Global vs. Scoped Roles Separation:** Explicitly validate the distinct behavior between global application roles and
+  scoped roles.
+- **Cross-Scoped Isolation (Negative A/B Testing):**
+    - Any test attempting to access a **Scoped Role A** resource using credentials/roles restricted to **Scoped Role B**
+      must explicitly include a negative test verifying an access-denied failure (`403 Forbidden` or security
+      exception).
+    - Mandatory coverage to prevent cross-scoped data leakage.
 
-- Methods ≤ 25 lines, tests included. Descriptive backtick names: ``fun `Should ... when ...`()``.
-- **Unit tests** (services, validators, extensions): construct the class directly, `mock()` its ports, no Spring
-  context. Reactive results are verified with `StepVerifier.create(...).expectNext(...).verifyComplete()`.
-- **Parameterized cases:** `@ParameterizedTest` + `@MethodSource` with a `@JvmStatic` provider returning
-  `Stream<Arguments>`.
-- **Repositories:** Testcontainers PostgreSQL. **Endpoints:** `WebTestClient` for contract and `@PreAuthorize`
-  authorization (allow and deny cases).
-- Reuse the shared helpers and fixtures (`WebTestClientExt`, `ModelExt`, `TestContext`, `TestContainerDatabase`);
-  seed data via SQL under `src/test/resources/db/migrations`. Fixtures are excluded from coverage.
+### 3. Test Structure & Rigor (AAA Pattern)
 
-## Deliverable
+- **Strict AAA Separation:** Every test must explicitly separate its phases using mandatory comments:
+    - `// Arrange`
+    - `// Act`
+    - `// Assert`
+- **Behavioral Assertions:** Validate **real behavior** (return values, HTTP status codes, payloads, database mutations)
+  rather than merely verifying mock invocations (`verify`).
+- **Integrity:** No test may be disabled (`@Disabled`), ignored, or weakened.
 
-- Cover the happy path, edge cases, empty/`switchIfEmpty` branches, error branches, validation bounds and
-  authorization allow/deny.
-- Add cases to an existing `*Test.kt` when one exists for the class.
-- Run `./gradlew test` and report the result. Never weaken assertions or coverage thresholds to pass; thresholds only
-  go up.
+### 4. Edge Cases, Errors, Concurrency & Anti-Flaky
+
+- **Error Branches & Boundaries:** Provide test cases for error flows, allow/deny authorization paths, and validation
+  bounds (min value, max value, max+1).
+- **Concurrency & Race Conditions:** If the code touches critical invariants (locking, uniqueness, counters, statuses),
+  implement concurrency tests simulating simultaneous requests.
+- **Anti-Flaky & Determinism Guarantees:**
+    - No unseeded randomness or dependency on an unmocked system clock (`Clock` injection required).
+    - **Absolute ban on `Thread.sleep()`** in reactive or integration tests (prefer `StepVerifier` time virtualizers or
+      reactive synchronization).
+    - **State Isolation:** Testcontainers must ensure total database isolation and rollbacks between tests.
+
+---
+
+## Expected Output Format
+
+When writing tests, structure your deliverable as follows:
+
+1. **Test Strategy & Covered Cases:** Brief description of the tested flows (positive, negative, security/RBAC,
+   boundaries).
+2. **Test Code Implementation:** Clean, idiomatic (Kotlin/Spring) code strictly following the `// Arrange`, `// Act`,
+   `// Assert` pattern.
+3. **Invariant Verification:** Confirmation that the use of Testcontainers, `StepVerifier`, `WebTestClient`, and the
+   absence of `Thread.sleep()` are properly respected.
