@@ -75,15 +75,27 @@ object DateExt {
 	}
 
 	fun CustomDateTimeModel?.isInRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {
-		val realStart = (start ?: CustomDateTimeModel.MIN).withTimeOrElse(OffsetTime.MIN)
-		val realEnd = (end ?: CustomDateTimeModel.MAX).withTimeOrElse(OffsetTime.MAX)
-		val challengerForStart = (this ?: realStart).withTimeOrElse(realStart.time)
-		val challengerForEnd = (this ?: realEnd).withTimeOrElse(realEnd.time)
+		val realStart = start.orMin()
+		val realEnd = end.orMax()
+		val challengerForStart = alignedOn(realStart)
+		val challengerForEnd = alignedOn(realEnd)
 
 		val isStrictlyInRange =
 			(realStart.asStartIsAfterOther(challengerForStart) || realEnd.asEndIsBeforeOther(challengerForEnd)).not()
 
 		return isSameInstant(realStart, challengerForStart) || isSameInstant(realEnd, challengerForEnd) || isStrictlyInRange
+	}
+
+	private fun CustomDateTimeModel?.orMin(): CustomDateTimeModel {
+		return (this ?: CustomDateTimeModel.MIN).withTimeOrElse(OffsetTime.MIN)
+	}
+
+	private fun CustomDateTimeModel?.orMax(): CustomDateTimeModel {
+		return (this ?: CustomDateTimeModel.MAX).withTimeOrElse(OffsetTime.MAX)
+	}
+
+	private fun CustomDateTimeModel?.alignedOn(bound: CustomDateTimeModel): CustomDateTimeModel {
+		return (this ?: bound).withTimeOrElse(bound.time)
 	}
 
 	private fun CustomDateTimeModel.withTimeOrElse(defaultTime: OffsetTime?): CustomDateTimeModel {

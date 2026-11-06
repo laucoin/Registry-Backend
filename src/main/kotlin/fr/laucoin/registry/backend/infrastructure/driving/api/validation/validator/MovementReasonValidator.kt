@@ -37,8 +37,12 @@ class MovementReasonValidator: GenericValidator<MovementReason, Any>() {
 		return when {
 			reason == null && participantType === GUEST -> type === OUT
 			reason == null && activityId == null && participantType === REGISTERED -> type === IN
-			else -> activityId != null || (reason!!.type == type && reason.participantType == participantType)
+			else -> activityId != null || matches(reason!!, type)
 		}
+	}
+
+	private fun matches(reason: MovementReasonEnum, type: MovementTypeEnum): Boolean {
+		return reason.type == type && reason.participantType == participantType
 	}
 
 	private inline fun <reified T : Enum<T>> extractEnum(field: String, value: Any): T? {
