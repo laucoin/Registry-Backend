@@ -54,7 +54,7 @@ mappers are specified in `architecture-review`; the prohibitions are listed in �
 
 - **`config/`**: Spring configuration (security, CORS, properties binding, i18n, OpenAPI). Cross-cutting concerns live
   here; business capabilities live in `domain/` with adapters under `infrastructure/`, grouped by resource.
-- **`domain/service/`** is split into `core/` (one service per resource), `usecase/` (orchestrators, the only services
+- **`domain/service/`** is split into `core/` (services per resource, split by concern — query, search, write — when one grows too large), `usecase/` (orchestrators, the only services
   the REST layer calls) and `support/` (technical services without a resource: translation, concurrency, logging,
   principal cache). `support` is callable from every layer and never depends on `core` nor `usecase`.
 - Multi-step writes run inside `transactionalOperator::transactional` (ADR 002).
