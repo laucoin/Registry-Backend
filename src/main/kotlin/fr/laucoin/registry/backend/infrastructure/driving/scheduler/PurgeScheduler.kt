@@ -7,6 +7,7 @@ import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
@@ -38,7 +39,8 @@ class PurgeScheduler(
 	fun purgeAudits() = launch("audits", platform.purgeAudits(dateThreshold = null, dryRun = false))
 
 	private fun launch(job: String, purge: Publisher<*>) {
-		Mono.from(purge)
+		Flux.from(purge)
+			.then()
 			.doOnError { log.error("Scheduled purge \"{}\" failed", job, it) }
 			.onErrorResume { Mono.empty() }
 			.subscribe()
