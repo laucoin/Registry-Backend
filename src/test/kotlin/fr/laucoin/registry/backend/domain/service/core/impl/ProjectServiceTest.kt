@@ -18,13 +18,11 @@ import fr.laucoin.registry.backend.domain.port.IProjectFavoritePort
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.core.IProjectService
-import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import fr.laucoin.registry.backend.test.ModelExt
 import fr.laucoin.registry.backend.test.ModelExt.defaultProject
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
-import fr.laucoin.registry.backend.test.ModelExt.defaultProjectProfile
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -61,7 +59,6 @@ class ProjectServiceTest {
 	private val port: IProjectPort = mock()
 	private val profilePort: IProjectProfilePort = mock()
 	private val favoritePort: IProjectFavoritePort = mock()
-	private val projectProfileService: IUserProjectProfileService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val roleService: IRoleService = mock()
 	private val principalCache: IPrincipalCacheService = mock()
@@ -69,7 +66,6 @@ class ProjectServiceTest {
 		port,
 		profilePort,
 		favoritePort,
-		projectProfileService,
 		transactionalOperator,
 		roleService,
 		principalCache,
@@ -539,41 +535,22 @@ class ProjectServiceTest {
 
 		// Assert
 		verifyNoInteractions(port)
-		verifyNoInteractions(projectProfileService)
 		verifyNoInteractions(transactionalOperator)
 		verifyNoInteractions(roleService)
 	}
 
 	@Test
-	fun `Should createProject call profile service createUserProjectProfileFromProject and port create`() {
+	fun `Should createProject call port create with the creator as author`() {
 		// Arrange
-		whenever(projectProfileService.createUserProjectProfileFromProject(any(), any()))
-			.thenReturn(Mono.just(defaultProjectProfile()))
 		whenever(port.create(any())).thenReturn(Mono.just(defaultProject()))
-		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<String>(0) }
 
 		// Act
-		service.createProject(currentUser(), defaultProject()).block()
+		val result = service.createProject(currentUser(), defaultProject()).block()
 
 		// Assert
-		verify(projectProfileService).createUserProjectProfileFromProject(currentUser(), defaultProject())
+		assertEquals(defaultProjectId, result?.id)
 		verify(port).create(defaultProject())
-		verify(transactionalOperator).transactional(any<Mono<*>>())
-	}
-
-	@Test
-	fun `Should createProject invalidate the cached principal of the creator so the new profile grants its authorities`() {
-		// Arrange
-		whenever(projectProfileService.createUserProjectProfileFromProject(any(), any()))
-			.thenReturn(Mono.just(defaultProjectProfile()))
-		whenever(port.create(any())).thenReturn(Mono.just(defaultProject()))
-		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
-
-		// Act
-		service.createProject(currentUser(), defaultProject()).block()
-
-		// Assert
-		verify(principalCache).invalidate(currentUser().oidcId)
+		verifyNoInteractions(transactionalOperator)
 	}
 
 	@ParameterizedTest
