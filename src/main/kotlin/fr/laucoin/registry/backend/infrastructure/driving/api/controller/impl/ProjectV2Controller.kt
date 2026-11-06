@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
@@ -30,6 +31,7 @@ import reactor.core.publisher.Mono
 @RestController
 class ProjectV2Controller(
 	private val service: IProjectService,
+	private val useCase: IProjectUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectWithProfileReaderDtoMapper,
 	private val writerMapper: ProjectWriterDtoMapper,
@@ -65,7 +67,7 @@ class ProjectV2Controller(
 		exchange: ServerWebExchange,
 	): Mono<ResponseEntity<ProjectWithProfileReaderDto>> {
 		val projectModel = writerMapper.toModel(project)
-		return service.createProject(currentUser, projectModel)
+		return useCase.createProject(currentUser, projectModel)
 			.map(readerMapper::toDto)
 			.map { exchange.created(it) }
 	}

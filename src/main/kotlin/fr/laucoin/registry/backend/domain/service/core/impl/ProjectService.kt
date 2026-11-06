@@ -24,7 +24,6 @@ import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IProjectProfilePort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IProjectService
-import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileService
 import fr.laucoin.registry.backend.domain.service.support.IPrincipalCacheService
 import fr.laucoin.registry.backend.domain.service.support.IRoleService
 import java.time.Clock
@@ -39,7 +38,7 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Gère les projets, leurs options, compteurs et favoris.
- * Périmètre : Cycle de vie du projet et création du profil administrateur initial.
+ * Périmètre : Cycle de vie du projet.
  * Limites : Ne gère pas les profils de projet au-delà du profil initial.
  */
 @Service
@@ -47,7 +46,6 @@ class ProjectService(
 	private val port: IProjectPort,
 	private val profilePort: IProjectProfilePort,
 	private val favoritePort: IProjectFavoritePort,
-	private val userProjectProfileService: IUserProjectProfileService,
 	private val transactionalOperator: TransactionalOperator,
 	private val roleService: IRoleService,
 	private val principalCache: IPrincipalCacheService,
@@ -148,13 +146,6 @@ class ProjectService(
 
 	override fun createProject(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel> {
 		return port.create(project.apply { create(currentUser, now()) })
-			.flatMap {
-				userProjectProfileService.createUserProjectProfileFromProject(currentUser, it)
-					.thenReturn(it)
-			}
-			.withCurrentUserProfile(currentUser)
-			.`as`(transactionalOperator::transactional)
-			.doOnNext { principalCache.invalidate(currentUser.oidcId) }
 	}
 
 	override fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel> {

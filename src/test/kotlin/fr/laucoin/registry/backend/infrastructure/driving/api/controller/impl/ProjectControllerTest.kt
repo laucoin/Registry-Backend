@@ -29,6 +29,7 @@ import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.SortModel
 import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ProjectWriterDto
@@ -80,6 +81,9 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 class ProjectControllerTest : TestContext() {
 	@MockitoBean
 	private lateinit var service: IProjectService
+
+	@MockitoBean
+	private lateinit var useCase: IProjectUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: ProjectWithProfileReaderDtoMapper
@@ -379,7 +383,7 @@ class ProjectControllerTest : TestContext() {
 			end = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
 			options = listOf(ACTIVITY)
 		)
-		whenever(service.createProject(any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(useCase.createProject(any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto().apply { id = createdId })
 
@@ -396,7 +400,7 @@ class ProjectControllerTest : TestContext() {
 			.valueEquals("Location", "${BASE_URL.replace("{projectId}", defaultProjectId.toString())}/$createdId")
 		result.body<ProjectWithProfileReaderDto>(CREATED)
 
-		verify(service).createProject(any(), any())
+		verify(useCase).createProject(any(), any())
 		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any())
 	}
