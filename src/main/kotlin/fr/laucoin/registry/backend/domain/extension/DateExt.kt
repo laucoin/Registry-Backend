@@ -75,22 +75,22 @@ object DateExt {
 	}
 
 	fun CustomDateTimeModel?.isInRange(start: CustomDateTimeModel?, end: CustomDateTimeModel?): Boolean {
-		val realStart = (start ?: CustomDateTimeModel.MIN).copy()
-		if (Objects.isNull(realStart.time)) realStart.time = OffsetTime.MIN
-		val realEnd = (end ?: CustomDateTimeModel.MAX).copy()
-		if (Objects.isNull(realEnd.time)) realEnd.time = OffsetTime.MAX
-		val realChallengerForStart = (this ?: realStart).copy()
-		if (Objects.isNull(realChallengerForStart.time)) realChallengerForStart.time = realStart.time
-		val realChallengerForEnd = (this ?: realEnd).copy()
-		if (Objects.isNull(realChallengerForEnd.time)) realChallengerForEnd.time = realEnd.time
+		val realStart = (start ?: CustomDateTimeModel.MIN).withTimeOrElse(OffsetTime.MIN)
+		val realEnd = (end ?: CustomDateTimeModel.MAX).withTimeOrElse(OffsetTime.MAX)
+		val challengerForStart = (this ?: realStart).withTimeOrElse(realStart.time)
+		val challengerForEnd = (this ?: realEnd).withTimeOrElse(realEnd.time)
 
-		val isEqualStart =
-			realStart.date.isEqual(realChallengerForStart.date) && realStart.time!!.isEqual(realChallengerForStart.time)
-		val isEqualEnd =
-			realEnd.date.isEqual(realChallengerForEnd.date) && realEnd.time!!.isEqual(realChallengerForEnd.time)
 		val isStrictlyInRange =
-			(realStart.asStartIsAfterOther(realChallengerForStart) || realEnd.asEndIsBeforeOther(realChallengerForEnd)).not()
+			(realStart.asStartIsAfterOther(challengerForStart) || realEnd.asEndIsBeforeOther(challengerForEnd)).not()
 
-		return isEqualStart || isEqualEnd || isStrictlyInRange
+		return isSameInstant(realStart, challengerForStart) || isSameInstant(realEnd, challengerForEnd) || isStrictlyInRange
+	}
+
+	private fun CustomDateTimeModel.withTimeOrElse(defaultTime: OffsetTime?): CustomDateTimeModel {
+		return copy().also { if (it.time == null) it.time = defaultTime }
+	}
+
+	private fun isSameInstant(first: CustomDateTimeModel, second: CustomDateTimeModel): Boolean {
+		return first.date.isEqual(second.date) && first.time!!.isEqual(second.time)
 	}
 }

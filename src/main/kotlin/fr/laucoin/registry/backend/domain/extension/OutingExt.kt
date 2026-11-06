@@ -20,15 +20,21 @@ object OutingExt {
 		var openedAt: ZonedDateTime? = null
 
 		for (event in this) {
-			val opened = openedAt
-			when {
-				event.type == IN && opened != null -> outings += OutingModel(opened, event.dateTime)
-				event.type == OUT && event.reason == DEFINITIVE_DEPARTURE && opened != null -> outings += OutingModel(opened, event.dateTime)
-			}
+			closedOuting(openedAt, event)?.let(outings::add)
 			openedAt = nextOpening(openedAt, event)
 		}
 
 		return openedAt?.let { outings + OutingModel(it, now, ongoing = true) } ?: outings
+	}
+
+	private fun closedOuting(openedAt: ZonedDateTime?, event: MovementEventModel): OutingModel? {
+		if (openedAt == null || !event.closesOuting()) return null
+
+		return OutingModel(openedAt, event.dateTime)
+	}
+
+	private fun MovementEventModel.closesOuting(): Boolean {
+		return type == IN || (type == OUT && reason == DEFINITIVE_DEPARTURE)
 	}
 
 	fun List<OutingModel>.outSeconds(window: TimelineWindowModel?): Long {
