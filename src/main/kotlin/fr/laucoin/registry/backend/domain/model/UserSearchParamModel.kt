@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import java.util.UUID
 
 
@@ -12,6 +13,7 @@ data class UserSearchParamModel(
 
 	var memberOfProjectId: UUID? = null
 
+	@Default
 	constructor(
 		query: String? = null,
 		isVisible: Boolean? = null,
