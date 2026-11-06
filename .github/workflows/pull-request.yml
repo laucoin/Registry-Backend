@@ -5,7 +5,7 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
 
-# One in-flight run per PR; a new push cancels the previous build.
+# Une seule exécution en cours par PR ; un nouveau push annule le build précédent.
 concurrency:
   group: pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -18,7 +18,7 @@ jobs:
   verify:
     name: Test, build & publish branch image
     runs-on: ubuntu-latest
-    # Fork PRs cannot read registry secrets — only build internal-branch PRs.
+    # Les PR de forks ne peuvent pas lire les secrets du registre — seules les PR de branches internes sont construites.
     if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
@@ -35,7 +35,7 @@ jobs:
       - name: Set up Gradle (dependency + build cache)
         uses: gradle/actions/setup-gradle@v4
 
-      # `build` runs the full test suite AND assembles build/libs/registry-backend.jar.
+      # `build` exécute toute la suite de tests ET assemble build/libs/registry-backend.jar.
       - name: Run tests & build
         run: ./gradlew build
 
@@ -45,7 +45,7 @@ jobs:
           echo "value=$(echo '${{ github.head_ref }}' \
             | sed 's/[^a-zA-Z0-9._-]/-/g' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      # Tag == branch name, so every rebuild overwrites the previous PR image.
+      # Tag == nom de la branche : chaque rebuild écrase l'image précédente de la PR.
       - name: Build & push branch image
         uses: ./.github/actions/docker-publish
         with:

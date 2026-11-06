@@ -3,6 +3,10 @@
 Strict guidelines for AI agents and developers working on this reactive Kotlin backend. Specifications live in a
 **separate repository** (the documentation hub): spec commits never land here, code commits never land there.
 
+This document holds the workflow rules and the non-negotiable invariants. Detailed rules live in the **skills**
+(`.claude/skills/`, see §6) and are referenced, never copied, to avoid divergence. Skills state **generic** rules: a
+concrete value in a skill (a version prefix, a path, a status code) is an example of the rule, not the rule itself.
+
 ---
 
 ## 1. Language & Communication
@@ -15,7 +19,7 @@ Strict guidelines for AI agents and developers working on this reactive Kotlin b
   request, documentation update). Each question must carry enough context to decide without re-reading the code:
   what is at stake, the relevant code or spec reference (`file:line`), 2–4 options each with its consequences and
   trade-offs, and a recommended option placed first. Group related decisions in a single call. Do not ask when a
-  convention of this document or the existing code already settles the point.
+  convention of this document, a skill or the existing code already settles the point.
 - **Detailed questions (exception to the brevity rule):** assume the user has lost the context (after `/clear`, a task
   switch or a long session). Every interactive question is therefore self-contained and detailed, never a terse label:
   1. **Situation:** recall the starting point (current behaviour, what was already done, files with `file:line`).
@@ -23,10 +27,10 @@ Strict guidelines for AI agents and developers working on this reactive Kotlin b
   3. **Options:** for each one, state concretely what changes, what is kept or lost, the risks and the follow-up work.
   4. **Recommendation:** first option, with the reason for the choice.
   Use `preview` to compare before/after. A question the user must reject to ask for clarification is a failed question.
-- **Code & Comments:** All source code, identifiers, commit messages, and error-key defaults **must** be written in
-  **US English**. Comments and KDoc **must** be written in **French**; the `// Arrange`, `// Act`, `// Assert` test
-  markers stay as is.
-- **Strict Scope:** Address only the requested task. Do not refactor surrounding code or fix unrelated items.
+- **Code & Comments:** language conventions for code, comments, messages and spelling are defined in
+  `techlead-review` (§ Linguistic Conventions).
+- **Strict Scope:** Address only the requested task. Do not refactor surrounding code or fix unrelated items. Every file
+  that the task modifies must however comply with the skills (§6); files it does not touch are left as they are.
 
 ---
 
@@ -34,6 +38,7 @@ Strict guidelines for AI agents and developers working on this reactive Kotlin b
 
 - **Language & Runtime:** Kotlin on JDK 25, Spring Boot WebFlux (fully reactive: `Mono` / `Flux`).
 - **Persistence:** PostgreSQL through R2DBC; **Flyway** owns the schema (JDBC is used by Flyway at boot only).
+- **Mapping:** MapStruct for every object-to-object mapping (rules in `architecture-review`).
 - **Security:** Spring Security resource server (JWT), authentication delegated to an external ID provider (Authentik).
 - **Build & Quality:** Gradle, JUnit, `mockito-kotlin`, `StepVerifier`, `WebTestClient`, Testcontainers, ArchUnit
   (`HexagonalArchitectureTest`), Kover (`koverVerify` coverage gate).
@@ -44,19 +49,12 @@ Strict guidelines for AI agents and developers working on this reactive Kotlin b
 ## 3. Architecture
 
 The root package `fr.laucoin.registry.backend` contains **only** `config/`, `domain/`, `infrastructure/` (ADR 001).
-Boundaries are enforced by ArchUnit on every `./gradlew build`.
+Boundaries are enforced by ArchUnit on every `./gradlew build`. Layering, service/use-case split, helpers, data flow and
+mappers are specified in `architecture-review`; the prohibitions are listed in §10.
 
-- **`domain/`**: business models, `port` interfaces, service use-cases. Never depends on `infrastructure`.
-- **`infrastructure/driving/api`**: REST layer — controller contract interfaces, controllers, reader/writer DTOs, mappers.
-- **`infrastructure/driven/postgres` and `driven/idp`**: driven adapters — entities, repositories, mappers, IDP client.
 - **`config/`**: Spring configuration (security, CORS, properties binding, i18n, OpenAPI). Cross-cutting concerns live
   here; business capabilities live in `domain/` with adapters under `infrastructure/`, grouped by resource.
-
-**Data flow:** controller → service → port → adapter. The contract interface carries the endpoint metadata
-(`@RequestMapping`, `@PreAuthorize`, OpenAPI, bean validation); the `@RestController` only maps DTOs and delegates to a
-domain service; the service owns the business rules and reaches the outside only through ports; the port
-implementation does the I/O and maps entities to domain models. Multi-step writes run inside
-`transactionalOperator::transactional` (ADR 002). The prohibitions are listed in §11.
+- Multi-step writes run inside `transactionalOperator::transactional` (ADR 002).
 
 ---
 
@@ -66,7 +64,6 @@ implementation does the I/O and maps entities to domain models. Multi-step write
   environment variables, bound through typed properties. Never hardcode or bake environment-specific values.
 - **Fail loudly:** secrets (datasource password, IDP client secret) are placeholders in `application.yml`; a missing one
   **must fail startup**, never silently default.
-- **Explicit mappers** (`entity ↔ domain model ↔ DTO`) even when structures are identical.
 - **Time & randomness** come from injected abstractions (e.g. `Clock`) so they stay testable.
 - The configuration keys are documented in `README.md` (single reference).
 
@@ -74,7 +71,8 @@ implementation does the I/O and maps entities to domain models. Multi-step write
 
 ## 5. Coding Standards
 
-- **Security:** validate every input, authorize every endpoint, never leak internals (see §11).
+- **Security:** validate every input, authorize every endpoint, never leak internals (see §10 and
+  `cybersecurity-review`).
 - **Performance:** non-blocking pipelines; SQL-side filtering, sorting and pagination; no N+1; no unbounded collection.
 - **Kotlin:** immutability by default (`val`, `data class`); null-safety instead of sentinel values.
 - **Errors:** i18n message keys resolved through `ErrorConst` + `resources/i18n` bundles (en default, fr) via
@@ -83,8 +81,8 @@ implementation does the I/O and maps entities to domain models. Multi-step write
   errors; never swallow an error, never `subscribe()` in a request path, never return `null` from a reactive method.
 - **Reactive readability:** one operator per line; if an operator's logic needs a second line, extract it into a
   well-named private method. Exceptions are agreed with the developer case by case.
-- **Method size:** 25 lines or fewer (tests included).
-- **Naming:** explicit and self-descriptive. A lambda with a single parameter may use a one- or two-letter name (`it`).
+- **Craft thresholds** (method size, parameters, nesting, complexity, lambdas, naming, duplication) and **REST API
+  design** are defined in `techlead-review`.
 - **No dead code:** remove unused code, methods, imports and variables.
 
 ---
@@ -93,16 +91,24 @@ implementation does the I/O and maps entities to domain models. Multi-step write
 
 When a request matches a skill, **load and follow it before doing anything else**. Do not improvise the procedure.
 
-| Request                                                    | Skill         |
-|------------------------------------------------------------|---------------|
-| Review a diff, file or branch; "review", "check my change" | `code-review` |
-| Add, write, extend or fix tests                            | `test`        |
-| Create a commit, plan commit scopes                        | `commit`      |
-| Compare the code against the documentation                 | `doc-drift`   |
+| Request                                                    | Skill                 |
+|------------------------------------------------------------|-----------------------|
+| Review a diff, file or branch; "review", "check my change" | `code-review`         |
+| Guided feature-by-feature review with the developer        | `peer-review`         |
+| Add, write, extend or fix tests                            | `test`                |
+| Create a commit, plan commit scopes                        | `git-commit`          |
+| Create a local branch                                      | `git-branch-creation` |
+| Create an issue / obtain a ticket number                   | `git-issue-creation`  |
+
+`code-review` delegates to `architecture-review`, `cybersecurity-review`, `qa-review`, `techlead-review` and
+`peer-review`; load those directly only when the user asks for that single perspective.
+
+**Positioning:** the skills describe the target state. Their rules apply to every file touched by the change from now
+on; a gap with untouched existing code is reported as debt, never silently ignored.
 
 `code-review` and `test` run **only** before a commit or when the user asks for them; never automatically after an
-edit. Before each commit, `code-review` must give every one of its 4 ratings ≥ 8/10, and the new code must be covered
-by tests.
+edit. Before each commit, `code-review` must reach 100/100 on each of its categories (its own re-check loop applies),
+and the new code must be covered by tests.
 
 ---
 
@@ -112,28 +118,11 @@ by tests.
   authority. `./gradlew test` is a faster inner loop. Coverage thresholds only go up.
 - **Run locally:** `./gradlew bootRun` (pass infra settings as `-D…` VM options).
 - **Local dependencies:** `cd local-dev && cp .example.env .env && docker compose up -d` (PostgreSQL + Authentik).
-- Test writing conventions (AAA, fixtures, naming) are in the `test` skill.
+- Test writing conventions are in the `test` skill.
 
 ---
 
-## 8. Documentation
-
-- **Default source:** `https://doc.laucoin.fr/registry/functional` (technical specs under `/technical`). If a local
-  copy may be fresher, propose it to the user instead of asking where the specs are.
-- Always ask the user whether documentation updates are relevant to a change, and where the documentation is located,
-  before updating anything.
-- **Separation:** never modify documentation during code steps, never touch backend source during a specification step.
-  A scope change or unforeseen case means updating the specification **first**.
-- **Conflict/Missing:** if a request or a spec would require violating a rule of this document, stop. Propose either to
-  update this document or to adjust the request/spec, and proceed only once the user has picked one.
-- `README.md` and internal configuration files must be updated whenever an API, feature, configuration key, migration or
-  dependency changes. The README keeps an exhaustive **"Comment l'installer et l'utiliser ? ⚙️"** section (prerequisites,
-  configuration keys with defaults, local setup, build/run/test commands).
-- ADRs **001–006, 009, 011** govern the backend (007, 008, 012 are frontend-scoped).
-
----
-
-## 9. Comments Policy
+## 8. Comments Policy
 
 - Ask the user before adding any comment. Keep comments synthetic; none about migrations, past states or changelogs. Write them in French.
 - Future work or technical debt is marked `// TODO:`.
@@ -150,24 +139,24 @@ by tests.
 
 ---
 
-## 10. Git
+## 9. Git
 
-- **Commits:** the agent may commit, in Conventional Commits format `<type>(<scope>): <short summary>`,
-  `type` ∈ `feat, fix, chore, docs, style, refactor, perf, test` (semantic-release derives versions from them, ADR 009).
-  Use the `commit` skill.
+Commit format, atomicity, branch naming and issue creation are defined in `git-commit`, `git-branch-creation` and
+`git-issue-creation` (the scope is the ticket number of the branch).
+
 - **The git remote is read-only:** no write action on it (push, creating or editing a pull request, issue or release,
   etc.). Reads (fetch, viewing pull requests and issues) are allowed. Write actions are also denied in
   `.claude/settings.json`.
-- **Scopes** are planned and agreed with the user before development begins.
 - **Pre-commit:** `./gradlew build` must pass. Never commit a failing build or a coverage drop.
 - **Work-in-progress gate:** while a complete, testable feature is implemented but uncommitted, refuse any new unrelated
   feature; only fixes, review feedback and adjustments to the pending feature are allowed.
 - **Misunderstanding / bug:** stop immediately, never stack patch commits on a broken change. Explain the issue in one
   sentence so the user can `git reset`.
+- Releases derive from Conventional Commits through semantic-release (ADR 009).
 
 ---
 
-## 11. Non-Negotiable Technical Invariants
+## 10. Non-Negotiable Technical Invariants
 
 A change must not silently violate any of these:
 
@@ -200,8 +189,9 @@ A change must not silently violate any of these:
   default `USER` role. (ADR 004)
 - **No secret or personal data in logs or responses** beyond what the endpoint's contract requires.
 - **CORS is an explicit allow-list**, never `*`.
-- **One API version: `/api/v2`.** The irregular endpoints listed in `api-reference.md`
-  (`.../profiles/{id}/accept/{accepted}`, `.../alerts/{id}/status/{status}`, the `impersonate` naming) are **frozen**.
+- **Every API is versioned in its URL.** The current and only version is `/api/v2`. The irregular endpoints listed in
+  `api-reference.md` (`.../profiles/{id}/accept/{accepted}`, `.../alerts/{id}/status/{status}`, the `impersonate`
+  naming) are **frozen**.
 - **Retention purges are irreversible and gated.** `/api/v2/purge/**` requires `REGISTRY_JOB_C`; `dryRun` **defaults to
   `true`**; thresholds are configuration, not code; the four sweeps are staggered content-before-configuration. No
   export before deletion. (ADR 011)

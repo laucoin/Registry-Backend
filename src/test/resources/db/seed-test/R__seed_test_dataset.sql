@@ -1,4 +1,4 @@
--- Insert data related to users
+-- Insertion des données liées aux utilisateurs
 DO
 $$
     DECLARE
@@ -8,7 +8,7 @@ $$
         global_blocked_user_id    UUID = 'e68014a3-5ac0-42cf-8b85-67d6183f6d69';
         global_blocked_profile_id UUID = 'da39968a-c90f-46e1-b3dd-81988458ea0f';
     BEGIN
-        -- Insert users
+        -- Insertion des utilisateurs
         INSERT INTO tb_user (id, oidc_id, type, first_name, last_name, email, role, birthday, last_login, created_by,
                              last_modified_by, visible)
         VALUES (global_admin_id, '08513d7b-cce1-4efe-bb27-8d936c4a12b4', 'USER', 'Jane', 'SMITH',
@@ -27,7 +27,7 @@ $$
                 'blocked-profile@sgdf.fr', 'USER_ADMINISTRATOR', '1960-01-01', '2025-03-01 15:28:51.144372 +00:00',
                 global_blocked_profile_id, global_blocked_profile_id, TRUE);
 
-        -- Insert preferences for users
+        -- Insertion des préférences des utilisateurs
         INSERT INTO tb_preferences (user_id, created_by, last_modified_by)
         VALUES (global_coordinator_id, global_coordinator_id, global_coordinator_id),
                (global_user_id, global_user_id, global_user_id),
@@ -36,7 +36,7 @@ $$
     END
 $$;
 
--- Insert projects and make them usable
+-- Insertion des projets et mise en état d'utilisation
 DO
 $$
     DECLARE
@@ -53,7 +53,7 @@ $$
         current_project_end_date   DATE;
         current_project_end_time   TIME WITH TIME ZONE;
     BEGIN
-        -- Insert projects
+        -- Insertion des projets
         INSERT INTO tb_project (id, name, begin_date, begin_time, end_date, end_time, created_by, last_modified_by,
                                 visible)
         SELECT CASE WHEN i = 1 THEN global_project_id ELSE gen_random_uuid() END,
@@ -113,7 +113,7 @@ $$
     END
 $$;
 
--- Insert participants
+-- Insertion des participants
 DO
 $$
     DECLARE
@@ -194,7 +194,7 @@ $$
     END
 $$;
 
--- Insert groups
+-- Insertion des groupes
 DO
 $$
     DECLARE
@@ -277,7 +277,7 @@ $$
     END
 $$;
 
--- Insert vehicles
+-- Insertion des véhicules
 DO
 $$
     DECLARE
@@ -342,7 +342,7 @@ $$
     END
 $$;
 
--- Insert activities
+-- Insertion des activités
 DO
 $$
     DECLARE
@@ -410,7 +410,7 @@ $$
     END
 $$;
 
--- Insert movements for registered participants
+-- Insertion des mouvements des participants inscrits
 DO
 $$
     DECLARE
@@ -527,7 +527,7 @@ $$
     END
 $$;
 
--- Insert movements for guest participants
+-- Insertion des mouvements des participants invités
 DO
 $$
     DECLARE
@@ -596,7 +596,7 @@ $$
     END
 $$;
 
--- Insert movements' communications
+-- Insertion des communications des mouvements
 DO
 $$
     DECLARE
@@ -642,7 +642,7 @@ $$
     END
 $$;
 
--- Make sure we know a communication ID
+-- S'assurer de connaître un identifiant de communication
 DO
 $$
     DECLARE
@@ -656,7 +656,7 @@ $$
     END
 $$;
 
--- Insert alerts
+-- Insertion des alertes
 DO
 $$
     DECLARE
