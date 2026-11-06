@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.OutingExt.toOutings
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -35,7 +36,6 @@ import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.port.IUserPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IParticipantService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import java.time.Clock
 import java.time.LocalDate
 import java.util.Objects
@@ -56,7 +56,7 @@ import reactor.core.publisher.Mono
  */
 @Service
 class ParticipantService(
-	private val projectService: IProjectService,
+	private val projectDates: ProjectDateHelper,
 	private val port: IParticipantPort,
 	private val userPort: IUserPort,
 	private val movementPort: IMovementPort,
@@ -162,7 +162,7 @@ class ParticipantService(
 		currentUser: CurrentUserModel,
 		participant: ParticipantModel,
 	): Mono<ParticipantModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			participant.projectId!!,
 			participant.startAvailability,
 			participant.endAvailability,
@@ -242,7 +242,7 @@ class ParticipantService(
 		id: UUID,
 		participant: ParticipantModel,
 	): Mono<ParticipantModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			participant.projectId!!,
 			participant.startAvailability,
 			participant.endAvailability,

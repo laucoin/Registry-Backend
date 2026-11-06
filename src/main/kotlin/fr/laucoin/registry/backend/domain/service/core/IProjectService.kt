@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.domain.service.core
 
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
@@ -28,13 +27,6 @@ interface IProjectService {
 	fun findProjectById(id: UUID, isVisible: Boolean?): Mono<ProjectModel>
 	fun findProjectWithProfileById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectModel>
 	fun availableProjectOptions(): Flux<ProjectOptionEnum>
-	fun validateDateTime(id: UUID, dateTime: CustomDateTimeModel?, errorCode: String): Mono<UUID>
-	fun validateDateTimes(
-		id: UUID,
-		start: CustomDateTimeModel?,
-		end: CustomDateTimeModel?,
-		errorCode: String
-	): Mono<UUID>
 
 	fun createProject(currentUser: CurrentUserModel, project: ProjectModel): Mono<ProjectModel>
 	fun updateProjectById(currentUser: CurrentUserModel, id: UUID, project: ProjectModel): Mono<ProjectModel>

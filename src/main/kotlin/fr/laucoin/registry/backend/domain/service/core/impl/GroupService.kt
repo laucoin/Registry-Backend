@@ -7,6 +7,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_M
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -19,7 +20,6 @@ import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IGroupService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import java.time.Clock
 import java.util.UUID
 import org.springframework.beans.factory.annotation.Value
@@ -38,7 +38,7 @@ import reactor.core.publisher.Mono
  */
 @Service
 class GroupService(
-	private val projectService: IProjectService,
+	private val projectDates: ProjectDateHelper,
 	private val port: IGroupPort,
 	private val participantPort: IParticipantPort,
 	private val transactionalOperator: TransactionalOperator,
@@ -100,7 +100,7 @@ class GroupService(
 	}
 
 	override fun createGroup(currentUser: CurrentUserModel, group: GroupModel): Mono<GroupModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,
@@ -116,7 +116,7 @@ class GroupService(
 		id: UUID,
 		group: GroupModel
 	): Mono<GroupModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			group.projectId!!,
 			group.startAvailability,
 			group.endAvailability,

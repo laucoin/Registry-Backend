@@ -34,7 +34,7 @@ import fr.laucoin.registry.backend.domain.port.ICommunicationPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.service.core.ICommunicationService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.test.ModelExt.defaultAlert
 import fr.laucoin.registry.backend.test.ModelExt.defaultAlertId
 import fr.laucoin.registry.backend.test.ModelExt.defaultCommunication
@@ -77,14 +77,14 @@ import java.util.stream.Stream
 
 class CommunicationServiceTest {
 	private val port: ICommunicationPort = mock()
-	private val projectService: IProjectService = mock()
+	private val projectDates: ProjectDateHelper = mock()
 	private val movementPort: IMovementPort = mock()
 	private val alertPort: IAlertPort = mock()
 	private val historyPort: ICommunicationHistoryPort = mock()
 	private val rowLockPort: IRowLockPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: ICommunicationService = CommunicationService(
-		projectService, port, historyPort, rowLockPort, transactionalOperator, movementPort, alertPort,
+		projectDates, port, historyPort, rowLockPort, transactionalOperator, movementPort, alertPort,
 		Clock.systemUTC(), MAX_ACTIVITIES, MAX_ALERTS
 	)
 
@@ -308,7 +308,7 @@ class CommunicationServiceTest {
 		callToAlert: Int,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(projectDates.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(movementPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(if (Objects.nonNull(movement)) Mono.just(movement!!) else Mono.empty())
 		whenever(alertPort.findById(any(), anyOrNull(), anyOrNull()))
@@ -322,7 +322,7 @@ class CommunicationServiceTest {
 		).block()
 
 		// Assert
-		verify(projectService).validateDateTime(
+		verify(projectDates).validateDateTime(
 			eq(defaultProjectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
 		verify(movementPort, times(callToMovement)).findById(defaultProjectId, defaultMovementId, isVisible = null)
@@ -339,7 +339,7 @@ class CommunicationServiceTest {
 		errorMessage: String,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(projectDates.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(movementPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(if (Objects.isNull(movement)) Mono.empty() else Mono.just(movement!!))
 		whenever(port.create(any())).thenReturn(Mono.just(communication))
@@ -353,7 +353,7 @@ class CommunicationServiceTest {
 		assertEquals(status, result.status)
 		assertEquals(errorMessage, result.message)
 
-		verify(projectService).validateDateTime(
+		verify(projectDates).validateDateTime(
 			eq(defaultProjectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
 		verify(movementPort).findById(eq(defaultProjectId), any(), eq(null))
@@ -371,7 +371,7 @@ class CommunicationServiceTest {
 		errorMessage: String,
 	) {
 		// Arrange
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(projectDates.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(alertPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(if (Objects.nonNull(alert)) Mono.just(alert!!) else Mono.empty())
 		whenever(port.create(any())).thenReturn(Mono.just(communication))
@@ -384,7 +384,7 @@ class CommunicationServiceTest {
 		// Assert
 		assertEquals(status, result.status)
 		assertEquals(errorMessage, result.message)
-		verify(projectService).validateDateTime(
+		verify(projectDates).validateDateTime(
 			eq(defaultProjectId), any(), eq(COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
 		)
 		verify(alertPort, times(callAlertPort)).findById(
@@ -399,7 +399,7 @@ class CommunicationServiceTest {
 		val now = ZonedDateTime.now(ZoneOffset.UTC)
 		val communication = defaultCommunication().apply { dateTime = now; movement = defaultMovement() }
 
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(projectDates.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(communication))
 		whenever(movementPort.findById(any(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(MovementModel().apply { visible = true }))
@@ -409,7 +409,7 @@ class CommunicationServiceTest {
 		service.updateCommunicationById(currentUser(), defaultProjectId, defaultCommunicationId, communication).block()
 
 		// Assert
-		verify(projectService).validateDateTime(
+		verify(projectDates).validateDateTime(
 			defaultProjectId, CustomDateTimeModel(now), COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(port).findById(defaultProjectId, defaultCommunicationId, isVisible = null)
@@ -421,7 +421,7 @@ class CommunicationServiceTest {
 	fun `Should updateCommunicationById lock then archive the current state before updating`() {
 		// Arrange
 		val communication = defaultCommunication().apply { dateTime = now }
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(projectDates.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(communication))
 		whenever(port.update(any())).thenReturn(Mono.just(communication))
 
@@ -439,7 +439,7 @@ class CommunicationServiceTest {
 	fun `Should updateCommunicationById not lock nor archive when the date is out of the project range`() {
 		// Arrange
 		val error = RegistryException(UNPROCESSABLE_CONTENT, COMMUNICATION_DATETIME_OUT_OF_PROJECT_DATE_RANGE)
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.error(error))
+		whenever(projectDates.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.error(error))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -458,7 +458,7 @@ class CommunicationServiceTest {
 		// Arrange
 		val communication = defaultCommunication().apply { dateTime = now; movement = defaultMovement() }
 		val inMovement = defaultMovement().apply { type = IN; contentType = REGISTERED }
-		whenever(projectService.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
+		whenever(projectDates.validateDateTime(any(), anyOrNull(), any())).thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultCommunication()))
 		whenever(movementPort.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(inMovement))
 

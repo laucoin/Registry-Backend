@@ -17,7 +17,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IGroupPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.service.core.IGroupService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.test.ModelExt.defaultGroup
 import fr.laucoin.registry.backend.test.ModelExt.defaultGroupId
 import fr.laucoin.registry.backend.test.ModelExt.defaultParticipant
@@ -50,12 +50,12 @@ import java.util.UUID
 import java.util.stream.Stream
 
 class GroupServiceTest {
-	private val projectService: IProjectService = mock()
+	private val projectDates: ProjectDateHelper = mock()
 	private val port: IGroupPort = mock()
 	private val participantPort: IParticipantPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val service: IGroupService =
-		GroupService(projectService, port, participantPort, transactionalOperator, Clock.systemUTC(), MAX_PARTICIPANTS)
+		GroupService(projectDates, port, participantPort, transactionalOperator, Clock.systemUTC(), MAX_PARTICIPANTS)
 
 	@BeforeEach
 	fun setUp() {
@@ -189,7 +189,7 @@ class GroupServiceTest {
 		val participant = defaultParticipant().apply { type = REGISTERED }
 		val group = defaultGroup().apply { members = listOf(participant) }
 
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(participant))
 		whenever(port.create(any())).thenReturn(Mono.just(group))
@@ -198,7 +198,7 @@ class GroupServiceTest {
 		service.createGroup(currentUser(), group).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
@@ -209,7 +209,7 @@ class GroupServiceTest {
 	fun `Should createGroup check date, members and throw because a member is not found`() {
 		// Arrange
 		val group = defaultGroup().apply { members = listOf(defaultParticipant()) }
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.empty())
 
@@ -221,7 +221,7 @@ class GroupServiceTest {
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT, result.message)
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
@@ -233,7 +233,7 @@ class GroupServiceTest {
 	fun `Should createGroup check date, members and throw because a member is not visible or purged`(participant: ParticipantModel) {
 		// Arrange
 		val group = defaultGroup().apply { members = listOf(defaultParticipant()) }
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(participant))
 
@@ -245,7 +245,7 @@ class GroupServiceTest {
 		// Assert
 		assertEquals(NOT_FOUND, result.status)
 		assertEquals(GROUP_MEMBERS_NOT_VISIBLE, result.message)
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(participantPort).findAllByIds(defaultProjectId, listOf(defaultParticipantId), isVisible = null)
@@ -270,7 +270,7 @@ class GroupServiceTest {
 		val newParticipants = newParticipantIds.map {
 			defaultParticipant().apply { id = it; type = REGISTERED }
 		}
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findByIdWithContent(any(), any(), anyOrNull(), anyOrNull(), anyOrNull()))
 			.thenReturn(Mono.just(groupToUpdate))
@@ -282,7 +282,7 @@ class GroupServiceTest {
 		service.updateGroupById(currentUser(), defaultProjectId, defaultGroupId, groupUpdated).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId, null, null, GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 		)
 		verify(port).lockByIds(listOf(defaultGroupId))

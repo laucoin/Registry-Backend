@@ -14,6 +14,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
 import org.springframework.transaction.reactive.TransactionalOperator
+import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.NOT_FOUND_WITH_GIVEN_IDENTIFIER
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.VehicleError.VEHICLE_DELETE_HAS_MOVEMENT
@@ -26,7 +27,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.service.core.IVehicleService
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.ModelExt.defaultVehicle
@@ -52,7 +53,8 @@ import java.util.UUID
 
 class VehicleServiceTest {
 	private val port: IVehiclePort = mock()
-	private val projectService: IProjectService = mock()
+	private val projectDates: ProjectDateHelper = mock()
+	private val projectPort: IProjectPort = mock()
 	private val movementPort: IMovementPort = mock()
 	private val rowLockPort: IRowLockPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
@@ -61,7 +63,7 @@ class VehicleServiceTest {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Any>(0) }
 	}
 
-	private val service: IVehicleService = VehicleService(port, projectService, movementPort, rowLockPort, transactionalOperator, Clock.systemUTC())
+	private val service: IVehicleService = VehicleService(port, projectDates, projectPort, movementPort, rowLockPort, transactionalOperator, Clock.systemUTC())
 
 	@Test
 	fun `Should findVehiclesPage call port findPage`() {
@@ -88,7 +90,7 @@ class VehicleServiceTest {
 			endAvailability = CustomDateTimeModel(LocalDate.of(2026, 7, 2))
 		}
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
-		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
+		whenever(projectPort.findById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
 		whenever(movementPort.findEventsByVehicleId(any(), any())).thenReturn(
 			Flux.just(MovementEventModel(departure, OUT), MovementEventModel(departure.plusHours(3), IN))
 		)
@@ -112,7 +114,7 @@ class VehicleServiceTest {
 			end = CustomDateTimeModel(LocalDate.of(2026, 7, 1)),
 		)
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
-		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(project))
+		whenever(projectPort.findById(any(), anyOrNull())).thenReturn(Mono.just(project))
 		whenever(movementPort.findEventsByVehicleId(any(), any())).thenReturn(
 			Flux.just(MovementEventModel(departure, OUT), MovementEventModel(departure.plusHours(12), IN))
 		)
@@ -130,7 +132,7 @@ class VehicleServiceTest {
 		// Arrange
 		val departure = ZonedDateTime.of(2026, 7, 1, 8, 0, 0, 0, ZoneOffset.UTC)
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultVehicle()))
-		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
+		whenever(projectPort.findById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
 		whenever(movementPort.findEventsByVehicleId(any(), any())).thenReturn(
 			Flux.just(MovementEventModel(departure, OUT), MovementEventModel(departure.plusHours(2), IN))
 		)
@@ -147,7 +149,7 @@ class VehicleServiceTest {
 	fun `Should findVehicleTimeline throw when the vehicle does not exist`() {
 		// Arrange
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.empty())
-		whenever(projectService.findProjectById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
+		whenever(projectPort.findById(any(), anyOrNull())).thenReturn(Mono.just(ProjectModel()))
 
 		// Act
 		val result = service.findVehicleTimeline(defaultProjectId, defaultVehicleId)
@@ -214,7 +216,7 @@ class VehicleServiceTest {
 		// Arrange
 		val vehicle = defaultVehicle()
 
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 
 		whenever(port.create(any())).thenReturn(Mono.just(vehicle))
@@ -223,7 +225,7 @@ class VehicleServiceTest {
 		service.createVehicle(currentUser(), vehicle).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
 			end = null,
@@ -238,7 +240,7 @@ class VehicleServiceTest {
 		// Arrange
 		val vehicle = defaultVehicle()
 
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(vehicle))
@@ -248,7 +250,7 @@ class VehicleServiceTest {
 		service.updateVehicleById(currentUser(), defaultProjectId, defaultVehicleId, vehicle).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
 			end = null,

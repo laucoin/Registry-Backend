@@ -6,6 +6,7 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DELETE_HAS_MOVEMENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
@@ -19,7 +20,6 @@ import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IActivityService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
@@ -35,7 +35,7 @@ import reactor.core.publisher.Mono
  */
 @Service
 class ActivityService(
-	private val projectService: IProjectService,
+	private val projectDates: ProjectDateHelper,
 	private val port: IActivityPort,
 	private val movementPort: IMovementPort,
 	private val rowLockPort: IRowLockPort,
@@ -69,7 +69,7 @@ class ActivityService(
 	}
 
 	override fun createActivity(currentUser: CurrentUserModel, activity: ActivityModel): Mono<ActivityModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,
@@ -83,7 +83,7 @@ class ActivityService(
 		id: UUID,
 		activity: ActivityModel
 	): Mono<ActivityModel> {
-		return projectService.validateDateTimes(
+		return projectDates.validateDateTimes(
 			activity.projectId!!,
 			activity.startAvailability,
 			activity.endAvailability,

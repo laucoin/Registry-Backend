@@ -24,7 +24,7 @@ import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.service.core.IActivityService
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.test.ModelExt.defaultActivity
 import fr.laucoin.registry.backend.test.ModelExt.defaultActivityId
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
@@ -49,7 +49,7 @@ import java.util.UUID
 
 class ActivityServiceTest {
 	private val port: IActivityPort = mock()
-	private val projectService: IProjectService = mock()
+	private val projectDates: ProjectDateHelper = mock()
 	private val movementPort: IMovementPort = mock()
 	private val rowLockPort: IRowLockPort = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
@@ -58,7 +58,7 @@ class ActivityServiceTest {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Any>(0) }
 	}
 
-	private val service: IActivityService = ActivityService(projectService, port, movementPort, rowLockPort, transactionalOperator, Clock.systemUTC())
+	private val service: IActivityService = ActivityService(projectDates, port, movementPort, rowLockPort, transactionalOperator, Clock.systemUTC())
 
 	@Test
 	fun `Should findActivitiesPage call port findPage`() {
@@ -155,7 +155,7 @@ class ActivityServiceTest {
 	@Test
 	fun `Should createActivity check date and call port create`() {
 		// Arrange
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.create(any())).thenReturn(Mono.just(defaultActivity()))
 
@@ -163,7 +163,7 @@ class ActivityServiceTest {
 		service.createActivity(currentUser(), defaultActivity()).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
 			end = null,
@@ -175,7 +175,7 @@ class ActivityServiceTest {
 	@Test
 	fun `Should updateActivityById check date, check existing activity, call port updateActivity`() {
 		// Arrange
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultActivity()))
 		whenever(port.update(any())).thenReturn(Mono.just(defaultActivity()))
@@ -184,7 +184,7 @@ class ActivityServiceTest {
 		service.updateActivityById(currentUser(), defaultProjectId, defaultActivityId, defaultActivity()).block()
 
 		// Assert
-		verify(projectService).validateDateTimes(
+		verify(projectDates).validateDateTimes(
 			defaultProjectId,
 			start = null,
 			end = null,
@@ -299,8 +299,8 @@ verify(rowLockPort).lock(ACTIVITY, defaultActivityId)
 	fun `Should createActivity stamp the creation with the injected clock`() {
 		// Arrange
 		val clock = Clock.fixed(Instant.parse("2030-01-02T03:04:05Z"), ZoneOffset.UTC)
-		val clockedService = ActivityService(projectService, port, movementPort, rowLockPort, transactionalOperator, clock)
-		whenever(projectService.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+		val clockedService = ActivityService(projectDates, port, movementPort, rowLockPort, transactionalOperator, clock)
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.create(any())).thenReturn(Mono.just(defaultActivity()))
 
