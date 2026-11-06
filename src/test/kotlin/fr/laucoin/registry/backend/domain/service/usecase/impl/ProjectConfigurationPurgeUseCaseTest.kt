@@ -26,7 +26,10 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 
-class PurgeUseCaseTest {
+import fr.laucoin.registry.backend.domain.helper.PurgeThresholdHelper
+import fr.laucoin.registry.backend.domain.model.PurgeFeatureModel
+
+class ProjectConfigurationPurgeUseCaseTest {
 	private val userService: IUserService = mock()
 	private val projectService: IProjectService = mock()
 	private val movementService: IMovementService = mock()
@@ -39,11 +42,18 @@ class PurgeUseCaseTest {
 	private val auditService: IAuditService = mock()
 	private val transactionalOperator: TransactionalOperator = mock()
 	private val clock: Clock = Clock.fixed(Instant.parse("2026-10-12T10:00:00Z"), UTC)
-	private val service = PurgeUseCase(
-		userService, projectService, movementService, alertService, communicationService,
-		activityService, vehicleService, participantService, groupService, auditService, clock,
+	private val service = ProjectConfigurationPurgeUseCase(
+		vehicleService, participantService, activityService, groupService, PurgeThresholdHelper(clock),
+		PurgeFeatureModel(
+		PurgeFeatureModel.Threshold(USERS_MONTHS),
+		PurgeFeatureModel.Projects(
+			PROJECTS_MONTHS,
+			PurgeFeatureModel.Threshold(CONTENT_MONTHS),
+			PurgeFeatureModel.Threshold(CONFIGURATION_MONTHS),
+		),
+		PurgeFeatureModel.Threshold(AUDIT_MONTHS),
+	),
 		transactionalOperator,
-		USERS_MONTHS, PROJECTS_MONTHS, CONTENT_MONTHS, CONFIGURATION_MONTHS, AUDIT_MONTHS,
 	)
 
 	private companion object {
@@ -57,70 +67,6 @@ class PurgeUseCaseTest {
 	@BeforeEach
 	fun setup() {
 		whenever(transactionalOperator.transactional(any<Mono<*>>())).thenAnswer { it.getArgument<Mono<*>>(0) }
-	}
-
-	@Test
-	fun `Should purgeUsers use the configured threshold when no date is given`() {
-		// Arrange
-		val ids = listOf(UUID.randomUUID())
-		whenever(userService.purgeUsersIfNecessary(LocalDate.of(2026, 4, 12), false)).thenReturn(Flux.fromIterable(ids))
-
-		// Act
-		val result = service.purgeUsers(dateThreshold = null, dryRun = false)
-
-		// Assert
-		StepVerifier.create(result).expectNext(ids[0]).verifyComplete()
-	}
-
-	@Test
-	fun `Should purgeUsers prefer the explicit date over the configured threshold`() {
-		// Arrange
-		val threshold = LocalDate.of(2025, 1, 1)
-		whenever(userService.purgeUsersIfNecessary(threshold, true)).thenReturn(Flux.empty())
-
-		// Act
-		val result = service.purgeUsers(threshold, dryRun = true)
-
-		// Assert
-		StepVerifier.create(result).verifyComplete()
-		verify(userService).purgeUsersIfNecessary(threshold, true)
-	}
-
-	@Test
-	fun `Should purgeProjects use the configured threshold when no date is given`() {
-		// Arrange
-		whenever(projectService.purgeProjectsIfNecessary(LocalDate.of(2025, 10, 12), true)).thenReturn(Flux.empty())
-
-		// Act
-		val result = service.purgeProjects(dateThreshold = null, dryRun = true)
-
-		// Assert
-		StepVerifier.create(result).verifyComplete()
-		verify(projectService).purgeProjectsIfNecessary(LocalDate.of(2025, 10, 12), true)
-	}
-
-	@Test
-	fun `Should purgeProjectsContents purge orphan communications of the purged movements and alerts`() {
-		// Arrange
-		val movementId = UUID.randomUUID()
-		val alertId = UUID.randomUUID()
-		val communicationId = UUID.randomUUID()
-		val threshold = LocalDate.of(2026, 7, 12)
-		whenever(movementService.purgeMovementsIfNecessary(threshold, false)).thenReturn(Flux.just(movementId))
-		whenever(alertService.purgeAlertsIfNecessary(threshold, false)).thenReturn(Flux.just(alertId))
-		whenever(communicationService.purgeOrphanCommunications(listOf(movementId), listOf(alertId), false))
-			.thenReturn(Flux.just(communicationId))
-
-		// Act
-		val result = service.purgeProjectsContents(dateThreshold = null, dryRun = false)
-
-		// Assert
-		StepVerifier.create(result)
-			.expectNextMatches {
-				it.movements == listOf(movementId) && it.alerts == listOf(alertId) &&
-					it.communications == listOf(communicationId)
-			}
-			.verifyComplete()
 	}
 
 	@Test
@@ -149,23 +95,6 @@ class PurgeUseCaseTest {
 	}
 
 	@Test
-	fun `Should purgeProjectsContents prefer the explicit date over the configured threshold`() {
-		// Arrange
-		val threshold = LocalDate.of(2025, 1, 1)
-		whenever(movementService.purgeMovementsIfNecessary(threshold, true)).thenReturn(Flux.empty())
-		whenever(alertService.purgeAlertsIfNecessary(threshold, true)).thenReturn(Flux.empty())
-		whenever(communicationService.purgeOrphanCommunications(emptyList(), emptyList(), true)).thenReturn(Flux.empty())
-
-		// Act
-		val result = service.purgeProjectsContents(threshold, dryRun = true)
-
-		// Assert
-		StepVerifier.create(result).expectNextCount(1).verifyComplete()
-		verify(movementService).purgeMovementsIfNecessary(threshold, true)
-		verify(alertService).purgeAlertsIfNecessary(threshold, true)
-	}
-
-	@Test
 	fun `Should purgeProjectsConfigurations prefer the explicit date over the configured threshold`() {
 		// Arrange
 		val threshold = LocalDate.of(2025, 1, 1)
@@ -185,20 +114,6 @@ class PurgeUseCaseTest {
 	}
 
 	@Test
-	fun `Should purgeProjectsContents run inside a transaction`() {
-		// Arrange
-		whenever(movementService.purgeMovementsIfNecessary(any(), any())).thenReturn(Flux.empty())
-		whenever(alertService.purgeAlertsIfNecessary(any(), any())).thenReturn(Flux.empty())
-		whenever(communicationService.purgeOrphanCommunications(any(), any(), any())).thenReturn(Flux.empty())
-
-		// Act
-		service.purgeProjectsContents(dateThreshold = null, dryRun = true).block()
-
-		// Assert
-		verify(transactionalOperator).transactional(any<Mono<*>>())
-	}
-
-	@Test
 	fun `Should purgeProjectsConfigurations run inside a transaction`() {
 		// Arrange
 		whenever(vehicleService.purgeVehiclesIfNecessary(any(), any())).thenReturn(Flux.empty())
@@ -211,31 +126,5 @@ class PurgeUseCaseTest {
 
 		// Assert
 		verify(transactionalOperator).transactional(any<Mono<*>>())
-	}
-
-	@Test
-	fun `Should purgeAudits use the configured threshold when no date is given`() {
-		// Arrange
-		whenever(auditService.purgeAuditsIfNecessary(LocalDate.of(2025, 4, 12), true)).thenReturn(Mono.just(7L))
-
-		// Act
-		val result = service.purgeAudits(dateThreshold = null, dryRun = true)
-
-		// Assert
-		StepVerifier.create(result).expectNext(7L).verifyComplete()
-	}
-
-	@Test
-	fun `Should purgeAudits prefer the explicit date over the configured threshold`() {
-		// Arrange
-		val threshold = LocalDate.of(2025, 1, 1)
-		whenever(auditService.purgeAuditsIfNecessary(threshold, false)).thenReturn(Mono.just(0L))
-
-		// Act
-		val result = service.purgeAudits(threshold, dryRun = false)
-
-		// Assert
-		StepVerifier.create(result).expectNext(0L).verifyComplete()
-		verify(auditService).purgeAuditsIfNecessary(threshold, false)
 	}
 }

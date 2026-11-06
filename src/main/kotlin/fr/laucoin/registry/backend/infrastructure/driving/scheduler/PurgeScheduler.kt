@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.scheduler
 
-import fr.laucoin.registry.backend.domain.service.usecase.IPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IPlatformPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectConfigurationPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectContentPurgeUseCase
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -14,24 +16,26 @@ import reactor.core.publisher.Mono
  */
 @Component
 class PurgeScheduler(
-	private val purgeUseCase: IPurgeUseCase,
+	private val platform: IPlatformPurgeUseCase,
+	private val content: IProjectContentPurgeUseCase,
+	private val configuration: IProjectConfigurationPurgeUseCase,
 ) {
 	@Scheduled(cron = $$"${registry.feature.purge.users.cron}")
-	fun purgeUsers() = launch("users", purgeUseCase.purgeUsers(dateThreshold = null, dryRun = false))
+	fun purgeUsers() = launch("users", platform.purgeUsers(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.cron}")
-	fun purgeProjects() = launch("projects", purgeUseCase.purgeProjects(dateThreshold = null, dryRun = false))
+	fun purgeProjects() = launch("projects", platform.purgeProjects(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.content.cron}")
 	fun purgeProjectsContents() =
-		launch("projects contents", purgeUseCase.purgeProjectsContents(dateThreshold = null, dryRun = false))
+		launch("projects contents", content.purgeProjectsContents(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.projects.configuration.cron}")
 	fun purgeProjectsConfigurations() =
-		launch("projects configurations", purgeUseCase.purgeProjectsConfigurations(dateThreshold = null, dryRun = false))
+		launch("projects configurations", configuration.purgeProjectsConfigurations(dateThreshold = null, dryRun = false))
 
 	@Scheduled(cron = $$"${registry.feature.purge.audit.cron}")
-	fun purgeAudits() = launch("audits", purgeUseCase.purgeAudits(dateThreshold = null, dryRun = false))
+	fun purgeAudits() = launch("audits", platform.purgeAudits(dateThreshold = null, dryRun = false))
 
 	private fun launch(job: String, purge: Publisher<*>) {
 		Mono.from(purge)

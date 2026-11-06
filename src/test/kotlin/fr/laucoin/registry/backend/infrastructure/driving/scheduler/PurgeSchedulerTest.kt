@@ -2,7 +2,9 @@ package fr.laucoin.registry.backend.infrastructure.driving.scheduler
 
 import fr.laucoin.registry.backend.domain.model.ProjectConfigurationPurgeModel
 import fr.laucoin.registry.backend.domain.model.ProjectContentPurgeModel
-import fr.laucoin.registry.backend.domain.service.usecase.IPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IPlatformPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectConfigurationPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectContentPurgeUseCase
 import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -12,92 +14,94 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class PurgeSchedulerTest {
-	private val purgeUseCase: IPurgeUseCase = mock()
-	private val scheduler = PurgeScheduler(purgeUseCase)
+	private val platform: IPlatformPurgeUseCase = mock()
+	private val content: IProjectContentPurgeUseCase = mock()
+	private val configuration: IProjectConfigurationPurgeUseCase = mock()
+	private val scheduler = PurgeScheduler(platform, content, configuration)
 
 	@Test
 	fun `Should purgeUsers run a real purge with the configured threshold`() {
 		// Arrange
-		whenever(purgeUseCase.purgeUsers(null, false)).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(platform.purgeUsers(null, false)).thenReturn(Flux.just(UUID.randomUUID()))
 
 		// Act
 		scheduler.purgeUsers()
 
 		// Assert
-		verify(purgeUseCase).purgeUsers(null, false)
+		verify(platform).purgeUsers(null, false)
 	}
 
 	@Test
 	fun `Should purgeUsers not propagate a purge failure`() {
 		// Arrange
-		whenever(purgeUseCase.purgeUsers(null, false)).thenReturn(Flux.error(IllegalStateException("boom")))
+		whenever(platform.purgeUsers(null, false)).thenReturn(Flux.error(IllegalStateException("boom")))
 
 		// Act
 		scheduler.purgeUsers()
 
 		// Assert
-		verify(purgeUseCase).purgeUsers(null, false)
+		verify(platform).purgeUsers(null, false)
 	}
 
 	@Test
 	fun `Should purgeProjects run a real purge with the configured threshold`() {
 		// Arrange
-		whenever(purgeUseCase.purgeProjects(null, false)).thenReturn(Flux.empty())
+		whenever(platform.purgeProjects(null, false)).thenReturn(Flux.empty())
 
 		// Act
 		scheduler.purgeProjects()
 
 		// Assert
-		verify(purgeUseCase).purgeProjects(null, false)
+		verify(platform).purgeProjects(null, false)
 	}
 
 	@Test
 	fun `Should purgeProjectsContents run a real purge with the configured threshold`() {
 		// Arrange
-		whenever(purgeUseCase.purgeProjectsContents(null, false))
+		whenever(content.purgeProjectsContents(null, false))
 			.thenReturn(Mono.just(ProjectContentPurgeModel(emptyList(), emptyList(), emptyList())))
 
 		// Act
 		scheduler.purgeProjectsContents()
 
 		// Assert
-		verify(purgeUseCase).purgeProjectsContents(null, false)
+		verify(content).purgeProjectsContents(null, false)
 	}
 
 	@Test
 	fun `Should purgeProjectsConfigurations run a real purge with the configured threshold`() {
 		// Arrange
-		whenever(purgeUseCase.purgeProjectsConfigurations(null, false))
+		whenever(configuration.purgeProjectsConfigurations(null, false))
 			.thenReturn(Mono.just(ProjectConfigurationPurgeModel(emptyList(), emptyList(), emptyList(), emptyList())))
 
 		// Act
 		scheduler.purgeProjectsConfigurations()
 
 		// Assert
-		verify(purgeUseCase).purgeProjectsConfigurations(null, false)
+		verify(configuration).purgeProjectsConfigurations(null, false)
 	}
 
 	@Test
 	fun `Should purgeAudits run a real purge with the configured threshold`() {
 		// Arrange
-		whenever(purgeUseCase.purgeAudits(null, false)).thenReturn(Mono.just(3L))
+		whenever(platform.purgeAudits(null, false)).thenReturn(Mono.just(3L))
 
 		// Act
 		scheduler.purgeAudits()
 
 		// Assert
-		verify(purgeUseCase).purgeAudits(null, false)
+		verify(platform).purgeAudits(null, false)
 	}
 
 	@Test
 	fun `Should purgeAudits not propagate a purge failure`() {
 		// Arrange
-		whenever(purgeUseCase.purgeAudits(null, false)).thenReturn(Mono.error(IllegalStateException("boom")))
+		whenever(platform.purgeAudits(null, false)).thenReturn(Mono.error(IllegalStateException("boom")))
 
 		// Act
 		scheduler.purgeAudits()
 
 		// Assert
-		verify(purgeUseCase).purgeAudits(null, false)
+		verify(platform).purgeAudits(null, false)
 	}
 }

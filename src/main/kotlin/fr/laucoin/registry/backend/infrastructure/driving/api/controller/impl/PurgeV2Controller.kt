@@ -1,7 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
-import fr.laucoin.registry.backend.domain.service.usecase.IPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IPlatformPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectConfigurationPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectContentPurgeUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPurgeV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuditPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
@@ -21,7 +23,9 @@ import reactor.core.publisher.Mono
  */
 @RestController
 class PurgeV2Controller(
-	private val service: IPurgeUseCase,
+	private val platform: IPlatformPurgeUseCase,
+	private val content: IProjectContentPurgeUseCase,
+	private val configuration: IProjectConfigurationPurgeUseCase,
 	private val contentMapper: ProjectContentPurgeReaderDtoMapper,
 	private val configurationMapper: ProjectConfigurationPurgeReaderDtoMapper,
 ) : IPurgeV2Controller {
@@ -30,28 +34,28 @@ class PurgeV2Controller(
 	}
 
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
-		return service.purgeUsers(dateThreshold, dryRun).cappedForReport()
+		return platform.purgeUsers(dateThreshold, dryRun).cappedForReport()
 	}
 
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
-		return service.purgeProjects(dateThreshold, dryRun).cappedForReport()
+		return platform.purgeProjects(dateThreshold, dryRun).cappedForReport()
 	}
 
 	override fun purgeProjectsContentsIfNecessary(
 		dateThreshold: LocalDate?,
 		dryRun: Boolean,
 	): Mono<ProjectContentPurgeReaderDto> {
-		return service.purgeProjectsContents(dateThreshold, dryRun).map(contentMapper::toDto)
+		return content.purgeProjectsContents(dateThreshold, dryRun).map(contentMapper::toDto)
 	}
 
 	override fun purgeProjectsConfigurationsIfNecessary(
 		dateThreshold: LocalDate?,
 		dryRun: Boolean,
 	): Mono<ProjectConfigurationPurgeReaderDto> {
-		return service.purgeProjectsConfigurations(dateThreshold, dryRun).map(configurationMapper::toDto)
+		return configuration.purgeProjectsConfigurations(dateThreshold, dryRun).map(configurationMapper::toDto)
 	}
 
 	override fun purgeAuditsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Mono<AuditPurgeReaderDto> {
-		return service.purgeAudits(dateThreshold, dryRun).map { AuditPurgeReaderDto(it) }
+		return platform.purgeAudits(dateThreshold, dryRun).map { AuditPurgeReaderDto(it) }
 	}
 }
