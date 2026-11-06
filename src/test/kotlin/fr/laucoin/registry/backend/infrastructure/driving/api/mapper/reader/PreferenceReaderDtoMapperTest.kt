@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 
 class PreferenceReaderDtoMapperTest {
-	private val mapper: PreferenceReaderDtoMapper = PreferenceReaderDtoMapper()
+	private val mapper: PreferenceReaderDtoMapper = PreferenceReaderDtoMapperImpl()
 
 	@Test
 	fun `Should toDto convert PreferencesModel to PreferenceReaderDto`() {

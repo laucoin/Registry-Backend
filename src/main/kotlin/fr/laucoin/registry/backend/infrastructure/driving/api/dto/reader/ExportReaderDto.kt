@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import java.time.LocalDate
+import fr.laucoin.registry.backend.domain.constant.ExportConst
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -71,17 +72,17 @@ data class ExportUserDataReaderDto(
 
 @JsonInclude(NON_NULL)
 data class ParticipantExportReaderDto(
-	val schemaVersion: String = "1.0",
+	val schemaVersion: String = ExportConst.SCHEMA_VERSION,
 	val generatedAt: ZonedDateTime,
-	val subjectType: String = "PARTICIPANT",
+	val subjectType: String = ExportConst.SUBJECT_PARTICIPANT,
 	val participant: ExportParticipantReaderDto,
 )
 
 @JsonInclude(NON_NULL)
 data class UserExportReaderDto(
-	val schemaVersion: String = "1.0",
+	val schemaVersion: String = ExportConst.SCHEMA_VERSION,
 	val generatedAt: ZonedDateTime,
-	val subjectType: String = "USER",
+	val subjectType: String = ExportConst.SUBJECT_USER,
 	val user: ExportUserDataReaderDto,
 	val preferences: ExportPreferencesReaderDto?,
 	val projectProfiles: List<ExportProjectProfileReaderDto>,

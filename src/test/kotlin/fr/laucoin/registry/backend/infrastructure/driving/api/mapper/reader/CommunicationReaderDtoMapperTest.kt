@@ -27,7 +27,7 @@ import kotlin.test.assertEquals
 class CommunicationReaderDtoMapperTest {
 	private val movementMapper: MovementReaderDtoMapper = mock()
 	private val alertMapper: AlertReaderDtoMapper = mock()
-	private val mapper = CommunicationReaderDtoMapper(movementMapper, alertMapper)
+	private val mapper = CommunicationReaderDtoMapperImpl(movementMapper, alertMapper)
 
 	private companion object {
 		private val now = ZonedDateTime.now(ZoneOffset.UTC)

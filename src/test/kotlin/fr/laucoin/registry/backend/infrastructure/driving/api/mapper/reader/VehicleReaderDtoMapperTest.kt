@@ -1,74 +1,75 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.IN
+import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
-import java.util.stream.Stream
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.UUID
 import kotlin.test.assertEquals
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
+import kotlin.test.assertNull
+import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class VehicleReaderDtoMapperTest {
-	private val presenceStatusMapper: PresenceStatusReaderDtoMapper = mock()
-	private val mapper: VehicleReaderDtoMapper = VehicleReaderDtoMapper(presenceStatusMapper)
+	private val statusHelper: StatusLabelMappingHelper = mock()
+	private val mapper: VehicleReaderDtoMapper = VehicleReaderDtoMapperImpl(statusHelper)
 
-	private companion object {
-		@JvmStatic
-		fun `Should toDto convert VehicleModel to VehicleReaderDto`(): Stream<Arguments> {
-			return Stream.of(
-				Arguments.of(
-					VehicleModel(),
-					0,
-					0,
-				),
-				Arguments.of(
-					VehicleModel().apply {
-						status = IN
-					},
-					1,
-					1,
-				),
-			)
-		}
+	private fun vehicle() = VehicleModel(
+		licensePlate = "AB-123-CD",
+		brand = "Renault",
+		model = "Trafic",
+		status = IN,
+		startAvailability = CustomDateTimeModel.MIN,
+		endAvailability = CustomDateTimeModel.MAX,
+	).apply {
+		id = UUID.randomUUID()
+		visible = true
+		creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+		lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 	}
 
-	@ParameterizedTest
-	@MethodSource
-	fun `Should toDto convert VehicleModel to VehicleReaderDto`(
-		vehicle: VehicleModel,
-		expectedTranslation: Int,
-	) {
+	@Test
+	fun `Should toDto convert VehicleModel with the status label of the helper`() {
 		// Arrange
-		whenever(presenceStatusMapper.toDto(any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
-			LabelDto(
-				"translated",
-				"translated"
-			)
-		)
+		val vehicle = vehicle()
+		val status = LabelDto("IN", "In since 2 hours")
+		whenever(statusHelper.vehicleStatus(any())).thenReturn(status)
 
 		// Act
 		val result = mapper.toDto(vehicle)
 
 		// Assert
-		verify(presenceStatusMapper, times(expectedTranslation)).toDto(
-			any(), anyOrNull(), anyOrNull(), anyOrNull()
-		)
-
 		assertEquals(vehicle.id, result.id)
 		assertEquals(vehicle.licensePlate, result.licensePlate)
 		assertEquals(vehicle.brand, result.brand)
 		assertEquals(vehicle.model, result.model)
+		assertEquals(status, result.status)
 		assertEquals(vehicle.startAvailability, result.startAvailability)
 		assertEquals(vehicle.endAvailability, result.endAvailability)
 		assertEquals(vehicle.visible, result.visible)
 		assertEquals(vehicle.creation, result.creation)
 		assertEquals(vehicle.lastEdition, result.lastEdition)
+		verify(statusHelper).vehicleStatus(vehicle)
+	}
+
+	@Test
+	fun `Should toDto leave the status empty when the helper gives none`() {
+		// Arrange
+		val vehicle = VehicleModel()
+		whenever(statusHelper.vehicleStatus(any())).thenReturn(null)
+
+		// Act
+		val result = mapper.toDto(vehicle)
+
+		// Assert
+		assertNull(result.status)
+		assertNull(result.licensePlate)
 	}
 }

@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.MovementReasonMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_TYPE_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonKindEnum.REASON
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
@@ -26,11 +28,10 @@ class MovementReaderDtoMapperTest {
 	private val reasonMapper: MovementReasonReaderDtoMapper = mock()
 	private val movementContentMapper: MovementContentReaderDtoMapper = mock()
 	private val mapper: MovementReaderDtoMapper =
-		MovementReaderDtoMapper(
-			translateService,
-				activityReasonMapper,
-			reasonMapper,
-			movementContentMapper
+		MovementReaderDtoMapperImpl(
+			MovementTypeReaderDtoMapperImpl(LabelMappingHelper(translateService)),
+			MovementReasonMappingHelper(reasonMapper, activityReasonMapper),
+			movementContentMapper,
 		)
 
 	private companion object {

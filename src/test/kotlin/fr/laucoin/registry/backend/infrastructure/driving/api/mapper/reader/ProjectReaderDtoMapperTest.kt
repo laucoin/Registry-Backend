@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_NAME_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
@@ -26,8 +28,11 @@ import org.mockito.kotlin.whenever
 
 class ProjectReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
-	private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapper(translateService, availabilityMapper)
+	private val statusHelper: StatusLabelMappingHelper = mock()
+	private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapperImpl(
+		statusHelper,
+		ProjectOptionLabelReaderDtoMapperImpl(LabelMappingHelper(translateService)),
+	)
 
 	private companion object {
 		@JvmStatic

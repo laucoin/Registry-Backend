@@ -6,7 +6,7 @@ import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
 class AlertStatisticsReaderDtoMapperTest {
-	private val mapper = AlertStatisticsReaderDtoMapper()
+	private val mapper = AlertStatisticsReaderDtoMapperImpl()
 
 	@Test
 	fun `Should expose the counts, the average and the real alert rate`() {

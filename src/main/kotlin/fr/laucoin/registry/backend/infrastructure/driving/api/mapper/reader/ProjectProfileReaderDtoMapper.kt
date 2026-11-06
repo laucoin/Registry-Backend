@@ -1,65 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_PROFILE_ROLE_PREFIX
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_PROFILE_STATUS_PREFIX
-import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.PROFILE
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
-import fr.laucoin.registry.backend.domain.service.support.ITranslateService
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectProfileReaderDto
-import java.util.Objects
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.ProfileLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ProjectProfileReaderDtoMapper(
-	private val translateService: ITranslateService,
-	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
-	private val partialUserMapper: PartialUserReaderDtoMapper,
-): IGenericReaderDtoMapper<ProjectProfileModel, ProjectProfileReaderDto> {
-	override fun toDto(model: ProjectProfileModel): ProjectProfileReaderDto {
-		return ProjectProfileReaderDto(
-			user = Optional.ofNullable(model.user).map(partialUserMapper::toDto).orElse(null),
-			role = Optional.ofNullable(model.role).map {
-				LabelDto(
-					it,
-					translateService.getMessage(code = "$PROJECT_PROFILE_ROLE_PREFIX$it"),
-				)
-			}.orElse(null),
-			availabilityStatus = Optional.ofNullable(model.availabilityStatus)
-				.map { availabilityStatusMapper.toDto(it, PROFILE, model.startAccess, model.endAccess) }
-				.orElse(null),
-			status = buildStatus(model),
-			startAccess = model.startAccess,
-			endAccess = model.endAccess,
-		).apply {
-			id = model.id
-			projectId = model.projectId
-			visible = model.visible
-			creation = model.creation
-			lastEdition = model.lastEdition
-		}
-	}
-
-	private fun buildStatus(model: ProjectProfileModel): LabelDto? {
-		val originalStatus =
-			translateService.getMessage(code = "$PROJECT_PROFILE_STATUS_PREFIX${model.status}")
-		if (!model.visible) {
-			return LabelDto(
-				BLOCKED.name,
-				Optional.ofNullable(model.status).map {
-					translateService.getMessage(
-						code = "$PROJECT_PROFILE_STATUS_PREFIX${BLOCKED}_WITH_STATUS",
-						args = arrayOf(originalStatus),
-					)
-				}.orElse(translateService.getMessage(code = "$PROJECT_PROFILE_STATUS_PREFIX$BLOCKED"))
-			)
-		}
-
-		return if (Objects.nonNull(model.status)) LabelDto(
-			model.status!!.name,
-			originalStatus,
-		) else null
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [PartialUserReaderDtoMapper::class, ProjectProfileRoleReaderDtoMapper::class, StatusLabelMappingHelper::class, ProfileLabelMappingHelper::class])
+interface ProjectProfileReaderDtoMapper: IGenericReaderDtoMapper<ProjectProfileModel, ProjectProfileReaderDto> {
+	@Mapping(target = "availabilityStatus", source = "model", qualifiedByName = ["profileAvailabilityStatus"])
+	@Mapping(target = "status", source = "model", qualifiedByName = ["profileStatus"])
+	override fun toDto(model: ProjectProfileModel): ProjectProfileReaderDto
 }

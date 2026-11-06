@@ -1,19 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ALERT_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
-import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class AlertStatusReaderDtoMapper(
-	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<AlertStatusEnum, LabelDto> {
-	override fun toDto(model: AlertStatusEnum): LabelDto {
-		return LabelDto(
-			model.name,
-			translateService.getMessage(code = "$ALERT_STATUS_PREFIX$model"),
-		)
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [LabelMappingHelper::class])
+interface AlertStatusReaderDtoMapper: IGenericReaderDtoMapper<AlertStatusEnum, LabelDto> {
+	@Mapping(target = "value", expression = "java(model.name())")
+	@Mapping(target = "label", source = "model", qualifiedByName = ["alertStatusLabel"])
+	override fun toDto(model: AlertStatusEnum): LabelDto
 }

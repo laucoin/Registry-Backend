@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 class VehicleTimelineReaderDtoMapperTest {
-	private val mapper = VehicleTimelineReaderDtoMapper(TimelineReaderDtoMapper())
+	private val mapper = VehicleTimelineReaderDtoMapperImpl(TimelineReaderDtoMapperImpl())
 	private val start = ZonedDateTime.of(2026, 7, 1, 9, 0, 0, 0, UTC)
 
 	@Test

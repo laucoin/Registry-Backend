@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
@@ -21,7 +22,7 @@ import org.mockito.kotlin.whenever
 
 class UserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper: UserReaderDtoMapper = UserReaderDtoMapper(translateService)
+	private val mapper: UserReaderDtoMapper = UserReaderDtoMapperImpl(UserRoleReaderDtoMapperImpl(LabelMappingHelper(translateService)))
 
 	private companion object {
 		@JvmStatic

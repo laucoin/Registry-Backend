@@ -2,16 +2,10 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
 
-@Component
-class PreferenceReaderDtoMapper: IGenericReaderDtoMapper<PreferencesModel, PreferenceReaderDto> {
-	override fun toDto(model: PreferencesModel): PreferenceReaderDto {
-		return PreferenceReaderDto(
-			userId = model.userId,
-			theme = model.theme,
-			language = model.language,
-			refreshMode = model.refreshMode,
-		)
-	}
+@Mapper(config = DtoMapperConfig::class)
+interface PreferenceReaderDtoMapper: IGenericReaderDtoMapper<PreferencesModel, PreferenceReaderDto> {
+	override fun toDto(model: PreferencesModel): PreferenceReaderDto
 }

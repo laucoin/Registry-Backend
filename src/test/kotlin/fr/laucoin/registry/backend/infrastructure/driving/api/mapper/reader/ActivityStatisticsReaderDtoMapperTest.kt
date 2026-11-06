@@ -6,7 +6,7 @@ import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
 class ActivityStatisticsReaderDtoMapperTest {
-	private val mapper = ActivityStatisticsReaderDtoMapper()
+	private val mapper = ActivityStatisticsReaderDtoMapperImpl()
 
 	@Test
 	fun `Should expose the counts, the rate and the durations`() {

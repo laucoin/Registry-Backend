@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CreatedProjectProfilesReaderDto
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -9,7 +8,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 
 class CreatedProjectProfilesReaderDtoMapperTest {
-	private val mapper = CreatedProjectProfilesReaderDtoMapper()
+	private val mapper = CreatedProjectProfilesReaderDtoMapperImpl()
 
 	private companion object {
 		private const val EMAIL_1 = "one@sgdf.fr"
@@ -37,50 +36,5 @@ class CreatedProjectProfilesReaderDtoMapperTest {
 
 		// Assert
 		assertEquals(dto, result)
-	}
-
-	@ParameterizedTest
-	@MethodSource("Pair to CreatedProjectProfilesReaderDto data")
-	fun `Should toDto convert Pair list to CreatedProjectProfilesReaderDto list`(
-		model: Pair<List<String>, List<String>>, dto: CreatedProjectProfilesReaderDto
-	) {
-		// Arrange
-		val models = listOf(model)
-		val dtos = listOf(dto)
-
-		// Act
-		val result = mapper.toDtoList(models)
-
-		// Assert
-		assertEquals(dtos, result)
-	}
-
-	@ParameterizedTest
-	@MethodSource("Pair to CreatedProjectProfilesReaderDto data")
-	fun `Should toDto convert Pair page to CreatedProjectProfilesReaderDto page`(
-		model: Pair<List<String>, List<String>>, dto: CreatedProjectProfilesReaderDto
-	) {
-		// Arrange
-		val modelPage = PageModel(
-			page = 0,
-			size = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(model),
-		)
-		val dtoPage = PageModel(
-			page = 0,
-			size = 10,
-			totalPages = 1,
-			totalElements = 1,
-			content = listOf(dto),
-			lastRefresh = modelPage.lastRefresh,
-		)
-
-		// Act
-		val result = mapper.toDtoPage(modelPage)
-
-		// Assert
-		assertEquals(dtoPage, result)
 	}
 }

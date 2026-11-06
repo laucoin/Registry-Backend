@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 
 class PartialUserReaderDtoMapperTest {
-	private val mapper: PartialUserReaderDtoMapper = PartialUserReaderDtoMapper()
+	private val mapper: PartialUserReaderDtoMapper = PartialUserReaderDtoMapperImpl()
 
 	@Test
 	fun `Should toDto convert UserModel to PartialUserReaderDto`() {

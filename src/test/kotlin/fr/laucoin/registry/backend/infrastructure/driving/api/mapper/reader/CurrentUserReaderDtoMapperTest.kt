@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.AuthorityMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
@@ -30,7 +32,11 @@ import kotlin.test.assertEquals
 class CurrentUserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
 	private val preferenceMapper: PreferenceReaderDtoMapper = mock()
-	private val mapper = CurrentUserReaderDtoMapper(translateService, preferenceMapper)
+	private val mapper = CurrentUserReaderDtoMapperImpl(
+		AuthorityMappingHelper(),
+		preferenceMapper,
+		UserRoleReaderDtoMapperImpl(LabelMappingHelper(translateService)),
+	)
 
 	private companion object {
 		private const val TRANSLATED = "TRANSLATED"

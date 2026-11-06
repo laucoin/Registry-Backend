@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantExportModel
@@ -15,81 +16,63 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ExportP
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ExportUserDataReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserExportReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
 import java.util.UUID
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.domain.constant.ExportConst
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
+import org.mapstruct.Named
 
-@Component
-class ExportReaderDtoMapper {
-	fun toDto(model: UserExportModel) = UserExportReaderDto(
-		generatedAt = model.generatedAt,
-		user = toUserDto(model.user),
-		preferences = model.preferences?.let(::toPreferencesDto),
-		projectProfiles = model.projectProfiles.map(::toProfileDto),
-		participants = model.participants.map(::toParticipantDto),
-	)
+@Mapper(config = DtoMapperConfig::class)
+interface ExportReaderDtoMapper {
+	@Mapping(target = "user", source = "model.user")
+	@Mapping(target = "schemaVersion", constant = ExportConst.SCHEMA_VERSION)
+	@Mapping(target = "subjectType", constant = ExportConst.SUBJECT_USER)
+	fun toDto(model: UserExportModel): UserExportReaderDto
 
-	fun toDto(model: ParticipantExportModel) = ParticipantExportReaderDto(
-		generatedAt = model.generatedAt,
-		participant = toParticipantDto(model),
-	)
+	@Mapping(target = "participant", source = "model")
+	@Mapping(target = "schemaVersion", constant = ExportConst.SCHEMA_VERSION)
+	@Mapping(target = "subjectType", constant = ExportConst.SUBJECT_PARTICIPANT)
+	fun toDto(model: ParticipantExportModel): ParticipantExportReaderDto
 
-	private fun toUserDto(user: UserModel) = ExportUserDataReaderDto(
-		id = user.id,
-		oidcId = user.oidcId,
-		type = user.type.name,
-		firstName = user.firstName,
-		lastName = user.lastName,
-		email = user.email,
-		role = user.role,
-		birthday = user.birthday,
-		lastLogin = user.lastLogin,
-		blocked = user.isNotVisible(),
-	)
+	@Mapping(target = "blocked", source = "notVisible")
+	fun toUserDto(user: UserModel): ExportUserDataReaderDto
 
-	private fun toPreferencesDto(preferences: PreferencesModel) = ExportPreferencesReaderDto(
-		theme = preferences.theme.name,
-		language = preferences.language,
-	)
+	fun toPreferencesDto(preferences: PreferencesModel): ExportPreferencesReaderDto
 
-	private fun toProfileDto(profile: ProjectProfileModel) = ExportProjectProfileReaderDto(
-		projectId = profile.project?.id ?: profile.projectId,
-		projectName = profile.project?.name,
-		role = profile.role,
-		status = profile.status?.name,
-		startAccess = profile.startAccess,
-		endAccess = profile.endAccess,
-	)
+	@Mapping(target = "projectId", source = "project.id", defaultExpression = "java(profile.getProjectId())")
+	@Mapping(target = "projectName", source = "project.name")
+	fun toProfileDto(profile: ProjectProfileModel): ExportProjectProfileReaderDto
 
-	private fun toParticipantDto(model: ParticipantExportModel): ExportParticipantReaderDto {
-		val participant = model.participant
-		val subjectUserId = participant.user?.id
+	@Mapping(target = "id", source = "participant.id")
+	@Mapping(target = "projectId", source = "participant.projectId")
+	@Mapping(target = "firstName", source = "participant.firstName")
+	@Mapping(target = "lastName", source = "participant.lastName")
+	@Mapping(target = "birthday", source = "participant.birthday")
+	@Mapping(target = "type", source = "participant.type")
+	@Mapping(target = "startAvailability", source = "participant.startAvailability")
+	@Mapping(target = "endAvailability", source = "participant.endAvailability")
+	@Mapping(target = "groups", source = "participant.groups", qualifiedByName = ["groupNames"])
+	@Mapping(target = "creation", source = "model", qualifiedByName = ["creationOf"])
+	@Mapping(target = "lastEdition", source = "model", qualifiedByName = ["lastEditionOf"])
+	fun toParticipantDto(model: ParticipantExportModel): ExportParticipantReaderDto
 
-		return ExportParticipantReaderDto(
-			id = participant.id,
-			projectId = participant.projectId,
-			projectName = model.projectName,
-			firstName = participant.firstName,
-			lastName = participant.lastName,
-			birthday = participant.birthday,
-			type = participant.type?.name,
-			startAvailability = participant.startAvailability,
-			endAvailability = participant.endAvailability,
-			groups = participant.groups.mapNotNull { it.name },
-			movements = model.movements.map(::toMovementDto),
-			creation = participant.creation?.let { toHistoryDto(it, subjectUserId) },
-			lastEdition = participant.lastEdition?.let { toHistoryDto(it, subjectUserId) },
-		)
+	@Mapping(target = "activity", source = "activity.name")
+	fun toMovementDto(movement: MovementModel): ExportMovementReaderDto
+
+	@Mapping(target = "byDataSubject", expression = "java(subjectUserId != null && history.getUser() != null && subjectUserId.equals(history.getUser().getId()))")
+	fun toHistoryDto(history: HistoryModel, subjectUserId: UUID?): ExportHistoryReaderDto
+
+	@Named("groupNames")
+	fun groupNames(groups: List<GroupModel>): List<String> = groups.mapNotNull { it.name }
+
+	@Named("creationOf")
+	fun creationOf(model: ParticipantExportModel): ExportHistoryReaderDto? {
+		return model.participant.creation?.let { toHistoryDto(it, model.participant.user?.id) }
 	}
 
-	private fun toMovementDto(movement: MovementModel) = ExportMovementReaderDto(
-		dateTime = movement.dateTime,
-		type = movement.type?.name,
-		reason = movement.reason?.name,
-		activity = movement.activity?.name,
-	)
-
-	private fun toHistoryDto(history: HistoryModel, subjectUserId: UUID?) = ExportHistoryReaderDto(
-		dateTime = history.dateTime,
-		byDataSubject = subjectUserId != null && history.user?.id == subjectUserId,
-	)
+	@Named("lastEditionOf")
+	fun lastEditionOf(model: ParticipantExportModel): ExportHistoryReaderDto? {
+		return model.participant.lastEdition?.let { toHistoryDto(it, model.participant.user?.id) }
+	}
 }

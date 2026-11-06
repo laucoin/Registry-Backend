@@ -1,11 +1,13 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.FeaturesReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class FeaturesReaderDtoMapper: IGenericReaderDtoMapper<Boolean, FeaturesReaderDto> {
-	override fun toDto(model: Boolean): FeaturesReaderDto {
-		return FeaturesReaderDto(inviteByEmail = model)
-	}
+@Mapper(config = DtoMapperConfig::class)
+interface FeaturesReaderDtoMapper: IGenericReaderDtoMapper<Boolean?, FeaturesReaderDto> {
+	@Mapping(target = "inviteByEmail", source = "model")
+	@Mapping(target = "copy", ignore = true)
+	override fun toDto(model: Boolean?): FeaturesReaderDto
 }

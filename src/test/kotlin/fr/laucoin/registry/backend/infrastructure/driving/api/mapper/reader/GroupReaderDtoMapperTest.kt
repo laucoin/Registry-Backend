@@ -1,7 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import org.mockito.kotlin.argThat
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
-import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.GROUP
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
@@ -16,10 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.ZoneOffset
@@ -28,9 +26,9 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 class GroupReaderDtoMapperTest {
-	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
+	private val statusHelper: StatusLabelMappingHelper = mock()
 	private val memberMapper: ParticipantReaderDtoMapper = mock()
-	private val mapper = GroupReaderDtoMapper(availabilityMapper, memberMapper)
+	private val mapper = GroupReaderDtoMapperImpl(statusHelper, memberMapper)
 
 	private companion object {
 		private val participantDto = ParticipantReaderDto()
@@ -70,8 +68,8 @@ class GroupReaderDtoMapperTest {
 		@JvmStatic
 		fun `GroupModel to GroupReaderDto data`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(model, dto, 1),
-				Arguments.of(GroupModel(), GroupReaderDto(members = listOf(participantDto)), 0),
+				Arguments.of(model, dto),
+				Arguments.of(GroupModel(), GroupReaderDto(members = listOf(participantDto))),
 			)
 		}
 	}
@@ -79,7 +77,7 @@ class GroupReaderDtoMapperTest {
 	@BeforeEach
 	fun setup() {
 		whenever(memberMapper.toDtoList(any())).thenReturn(listOf(participantDto))
-		whenever(availabilityMapper.toDto(any(), eq(GROUP), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(statusHelper.groupStatus(argThat { status != null })).thenReturn(activityStatus)
 	}
 
 	@ParameterizedTest
@@ -87,7 +85,6 @@ class GroupReaderDtoMapperTest {
 	fun `Should toDto convert GroupModel to GroupReaderDto`(
 		model: GroupModel,
 		dto: GroupReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Act
 		val result = mapper.toDto(model)
@@ -96,8 +93,7 @@ class GroupReaderDtoMapperTest {
 		assertEquals(dto, result)
 
 		verify(memberMapper).toDtoList(model.members)
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
+		verify(statusHelper).groupStatus(model)
 
 	}
 
@@ -106,7 +102,6 @@ class GroupReaderDtoMapperTest {
 	fun `Should toDto convert GroupModel list to GroupReaderDto list`(
 		model: GroupModel,
 		dto: GroupReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Arrange
 		val models = listOf(model)
@@ -119,8 +114,7 @@ class GroupReaderDtoMapperTest {
 		assertEquals(dtos, result)
 
 		verify(memberMapper).toDtoList(model.members)
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
+		verify(statusHelper).groupStatus(model)
 
 	}
 
@@ -129,7 +123,6 @@ class GroupReaderDtoMapperTest {
 	fun `Should toDto convert GroupModel page to GroupReaderDto page`(
 		model: GroupModel,
 		dto: GroupReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Arrange
 		val modelPage = PageModel(
@@ -155,8 +148,7 @@ class GroupReaderDtoMapperTest {
 		assertEquals(dtoPage, result)
 
 		verify(memberMapper).toDtoList(model.members)
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
+		verify(statusHelper).groupStatus(model)
 
 	}
 }

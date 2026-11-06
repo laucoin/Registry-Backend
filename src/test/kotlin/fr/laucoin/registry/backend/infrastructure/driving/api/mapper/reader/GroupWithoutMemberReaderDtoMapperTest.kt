@@ -1,7 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import org.mockito.kotlin.argThat
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVAILABLE
-import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum.GROUP
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
@@ -14,11 +15,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.ZoneOffset
@@ -27,8 +24,8 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 class GroupWithoutMemberReaderDtoMapperTest {
-	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
-	private val mapper = GroupWithoutMemberReaderDtoMapper(availabilityMapper)
+	private val statusHelper: StatusLabelMappingHelper = mock()
+	private val mapper = GroupWithoutMemberReaderDtoMapperImpl(statusHelper)
 
 	private companion object {
 		private val activityStatus = LabelDto(value = AVAILABLE.name, label = "Available")
@@ -74,15 +71,15 @@ class GroupWithoutMemberReaderDtoMapperTest {
 		@JvmStatic
 		fun `GroupModel to GroupWithoutMemberReaderDto data`(): Stream<Arguments> {
 			return Stream.of(
-				Arguments.of(model, dto, 1),
-				Arguments.of(GroupModel(), GroupWithoutMemberReaderDto(), 0),
+				Arguments.of(model, dto),
+				Arguments.of(GroupModel(), GroupWithoutMemberReaderDto()),
 			)
 		}
 	}
 
 	@BeforeEach
 	fun setup() {
-		whenever(availabilityMapper.toDto(any(), eq(GROUP), anyOrNull(), anyOrNull())).thenReturn(activityStatus)
+		whenever(statusHelper.groupStatus(argThat { status != null })).thenReturn(activityStatus)
 	}
 
 	@ParameterizedTest
@@ -90,7 +87,6 @@ class GroupWithoutMemberReaderDtoMapperTest {
 	fun `Should toDto convert GroupModel to GroupWithoutMemberReaderDto`(
 		model: GroupModel,
 		dto: GroupWithoutMemberReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Act
 		val result = mapper.toDto(model)
@@ -106,8 +102,7 @@ class GroupWithoutMemberReaderDtoMapperTest {
 		assertEquals(dto.id, result.id)
 		assertEquals(dto.visible, result.visible)
 
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
+		verify(statusHelper).groupStatus(model)
 
 	}
 
@@ -116,7 +111,6 @@ class GroupWithoutMemberReaderDtoMapperTest {
 	fun `Should toDto convert GroupModel list to GroupWithoutMemberReaderDto list`(
 		model: GroupModel,
 		dto: GroupWithoutMemberReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Arrange
 		val models = listOf(model)
@@ -128,8 +122,7 @@ class GroupWithoutMemberReaderDtoMapperTest {
 		// Assert
 		assertEquals(dtos.size, result.size)
 
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
+		verify(statusHelper).groupStatus(model)
 
 	}
 
@@ -138,7 +131,6 @@ class GroupWithoutMemberReaderDtoMapperTest {
 	fun `Should toDto convert GroupModel page to GroupWithoutMemberReaderDto page`(
 		model: GroupModel,
 		dto: GroupWithoutMemberReaderDto,
-		expectedAvailabilityCast: Int,
 	) {
 		// Arrange
 		val modelPage = PageModel(
@@ -167,8 +159,7 @@ class GroupWithoutMemberReaderDtoMapperTest {
 		assertEquals(dtoPage.totalElements, result.totalElements)
 		assertEquals(dtoPage.content.size, result.content.size)
 
-		verify(availabilityMapper, times(expectedAvailabilityCast))
-			.toDto(model.status ?: AVAILABLE, GROUP, model.startAvailability, model.endAvailability)
+		verify(statusHelper).groupStatus(model)
 
 	}
 }

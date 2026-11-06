@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.AlertCriticalityRuleHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.ALERT_CRITICALITY_RULE_KEY
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
@@ -16,7 +17,10 @@ import org.mockito.kotlin.whenever
 class AlertCriticalityMetadataReaderDtoMapperTest {
 	private val criticalityMapper: AlertCriticalityReaderDtoMapper = mock()
 	private val translateService: ITranslateService = mock()
-	private val mapper = AlertCriticalityMetadataReaderDtoMapper(criticalityMapper, translateService, 6, 18)
+	private val mapper = AlertCriticalityMetadataReaderDtoMapper(
+		criticalityMapper,
+		AlertCriticalityRuleHelper(translateService, 6, 18),
+	)
 
 	@Test
 	fun `Should toDto map every level and describe the rule with the configured thresholds`() {
