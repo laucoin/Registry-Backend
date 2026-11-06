@@ -1,8 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.CommunicationQueryDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.AlertQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
@@ -24,7 +25,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Aler
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
@@ -51,26 +51,18 @@ class AlertV2Controller(
 	override fun findAlerts(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		status: AlertStatusEnum?,
-		criticality: AlertCriticalityEnum?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sort: String?,
+		search: AlertQueryDto,
 	): Mono<PageModel<AlertReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_ALERT_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_ALERT_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = AlertSearchParamModel(
-			query,
+			search.query,
 			visibility,
-			status,
-			from,
-			to,
-			criticality,
-			sort = sort.toSortModel(AlertSearchParamModel.SORT_FIELDS),
+			search.status,
+			search.from,
+			search.to,
+			search.criticality,
+			sort = search.sort.toSortModel(AlertSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findAlertsPage(currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
@@ -88,19 +80,13 @@ class AlertV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sort: String?,
+		search: CommunicationQueryDto,
 	): Mono<PageModel<CommunicationReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = CommunicationSearchParamModel(
-			query, visibility, from, to,
-			sort = sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
+			search.query, visibility, search.from, search.to,
+			sort = search.sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findAlertCommunicationsPage(projectId, id, pageable, searchParams)

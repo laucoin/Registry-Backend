@@ -1,8 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ProjectProfileQueryDto
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_RESTORE
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
-import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
@@ -24,7 +24,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Proj
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileRoleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfilesWriterDtoMapper
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
@@ -53,21 +52,13 @@ class ProjectProfileV2Controller(
 	override fun findProjectProfiles(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isAvailable: Boolean?,
-		status: ProfileStatusEnum?,
-		isVisible: Boolean?,
-		at: ZonedDateTime?,
-		role: String?,
-		sort: String?,
+		search: ProjectProfileQueryDto,
 	): Mono<PageModel<ProjectProfileReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = ProjectProfileSearchParamModel(
-			query, isAvailable, status, at, role,
-			sort = sort.toSortModel(ProjectProfileSearchParamModel.SORT_FIELDS),
-			isVisible = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PROFILE_RESTORE),
+			search.query, search.isAvailable, search.status, search.at, search.role,
+			sort = search.sort.toSortModel(ProjectProfileSearchParamModel.SORT_FIELDS),
+			isVisible = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_PROFILE_RESTORE),
 		)
 
 		return useCase.findProjectProfilesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)

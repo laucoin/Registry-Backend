@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.MovementQueryDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.CommunicationQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectStatusReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleStatusReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectStatusReaderDtoMapper
@@ -80,30 +82,21 @@ class MovementV2Controller(
 	override fun findMovements(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Long,
-		size: Int,
-		isCurrent: Boolean,
-		hasActivity: Boolean?,
-		isVisible: Boolean?,
-		type: MovementTypeEnum?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		activityId: UUID?,
-		sort: String?,
+		search: MovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = MovementSearchParamModel(
 			visibility,
-			hasActivity,
-			type,
-			from,
-			to,
-			activityId = activityId,
-			sort = sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
+			search.hasActivity,
+			search.type,
+			search.from,
+			search.to,
+			activityId = search.activityId,
+			sort = search.sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
 		)
 
-		return movementsPage(isCurrent, currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return movementsPage(search.isCurrent, currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	private fun movementsPage(
@@ -197,19 +190,13 @@ class MovementV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		from: ZonedDateTime?,
-		to: ZonedDateTime?,
-		sort: String?,
+		search: CommunicationQueryDto,
 	): Mono<PageModel<CommunicationReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = CommunicationSearchParamModel(
-			query, visibility, from, to,
-			sort = sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
+			search.query, visibility, search.from, search.to,
+			sort = search.sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findMovementCommunicationsPage(projectId, id, pageable, searchParams)

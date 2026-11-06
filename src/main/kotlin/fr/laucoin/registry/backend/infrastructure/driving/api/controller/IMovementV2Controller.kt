@@ -1,10 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.MovementQueryDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.CommunicationQueryDto
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_IDS_TOO_MANY
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_MOVEMENT_C
@@ -18,14 +17,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_COMMUNICATION
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.MOVEMENT_IDS_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MIN
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MIN
 import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -45,8 +37,6 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Max
-import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Size
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -88,25 +78,7 @@ interface IMovementV2Controller {
 	fun findMovements(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
-		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
-		@Parameter(description = "\"isCurrent\" means a movement with a REGISTERED participant still outside or a GUEST still inside")
-		@RequestParam(required = false, defaultValue = "false") isCurrent: Boolean,
-		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
-		@RequestParam(required = false) hasActivity: Boolean?,
-		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
-		@RequestParam(required = false) isVisible: Boolean?,
-		@RequestParam(required = false) type: MovementTypeEnum?,
-		@Parameter(description = "Start (inclusive) of the period that must contain the element date-time")
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) from: ZonedDateTime?,
-		@Parameter(description = "End (inclusive) of the period that must contain the element date-time")
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
-		@Parameter(description = "Only the movements of this activity. Considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
-		@RequestParam(required = false) activityId: UUID?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, type")
-		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
+		@Valid @ParameterObject search: MovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>>
 
 	@Operation(
@@ -189,20 +161,7 @@ interface IMovementV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
-		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
-		@Parameter(description = "Text matched against the communication message")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
-		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
-		@RequestParam(required = false) isVisible: Boolean?,
-		@Parameter(description = "Start (inclusive) of the period that must contain the element date-time")
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) from: ZonedDateTime?,
-		@Parameter(description = "End (inclusive) of the period that must contain the element date-time")
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, message")
-		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
+		@Valid @ParameterObject search: CommunicationQueryDto,
 	): Mono<PageModel<CommunicationReaderDto>>
 
 	@Operation(

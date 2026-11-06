@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ProjectQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -15,7 +16,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expect
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectWriterDtoMapper
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
@@ -36,25 +36,18 @@ class ProjectV2Controller(
 ): IProjectV2Controller {
 	override fun findProjects(
 		currentUser: CurrentUserModel,
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		isFavorite: Boolean?,
-		withProfile: Boolean?,
-		at: ZonedDateTime?,
-		sort: String?,
+		search: ProjectQueryDto,
 	): Mono<PageModel<ProjectWithProfileReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = ProjectSearchParamModel(
-			query = query,
-			isVisible = isVisible,
-			at = at,
-			sort = sort.toSortModel(ProjectSearchParamModel.SORT_FIELDS),
-			isFavorite = isFavorite,
+			query = search.query,
+			isVisible = search.isVisible,
+			at = search.at,
+			sort = search.sort.toSortModel(ProjectSearchParamModel.SORT_FIELDS),
+			isFavorite = search.isFavorite,
 		)
 
-		return useCase.findProjectsPage(currentUser, pageable, withProfile, searchParams).map(readerMapper::toDtoPage)
+		return useCase.findProjectsPage(currentUser, pageable, search.withProfile, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun findProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {

@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.UserProjectProfileQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
@@ -15,7 +16,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Proj
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserInvitationReaderDtoMapper
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
-import java.time.ZonedDateTime
 import java.util.UUID
 
 /**
@@ -32,19 +32,12 @@ class UserProjectProfileV2Controller(
 ) : IUserProjectProfileV2Controller {
 	override fun findUserProjectProfiles(
 		currentUser: CurrentUserModel,
-		page: Long,
-		size: Int,
-		query: String?,
-		isAvailable: Boolean?,
-		status: ProfileStatusEnum?,
-		at: ZonedDateTime?,
-		role: String?,
-		sort: String?,
+		search: UserProjectProfileQueryDto,
 	): Mono<PageModel<UserInvitationReaderDto>> {
-		val pageable = PageableModel(page * size, size)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = ProjectProfileSearchParamModel(
-			query, isAvailable, status, at, role,
-			sort = sort.toSortModel(ProjectProfileSearchParamModel.PROJECT_SORT_FIELDS),
+			search.query, search.isAvailable, search.status, search.at, search.role,
+			sort = search.sort.toSortModel(ProjectProfileSearchParamModel.PROJECT_SORT_FIELDS),
 		)
 
 		return service.findProjectProfilesPage(currentUser.id!!, pageable, searchParams).map(readerMapper::toDtoPage)

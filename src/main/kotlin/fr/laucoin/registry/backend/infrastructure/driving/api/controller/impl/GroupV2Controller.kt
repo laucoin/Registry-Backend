@@ -1,9 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ParticipantQueryDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.GroupQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
@@ -24,8 +24,6 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Grou
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.GroupWithoutMemberReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ParticipantReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.GroupWriterDtoMapper
-import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.http.HttpStatus.MULTI_STATUS
 import org.springframework.http.HttpStatus.OK
@@ -55,23 +53,15 @@ class GroupV2Controller(
 	override fun findGroups(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isVisible: Boolean?,
-		isPresent: Boolean?,
-		at: ZonedDateTime?,
-		mine: Boolean?,
-		hasOnSiteMembers: Boolean?,
-		sort: String?,
+		search: GroupQueryDto,
 	): Mono<PageModel<GroupWithoutMemberReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_GROUP_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_GROUP_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = GroupSearchParamModel(
-			query, visibility, isPresent, at,
-			memberUserId = currentUser.id.takeIf { mine == true },
-			hasOnSiteMembers = hasOnSiteMembers,
-			sort = sort.toSortModel(GroupSearchParamModel.SORT_FIELDS),
+			search.query, visibility, search.isPresent, search.at,
+			memberUserId = currentUser.id.takeIf { search.mine == true },
+			hasOnSiteMembers = search.hasOnSiteMembers,
+			sort = search.sort.toSortModel(GroupSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findGroupsPage(projectId, pageable, searchParams).map(readerLightMapper::toDtoPage)
@@ -81,29 +71,17 @@ class GroupV2Controller(
 		currentUser: CurrentUserModel,
 		projectId: UUID,
 		id: UUID,
-		page: Long,
-		size: Int,
-		query: String?,
-		isMajor: Boolean?,
-		type: ParticipantTypeEnum?,
-		isVisible: Boolean?,
-		status: PresenceStatusEnum?,
-		at: ZonedDateTime?,
-		hasUser: Boolean?,
-		onSite: Boolean?,
-		birthdayFrom: LocalDate?,
-		birthdayTo: LocalDate?,
-		sort: String?,
+		search: ParticipantQueryDto,
 	): Mono<PageModel<ParticipantReaderDto>> {
-		val visibility = currentUser.visibilityFor(isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_RESTORE)
-		val pageable = PageableModel(page * size, size)
+		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_PARTICIPANT_RESTORE)
+		val pageable = PageableModel(search.page * search.size, search.size)
 		val searchParams = ParticipantSearchParamModel(
-			query, isMajor, type, visibility, status, at,
-			hasUser = hasUser,
-			isOnSite = onSite,
-			birthdayFrom = birthdayFrom,
-			birthdayTo = birthdayTo,
-			sort = sort.toSortModel(ParticipantSearchParamModel.SORT_FIELDS),
+			search.query, search.isMajor, search.type, visibility, search.status, search.at,
+			hasUser = search.hasUser,
+			isOnSite = search.onSite,
+			birthdayFrom = search.birthdayFrom,
+			birthdayTo = search.birthdayTo,
+			sort = search.sort.toSortModel(ParticipantSearchParamModel.SORT_FIELDS),
 		)
 
 		return service.findGroupMembersPageByGroupId(projectId, id, pageable, searchParams)

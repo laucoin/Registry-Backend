@@ -1,10 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import org.springdoc.core.annotations.ParameterObject
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.VehicleQueryDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ElementMovementQueryDto
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_D
@@ -13,16 +11,6 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_RESTORE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_VEHICLE_U
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_MIN
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_DEFAULT
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PAGE_SIZE_MIN
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SEARCH_QUERY_MAX
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.SORT_MAX
-import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -30,16 +18,9 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Vehicle
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleTimelineReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.VehicleWriterDto
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Max
-import jakarta.validation.constraints.Min
-import jakarta.validation.constraints.Size
-import java.time.ZonedDateTime
 import java.util.UUID
-import org.springframework.format.annotation.DateTimeFormat
-import org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -51,7 +32,6 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
@@ -73,22 +53,7 @@ interface IVehicleV2Controller {
 	fun findVehicles(
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
-		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
-		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
-		@Parameter(description = "Text matched against the vehicle license plate, brand and model")
-		@RequestParam(value = "q", required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
-		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
-		@RequestParam(required = false) isVisible: Boolean?,
-		@RequestParam(required = false) status: PresenceStatusEnum?,
-		@Parameter(description = "Instant that must fall inside the validity window")
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) at: ZonedDateTime?,
-		@Parameter(description = "Exact vehicle brand, ignoring case and accents")
-		@RequestParam(required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) brand: String?,
-		@Parameter(description = "Exact vehicle model, ignoring case and accents")
-		@RequestParam(required = false) @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) model: String?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: licensePlate, brand, model, startAvailability, endAvailability")
-		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
+		@Valid @ParameterObject search: VehicleQueryDto,
 	): Mono<PageModel<VehicleReaderDto>>
 
 	@Operation(
@@ -125,21 +90,7 @@ interface IVehicleV2Controller {
 		@AuthenticationPrincipal currentUser: CurrentUserModel,
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
-		@RequestParam(defaultValue = PAGE_DEFAULT) @Valid @Min(PAGE_MIN, message = PAGE_NUMBER_IS_LOWER_THAN_ZERO) @Max(PAGE_MAX, message = PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE) page: Long,
-		@RequestParam(defaultValue = PAGE_SIZE_DEFAULT) @Valid @Min(PAGE_SIZE_MIN, message = PAGE_SIZE_IS_LOWER_THAN_ONE) @Max(PAGE_SIZE_MAX, message = PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE) size: Int,
-		@Parameter(description = "Visibility filter: true keeps visible elements only, false keeps hidden ones only, omitted keeps both")
-		@RequestParam(required = false) isVisible: Boolean?,
-		@Parameter(description = "\"true\" value will be considered only if the project has REGISTRY_PROJECT_OPTION_ACTIVITY.")
-		@RequestParam(required = false) hasActivity: Boolean?,
-		@RequestParam(required = false) type: MovementTypeEnum?,
-		@Parameter(description = "Start (inclusive) of the period that must contain the element date-time")
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) from: ZonedDateTime?,
-		@Parameter(description = "End (inclusive) of the period that must contain the element date-time")
-		@RequestParam(required = false)
-		@DateTimeFormat(iso = DATE_TIME) to: ZonedDateTime?,
-		@Parameter(description = "Sort field, prefixed with - for descending order. Supported: dateTime, type")
-		@RequestParam(required = false) @Valid @Size(max = SORT_MAX, message = PARAMETER_TOO_LONG) sort: String?,
+		@Valid @ParameterObject search: ElementMovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>>
 
 	@Operation(
