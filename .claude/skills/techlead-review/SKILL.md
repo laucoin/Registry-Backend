@@ -31,7 +31,7 @@ deductions: **blocker −40**, **should-fix −10**, **nit −2.5** (minimum flo
   `{ ... }`)** when it can be written concisely or converted to a method reference (`::`).
 - **Systematic Extraction (Helpers):** Anything that can be factored, cleaned up, or rendered stateless (calculations,
   formatting, data transformations, validations) **must be extracted** into dedicated helper classes (`domain/helper` or
-  `infrastructure/helper`) to keep services and use-cases focused exclusively on business orchestration.
+  `infrastructure/**/helper`) to keep services and use-cases focused exclusively on business orchestration.
 
 ### 3. Non-Duplication (DRY) & Factorization
 

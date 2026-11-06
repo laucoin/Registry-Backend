@@ -32,7 +32,7 @@ with a baseline score of **100 points** and deduct points based on findings: **b
       `impl/ProjectService`) to avoid scope churn.
 - **Helper Placement & Cross-Feature Mutualization:**
     - Reusable, stateless, or utility logic must be extracted into dedicated helper classes in the correct package
-      (`domain/helper` for domain logic, `infrastructure/helper` for technical tasks).
+      (`domain/helper` for domain logic, `infrastructure/**/helper` for technical tasks, next to the adapters they serve).
     - **Cross-Feature Mutualization:** Track and prevent duplication (DRY principle). Components, helpers, logic, and
       **domain data models** must be cross-feature mutualized whenever they share a common business concept, rather than
       being duplicated across modules.
