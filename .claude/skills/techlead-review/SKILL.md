@@ -18,8 +18,10 @@ deductions: **blocker −40**, **should-fix −10**, **nit −2.5** (minimum flo
 - **Parameter Count:** Maximum **7 parameters** per method/constructor (prefer a parameter object or a DTO if the number
   of parameters increases). *Exemption:* pure data holders (entities, DTOs and domain models: classes under `entity/`,
   `dto/` or `model/` that carry fields and no business logic) are not counted; each parameter there is a column or a
-  field. REST contracts and repository queries are not exempt: group filter, sort and pagination parameters into a
-  parameter object.
+  field. The named parameters of a Spring Data `@Query` repository method are not counted either: they are the bind
+  markers of the SQL statement (temporary exemption, until the data access plan replaces the hand-written `@Query`).
+  REST contracts and domain services are not exempt: group filter, sort and pagination parameters into a parameter
+  object.
 - **Nesting Levels:** Maximum **2 nesting levels** (e.g., a loop or an `if` nested inside another). Beyond that, extract
   the blocks into dedicated methods or helpers.
 - **Cyclomatic Complexity:** Limited to a maximum of **6** per method. Control structures that are too complex
