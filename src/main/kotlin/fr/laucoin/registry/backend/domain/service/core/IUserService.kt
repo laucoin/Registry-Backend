@@ -20,8 +20,6 @@ interface IUserService {
 	fun findUserById(id: UUID, isVisible: Boolean?): Mono<UserModel>
 	fun findUserByOidcId(id: UUID, isVisible: Boolean?): Mono<CurrentUserModel>
 	fun findUserByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel>
-	fun findUsersByEmails(emails: Collection<String>): Flux<UserModel>
-	fun createPendingUser(email: String): Mono<UserModel>
 	fun resolveUsersByEmail(emails: List<String>): Mono<Map<String, UserModel>>
 	fun serviceAccount(): UserModel
 	fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String>
