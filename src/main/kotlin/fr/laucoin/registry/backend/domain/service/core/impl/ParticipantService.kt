@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_USER_NOT_PROJECT_MEMBER
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
@@ -37,7 +38,6 @@ import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IParticipantService
 import java.time.Clock
 import java.time.LocalDate
-import java.util.Objects
 import java.util.UUID
 import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -153,9 +153,8 @@ class ParticipantService(
 	}
 
 	private fun validateUserLink(participant: ParticipantModel): Mono<List<ParticipantModel>> {
-		return if (Objects.nonNull(participant.user)) {
-			validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!)
-		} else Mono.just(emptyList())
+		val userId = participant.user?.id ?: return Mono.just(emptyList())
+		return validateLinkableUser(participant.projectId!!, userId)
 	}
 
 	private fun validateParticipantGroups(participant: ParticipantModel): Mono<ParticipantModel> {
@@ -164,10 +163,17 @@ class ParticipantService(
 		} else Mono.just(participant)
 	}
 
-	private fun validateNoParticipantForUser(projectId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
-		return port.findByUserId(projectId, userId)
-			.collectList()
+	private fun validateLinkableUser(projectId: UUID, userId: UUID): Mono<List<ParticipantModel>> {
+		return port.isProjectMember(projectId, userId)
+			.handle<Boolean> { member, sink -> sink.nextOrError(member, notMemberError(projectId, userId, member)) }
+			.flatMap { port.findByUserId(projectId, userId).collectList() }
 			.handle { linked, sink -> sink.nextIfNoLinkedParticipant(linked) }
+	}
+
+	private fun notMemberError(projectId: UUID, userId: UUID, member: Boolean): RegistryException? {
+		if (member) return null
+		log.warn("The user {} has no profile on the project {} and cannot be linked to a participant", userId, projectId)
+		return RegistryException(UNPROCESSABLE_CONTENT, PARTICIPANT_USER_NOT_PROJECT_MEMBER)
 	}
 
 	private fun SynchronousSink<List<ParticipantModel>>.nextIfNoLinkedParticipant(linked: List<ParticipantModel>) {
@@ -177,7 +183,7 @@ class ParticipantService(
 			PARTICIPANT_IN_PROJECT_ALREADY_LINKED_TO_USER,
 			arrayListOf("${linked.first().firstName} ${linked.first().lastName}")
 		)
-		log.warn("Attempt to link an already link user to a participant", exception)
+		log.warn("Attempt to link a user already linked to another participant", exception)
 		error(exception)
 	}
 
@@ -238,11 +244,9 @@ class ParticipantService(
 	}
 
 	private fun validateUserLink(toUpdate: ParticipantModel, participant: ParticipantModel): Mono<ParticipantModel> {
-		return if (toUpdate.user?.id != participant.user?.id && Objects.nonNull(participant.user?.id)) {
-			validateNoParticipantForUser(participant.projectId!!, participant.user!!.id!!).map { toUpdate }
-		} else {
-			Mono.just(toUpdate)
-		}
+		val userId = participant.user?.id
+		if (userId == null || userId == toUpdate.user?.id) return Mono.just(toUpdate)
+		return validateLinkableUser(participant.projectId!!, userId).map { toUpdate }
 	}
 
 	private fun validateNewGroups(toUpdate: ParticipantModel, participant: ParticipantModel): Mono<ParticipantModel> {
@@ -323,7 +327,7 @@ class ParticipantService(
 			type = null,
 			to = participant.startAvailability!!.toZonedDateTime(),
 		)
-		return rejectMovements(oldParticipant, searchParams, "before the new end date")
+		return rejectMovements(oldParticipant, searchParams, "before the new start date")
 	}
 
 	private fun validateNoMovementConflictAfter(
@@ -334,7 +338,7 @@ class ParticipantService(
 			type = null,
 			from = participant.endAvailability!!.toZonedDateTime(),
 		)
-		return rejectMovements(oldParticipant, searchParams, "after the new start date")
+		return rejectMovements(oldParticipant, searchParams, "after the new end date")
 	}
 
 	private fun rejectMovements(

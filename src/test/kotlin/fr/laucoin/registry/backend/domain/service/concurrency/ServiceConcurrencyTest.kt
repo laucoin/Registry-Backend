@@ -117,6 +117,7 @@ class ServiceConcurrencyTest : TestContext() {
 		// Arrange
 		val projectId = insertProject()
 		val userId = insertUser(role = "USER")
+		insertAdministratorProfile(projectId, userId)
 
 		// Act
 		val outcomes = concurrently(
