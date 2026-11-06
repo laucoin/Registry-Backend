@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.enumeration.RefreshModeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ThemeEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.service.core.IPreferencesService
+import fr.laucoin.registry.backend.domain.service.usecase.IPreferencesUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPreferencesV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PreferenceReaderDtoMapper
@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono
  */
 @RestController
 class PreferencesV2Controller(
-	private val service: IPreferencesService,
+	private val service: IPreferencesUseCase,
 	private val mapper: PreferenceReaderDtoMapper,
 ): IPreferencesV2Controller {
 	override fun updateTheme(

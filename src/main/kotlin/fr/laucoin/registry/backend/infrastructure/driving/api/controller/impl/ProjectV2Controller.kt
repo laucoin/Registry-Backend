@@ -6,7 +6,6 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IProjectV2Controller
@@ -30,7 +29,6 @@ import reactor.core.publisher.Mono
  */
 @RestController
 class ProjectV2Controller(
-	private val service: IProjectService,
 	private val useCase: IProjectUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ProjectWithProfileReaderDtoMapper,
@@ -56,11 +54,11 @@ class ProjectV2Controller(
 			isFavorite = isFavorite,
 		)
 
-		return service.findProjectsPage(currentUser, pageable, withProfile, searchParams).map(readerMapper::toDtoPage)
+		return useCase.findProjectsPage(currentUser, pageable, withProfile, searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun findProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
-		return service.findProjectWithProfileById(currentUser, id).map(readerMapper::toDto)
+		return useCase.findProjectWithProfileById(currentUser, id).map(readerMapper::toDto)
 	}
 
 	override fun createProject(currentUser: CurrentUserModel, project: ProjectWriterDto,
@@ -83,26 +81,26 @@ class ProjectV2Controller(
 			LockableResourceEnum.PROJECT,
 			id,
 			exchange.expectedLastEditions(),
-			current = { service.findProjectById(id, isVisible = null) },
-			action = { service.updateProjectById(currentUser, id, projectModel) },
+			current = { useCase.findProjectById(id, isVisible = null) },
+			action = { useCase.updateProjectById(currentUser, id, projectModel) },
 		).map(readerMapper::toDto)
 	}
 
 	override fun disableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
-		return service.disableProjectById(currentUser, id).map(readerMapper::toDto)
+		return useCase.disableProjectById(currentUser, id).map(readerMapper::toDto)
 	}
 
 	override fun enableProjectById(currentUser: CurrentUserModel, id: UUID): Mono<ProjectWithProfileReaderDto> {
-		return service.enableProjectById(currentUser, id).map(readerMapper::toDto)
+		return useCase.enableProjectById(currentUser, id).map(readerMapper::toDto)
 	}
 
 	override fun addFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
-		return service.addFavoriteProject(currentUser, id)
+		return useCase.addFavoriteProject(currentUser, id)
 	}
 
 	override fun removeFavoriteProject(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
-		return service.removeFavoriteProject(currentUser, id)
+		return useCase.removeFavoriteProject(currentUser, id)
 	}
 
-	override fun deleteProjectById(id: UUID): Mono<Unit> = service.deleteProjectById(id)
+	override fun deleteProjectById(id: UUID): Mono<Unit> = useCase.deleteProjectById(id)
 }

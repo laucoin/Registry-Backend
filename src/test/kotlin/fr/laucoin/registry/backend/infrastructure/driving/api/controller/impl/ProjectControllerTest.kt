@@ -28,7 +28,6 @@ import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.SortModel
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CustomDateTimeWriterDto
@@ -79,9 +78,6 @@ import kotlin.test.assertEquals
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_R as PROJECT_SCOPED_PROJECT_R
 
 class ProjectControllerTest : TestContext() {
-	@MockitoBean
-	private lateinit var service: IProjectService
-
 	@MockitoBean
 	private lateinit var useCase: IProjectUseCase
 
@@ -183,7 +179,7 @@ class ProjectControllerTest : TestContext() {
 			at = at?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
 		)
 		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectModel()))
-		whenever(service.findProjectsPage(any(), any(), anyOrNull(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(useCase.findProjectsPage(any(), any(), anyOrNull(), any())).thenReturn(Mono.just(expectedPage))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectWithProfileReaderDto())),
 		)
@@ -211,7 +207,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findProjectsPage(
+		verify(useCase).findProjectsPage(
 			currentUser(*authorities.toTypedArray()),
 			pageable,
 			null,
@@ -226,7 +222,7 @@ class ProjectControllerTest : TestContext() {
 		// Arrange
 		val pageable = PageableModel(0, 20)
 		val captor = argumentCaptor<ProjectSearchParamModel>()
-		whenever(service.findProjectsPage(any(), any(), anyOrNull(), any()))
+		whenever(useCase.findProjectsPage(any(), any(), anyOrNull(), any()))
 			.thenReturn(Mono.just(PageModel(pageable, totalElements = 0, emptyList())))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(PageModel(pageable, totalElements = 0, emptyList()))
 
@@ -240,7 +236,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findProjectsPage(any(), any(), anyOrNull(), captor.capture())
+		verify(useCase).findProjectsPage(any(), any(), anyOrNull(), captor.capture())
 		assertEquals(true, captor.firstValue.isFavorite)
 		assertEquals(SortModel("favorite", isDescending = true), captor.firstValue.sort)
 	}
@@ -260,7 +256,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_TYPE_MISMATCH)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -278,7 +274,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.expectStatus().isBadRequest
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@ParameterizedTest
@@ -309,7 +305,7 @@ class ProjectControllerTest : TestContext() {
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -317,7 +313,7 @@ class ProjectControllerTest : TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.findProjectWithProfileById(any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(useCase.findProjectWithProfileById(any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
@@ -330,7 +326,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
 
-		verify(service).findProjectWithProfileById(any(), eq(uuid))
+		verify(useCase).findProjectWithProfileById(any(), eq(uuid))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
@@ -347,7 +343,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -370,7 +366,7 @@ class ProjectControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -424,7 +420,7 @@ class ProjectControllerTest : TestContext() {
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -437,7 +433,7 @@ class ProjectControllerTest : TestContext() {
 			options = listOf(ACTIVITY)
 		)
 
-		whenever(service.updateProjectById(any(), any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(useCase.updateProjectById(any(), any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
@@ -452,7 +448,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
 
-		verify(service).updateProjectById(any(), eq(defaultProjectId), any())
+		verify(useCase).updateProjectById(any(), eq(defaultProjectId), any())
 		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any())
 	}
@@ -467,10 +463,10 @@ class ProjectControllerTest : TestContext() {
 			options = listOf(ACTIVITY)
 		)
 
-		whenever(service.updateProjectById(any(), any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(useCase.updateProjectById(any(), any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
-		whenever(service.findProjectById(any(), anyOrNull())).thenReturn(
+		whenever(useCase.findProjectById(any(), anyOrNull())).thenReturn(
 			Mono.just(ProjectModel().apply {
 				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
 			}),
@@ -488,7 +484,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
 
-		verify(service).updateProjectById(any(), eq(defaultProjectId), any())
+		verify(useCase).updateProjectById(any(), eq(defaultProjectId), any())
 		verify(readerMapper).toDto(any())
 		verify(writerMapper).toModel(any())
 	}
@@ -504,7 +500,7 @@ class ProjectControllerTest : TestContext() {
 		)
 
 		whenever(writerMapper.toModel(any())).thenReturn(ProjectModel())
-		whenever(service.findProjectById(any(), anyOrNull())).thenReturn(
+		whenever(useCase.findProjectById(any(), anyOrNull())).thenReturn(
 			Mono.just(ProjectModel().apply {
 				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
 			}),
@@ -522,7 +518,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
 
-		verify(service, never()).updateProjectById(any(), eq(defaultProjectId), any())
+		verify(useCase, never()).updateProjectById(any(), eq(defaultProjectId), any())
 	}
 
 	@ParameterizedTest
@@ -544,13 +540,13 @@ class ProjectControllerTest : TestContext() {
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
 	fun `Should disableProjectById return 200`() {
 		// Arrange
-		whenever(service.disableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(useCase.disableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
@@ -563,7 +559,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
 
-		verify(service).disableProjectById(any(), eq(defaultProjectId))
+		verify(useCase).disableProjectById(any(), eq(defaultProjectId))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
@@ -571,7 +567,7 @@ class ProjectControllerTest : TestContext() {
 	@Test
 	fun `Should enableProjectById return 200`() {
 		// Arrange
-		whenever(service.enableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(useCase.enableProjectById(any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto())
 
 		// Act
@@ -584,7 +580,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<ProjectWithProfileReaderDto>(OK)
 
-		verify(service).enableProjectById(any(), eq(defaultProjectId))
+		verify(useCase).enableProjectById(any(), eq(defaultProjectId))
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(writerMapper)
 	}
@@ -592,7 +588,7 @@ class ProjectControllerTest : TestContext() {
 	@Test
 	fun `Should addFavoriteProject return 204 with the global read authority`() {
 		// Arrange
-		whenever(service.addFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(useCase.addFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
 
 		// Act
 		val result = webClient
@@ -604,13 +600,13 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<Void>(NO_CONTENT)
 
-		verify(service).addFavoriteProject(currentUser(REGISTRY_PROJECT_R), defaultProjectId)
+		verify(useCase).addFavoriteProject(currentUser(REGISTRY_PROJECT_R), defaultProjectId)
 	}
 
 	@Test
 	fun `Should addFavoriteProject return 204 with the project read permission`() {
 		// Arrange
-		whenever(service.addFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(useCase.addFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
 
 		// Act
 		val result = webClient
@@ -622,7 +618,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<Void>(NO_CONTENT)
 
-		verify(service).addFavoriteProject(any(), eq(defaultProjectId))
+		verify(useCase).addFavoriteProject(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -640,13 +636,13 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
 	fun `Should removeFavoriteProject return 204 with the project read permission`() {
 		// Arrange
-		whenever(service.removeFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(useCase.removeFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
 
 		// Act
 		val result = webClient
@@ -658,7 +654,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<Void>(NO_CONTENT)
 
-		verify(service).removeFavoriteProject(any(), eq(defaultProjectId))
+		verify(useCase).removeFavoriteProject(any(), eq(defaultProjectId))
 	}
 
 	@Test
@@ -676,13 +672,13 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
 	fun `Should removeFavoriteProject return 204 with the global read authority`() {
 		// Arrange
-		whenever(service.removeFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
+		whenever(useCase.removeFavoriteProject(any(), any())).thenReturn(Mono.just(Unit))
 
 		// Act
 		val result = webClient
@@ -694,7 +690,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<Void>(NO_CONTENT)
 
-		verify(service).removeFavoriteProject(currentUser(REGISTRY_PROJECT_R), defaultProjectId)
+		verify(useCase).removeFavoriteProject(currentUser(REGISTRY_PROJECT_R), defaultProjectId)
 	}
 
 	@ParameterizedTest
@@ -713,7 +709,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.assertError(FORBIDDEN, NOT_ENOUGH_PERMISSION)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@ParameterizedTest
@@ -732,7 +728,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, PARAMETER_TYPE_MISMATCH)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -740,7 +736,7 @@ class ProjectControllerTest : TestContext() {
 		// Arrange
 		val notFound =
 			RegistryException(NOT_FOUND, NOT_FOUND_WITH_GIVEN_IDENTIFIER, arrayListOf(defaultProjectId.toString()))
-		whenever(service.addFavoriteProject(any(), any())).thenReturn(Mono.error(notFound))
+		whenever(useCase.addFavoriteProject(any(), any())).thenReturn(Mono.error(notFound))
 
 		// Act
 		val result = webClient
@@ -756,7 +752,7 @@ class ProjectControllerTest : TestContext() {
 	@Test
 	fun `Should findProjectById expose the favorite flag in the response body`() {
 		// Arrange
-		whenever(service.findProjectWithProfileById(any(), any())).thenReturn(Mono.just(ProjectModel()))
+		whenever(useCase.findProjectWithProfileById(any(), any())).thenReturn(Mono.just(ProjectModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectWithProfileReaderDto(favorite = true))
 
 		// Act
@@ -773,7 +769,7 @@ class ProjectControllerTest : TestContext() {
 	@Test
 	fun `Should deleteProjectById return 204`() {
 		// Arrange
-		whenever(service.deleteProjectById(any())).thenReturn(Mono.empty())
+		whenever(useCase.deleteProjectById(any())).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
@@ -785,7 +781,7 @@ class ProjectControllerTest : TestContext() {
 		// Assert
 		result.body<Void>(NO_CONTENT)
 
-		verify(service).deleteProjectById(eq(defaultProjectId))
+		verify(useCase).deleteProjectById(eq(defaultProjectId))
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(writerMapper)
 	}

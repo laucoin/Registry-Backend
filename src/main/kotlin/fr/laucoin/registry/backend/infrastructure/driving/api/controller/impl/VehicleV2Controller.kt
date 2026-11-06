@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
-import fr.laucoin.registry.backend.domain.service.core.IVehicleService
+import fr.laucoin.registry.backend.domain.service.usecase.IVehicleUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IVehicleV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
@@ -38,7 +38,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
  */
 @RestController
 class VehicleV2Controller(
-	private val service: IVehicleService,
+	private val service: IVehicleUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: VehicleReaderDtoMapper,
 	private val timelineReaderMapper: VehicleTimelineReaderDtoMapper,

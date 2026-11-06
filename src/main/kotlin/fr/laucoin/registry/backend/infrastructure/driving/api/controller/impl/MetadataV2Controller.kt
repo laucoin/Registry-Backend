@@ -7,7 +7,7 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
-import fr.laucoin.registry.backend.domain.service.core.IProjectService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectUseCase
 import fr.laucoin.registry.backend.domain.service.support.IFeatureService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IMetadataV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
@@ -41,7 +41,7 @@ class MetadataV2Controller(
 	private val participantTypeReaderMapper: ParticipantTypeReaderDtoMapper,
 	private val alertStatusReaderMapper: AlertStatusReaderDtoMapper,
 	private val alertCriticalityMetadataReaderMapper: AlertCriticalityMetadataReaderDtoMapper,
-	private val projectService: IProjectService,
+	private val projectService: IProjectUseCase,
 	private val projectOptionsReaderMapper: ProjectOptionsReaderDtoMapper,
 	private val featureService: IFeatureService,
 	private val featuresReaderMapper: FeaturesReaderDtoMapper,

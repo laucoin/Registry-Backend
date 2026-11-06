@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.extension.UserExt.getClaimAsUUID
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.TokenModel
-import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.support.IAuthenticationService
 import fr.laucoin.registry.backend.domain.service.support.impl.LoggerService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ISecurityV2Controller
@@ -33,7 +33,7 @@ class SecurityV2Controller(
 	private val cookieService: AuthenticationCookieService,
 	private val mapper: CurrentUserReaderDtoMapper,
 	private val uriMapper: AuthenticationUriReaderDtoMapper,
-	private val userService: IUserService,
+	private val userService: IUserUseCase,
 	private val jwtDecoder: ReactiveJwtDecoder,
 	@param:Value($$"${registry.security.oauth2.claims.user-id}")
 	private val userIdKey: String,

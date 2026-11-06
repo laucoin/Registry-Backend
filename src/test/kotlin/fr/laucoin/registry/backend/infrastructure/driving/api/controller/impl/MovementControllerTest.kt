@@ -44,7 +44,7 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.PlannedMovementModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
-import fr.laucoin.registry.backend.domain.service.core.IMovementService
+import fr.laucoin.registry.backend.domain.service.usecase.IMovementUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
@@ -106,7 +106,7 @@ import java.util.stream.Stream
 
 class MovementControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var service: IMovementService
+	private lateinit var service: IMovementUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: MovementReaderDtoMapper

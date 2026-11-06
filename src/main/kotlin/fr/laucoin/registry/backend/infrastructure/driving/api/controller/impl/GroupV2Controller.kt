@@ -10,7 +10,7 @@ import fr.laucoin.registry.backend.domain.model.GroupSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
-import fr.laucoin.registry.backend.domain.service.core.IGroupService
+import fr.laucoin.registry.backend.domain.service.usecase.IGroupUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IGroupV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AddedGroupMembersReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.GroupReaderDto
@@ -44,7 +44,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
  */
 @RestController
 class GroupV2Controller(
-	private val service: IGroupService,
+	private val service: IGroupUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: GroupReaderDtoMapper,
 	private val readerLightMapper: GroupWithoutMemberReaderDtoMapper,

@@ -3,7 +3,7 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_RESTORE
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.service.core.ICommunicationService
+import fr.laucoin.registry.backend.domain.service.usecase.ICommunicationUseCase
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.ICommunicationV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
@@ -25,12 +25,12 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Adaptateur REST des endpoints de communication des alertes.
- * Périmètre : Mappe les modèles de communication et les DTO et délègue à ICommunicationService.
+ * Périmètre : Mappe les modèles de communication et les DTO et délègue à ICommunicationUseCase.
  * Limites : Ne porte aucune règle métier.
  */
 @RestController
 class CommunicationV2Controller(
-	private val service: ICommunicationService,
+	private val service: ICommunicationUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: CommunicationReaderDtoMapper,
 	private val readerAlertMapper: AlertReaderDtoMapper,

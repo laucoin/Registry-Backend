@@ -12,7 +12,7 @@ import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
-import fr.laucoin.registry.backend.domain.service.core.IParticipantService
+import fr.laucoin.registry.backend.domain.service.usecase.IParticipantUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ParticipantExportReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ExportExt.asAttachment
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ExportReaderDtoMapper
@@ -52,7 +52,7 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
  */
 @RestController
 class ParticipantV2Controller(
-	private val service: IParticipantService,
+	private val service: IParticipantUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ParticipantReaderDtoMapper,
 	private val timelineReaderMapper: ParticipantTimelineReaderDtoMapper,

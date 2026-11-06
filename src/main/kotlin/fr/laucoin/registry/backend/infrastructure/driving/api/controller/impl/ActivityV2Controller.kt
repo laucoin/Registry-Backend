@@ -11,7 +11,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
-import fr.laucoin.registry.backend.domain.service.core.IActivityService
+import fr.laucoin.registry.backend.domain.service.usecase.IActivityUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IActivityV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityStatisticsReaderDto
@@ -37,12 +37,12 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 
 /**
  * Objectif : Adaptateur REST des endpoints d'activité du projet.
- * Périmètre : Mappe les modèles d'activité vers des DTO et délègue à IActivityService.
+ * Périmètre : Mappe les modèles d'activité vers des DTO et délègue à IActivityUseCase.
  * Limites : Ne porte aucune règle métier.
  */
 @RestController
 class ActivityV2Controller(
-	private val service: IActivityService,
+	private val service: IActivityUseCase,
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: ActivityReaderDtoMapper,
 	private val statisticsReaderMapper: ActivityStatisticsReaderDtoMapper,

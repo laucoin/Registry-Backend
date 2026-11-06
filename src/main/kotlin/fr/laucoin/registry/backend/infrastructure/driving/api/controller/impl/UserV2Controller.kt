@@ -5,7 +5,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
-import fr.laucoin.registry.backend.domain.service.core.IUserService
+import fr.laucoin.registry.backend.domain.service.usecase.IUserUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IExportUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
@@ -31,7 +31,7 @@ import reactor.core.publisher.Mono
  */
 @RestController
 class UserV2Controller(
-	private val service: IUserService,
+	private val service: IUserUseCase,
 	private val readerMapper: UserReaderDtoMapper,
 	private val userRoleReaderMapper: UserRoleReaderDtoMapper,
 	private val exportUseCase: IExportUseCase,
