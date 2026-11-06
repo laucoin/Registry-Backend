@@ -34,6 +34,7 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -106,6 +107,7 @@ class UserControllerTest: TestContext() {
 		@JvmStatic
 		fun `Should updateUserRole return 400 without a role`(): Stream<Arguments> = Stream.of(
 			Arguments.of(null),
+			Arguments.of(""),
 		)
 	}
 
@@ -275,6 +277,25 @@ class UserControllerTest: TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, USER_ROLE_BLANK)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should updateUserRole return 400 for a role made of spaces only`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_USER_U)
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}/role", listOf(uuid), emptyList()))
+			.bodyValue(UserRoleWriterDto("   "))
+			.exchange()
+
+		// Assert
+		val error = result.body<Map<*, *>>(BAD_REQUEST)
+		assertTrue(error?.get("code") in setOf(USER_ROLE_BLANK, PARAMETER_FORMAT_INVALID))
 		verifyNoInteractions(service)
 	}
 
