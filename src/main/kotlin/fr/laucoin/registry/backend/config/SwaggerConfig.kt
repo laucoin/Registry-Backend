@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import java.util.*
 
 /**
  * Objectif : Configure le document OpenAPI et ses groupes.
@@ -40,10 +39,10 @@ import java.util.*
 )
 class SwaggerConfig(
 	@param:Value($$"${registry.security.oauth2.authorization-uri:}")
-	private val configAuthUrl: String?,
+	private val configAuthUrl: String,
 	@param:Value($$"${registry.security.oauth2.token-uri:}")
-	private val configTokenUrl: String?,
-	@param:Value($$"${registry.server.prefix:''}")
+	private val configTokenUrl: String,
+	@param:Value($$"${registry.server.prefix:}")
 	private val configApiPrefix: String,
 ) {
 	private companion object {
@@ -53,7 +52,7 @@ class SwaggerConfig(
 	@Bean
 	fun openApi(): OpenAPI {
 		val openAPI = OpenAPI()
-		if (Objects.nonNull(configAuthUrl) && Objects.nonNull(configTokenUrl)) {
+		if (configAuthUrl.isNotBlank() && configTokenUrl.isNotBlank()) {
 			openAPI.components(Components().addSecuritySchemes(CLIENT_NAME, oauth2Scheme()))
 				.security(listOf(SecurityRequirement().addList(CLIENT_NAME)))
 		}
@@ -113,6 +112,7 @@ class SwaggerConfig(
 				"/api/v*/projects/{id}",
 				"/api/v*/projects/{id}/disable",
 				"/api/v*/projects/{id}/enable",
+				"/api/v*/projects/{id}/favorite",
 			).build()
 	}
 
