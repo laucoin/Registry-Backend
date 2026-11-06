@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.helper.AuditMappingHelper
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum.HIGH
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import java.time.ZoneOffset
@@ -9,7 +10,7 @@ import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
 class AlertEntityMapperTest {
-	private val mapper = AlertEntityMapper()
+	private val mapper = AlertEntityMapperImpl(AuditMappingHelper())
 
 	@Test
 	fun `Should toModel keep the criticality and build the last communication`() {

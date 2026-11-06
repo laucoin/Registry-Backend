@@ -1,37 +1,22 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import fr.laucoin.registry.backend.domain.extension.AvailabilityElementExt.buildStatus
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
-import org.springframework.stereotype.Component
-import java.time.Clock
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class VehicleEntityMapper(private val clock: Clock): IEntityMapper<VehicleModel, VehicleEntity> {
-	override fun toModel(entity: VehicleEntity): VehicleModel {
-		return VehicleModel().apply {
-			licensePlate = entity.licensePlate
-			brand = entity.brand
-			model = entity.model
-			startAvailability = mapCustomDateTime(entity.startAvailabilityDate, entity.startAvailabilityTime)
-			endAvailability = mapCustomDateTime(entity.endAvailabilityDate, entity.endAvailabilityTime)
-			status = buildStatus(clock, entity.lastMovementType)
-			lastMovement = entity.lastMovementDateTime
-		}.fillWithProjectAndEntity(entity)
-	}
+@Mapper(config = PostgresMapperConfig::class)
+interface VehicleEntityMapper: IEntityMapper<VehicleModel, VehicleEntity> {
+	@IgnoreModelAudit
+	@AvailabilityDatesToModel
+	@Mapping(target = "status", ignore = true)
+	@Mapping(target = "lastMovement", source = "lastMovementDateTime")
+	override fun toModel(entity: VehicleEntity): VehicleModel
 
-	override fun toEntity(model: VehicleModel): VehicleEntity {
-		return VehicleEntity().apply {
-			licensePlate = model.licensePlate
-			brand = model.brand
-			this.model = model.model
-			startAvailabilityDate = model.startAvailability?.date
-			startAvailabilityTime = model.startAvailability?.time
-			endAvailabilityDate = model.endAvailability?.date
-			endAvailabilityTime = model.endAvailability?.time
-		}.fillWithProjectAndModel(model)
-	}
+	@IgnoreEntityAudit
+	@AvailabilityDatesToEntity
+	@Mapping(target = "lastMovementType", ignore = true)
+	@Mapping(target = "lastMovementDateTime", ignore = true)
+	override fun toEntity(model: VehicleModel): VehicleEntity
 }

@@ -1,40 +1,18 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 
-import fr.laucoin.registry.backend.domain.model.ProjectModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileRoleCountModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.profile.ProjectProfileRoleCountEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.project.ProjectEntity
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.helper.RoleCountMappingHelper
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ProjectProfileRoleCountEntityMapper(
-	private val projectMapper: ProjectEntityMapper,
-): IEntityMapper<ProjectProfileRoleCountModel, ProjectProfileRoleCountEntity> {
-	override fun toModel(entity: ProjectProfileRoleCountEntity): ProjectProfileRoleCountModel {
-		return ProjectProfileRoleCountModel().apply {
-			project = mapProject(entity)
-			level0 = entity.level0
-		}
-	}
+@Mapper(config = PostgresMapperConfig::class, uses = [RoleCountMappingHelper::class])
+interface ProjectProfileRoleCountEntityMapper: IEntityMapper<ProjectProfileRoleCountModel, ProjectProfileRoleCountEntity> {
+	@Mapping(target = "project", source = "entity", qualifiedByName = ["projectOf"])
+	override fun toModel(entity: ProjectProfileRoleCountEntity): ProjectProfileRoleCountModel
 
-	fun mapProject(entity: ProjectProfileRoleCountEntity): ProjectModel? {
-		return Optional.ofNullable(entity.projectId).map {
-			projectMapper.toModel(
-				ProjectEntity().apply {
-					id = it
-					name = entity.projectName
-				}
-			)
-		}.orElse(null)
-	}
-
-	override fun toEntity(model: ProjectProfileRoleCountModel): ProjectProfileRoleCountEntity {
-		return ProjectProfileRoleCountEntity(
-			projectId = model.project?.id,
-			projectName = model.project?.name,
-			level0 = model.level0,
-		)
-	}
+	@Mapping(target = "projectId", source = "project.id")
+	@Mapping(target = "projectName", source = "project.name")
+	override fun toEntity(model: ProjectProfileRoleCountModel): ProjectProfileRoleCountEntity
 }

@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 
 class ActivityStatisticsEntityMapperTest {
-	private val mapper = ActivityStatisticsEntityMapper()
+	private val mapper = ActivityStatisticsEntityMapperImpl()
 
 	@Test
 	fun `Should map the counts and round the durations to seconds`() {

@@ -30,7 +30,7 @@ class HexagonalArchitectureTest {
 		private const val USECASE = "$SERVICE.usecase"
 		private const val SUPPORT = "$SERVICE.support"
 		private const val DOMAIN_HELPER = "$DOMAIN.helper"
-		private const val INFRASTRUCTURE_HELPER = "$INFRASTRUCTURE.helper"
+		private const val INFRASTRUCTURE_HELPER = "$INFRASTRUCTURE..helper"
 	}
 
 	@ArchTest

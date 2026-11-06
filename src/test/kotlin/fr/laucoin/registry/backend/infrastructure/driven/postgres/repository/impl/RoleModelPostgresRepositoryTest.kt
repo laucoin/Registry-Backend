@@ -2,6 +2,7 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.im
 
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.role.RoleEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.RoleEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.RoleEntityMapperImpl
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IRoleEntityRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -12,7 +13,7 @@ import reactor.core.publisher.Flux
 
 class RoleModelPostgresRepositoryTest {
 	private val repository: IRoleEntityRepository = mock()
-	private val mapper: RoleEntityMapper = spy()
+	private val mapper: RoleEntityMapper = spy(RoleEntityMapperImpl())
 	private val modelRepository: RoleModelPostgresRepository =
 		RoleModelPostgresRepository(repository, mapper)
 

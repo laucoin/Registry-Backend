@@ -6,7 +6,7 @@ import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
 class AlertStatisticsEntityMapperTest {
-	private val mapper = AlertStatisticsEntityMapper()
+	private val mapper = AlertStatisticsEntityMapperImpl()
 
 	@Test
 	fun `Should map counts and round the average resolution to seconds`() {
