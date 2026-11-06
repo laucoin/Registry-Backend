@@ -13,6 +13,11 @@ import reactor.kotlin.core.publisher.switchIfEmpty
 import java.time.Clock
 import java.time.ZonedDateTime
 
+/**
+ * Objectif : Fournit les extensions Reactor communes aux services et aux repositories.
+ * Périmètre : Erreur « introuvable » sur flux vide, émission conditionnelle d'une valeur ou d'une erreur, construction d'une page.
+ * Limites : Ne porte aucune règle métier ; aucune souscription ni blocage.
+ */
 object ReactiveExt {
 	fun <T : Any> Mono<T>.notFoundIfEmpty(identifier: Any): Mono<T> {
 		return switchIfEmpty {
