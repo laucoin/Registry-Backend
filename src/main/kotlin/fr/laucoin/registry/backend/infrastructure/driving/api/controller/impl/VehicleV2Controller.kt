@@ -4,12 +4,8 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.VehicleQ
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ElementMovementQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.service.usecase.IVehicleUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IVehicleV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto
@@ -18,6 +14,7 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Vehicle
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.VehicleWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.VehicleQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleTimelineReaderDtoMapper
@@ -43,6 +40,7 @@ class VehicleV2Controller(
 	private val timelineReaderMapper: VehicleTimelineReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: VehicleWriterDtoMapper,
+	private val queryMapper: VehicleQueryDtoMapper,
 ): IVehicleV2Controller {
 	override fun findVehicles(
 		currentUser: CurrentUserModel,
@@ -50,13 +48,8 @@ class VehicleV2Controller(
 		search: VehicleQueryDto,
 	): Mono<PageModel<VehicleReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_VEHICLE_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = VehicleSearchParamModel(
-			search.query, visibility, search.status, search.at, search.brand, search.model,
-			sort = search.sort.toSortModel(VehicleSearchParamModel.SORT_FIELDS),
-		)
-
-		return service.findVehiclesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return service.findVehiclesPage(projectId, queryMapper.toPageable(search), queryMapper.toSearchParams(search, visibility))
+			.map(readerMapper::toDtoPage)
 	}
 
 	override fun findVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<VehicleReaderDto> {
@@ -78,17 +71,9 @@ class VehicleV2Controller(
 		search: ElementMovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = MovementSearchParamModel(
-			visibility,
-			search.hasActivity,
-			search.type,
-			search.from,
-			search.to,
-			sort = search.sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
-		)
+		val searchParams = queryMapper.toMovementSearchParams(search, visibility)
 
-		return service.findVehicleMovementsPage(projectId, id, pageable, searchParams)
+		return service.findVehicleMovementsPage(projectId, id, queryMapper.toPageable(search), searchParams)
 			.map(movementReaderMapper::toDtoPage)
 	}
 

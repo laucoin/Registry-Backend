@@ -1,10 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query
 
 import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
-import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.SortModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ElementMovementQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ParticipantQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
 import org.mapstruct.Mapper
@@ -12,7 +10,7 @@ import org.mapstruct.Mapping
 import org.mapstruct.Named
 
 @Mapper(config = DtoMapperConfig::class)
-interface ParticipantQueryDtoMapper : PageQueryDtoMapper {
+interface ParticipantQueryDtoMapper : ElementMovementQueryDtoMapper {
 	@Mapping(target = "sort", source = "dto.sort", qualifiedByName = ["participantSort"])
 	@Mapping(target = "isVisible", source = "isVisible")
 	@Mapping(target = "isMajor", expression = "java(dto.isMajor())")
@@ -24,15 +22,6 @@ interface ParticipantQueryDtoMapper : PageQueryDtoMapper {
 	@Mapping(target = "onSite", ignore = true)
 	fun toSearchParams(dto: ParticipantQueryDto, isVisible: Boolean?): ParticipantSearchParamModel
 
-	@Mapping(target = "sort", source = "dto.sort", qualifiedByName = ["movementSort"])
-	@Mapping(target = "isVisible", source = "isVisible")
-	@Mapping(target = "activityId", ignore = true)
-	@Mapping(target = "visible", ignore = true)
-	fun toMovementSearchParams(dto: ElementMovementQueryDto, isVisible: Boolean?): MovementSearchParamModel
-
 	@Named("participantSort")
 	fun participantSort(sort: String?): SortModel? = sort.toSortModel(ParticipantSearchParamModel.SORT_FIELDS)
-
-	@Named("movementSort")
-	fun movementSort(sort: String?): SortModel? = sort.toSortModel(MovementSearchParamModel.SORT_FIELDS)
 }
