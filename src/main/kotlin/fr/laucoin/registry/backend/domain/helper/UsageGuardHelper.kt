@@ -8,14 +8,14 @@ import org.springframework.http.HttpStatus.CONFLICT
 import reactor.core.publisher.Mono
 
 /**
- * Objectif : Refuse la suppression d'un élément encore utilisé par des mouvements.
- * Périmètre : Compte les mouvements liés à l'élément avec la requête fournie par l'appelant et lève un conflit s'il en existe.
- * Limites : Ne verrouille pas l'élément ; l'appelant le verrouille avant de compter pour éviter une course avec un mouvement créé en parallèle.
+ * Objectif : Refuse la suppression d'un élément encore utilisé par d'autres éléments (mouvements, communications…).
+ * Périmètre : Compte les éléments liés avec la requête fournie par l'appelant et lève un conflit (409) s'il en existe.
+ * Limites : Ne verrouille pas l'élément ; l'appelant le verrouille avant de compter pour éviter une course avec un lien créé en parallèle.
  */
-object MovementUsageHelper {
-	private val log = LoggerFactory.getLogger(MovementUsageHelper::class.java)
+object UsageGuardHelper {
+	private val log = LoggerFactory.getLogger(UsageGuardHelper::class.java)
 
-	fun <T : GenericModel> Mono<T>.rejectIfUsedByMovements(error: String, count: (T) -> Mono<Long>): Mono<T> =
+	fun <T : GenericModel> Mono<T>.rejectIfStillUsed(error: String, count: (T) -> Mono<Long>): Mono<T> =
 		flatMap { rejectIfUsed(it, error, count) }
 
 	private fun <T : GenericModel> rejectIfUsed(element: T, error: String, count: (T) -> Mono<Long>): Mono<T> {
@@ -25,7 +25,7 @@ object MovementUsageHelper {
 
 	private fun usageError(element: GenericModel, used: Long, error: String): RegistryException? {
 		if (used <= 0) return null
-		log.warn("The element {} is already linked to {} movement(s)", element.id, used)
+		log.warn("The element {} is still used by {} other element(s)", element.id, used)
 		return RegistryException(CONFLICT, error)
 	}
 }

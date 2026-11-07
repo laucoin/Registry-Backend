@@ -15,7 +15,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
-import fr.laucoin.registry.backend.domain.helper.MovementUsageHelper.rejectIfUsedByMovements
+import fr.laucoin.registry.backend.domain.helper.UsageGuardHelper.rejectIfStillUsed
 import fr.laucoin.registry.backend.domain.helper.ProjectOptionHelper.requireActivityOption
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
@@ -294,7 +294,7 @@ class ParticipantService(
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findParticipantById(projectId, id, isVisible = null)
 			.flatMap { rowLockPort.lock(PARTICIPANT, id).thenReturn(it) }
-			.rejectIfUsedByMovements(PARTICIPANT_DELETE_HAS_MOVEMENT, ::countMovements)
+			.rejectIfStillUsed(PARTICIPANT_DELETE_HAS_MOVEMENT, ::countMovements)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
 	}

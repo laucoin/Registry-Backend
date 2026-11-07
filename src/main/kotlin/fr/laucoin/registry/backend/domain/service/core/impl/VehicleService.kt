@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
-import fr.laucoin.registry.backend.domain.helper.MovementUsageHelper.rejectIfUsedByMovements
+import fr.laucoin.registry.backend.domain.helper.UsageGuardHelper.rejectIfStillUsed
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -151,7 +151,7 @@ class VehicleService(
 	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findVehicleById(projectId, id, isVisible = null)
 			.flatMap { rowLockPort.lock(VEHICLE, id).thenReturn(it) }
-			.rejectIfUsedByMovements(VEHICLE_DELETE_HAS_MOVEMENT, ::countMovements)
+			.rejectIfStillUsed(VEHICLE_DELETE_HAS_MOVEMENT, ::countMovements)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
 	}
