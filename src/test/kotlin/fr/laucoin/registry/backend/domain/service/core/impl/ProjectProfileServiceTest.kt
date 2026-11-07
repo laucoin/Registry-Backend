@@ -327,7 +327,13 @@ class ProjectProfileServiceTest {
 			startAccess = CustomDateTimeModel.MIN
 			endAccess = CustomDateTimeModel.MAX
 		}
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+		val existing = ProjectProfileModel().apply {
+			role = profileRole
+			user = UserModel().apply { id = uuid }
+			this.projectId = defaultProjectId
+			startAccess = CustomDateTimeModel.MIN
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(existing))
 		whenever(
 			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
 				any(),
@@ -368,7 +374,156 @@ class ProjectProfileServiceTest {
 		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
 			uuid,
 			defaultProjectId,
-			profile,
+			existing,
+			PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR
+		)
+		verify(port).findProjectProfileByProjectAndUserId(
+			defaultProjectId,
+			currentUser().id!!,
+			ProjectProfileSearchParamModel(
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
+			),
+		)
+		verify(roleService).getAssignableProjectRoles(currentUserProfile)
+		verify(port).update(profile)
+	}
+
+	@Test
+	fun `Should updateProjectProfileById not call lastAdministrator validateNotLastProjectRoleLevel0 when role and end access are unchanged`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val profileRole = "ROLE_PROJECT"
+		val currentUserProfile = ProjectProfileModel().apply {
+			role = profileRole
+			user = UserModel().apply { id = currentUser().id }
+			this.projectId = defaultProjectId
+		}
+		val profile = ProjectProfileModel().apply {
+			role = profileRole
+			user = UserModel().apply { id = uuid }
+			this.projectId = defaultProjectId
+			startAccess = CustomDateTimeModel.MIN
+			endAccess = CustomDateTimeModel.MAX
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(profile))
+		whenever(
+			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+				any(),
+				any(),
+				anyOrNull(),
+				any(),
+				anyOrNull(),
+				anyOrNull()
+			)
+		).thenReturn(Flux.just())
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
+			Mono.just(
+				profile
+			)
+		)
+		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), any())).thenReturn(
+			Mono.just(
+				currentUserProfile
+			)
+		)
+		whenever(roleService.getAssignableProjectRoles(any())).thenReturn(listOf(profileRole))
+		whenever(port.update(any())).thenReturn(Mono.just(profile))
+
+		// Act
+		val result = service.updateProjectProfileById(currentUser(), defaultProjectId, uuid, profile).block()
+
+		// Assert
+		assertEquals(profile, result)
+		verify(port).findById(defaultProjectId, uuid, isVisible = null)
+		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+			projectId = eq(defaultProjectId),
+			userIds = eq(listOf(uuid)),
+			profileIdToExclude = eq(null),
+			status = eq(listOf(ACCEPTED, INVITED)),
+			from = eq(CustomDateTimeModel.MIN.toZonedDateTime(OffsetTime.MIN)),
+			to = eq(CustomDateTimeModel.MAX.toZonedDateTime(OffsetTime.MAX)),
+		)
+		verify(lastAdministrator, never()).validateNotLastProjectRoleLevel0(any(), any(), any(), any())
+		verify(port).findProjectProfileByProjectAndUserId(
+			defaultProjectId,
+			currentUser().id!!,
+			ProjectProfileSearchParamModel(
+				isVisible = true,
+				isAvailable = true,
+				status = listOf(ACCEPTED),
+			),
+		)
+		verify(roleService).getAssignableProjectRoles(currentUserProfile)
+		verify(port).update(profile)
+	}
+
+	@Test
+	fun `Should updateProjectProfileById call lastAdministrator validateNotLastProjectRoleLevel0 when the role changes`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val profileRole = "ROLE_PROJECT"
+		val currentUserProfile = ProjectProfileModel().apply {
+			role = profileRole
+			user = UserModel().apply { id = currentUser().id }
+			this.projectId = defaultProjectId
+		}
+		val profile = ProjectProfileModel().apply {
+			role = profileRole
+			user = UserModel().apply { id = uuid }
+			this.projectId = defaultProjectId
+			startAccess = CustomDateTimeModel.MIN
+			endAccess = CustomDateTimeModel.MAX
+		}
+		val existing = ProjectProfileModel().apply {
+			role = "ROLE_OTHER"
+			user = UserModel().apply { id = uuid }
+			this.projectId = defaultProjectId
+			startAccess = CustomDateTimeModel.MIN
+			endAccess = CustomDateTimeModel.MAX
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(existing))
+		whenever(
+			port.findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+				any(),
+				any(),
+				anyOrNull(),
+				any(),
+				anyOrNull(),
+				anyOrNull()
+			)
+		).thenReturn(Flux.just())
+		whenever(lastAdministrator.validateNotLastProjectRoleLevel0(any(), any(), any(), any())).thenReturn(
+			Mono.just(
+				profile
+			)
+		)
+		whenever(port.findProjectProfileByProjectAndUserId(any(), any(), any())).thenReturn(
+			Mono.just(
+				currentUserProfile
+			)
+		)
+		whenever(roleService.getAssignableProjectRoles(any())).thenReturn(listOf(profileRole, "ROLE_OTHER"))
+		whenever(port.update(any())).thenReturn(Mono.just(profile))
+
+		// Act
+		val result = service.updateProjectProfileById(currentUser(), defaultProjectId, uuid, profile).block()
+
+		// Assert
+		verify(port).findById(defaultProjectId, uuid, isVisible = null)
+		verify(port).findUserIdsWithProjectProfileForProjectWithProfileExclusion(
+			projectId = eq(defaultProjectId),
+			userIds = eq(listOf(uuid)),
+			profileIdToExclude = eq(null),
+			status = eq(listOf(ACCEPTED, INVITED)),
+			from = eq(CustomDateTimeModel.MIN.toZonedDateTime(OffsetTime.MIN)),
+			to = eq(CustomDateTimeModel.MAX.toZonedDateTime(OffsetTime.MAX)),
+		)
+		verify(lastAdministrator).validateNotLastProjectRoleLevel0(
+			uuid,
+			defaultProjectId,
+			existing,
 			PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR
 		)
 		verify(port).findProjectProfileByProjectAndUserId(
