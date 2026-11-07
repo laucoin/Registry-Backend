@@ -44,7 +44,7 @@ runs:
           const RELEASE_RE = /^\d+\.\d+\.\d+$/;
           const PROTECTED_TAGS = new Set(['main', 'latest']);
 
-          // conteneurs GHCR appartenant à un utilisateur. Pour une organisation, remplacer ces deux
+          // Liste les versions du package GHCR d'un utilisateur. Pour une organisation, remplacer ces deux
           // appels par les équivalents *ForOrg et passer `org` au lieu de `username`.
           const versions = await github.paginate(
             github.rest.packages.getAllPackageVersionsForPackageOwnedByUser,
@@ -74,7 +74,7 @@ runs:
 
           const toDelete = new Set();
 
-          // 1) Images de release au-delà des N plus récentes.
+          // Images de release au-delà des N plus récentes.
           for (const r of releases.slice(keepReleases)) toDelete.add(r.id);
 
           // Ne jamais supprimer une version qui porte aussi un tag protégé (main/latest).
