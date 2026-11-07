@@ -45,6 +45,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -419,6 +420,8 @@ class AlertServiceTest {
 
 		// Assert
 		assertEquals(alert, result)
+		verify(rowLockPort).lock(ALERT, defaultAlertId)
+		verify(historyPort).archiveAlert(defaultAlertId)
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = null)
 		verify(port).update(alert.apply { status = RESOLVED })
 	}
@@ -474,7 +477,7 @@ verify(rowLockPort).lock(ALERT, defaultAlertId)
 	}
 
 	@Test
-	fun `Should deleteAlertById call existing alert, throw if movements are linked`() {
+	fun `Should deleteAlertById call existing alert, throw with a conflict if communications are linked`() {
 		// Arrange
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(defaultAlert()))
 		whenever(communicationPort.countAllByAlertId(any(), any(), any())).thenReturn(Mono.just(1))
@@ -485,7 +488,7 @@ verify(rowLockPort).lock(ALERT, defaultAlertId)
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_CONTENT, result.status)
+		assertEquals(CONFLICT, result.status)
 		assertEquals(ALERT_DELETE_HAS_COMMUNICATION, result.message)
 
 		verify(port).findById(defaultProjectId, defaultAlertId, isVisible = null)

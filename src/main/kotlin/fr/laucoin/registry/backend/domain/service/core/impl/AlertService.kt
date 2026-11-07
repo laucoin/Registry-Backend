@@ -13,6 +13,7 @@ import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ALERT
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.notFoundIfEmpty
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
+import fr.laucoin.registry.backend.domain.helper.UsageGuardHelper.rejectIfStillUsed
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
 import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
@@ -153,7 +154,7 @@ class AlertService(
 
 	private fun notInProgressError(alert: AlertModel): RegistryException? {
 		if (alert.status === IN_PROGRESS) return null
-		log.warn("Only {} alert can be update", IN_PROGRESS)
+		log.warn("Only an alert {} can be updated", IN_PROGRESS)
 		return RegistryException(UNPROCESSABLE_CONTENT, ALERT_STATUS_IS_NOT_UPDATABLE)
 	}
 
@@ -167,9 +168,12 @@ class AlertService(
 		id: UUID,
 		status: AlertStatusEnum
 	): Mono<AlertModel> {
-		return findAlertById(projectId, id, isVisible = null)
+		return rowLockPort.lock(ALERT, id)
+			.then(Mono.defer { findAlertById(projectId, id, isVisible = null) })
+			.archiveCurrentState()
 			.map { it.apply { this.status = status } }
 			.updateAlert(currentUser)
+			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun Mono<AlertModel>.validateAlertDateWithLinkedCommunications(updatedAlert: AlertModel): Mono<AlertModel> =
@@ -189,7 +193,7 @@ class AlertService(
 			ALERT_COMMUNICATION_OUT_OF_ALERT_DATETIME,
 			arrayListOf(oldAlert.title)
 		)
-		log.warn("Existing communications are out the alert date", exception)
+		log.warn("Existing communications are dated before the new alert date", exception)
 		return exception
 	}
 
@@ -224,27 +228,17 @@ class AlertService(
 	): Mono<Unit> {
 		return findAlertById(projectId, id, isVisible = null)
 			.flatMap { rowLockPort.lock(ALERT, id).thenReturn(it) }
-			.validateHasNoCommunicationLinked(ALERT_DELETE_HAS_COMMUNICATION)
+			.rejectIfStillUsed(ALERT_DELETE_HAS_COMMUNICATION, ::countCommunications)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
 	}
 
 	override fun purgeAlertsIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
-		log.info("Purging alerts older than {} and uncommented since {}", dateThreshold, dateThreshold)
+		log.info("Purging alerts older than {} without any later communication", dateThreshold)
 		return port.findOlderThanAndUncommentedSince(dateThreshold)
 			.purgeEach("alert", dryRun, port::deleteById)
 	}
 
-	private fun Mono<AlertModel>.validateHasNoCommunicationLinked(error: String): Mono<AlertModel> = flatMap { rejectIfLinkedToCommunication(it, error) }
-
-	private fun rejectIfLinkedToCommunication(alert: AlertModel, error: String): Mono<AlertModel> {
-		return communicationPort.countAllByAlertId(alert.projectId!!, alert.id!!, CommunicationSearchParamModel())
-			.handle { count, sink -> sink.nextOrError(alert, linkedToCommunicationError(alert, count, error)) }
-	}
-
-	private fun linkedToCommunicationError(alert: AlertModel, count: Long, error: String): RegistryException? {
-		if (count <= 0) return null
-		log.warn("The alert {} already linked to communication(s)", alert.id)
-		return RegistryException(UNPROCESSABLE_CONTENT, error)
-	}
+	private fun countCommunications(alert: AlertModel): Mono<Long> =
+		communicationPort.countAllByAlertId(alert.projectId!!, alert.id!!, CommunicationSearchParamModel())
 }

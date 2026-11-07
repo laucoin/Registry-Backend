@@ -74,20 +74,19 @@ class CommunicationConflictHelper(
 		oldCommunication: CommunicationModel? = null
 	): Mono<CommunicationModel> {
 		val communicationToReturn = oldCommunication ?: communication
-		return if (Objects.isNull(communication.alert) || communication.alert!!.id == oldCommunication?.alert?.id)
-			Mono.just(communicationToReturn)
-		else {
-			if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
-				return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
-			}
-
-			alertPort.findById(communication.projectId!!, communication.alert!!.id!!, isVisible = null)
-				.switchIfEmpty {
-					Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
-				}
-				.handle { alert, sink -> sink.nextOrError(communicationToReturn, alertConflict(alert, communication)) }
+		val alertId = communication.alert?.id
+		if (alertId == null || alertId == oldCommunication?.alert?.id) return Mono.just(communicationToReturn)
+		if (!currentUser.hasAuthority(communication.projectId!!, REGISTRY_PROJECT_OPTION_ALERT)) {
+			return Mono.error(RegistryException(status = FORBIDDEN, code = NOT_ENOUGH_PERMISSION))
 		}
+
+		return alertPort.findById(communication.projectId!!, alertId, isVisible = null)
+			.switchIfEmpty(Mono.defer { alertNotFound() })
+			.handle { alert, sink -> sink.nextOrError(communicationToReturn, alertConflict(alert, communication)) }
 	}
+
+	private fun alertNotFound(): Mono<AlertModel> =
+		Mono.error(RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_FOUND_IN_COMMUNICATION_PROJECT))
 
 	private fun alertConflict(alert: AlertModel, communication: CommunicationModel): RegistryException? = when {
 		alert.isNotVisible() -> RegistryException(NOT_FOUND, COMMUNICATION_ALERT_NOT_VISIBLE)

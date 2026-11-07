@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.ACTIVITY
-import fr.laucoin.registry.backend.domain.helper.MovementUsageHelper.rejectIfUsedByMovements
+import fr.laucoin.registry.backend.domain.helper.UsageGuardHelper.rejectIfStillUsed
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -109,7 +109,7 @@ class ActivityService(
 	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findActivityById(projectId, id, isVisible = null)
 			.flatMap { rowLockPort.lock(ACTIVITY, id).thenReturn(it) }
-			.rejectIfUsedByMovements(ACTIVITY_DELETE_HAS_MOVEMENT, ::countMovements)
+			.rejectIfStillUsed(ACTIVITY_DELETE_HAS_MOVEMENT, ::countMovements)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
 	}
