@@ -15,6 +15,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.P
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PARTICIPANT
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.PROJECT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
+import fr.laucoin.registry.backend.domain.helper.MovementUsageHelper.rejectIfUsedByMovements
 import fr.laucoin.registry.backend.domain.helper.ProjectOptionHelper.requireActivityOption
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
@@ -39,7 +40,6 @@ import fr.laucoin.registry.backend.domain.service.core.IParticipantService
 import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
@@ -294,7 +294,7 @@ class ParticipantService(
 	override fun deleteParticipantById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findParticipantById(projectId, id, isVisible = null)
 			.flatMap { rowLockPort.lock(PARTICIPANT, id).thenReturn(it) }
-			.validateHasNoMovementLinked(PARTICIPANT_DELETE_HAS_MOVEMENT)
+			.rejectIfUsedByMovements(PARTICIPANT_DELETE_HAS_MOVEMENT, ::countMovements)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
 	}
@@ -360,16 +360,6 @@ class ParticipantService(
 		error(RegistryException(UNPROCESSABLE_CONTENT, PARTICIPANT_OUT_OF_MOVEMENT_DATETIME, arrayListOf(count)))
 	}
 
-	private fun Mono<ParticipantModel>.validateHasNoMovementLinked(error: String): Mono<ParticipantModel> = flatMap { rejectIfLinkedToMovement(it, error) }
-
-	private fun rejectIfLinkedToMovement(participant: ParticipantModel, error: String): Mono<ParticipantModel> {
-		return movementPort.countAllByParticipantId(participant.projectId!!, participant.id!!, MovementSearchParamModel())
-			.handle { count, sink -> sink.nextOrError(participant, linkedToMovementError(participant, count, error)) }
-	}
-
-	private fun linkedToMovementError(participant: ParticipantModel, count: Long, error: String): RegistryException? {
-		if (count <= 0) return null
-		log.warn("The participant {} already linked to movement(s)", participant.id)
-		return RegistryException(CONFLICT, error)
-	}
+	private fun countMovements(participant: ParticipantModel): Mono<Long> =
+		movementPort.countAllByParticipantId(participant.projectId!!, participant.id!!, MovementSearchParamModel())
 }

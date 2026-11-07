@@ -1,7 +1,7 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum.VEHICLE
+import fr.laucoin.registry.backend.domain.helper.MovementUsageHelper.rejectIfUsedByMovements
 import fr.laucoin.registry.backend.domain.helper.PurgeHelper.purgeEach
 import fr.laucoin.registry.backend.domain.port.IProjectPort
 import fr.laucoin.registry.backend.domain.port.IRowLockPort
@@ -22,7 +22,6 @@ import fr.laucoin.registry.backend.domain.model.TimelineRangeModel
 import fr.laucoin.registry.backend.domain.model.TimelineWindowModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
 import fr.laucoin.registry.backend.domain.model.VehicleTimelineModel
@@ -33,7 +32,6 @@ import fr.laucoin.registry.backend.domain.service.core.IVehicleService
 import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -153,7 +151,7 @@ class VehicleService(
 	override fun deleteVehicleById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return findVehicleById(projectId, id, isVisible = null)
 			.flatMap { rowLockPort.lock(VEHICLE, id).thenReturn(it) }
-			.validateHasNoMovementLinked(VEHICLE_DELETE_HAS_MOVEMENT)
+			.rejectIfUsedByMovements(VEHICLE_DELETE_HAS_MOVEMENT, ::countMovements)
 			.flatMap { port.deleteById(it.id!!) }
 			.`as`(transactionalOperator::transactional)
 	}
@@ -168,19 +166,6 @@ class VehicleService(
 		port.update(it.apply { update(currentUser, now()) })
 	}
 
-	private fun Mono<VehicleModel>.validateHasNoMovementLinked(error: String): Mono<VehicleModel> = flatMap { rejectIfLinkedToMovement(it, error) }
-
-	private fun rejectIfLinkedToMovement(vehicle: VehicleModel, error: String): Mono<VehicleModel> {
-		return movementPort.countAllByVehicleId(vehicle.projectId!!, vehicle.id!!, MovementSearchParamModel())
-			.handle { count, sink -> sink.nextOrError(vehicle, linkedToMovementError(vehicle, count, error)) }
-	}
-
-	private fun linkedToMovementError(vehicle: VehicleModel, count: Long, error: String): RegistryException? {
-		if (count <= 0) return null
-		log.warn("The vehicle {} already linked to movement(s)", vehicle.id)
-		return RegistryException(CONFLICT, error)
-	}
-
 	private fun VehicleModel.withContentOf(vehicle: VehicleModel): VehicleModel = apply {
 		licensePlate = vehicle.licensePlate
 		model = vehicle.model
@@ -188,4 +173,7 @@ class VehicleService(
 		startAvailability = vehicle.startAvailability
 		endAvailability = vehicle.endAvailability
 	}
+
+	private fun countMovements(vehicle: VehicleModel): Mono<Long> =
+		movementPort.countAllByVehicleId(vehicle.projectId!!, vehicle.id!!, MovementSearchParamModel())
 }
