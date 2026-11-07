@@ -684,6 +684,7 @@ class UserServiceTest {
 		verify(port).findUserIdsOlderThanLastLogin(date)
 		verify(port).deleteById(uuid1)
 		verify(port).deleteById(uuid2)
+		verify(principalCache, times(2)).invalidate(anyOrNull())
 	}
 
 	@Test
@@ -720,5 +721,6 @@ class UserServiceTest {
 		// Assert
 		verify(port).findUserIdsOlderThanLastLogin(date)
 		verify(port, never()).deleteById(any())
+		verify(principalCache, never()).invalidate(anyOrNull())
 	}
 }
