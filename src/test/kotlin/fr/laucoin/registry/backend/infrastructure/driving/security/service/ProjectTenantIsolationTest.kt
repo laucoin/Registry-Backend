@@ -73,6 +73,20 @@ class ProjectTenantIsolationTest {
 		assertEquals(emptyList<String>(), granted.map(::label))
 	}
 
+	@Test
+	fun `Should every option gated endpoint refuse the holder of every permission of the project but its options`() {
+		// Arrange
+		val withoutOptions = authenticationWith(projectA, only = permissions.filterNot { it.startsWith(ProjectPermissionConst.REGISTRY_PROJECT_OPTION_PREFIX) }.toSet())
+		val optionGated = scopedEndpoints().filter { method -> method.getAnnotation(PreAuthorize::class.java).value.contains("OPTION_") }
+
+		// Act
+		val granted = optionGated.filter { decide(it, withoutOptions, projectA) }
+
+		// Assert
+		assertTrue(optionGated.size > MIN_OPTION_GATED_ENDPOINTS)
+		assertEquals(emptyList<String>(), granted.map(::label))
+	}
+
 	private fun scopedEndpoints(): List<Method> {
 		return ClassFileImporter()
 			.importPackages(IProjectV2Controller::class.java.packageName)
@@ -117,5 +131,6 @@ class ProjectTenantIsolationTest {
 
 	private companion object {
 		const val MIN_SCOPED_ENDPOINTS = 60
+		const val MIN_OPTION_GATED_ENDPOINTS = 20
 	}
 }
