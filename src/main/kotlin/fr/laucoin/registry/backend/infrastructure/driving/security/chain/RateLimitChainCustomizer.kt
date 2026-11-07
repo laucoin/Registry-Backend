@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.service.support.IAuditService
 import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.AuthenticationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.ExportRateLimitHandler
+import fr.laucoin.registry.backend.infrastructure.driving.security.handler.ProjectCreationRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.handler.UserSearchRateLimitHandler
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.ClientContextService
 import fr.laucoin.registry.backend.infrastructure.driving.security.service.TooManyRequestsResponder
@@ -17,7 +18,7 @@ import tools.jackson.databind.ObjectMapper
 import java.time.Clock
 
 /**
- * Objectif : Limite le débit des appels d'authentification, des exports de données personnelles et de la recherche d'utilisateurs.
+ * Objectif : Limite le débit des appels d'authentification, des exports de données personnelles, de la recherche d'utilisateurs et de la création de projets.
  * Périmètre : Ajoute les filtres de limitation, avec les capacités et fenêtres de la configuration typée.
  * Limites : Ne mesure rien hors des filtres qu'il ajoute.
  */
@@ -37,6 +38,7 @@ class RateLimitChainCustomizer(
 			.addFilterBefore(authenticationRateLimit(), FIRST)
 			.addFilterAfter(exportRateLimit(), AUTHENTICATION)
 			.addFilterAfter(userSearchRateLimit(), AUTHENTICATION)
+			.addFilterAfter(projectCreationRateLimit(), AUTHENTICATION)
 	}
 
 	private fun authenticationRateLimit() = AuthenticationRateLimitHandler(
@@ -64,6 +66,14 @@ class RateLimitChainCustomizer(
 		rateLimits.userSearch.capacity,
 		rateLimits.userSearch.windowSeconds,
 		rateLimits.userSearch.maxTrackedUsers,
+	)
+
+	private fun projectCreationRateLimit() = ProjectCreationRateLimitHandler(
+		tooManyRequestsResponder(),
+		clock,
+		rateLimits.projectCreation.capacity,
+		rateLimits.projectCreation.windowSeconds,
+		rateLimits.projectCreation.maxTrackedUsers,
 	)
 
 	private fun tooManyRequestsResponder() =
