@@ -18,6 +18,7 @@ import fr.laucoin.registry.backend.domain.service.core.IUserProjectProfileServic
 import fr.laucoin.registry.backend.domain.service.usecase.IUserProjectProfileUseCase
 import java.time.Clock
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -123,6 +124,28 @@ class UserProjectProfileUseCaseTest {
 		// Assert
 		StepVerifier.create(result).expectNext(project).verifyComplete()
 		verify(rowLockPort).lock(PROJECT, projectId)
+	}
+
+	@Test
+	fun `Should createSupportProjectProfile read the project only after the support profile is persisted`() {
+		// Arrange
+		val currentUser = CurrentUserModel().apply { id = UUID.randomUUID() }
+		val projectId = UUID.randomUUID()
+		val profile = supportProfile(currentUser, projectId)
+		val project = ProjectModel().apply { id = projectId }
+		val persisted = AtomicBoolean(false)
+		whenever(profileService.validateNoProfileConflict(eq(projectId), eq(listOf(currentUser.id!!)), isNull(), any(), any()))
+			.thenReturn(Mono.just(listOf(currentUser.id!!)))
+		whenever(service.createSupportProjectProfile(currentUser, profile))
+			.thenReturn(Mono.just(profile).doOnNext { persisted.set(true) })
+		whenever(projectService.findProjectWithProfileById(currentUser, projectId))
+			.thenReturn(Mono.fromSupplier { project.takeIf { persisted.get() } })
+
+		// Act
+		val result = useCase.createSupportProjectProfile(currentUser, projectId)
+
+		// Assert
+		StepVerifier.create(result).expectNext(project).verifyComplete()
 	}
 
 	@Test
