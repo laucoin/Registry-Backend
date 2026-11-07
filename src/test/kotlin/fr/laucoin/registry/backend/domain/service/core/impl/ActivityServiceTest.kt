@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import org.springframework.http.HttpStatus.CONFLICT
 import reactor.test.StepVerifier
 import org.mockito.kotlin.verifyNoInteractions
 import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
@@ -39,7 +40,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.Exceptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -264,7 +264,7 @@ verify(rowLockPort).lock(ACTIVITY, defaultActivityId)
 		}) as RegistryException
 
 		// Assert
-		assertEquals(UNPROCESSABLE_CONTENT, result.status)
+		assertEquals(CONFLICT, result.status)
 		assertEquals(ACTIVITY_DELETE_HAS_MOVEMENT, result.message)
 
 		verify(port).findById(defaultProjectId, defaultActivityId, isVisible = null)
