@@ -42,6 +42,22 @@ entries:
             "nickname": request.user.username,
         }
 
+  # Le mapping email par défaut d'Authentik émet email_verified à false en dur ; or le backend ne relie un
+  # compte du seed à son identité OIDC que si l'e-mail est vérifié (TokenConverterService). Les comptes
+  # locaux sont créés par ce blueprint, leur e-mail est donc considéré comme vérifié.
+  - model: authentik_providers_oauth2.scopemapping
+    id: registry-email-scope
+    identifiers:
+      name: Registry local email
+    attrs:
+      scope_name: email
+      description: Registry email claims (local accounts are verified)
+      expression: |
+        return {
+            "email": request.user.email,
+            "email_verified": True,
+        }
+
   # ------------------------------------------------------------------------- Backend (confidential)
   - model: authentik_providers_oauth2.oauth2provider
     id: registry-provider
@@ -71,7 +87,7 @@ entries:
       # mapping Authentik n'en fournit aucun, et refreshAuthenticationToken n'a rien à utiliser.
       property_mappings:
         - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, openid ] ]
-        - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, email ] ]
+        - !KeyOf registry-email-scope
         - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, offline_access ] ]
         - !KeyOf registry-profile-scope
 
@@ -110,7 +126,7 @@ entries:
           url: !Env [ IDP_SWAGGER_REDIRECT_URI, "http://localhost:8082/swagger-ui/oauth2-redirect.html" ]
       property_mappings:
         - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, openid ] ]
-        - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, email ] ]
+        - !KeyOf registry-email-scope
         - !KeyOf registry-profile-scope
 
   - model: authentik_core.application
