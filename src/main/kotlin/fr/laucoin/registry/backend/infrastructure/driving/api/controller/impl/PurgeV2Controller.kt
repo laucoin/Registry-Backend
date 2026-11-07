@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
 import fr.laucoin.registry.backend.domain.service.usecase.IPlatformPurgeUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectConfigurationPurgeUseCase
 import fr.laucoin.registry.backend.domain.service.usecase.IProjectContentPurgeUseCase
@@ -8,6 +7,8 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IPurgeV
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AuditPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectContentPurgeReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.PurgeReportHelper.reportedOnceCompleted
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AuditPurgeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectConfigurationPurgeReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectContentPurgeReaderDtoMapper
 import java.time.LocalDate
@@ -28,17 +29,14 @@ class PurgeV2Controller(
 	private val configuration: IProjectConfigurationPurgeUseCase,
 	private val contentMapper: ProjectContentPurgeReaderDtoMapper,
 	private val configurationMapper: ProjectConfigurationPurgeReaderDtoMapper,
+	private val auditMapper: AuditPurgeReaderDtoMapper,
 ) : IPurgeV2Controller {
-	private fun Flux<UUID>.cappedForReport(): Flux<UUID> {
-		return collectList().flatMapMany { Flux.fromIterable(it.take(PURGE_REPORTED_IDS_MAX)) }
-	}
-
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
-		return platform.purgeUsers(dateThreshold, dryRun).cappedForReport()
+		return platform.purgeUsers(dateThreshold, dryRun).reportedOnceCompleted()
 	}
 
 	override fun purgeProjectsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Flux<UUID> {
-		return platform.purgeProjects(dateThreshold, dryRun).cappedForReport()
+		return platform.purgeProjects(dateThreshold, dryRun).reportedOnceCompleted()
 	}
 
 	override fun purgeProjectsContentsIfNecessary(
@@ -56,6 +54,6 @@ class PurgeV2Controller(
 	}
 
 	override fun purgeAuditsIfNecessary(dateThreshold: LocalDate?, dryRun: Boolean): Mono<AuditPurgeReaderDto> {
-		return platform.purgeAudits(dateThreshold, dryRun).map { AuditPurgeReaderDto(it) }
+		return platform.purgeAudits(dateThreshold, dryRun).map(auditMapper::toDto)
 	}
 }
