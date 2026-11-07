@@ -141,7 +141,7 @@ class ProjectProfileService(
 			.then(Mono.defer { findProjectProfileById(projectId, id, isVisible = null) })
 			.flatMap { validateNoConflictForUpdate(projectId, it, profile) }
 			.validateRole(currentUser, projectId, profile)
-			.validateNotLastProjectRoleLevel0(PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR)
+			.validateNotLastProjectRoleLevel0IfAdministrationWeakens(profile)
 			.map { it.withAccessOf(profile) }
 			.updateProjectProfile(currentUser)
 			.`as`(transactionalOperator::transactional)
@@ -184,6 +184,19 @@ class ProjectProfileService(
 	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0(error: String) = flatMap {
 		lastAdministrator.validateNotLastProjectRoleLevel0(it.user!!.id!!, it.projectId!!, it, error)
 	}
+
+	private fun Mono<ProjectProfileModel>.validateNotLastProjectRoleLevel0IfAdministrationWeakens(profile: ProjectProfileModel) = flatMap {
+		if (it.keepsPermanentAccessOf(profile)) Mono.just(it)
+		else lastAdministrator.validateNotLastProjectRoleLevel0(
+			it.user!!.id!!,
+			it.projectId!!,
+			it,
+			PROJECT_PROFILE_UPDATE_LAST_PROJECT_ADMINISTRATOR,
+		)
+	}
+
+	private fun ProjectProfileModel.keepsPermanentAccessOf(profile: ProjectProfileModel): Boolean =
+		role == profile.role && (endAccess != null || profile.endAccess == null)
 
 	private fun Mono<ProjectProfileModel>.validateRole(
 		currentUser: CurrentUserModel, projectId: UUID, profile: ProjectProfileModel
