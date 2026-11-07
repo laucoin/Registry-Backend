@@ -1,5 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import org.junit.jupiter.params.provider.ValueSource
 import reactor.core.Exceptions
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
@@ -176,6 +177,22 @@ class PreferencesServiceTest {
 		// Act
 		val error = Exceptions.unwrap(assertThrows(Exception::class.java) {
 			service.updateLanguage(currentUser, "xx").block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(BAD_REQUEST, error.status)
+		verify(port, never()).save(any())
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["", "e", "f"])
+	fun `Should updateLanguage refuse a partial language code`(language: String) {
+		// Arrange
+		val currentUser = CurrentUserModel().apply { id = UUID.randomUUID(); oidcId = UUID.randomUUID() }
+
+		// Act
+		val error = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateLanguage(currentUser, language).block()
 		}) as RegistryException
 
 		// Assert
