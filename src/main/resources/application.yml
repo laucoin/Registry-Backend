@@ -67,8 +67,6 @@ registry:
     profile:
       invite-by-email:
         enabled: ${REGISTRY_PROFILE_INVITE_BY_EMAIL_ENABLED:false}
-      searched:
-        max-user-result: 10
     participant:
       searched:
         max-user-result: 10
