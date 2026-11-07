@@ -239,15 +239,22 @@ class UserService(
 	private fun Mono<UserModel>.deleteWithAdministratorGuards(): Mono<Unit> =
 		validateNotLastRoleLevel0(USER_DELETE_LAST_APPLICATION_ADMINISTRATOR)
 			.validateNotLastProjectRoleLevel0(USER_DELETE_LAST_PROJECT_ADMINISTRATOR)
-			.flatMap { port.deleteById(it.id!!).doOnSuccess { _ -> principalCache.invalidate(it.oidcId) } }
+			.flatMap(::deleteAndInvalidate)
 			.`as`(transactionalOperator::transactional)
+
+	private fun deleteAndInvalidate(user: UserModel): Mono<Unit> =
+		port.deleteById(user.id!!).doOnSuccess { principalCache.invalidate(user.oidcId) }
 
 	override fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID> {
 		log.info("Purging users inactive since {}", dateThreshold)
 		// Séquentiel : les vérifications du "dernier administrateur" dépendent des utilisateurs supprimés plus tôt dans la même exécution
 		return port.findUserIdsOlderThanLastLogin(dateThreshold)
 			.concatMap(::keepIfPurgeable)
-			.purgeEach("user", dryRun, port::deleteById, concurrency = 1)
+			.purgeEach("user", dryRun, ::purgeUser, concurrency = 1)
+	}
+
+	private fun purgeUser(id: UUID): Mono<Unit> {
+		return findUserById(id, isVisible = null).flatMap(::deleteAndInvalidate)
 	}
 
 	private fun keepIfPurgeable(id: UUID): Mono<UUID> {
