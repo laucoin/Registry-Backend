@@ -8,9 +8,8 @@ updates:
       day: monday
     open-pull-requests-limit: 10
     labels: ["dependencies", "gradle"]
-    # Préfixe Conventional Commits pour que les merges soient pris en compte par semantic-release.
-    # NOTE : d'après les releaseRules de .releaserc, `chore` => release MINOR. Passer
-    # le préfixe à `fix` pour que les mises à jour de dépendances sortent en PATCH.
+    # Préfixe Conventional Commits pour que les merges soient pris en compte par semantic-release
+    # (d'après les releaseRules de .releaserc.json, `chore` => release PATCH).
     commit-message:
       prefix: chore
       include: scope
@@ -36,7 +35,10 @@ updates:
 
   # ── GitHub Actions (workflows + actions composites locales) ────────
   - package-ecosystem: github-actions
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/docker-publish"
+      - "/.github/actions/registry-retention"
     schedule:
       interval: weekly
       day: monday
