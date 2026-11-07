@@ -4,14 +4,8 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.Activity
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.ActivityMovementQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.ActivityError.ACTIVITY_DURATION_FORMAT_FAILED
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
-import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
-import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.service.usecase.IActivityUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IActivityV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
@@ -20,14 +14,12 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Movemen
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.ActivityWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.ActivityQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ActivityStatisticsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ActivityWriterDtoMapper
 import java.util.UUID
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
-import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
@@ -48,6 +40,7 @@ class ActivityV2Controller(
 	private val statisticsReaderMapper: ActivityStatisticsReaderDtoMapper,
 	private val movementReaderMapper: MovementReaderDtoMapper,
 	private val writerMapper: ActivityWriterDtoMapper,
+	private val queryMapper: ActivityQueryDtoMapper,
 ): IActivityV2Controller {
 	override fun findActivities(
 		currentUser: CurrentUserModel,
@@ -55,14 +48,8 @@ class ActivityV2Controller(
 		search: ActivityQueryDto,
 	): Mono<PageModel<ActivityReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_ACTIVITY_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = ActivitySearchParamModel(
-			search.query, visibility, search.isAvailable, search.at,
-			parseDuration(search.minDuration), parseDuration(search.maxDuration), search.participants,
-			search.sort.toSortModel(ActivitySearchParamModel.SORT_FIELDS),
-		)
-
-		return service.findActivitiesPage(projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return service.findActivitiesPage(projectId, queryMapper.toPageable(search), queryMapper.toSearchParams(search, visibility))
+			.map(readerMapper::toDtoPage)
 	}
 
 	override fun findActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityReaderDto> {
@@ -84,17 +71,9 @@ class ActivityV2Controller(
 		search: ActivityMovementQueryDto,
 	): Mono<PageModel<MovementReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_MOVEMENT_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = MovementSearchParamModel(
-			visibility,
-			hasActivity = null,
-			search.type,
-			search.from,
-			search.to,
-			sort = search.sort.toSortModel(MovementSearchParamModel.SORT_FIELDS),
-		)
+		val searchParams = queryMapper.toMovementSearchParams(search, visibility)
 
-		return service.findActivityMovementsPage(projectId, id, pageable, searchParams)
+		return service.findActivityMovementsPage(projectId, id, queryMapper.toPageable(search), searchParams)
 			.map(movementReaderMapper::toDtoPage)
 	}
 
@@ -145,22 +124,5 @@ class ActivityV2Controller(
 
 	override fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit> {
 		return service.deleteActivityById(currentUser, projectId, id)
-	}
-
-	private fun parseDuration(duration: String?): Duration? {
-		val parsed = try {
-			duration?.let(Duration::parse)
-		} catch (e: IllegalArgumentException) {
-			throw RegistryException(BAD_REQUEST, ACTIVITY_DURATION_FORMAT_FAILED)
-		}
-
-		if (parsed != null && (!parsed.isFinite() || parsed.isNegative() || parsed > MAX_FILTER_DURATION)) {
-			throw RegistryException(BAD_REQUEST, ACTIVITY_DURATION_FORMAT_FAILED)
-		}
-		return parsed
-	}
-
-	private companion object {
-		val MAX_FILTER_DURATION: Duration = 366.days
 	}
 }
