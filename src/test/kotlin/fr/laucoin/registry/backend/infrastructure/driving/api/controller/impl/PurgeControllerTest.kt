@@ -272,4 +272,45 @@ class PurgeControllerTest : TestContext() {
 		result.expectStatus().isForbidden
 		verifyNoInteractions(platform, content, configuration)
 	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["/users", "/projects", "/projects/contents", "/projects/configurations", "/audits"])
+	fun `Should every purge endpoint run as a dry run when dryRun is omitted`(endpoint: String) {
+		// Arrange
+		whenever(platform.purgeUsers(anyOrNull(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeProjects(anyOrNull(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeAudits(anyOrNull(), any())).thenReturn(Mono.just(0L))
+		whenever(content.purgeProjectsContents(anyOrNull(), any()))
+			.thenReturn(Mono.just(ProjectContentPurgeModel(emptyList(), emptyList(), emptyList())))
+		whenever(configuration.purgeProjectsConfigurations(anyOrNull(), any()))
+			.thenReturn(Mono.just(ProjectConfigurationPurgeModel(emptyList(), emptyList(), emptyList(), emptyList())))
+
+		// Act
+		val result = webClient.authenticate(REGISTRY_JOB_C).post()
+			.uri(uriBuilder("$BASE_URL$endpoint", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isOk
+		when (endpoint) {
+			"/users" -> verify(platform).purgeUsers(null, true)
+			"/projects" -> verify(platform).purgeProjects(null, true)
+			"/projects/contents" -> verify(content).purgeProjectsContents(null, true)
+			"/projects/configurations" -> verify(configuration).purgeProjectsConfigurations(null, true)
+			else -> verify(platform).purgeAudits(null, true)
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["/users", "/projects", "/projects/contents", "/projects/configurations", "/audits"])
+	fun `Should every purge endpoint refuse a caller without the job permission`(endpoint: String) {
+		// Act
+		val result = webClient.authenticate().post()
+			.uri(uriBuilder("$BASE_URL$endpoint", emptyList(), listOf(Pair("dryRun", false))))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isForbidden
+		verifyNoInteractions(platform, content, configuration)
+	}
 }
