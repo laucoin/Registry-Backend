@@ -2,16 +2,10 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
 
-@Component
-class PartialUserReaderDtoMapper: IGenericReaderDtoMapper<UserModel, PartialUserReaderDto> {
-	override fun toDto(model: UserModel): PartialUserReaderDto {
-		return PartialUserReaderDto(
-			id = model.id,
-			firstName = model.firstName,
-			lastName = model.lastName,
-			email = model.email
-		)
-	}
+@Mapper(config = DtoMapperConfig::class)
+interface PartialUserReaderDtoMapper: IGenericReaderDtoMapper<UserModel, PartialUserReaderDto> {
+	override fun toDto(model: UserModel): PartialUserReaderDto
 }

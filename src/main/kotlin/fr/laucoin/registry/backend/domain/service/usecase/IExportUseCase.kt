@@ -1,0 +1,23 @@
+package fr.laucoin.registry.backend.domain.service.usecase
+
+import fr.laucoin.registry.backend.domain.model.ClientContextModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.ParticipantExportModel
+import fr.laucoin.registry.backend.domain.model.UserExportModel
+import java.util.UUID
+import reactor.core.publisher.Mono
+
+/**
+ * Objectif : Contrat de cas d'usage de l'export des données personnelles.
+ * Périmètre : Exporte les données d'un utilisateur ou d'un participant et en trace chaque demande avec le contexte client.
+ * Limites : Contrat uniquement ; l'implémentation porte l'autorisation.
+ */
+interface IExportUseCase {
+	fun exportUser(currentUser: CurrentUserModel, userId: UUID, client: ClientContextModel): Mono<UserExportModel>
+	fun exportParticipant(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		client: ClientContextModel,
+	): Mono<ParticipantExportModel>
+}

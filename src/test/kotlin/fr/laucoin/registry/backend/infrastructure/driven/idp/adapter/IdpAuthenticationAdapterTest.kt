@@ -1,10 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driven.idp.adapter
 
+import fr.laucoin.registry.backend.infrastructure.driven.idp.IdpProperties
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTHORIZATION_CODE_OUTDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.AUTH_PROVIDER_FAILED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.AuthError.REFRESH_TOKEN_OUTDATED
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.infrastructure.driven.idp.mapper.AuthenticationTokenEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.idp.mapper.AuthenticationTokenEntityMapperImpl
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import okhttp3.mockwebserver.MockResponse
@@ -22,28 +24,27 @@ import reactor.core.Exceptions
 
 class IdpAuthenticationAdapterTest {
 	private val mockWebServer: MockWebServer = MockWebServer()
-	private val mapper: AuthenticationTokenEntityMapper = spy()
-	private val adapter: IdpAuthenticationAdapter = IdpAuthenticationAdapter(
-		mapper,
-		authorizationUri = "authorizationUri",
-		tokenUri = "tokenUri",
-		endSessionUri = "endSessionUri",
-		revocationUri = "revocationUri",
-		clientId = "clientId",
-		clientSecret = "clientSecret",
-		connectTimeoutMillis = 2000,
-		responseTimeoutMillis = 5000,
-		maxConnections = 20,
-	)
+	private val mapper: AuthenticationTokenEntityMapper = spy(AuthenticationTokenEntityMapperImpl())
+	private lateinit var adapter: IdpAuthenticationAdapter
 
 	@BeforeEach
 	fun setUp() {
 		mockWebServer.start()
+		adapter = IdpAuthenticationAdapter(
+			mapper,
+			IdpProperties(
+				authorizationUri = mockWebServer.url("/oauth2/authorize").toString(),
+				tokenUri = mockWebServer.url("/oauth2/token").toString(),
+				endSessionUri = mockWebServer.url("/oauth2/logout").toString(),
+				revocationUri = mockWebServer.url("/oauth2/revoke").toString(),
+				clientId = "clientId",
+				clientSecret = "clientSecret",
+				connectTimeoutMillis = 2000,
+				responseTimeoutMillis = 5000,
+				maxConnections = 20,
+			),
+		)
 		setField(adapter, "http", WebClient.create())
-		setField(adapter, "authorizationUri", mockWebServer.url("/oauth2/authorize").toString())
-		setField(adapter, "tokenUri", mockWebServer.url("/oauth2/token").toString())
-		setField(adapter, "endSessionUri", mockWebServer.url("/oauth2/logout").toString())
-		setField(adapter, "revocationUri", mockWebServer.url("/oauth2/revoke").toString())
 	}
 
 	@AfterEach
@@ -59,10 +60,24 @@ class IdpAuthenticationAdapterTest {
 			"${mockWebServer.url("/oauth2/authorize")}?response_type=code&client_id=clientId&redirect_uri=redirectUri"
 
 		// Act
-		val result = adapter.getLoginUri(redirectUri)
+		val result = adapter.getLoginUri(redirectUri, null)
 
 		// Assert
 		assertNotNull(result)
+		assertEquals(expected, result.uri)
+	}
+
+	@Test
+	fun `Should getLoginUri append the encoded state when one is provided`() {
+		// Arrange
+		val state = "a b&c=d"
+		val expected = "${mockWebServer.url("/oauth2/authorize")}" +
+			"?response_type=code&client_id=clientId&redirect_uri=redirectUri&state=a+b%26c%3Dd"
+
+		// Act
+		val result = adapter.getLoginUri("redirectUri", state)
+
+		// Assert
 		assertEquals(expected, result.uri)
 	}
 
@@ -269,5 +284,31 @@ class IdpAuthenticationAdapterTest {
 		assertNotNull(result)
 		assertEquals(FAILED_DEPENDENCY, result.status)
 		assertEquals(AUTH_PROVIDER_FAILED, result.message)
+	}
+
+	@Test
+	fun `Should getLoginUri encode the redirect uri so it cannot add parameters`() {
+		// Arrange
+		val redirectUri = "https://app.test/cb?x=1&prompt=none"
+		val expected = "${mockWebServer.url("/oauth2/authorize")}?response_type=code&client_id=clientId&redirect_uri=https%3A%2F%2Fapp.test%2Fcb%3Fx%3D1%26prompt%3Dnone"
+
+		// Act
+		val result = adapter.getLoginUri(redirectUri, null)
+
+		// Assert
+		assertEquals(expected, result.uri)
+	}
+
+	@Test
+	fun `Should getLogoutUri encode the redirect uri so it cannot add parameters`() {
+		// Arrange
+		val redirectUri = "https://app.test/bye&id_token_hint=forged"
+		val expected = "${mockWebServer.url("/oauth2/logout")}?redirect_uri=https%3A%2F%2Fapp.test%2Fbye%26id_token_hint%3Dforged"
+
+		// Act
+		val result = adapter.getLogoutUri(redirectUri, accessToken = null, refreshToken = null).block()
+
+		// Assert
+		assertEquals(expected, result!!.uri)
 	}
 }

@@ -13,7 +13,7 @@ inputs:
     description: Fully-qualified image name WITHOUT the tag (registry/namespace/name)
     required: true
   tag:
-    description: The tag to publish (branch name, "main", x.y.z, or a hotfix tag)
+    description: The tag to publish (branch name, "main" or x.y.z)
     required: true
   username:
     description: Registry username
@@ -59,8 +59,8 @@ runs:
         push: ${{ inputs.push }}
         tags: ${{ inputs.image }}:${{ inputs.tag }}
         build-args: ${{ inputs.build-args }}
-        # Layer cache stored in the GitHub Actions cache, scoped per image so the
-        # backend/frontend and the different tag flows don't evict each other.
+        # Cache des couches stocké dans le cache GitHub Actions, isolé par image afin que le
+        # backend/frontend et les différents flux de tags ne s'évincent pas mutuellement.
         cache-from: type=gha,scope=${{ inputs.image }}
         cache-to: type=gha,mode=max,scope=${{ inputs.image }}
         provenance: false

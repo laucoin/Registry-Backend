@@ -1,11 +1,12 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_FORM_ASK_PREFIX
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_NAME_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.ACTIVITY
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.COMMUNICATION
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -16,7 +17,10 @@ import org.mockito.kotlin.whenever
 
 class ProjectOptionReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper: ProjectOptionsReaderDtoMapper = ProjectOptionsReaderDtoMapper(translateService)
+	private val mapper: ProjectOptionsReaderDtoMapper = ProjectOptionsReaderDtoMapperImpl(
+		LabelMappingHelper(translateService),
+		ProjectOptionLabelReaderDtoMapperImpl(LabelMappingHelper(translateService)),
+	)
 
 	@Test
 	fun `Should toDto convert Project option rules map to ProjectOptionModel List`() {

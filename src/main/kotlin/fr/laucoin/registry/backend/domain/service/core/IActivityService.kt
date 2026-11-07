@@ -1,0 +1,51 @@
+package fr.laucoin.registry.backend.domain.service.core
+
+import fr.laucoin.registry.backend.domain.model.ActivityModel
+import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.MovementModel
+import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import java.time.LocalDate
+import java.util.UUID
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+
+/**
+ * Objectif : Contrat de cas d'usage de l'activité.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos de l'activité.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
+interface IActivityService {
+	fun findActivitiesPage(
+		projectId: UUID,
+		pageable: PageableModel,
+		searchParams: ActivitySearchParamModel,
+	): Mono<PageModel<ActivityModel>>
+
+	fun findActivityStatistics(projectId: UUID, id: UUID): Mono<ActivityStatisticsModel>
+
+	fun findActivityById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel>
+
+	fun findActivityMovementsPage(
+		projectId: UUID,
+		id: UUID,
+		pageable: PageableModel,
+		searchParams: MovementSearchParamModel,
+	): Mono<PageModel<MovementModel>>
+
+	fun createActivity(currentUser: CurrentUserModel, activity: ActivityModel): Mono<ActivityModel>
+	fun updateActivityById(
+		currentUser: CurrentUserModel,
+		projectId: UUID,
+		id: UUID,
+		activity: ActivityModel
+	): Mono<ActivityModel>
+
+	fun disableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel>
+	fun enableActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<ActivityModel>
+	fun deleteActivityById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<Unit>
+	fun purgeActivitiesIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
+}

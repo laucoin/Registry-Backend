@@ -20,7 +20,7 @@ class MovementContentReaderDtoMapperTest {
 	private val participantMapper: ParticipantReaderDtoMapper = mock()
 	private val vehicleMapper: VehicleReaderDtoMapper = mock()
 	private val mapper: MovementContentReaderDtoMapper =
-		MovementContentReaderDtoMapper(participantMapper, vehicleMapper)
+		MovementContentReaderDtoMapperImpl(participantMapper, vehicleMapper)
 
 	private companion object {
 		@JvmStatic

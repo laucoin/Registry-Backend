@@ -4,59 +4,34 @@ import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.GUEST
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
-import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithProjectAndModel
-import java.time.ZonedDateTime
-import java.util.Objects
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.helper.MovementMappingHelper
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
+import org.mapstruct.Named
 
-@Component
-class MovementEntityMapper(
-	private val activityMapper: ActivityEntityMapper
-): IEntityMapper<MovementModel, MovementEntity> {
-	override fun toModel(entity: MovementEntity): MovementModel {
-		return MovementModel(contentType = determineContentType(entity)).apply {
-			dateTime = entity.dateTime ?: ZonedDateTime.now()
-			type = entity.type
-			reason = entity.reason
-			activity = mapActivity(entity)
-		}.fillWithProjectAndEntity(entity)
-	}
+@Mapper(config = PostgresMapperConfig::class, uses = [MovementMappingHelper::class])
+interface MovementEntityMapper: IEntityMapper<MovementModel, MovementEntity> {
+	@IgnoreModelAudit
+	@Mapping(target = "activity", source = "entity", qualifiedByName = ["activityOf"])
+	@Mapping(target = "contentType", source = "entity", qualifiedByName = ["contentTypeOf"])
+	@Mapping(target = "content", ignore = true)
+	override fun toModel(entity: MovementEntity): MovementModel
 
-	private fun mapActivity(entity: MovementEntity): ActivityModel? {
-		return Optional.ofNullable(entity.activityId).map {
-			activityMapper.toModel(ActivityEntity().apply {
-				id = it
-				name = entity.activityName
-				description = entity.activityDescription
-				duration = entity.activityDuration
-				minAllowedParticipants = entity.activityMinAllowedParticipants
-				maxAllowedParticipants = entity.activityMaxAllowedParticipants
-				startAvailabilityDate = entity.activityStartAvailabilityDate
-				startAvailabilityTime = entity.activityStartAvailabilityTime
-				endAvailabilityDate = entity.activityEndAvailabilityDate
-				endAvailabilityTime = entity.activityEndAvailabilityTime
-			})
-		}.orElse(null)
-	}
+	@BeanMapping(ignoreByDefault = true)
+	@KeepGenericProjectColumns
+	@Mapping(target = "dateTime", source = "dateTime")
+	@Mapping(target = "type", source = "type")
+	@Mapping(target = "reason", source = "reason")
+	@Mapping(target = "activityId", source = "activity.id")
+	override fun toEntity(model: MovementModel): MovementEntity
 
-	private fun determineContentType(entity: MovementEntity): ParticipantTypeEnum {
+	@Named("contentTypeOf")
+	fun contentTypeOf(entity: MovementEntity): ParticipantTypeEnum {
 		return entity.reason?.participantType
-			?: if (entity.type == IN || Objects.nonNull(entity.activityId)) REGISTERED else GUEST
-	}
-
-	override fun toEntity(model: MovementModel): MovementEntity {
-		return MovementEntity().apply {
-			dateTime = model.dateTime
-			type = model.type
-			reason = model.reason
-			activityId = model.activity?.id
-		}.fillWithProjectAndModel(model)
+			?: if (entity.type == IN || entity.activityId != null) REGISTERED else GUEST
 	}
 }

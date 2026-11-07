@@ -10,6 +10,8 @@ external:
     connect-timeout-millis: ${IDP_CONNECT_TIMEOUT_MILLIS:2000}
     response-timeout-millis: ${IDP_RESPONSE_TIMEOUT_MILLIS:5000}
     max-connections: ${IDP_MAX_CONNECTIONS:20}
+    allowed-redirect-uris: ${IDP_ALLOWED_REDIRECT_URIS}
+    allowed-logout-redirect-uris: ${IDP_ALLOWED_LOGOUT_REDIRECT_URIS}
     swagger:
       client-id: ${IDP_PUBLIC_CLIENT_ID}
   cors:
@@ -51,14 +53,20 @@ registry:
     database: ${DATASOURCE_DATABASE:registry}
     username: ${DATASOURCE_USERNAME:registry}
     password: ${DATASOURCE_PASSWORD}
+    lock-timeout-ms: ${DATASOURCE_LOCK_TIMEOUT_MS:5000}
+  audit:
+    buffer-size: ${REGISTRY_AUDIT_BUFFER_SIZE:1000}
+    read-dedup-window: ${REGISTRY_AUDIT_READ_DEDUP_WINDOW:60s}
+  concurrency:
+    update-timeout: ${REGISTRY_UPDATE_TIMEOUT:10s}
   feature:
     documentation:
       enabled: ${REGISTRY_DOCUMENTATION_ENABLED:false}
     observability:
       enabled: ${REGISTRY_OBSERVABILITY_ENABLED:true}
     profile:
-      searched:
-        max-user-result: 10
+      invite-by-email:
+        enabled: ${REGISTRY_PROFILE_INVITE_BY_EMAIL_ENABLED:false}
     participant:
       searched:
         max-user-result: 10
@@ -72,6 +80,13 @@ registry:
         max-group-result: 5
         max-vehicle-result: 10
         max-activity-result: 10
+      planned:
+        max-result: 200
+      future-tolerance: ${REGISTRY_MOVEMENT_FUTURE_TOLERANCE:2m}
+    alert:
+      criticality:
+        reinforced-after-hours: 6
+        high-after-hours: 18
     communication:
       searched:
         max-activity-result: 10
@@ -89,6 +104,9 @@ registry:
       users:
         cron: 0 0 1 * * *
         months-threshold: 12
+      audit:
+        cron: 0 0 3 * * *
+        months-threshold: 12
   information:
     name: Registry
     description: This application allows virtual registry management. This is a backend which one is called by the frontend.
@@ -101,12 +119,26 @@ registry:
       url: https://doc.laucoin.fr/registry/
   security:
     default-role: USER
+    trusted-proxies: ${REGISTRY_TRUSTED_PROXIES:}
     cookie:
       secure: ${COOKIE_SECURE:true}
     rate-limit:
       auth:
         capacity: ${REGISTRY_AUTH_RATE_LIMIT_CAPACITY:10}
         window-seconds: ${REGISTRY_AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+        max-tracked-clients: ${REGISTRY_AUTH_RATE_LIMIT_MAX_TRACKED_CLIENTS:10000}
+      export:
+        capacity: ${REGISTRY_EXPORT_RATE_LIMIT_CAPACITY:5}
+        window-seconds: ${REGISTRY_EXPORT_RATE_LIMIT_WINDOW_SECONDS:3600}
+        max-tracked-users: ${REGISTRY_EXPORT_RATE_LIMIT_MAX_TRACKED_USERS:10000}
+      user-search:
+        capacity: ${REGISTRY_USER_SEARCH_RATE_LIMIT_CAPACITY:30}
+        window-seconds: ${REGISTRY_USER_SEARCH_RATE_LIMIT_WINDOW_SECONDS:60}
+        max-tracked-users: ${REGISTRY_USER_SEARCH_RATE_LIMIT_MAX_TRACKED_USERS:10000}
+      project-creation:
+        capacity: ${REGISTRY_PROJECT_CREATION_RATE_LIMIT_CAPACITY:10}
+        window-seconds: ${REGISTRY_PROJECT_CREATION_RATE_LIMIT_WINDOW_SECONDS:3600}
+        max-tracked-users: ${REGISTRY_PROJECT_CREATION_RATE_LIMIT_MAX_TRACKED_USERS:10000}
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
@@ -117,6 +149,7 @@ registry:
       claims:
         user-id: sub
         email: email
+        email-verified: email_verified
         first-name: given_name
         last-name: family_name
       cache:
@@ -141,11 +174,14 @@ spring:
     password: ${registry.datasource.password}
     locations:
       - classpath:db/migrations
+  http:
+    codecs:
+      max-in-memory-size: ${REGISTRY_CODEC_MAX_IN_MEMORY_SIZE:512KB}
   main:
     web-application-type: reactive
     banner-mode: off
   r2dbc:
-    url: r2dbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    url: r2dbc:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}&options=lock_timeout=${registry.datasource.lock-timeout-ms}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
     pool:
@@ -158,7 +194,9 @@ springdoc:
   use-management-port: true
   api-docs:
     enabled: ${registry.feature.documentation.enabled}
+    version: openapi_3_0
   swagger-ui:
     enabled: ${registry.feature.documentation.enabled}
     oauth:
       client-id: ${external.idp.swagger.client-id}
+      use-pkce-with-authorization-code-grant: true

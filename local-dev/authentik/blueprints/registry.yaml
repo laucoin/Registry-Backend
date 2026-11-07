@@ -1,20 +1,20 @@
-# Authentik blueprint for local development (validated against Authentik 2026.5).
-# It provisions:
-#   - a confidential OAuth2 provider + application at slug `registry` for the backend's own
-#     authorization_code login (sub_mode user_uuid -> the JWT `sub` is the user UUID, which
-#     TokenConverterService links to tb_user.oidc_id);
-#   - a public OAuth2 provider + application at slug `registry-swagger` for Swagger UI's
-#     implicit-flow "Authorize" button (SwaggerConfig.kt), redirecting back to the management
-#     port (see README: SERVER_MANAGEMENT_PORT);
-#   - the six seed users from src/main/resources/db/seed/R__seed_dev_users.sql (same emails
-#     and given/family names), all sharing the AU_PASS password. Their Authentik UUIDs
-#     are random (authentik_core.user.uuid is not settable); the backend links them to the
-#     seeded, email-only accounts on first login (oidc_id is filled in then).
+# Blueprint Authentik pour le développement local (validé avec Authentik 2026.5).
+# Il provisionne :
+#   - un provider OAuth2 confidentiel + une application au slug `registry` pour le login
+#     authorization_code du backend (sub_mode user_uuid -> le `sub` du JWT est l'UUID utilisateur, que
+#     TokenConverterService relie à tb_user.oidc_id) ;
+#   - un provider OAuth2 public + une application au slug `registry-swagger` pour le bouton
+#     « Authorize » authorization-code + PKCE de Swagger UI (SwaggerConfig.kt), avec redirection vers le port
+#     de management (voir README : SERVER_MANAGEMENT_PORT) ;
+#   - les six utilisateurs du seed src/main/resources/db/seed/R__seed_dev_dataset.sql (mêmes e-mails
+#     et mêmes prénoms/noms), tous avec le mot de passe AU_PASS. Leurs UUID Authentik
+#     sont aléatoires (authentik_core.user.uuid n'est pas modifiable) ; le backend les relie aux
+#     comptes du seed, identifiés par e-mail seul, à la première connexion (oidc_id est alors renseigné).
 #
-# The seed only loads under the `local` Spring profile (application-local.yml) - run the
-# backend with SPRING_PROFILES_ACTIVE=local so the two sides match up.
+# Le seed ne se charge que sous le profil Spring `local` (application-local.yml) - lancer le
+# backend avec SPRING_PROFILES_ACTIVE=local pour que les deux côtés correspondent.
 #
-# Authentik auto-applies blueprints mounted under /blueprints/custom.
+# Authentik applique automatiquement les blueprints montés sous /blueprints/custom.
 version: 1
 metadata:
   name: registry-local
@@ -23,9 +23,9 @@ context:
   registry_client_secret: !Env [ IDP_PRIVATE_CLIENT_SECRET, registry-secret ]
   registry_swagger_client_id: !Env [ IDP_PUBLIC_CLIENT_ID, registry-swagger ]
 entries:
-  # Default Authentik puts the whole display name in given_name and leaves family_name
-  # empty; the backend needs a real given/family split (registry.security.oauth2.claims.*),
-  # so emit the claims from the per-user attributes set below.
+  # Par défaut, Authentik met tout le nom affiché dans given_name et laisse family_name
+  # vide ; le backend a besoin d'une vraie séparation prénom/nom (registry.security.oauth2.claims.*),
+  # on émet donc les claims à partir des attributs par utilisateur définis plus bas.
   - model: authentik_providers_oauth2.scopemapping
     id: registry-profile-scope
     identifiers:
@@ -51,8 +51,8 @@ entries:
       client_type: confidential
       client_id: !Context registry_client_id
       client_secret: !Context registry_client_secret
-      # The backend brokers the code exchange itself (IdpAuthenticationAdapter) and also
-      # calls the refresh grant, so both must be allowed.
+      # Le backend réalise lui-même l'échange du code (IdpAuthenticationAdapter) et appelle aussi
+      # le grant de refresh : les deux doivent donc être autorisés.
       grant_types:
         - authorization_code
         - refresh_token
@@ -62,13 +62,13 @@ entries:
       invalidation_flow: !Find [ authentik_flows.flow, [ slug, default-provider-invalidation-flow ] ]
       signing_key: !Find [ authentik_crypto.certificatekeypair, [ name, authentik Self-signed Certificate ] ]
       redirect_uris:
-        # Best-guess default for the Angular frontend (see README's EXTERNAL_CORS_URLS
-        # example, http://localhost:4200) - override with IDP_FRONTEND_REDIRECT_URI if your
-        # frontend's actual callback route differs.
+        # Valeur par défaut supposée pour le frontend Angular (voir l'exemple EXTERNAL_CORS_URLS
+        # du README, http://localhost:4200) - surcharger avec IDP_FRONTEND_REDIRECT_URI si la route
+        # de callback réelle du frontend diffère.
         - matching_mode: strict
           url: !Env [ IDP_FRONTEND_REDIRECT_URI, "http://localhost:4200/auth/callback" ]
-      # offline_access is what makes the IdP issue a usable refresh token; without this
-      # mapping Authentik hands out none, and refreshAuthenticationToken has nothing to use.
+      # offline_access permet à l'IdP d'émettre un refresh token utilisable ; sans ce
+      # mapping Authentik n'en fournit aucun, et refreshAuthenticationToken n'a rien à utiliser.
       property_mappings:
         - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, openid ] ]
         - !Find [ authentik_providers_oauth2.scopemapping, [ scope_name, email ] ]
@@ -84,10 +84,10 @@ entries:
       provider: !KeyOf registry-provider
 
   # ------------------------------------------------------------------------- Swagger UI (public)
-  # Swagger runs in the browser and holds no secret, so it cannot be the backend's confidential
-  # client: the provider would refuse it at the token endpoint for failing to authenticate.
-  # SwaggerConfig.kt configures the OAuth2 implicit flow, so this provider is public/implicit
-  # rather than the authorization_code + PKCE shape a browser client would otherwise use.
+  # Swagger s'exécute dans le navigateur et ne détient aucun secret : il ne peut pas être le client
+  # confidentiel du backend, le provider le refuserait au token endpoint faute d'authentification.
+  # SwaggerConfig.kt configure le flux OAuth2 authorization code avec PKCE. Le flux implicit
+  # n'est pas utilisable ici : Authentik rejette le `response_type=token` simple qu'envoie Swagger UI.
   - model: authentik_providers_oauth2.oauth2provider
     id: registry-swagger-provider
     identifiers:
@@ -96,16 +96,16 @@ entries:
       client_type: public
       client_id: !Context registry_swagger_client_id
       grant_types:
-        - implicit
+        - authorization_code
       sub_mode: user_uuid
       authentication_flow: !Find [ authentik_flows.flow, [ slug, default-authentication-flow ] ]
       authorization_flow: !Find [ authentik_flows.flow, [ slug, default-provider-authorization-implicit-consent ] ]
       invalidation_flow: !Find [ authentik_flows.flow, [ slug, default-provider-invalidation-flow ] ]
       signing_key: !Find [ authentik_crypto.certificatekeypair, [ name, authentik Self-signed Certificate ] ]
       redirect_uris:
-        # Swagger UI now loads from the management port (see README: SERVER_MANAGEMENT_PORT),
-        # and springdoc.use-management-port routes its OAuth2 callback there too. The path has
-        # no /actuator prefix: management.endpoints.web.base-path is "/".
+        # Swagger UI se charge désormais depuis le port de management (voir README : SERVER_MANAGEMENT_PORT),
+        # et springdoc.use-management-port y route aussi son callback OAuth2. Le chemin n'a
+        # pas de préfixe /actuator : management.endpoints.web.base-path vaut "/".
         - matching_mode: strict
           url: !Env [ IDP_SWAGGER_REDIRECT_URI, "http://localhost:8082/swagger-ui/oauth2-redirect.html" ]
       property_mappings:
@@ -121,13 +121,13 @@ entries:
       name: Registry Swagger
       provider: !KeyOf registry-swagger-provider
 
-  # ------------------------------------------------------------------------ test personas
-  # Match src/main/resources/db/seed/R__seed_dev_users.sql (loaded under the `local` profile).
-  # All active in Authentik; the "blocked" semantics live in the backend seed
-  # (blocked-user is visible=false there), so logging in as blocked-user links the account
-  # and is then rejected by the backend.
+  # ------------------------------------------------------------------------ personas de test
+  # Correspond à src/main/resources/db/seed/R__seed_dev_dataset.sql (chargé sous le profil `local`).
+  # Tous actifs dans Authentik ; la sémantique « bloqué » vit dans le seed du backend
+  # (blocked-user y a visible=false) : se connecter en tant que blocked-user relie le compte
+  # puis est rejeté par le backend.
   - model: authentik_core.user
-    id: registry-user-administrator
+    id: 865f44e7-1fe0-4ce4-87e5-8159f581894d
     identifiers:
       username: administrator
     attrs:
@@ -141,7 +141,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-coordinator
+    id: b82d96d3-02e5-4ea5-89fc-a1a50092d8d4
     identifiers:
       username: coordinator
     attrs:
@@ -155,21 +155,21 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-participant
+    id: 37b3186b-4839-472f-a67a-9bd4e8beae4b
     identifiers:
       username: participant
     attrs:
-      name: Charles PINA
+      name: Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V
       attributes:
-        given_name: Charles
-        family_name: PINA
-      email: participant@sgdf.fr
+        given_name: Jean-Baptiste-Maximilien-Alexandre-Marie-Charlotte
+        family_name: DE LA ROCHEFOUCAULD-LIANCOURT DE SAINT-MARTIN-LE-V
+      email: participant.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.fr
       password: !Env [ AU_PASS, "dev123" ]
       is_active: true
       path: users
 
   - model: authentik_core.user
-    id: registry-user-blocked-user
+    id: 3f311520-d686-4a3e-88aa-8b9e58a56f88
     identifiers:
       username: blocked-user
     attrs:
@@ -183,7 +183,7 @@ entries:
       path: users
 
   - model: authentik_core.user
-    id: registry-user-blocked-profile
+    id: ba3ea096-fc25-4e5a-ad3e-71a741358116
     identifiers:
       username: blocked-profile
     attrs:
@@ -192,20 +192,6 @@ entries:
         given_name: Emil
         family_name: BRADFORD
       email: blocked-profile@sgdf.fr
-      password: !Env [ AU_PASS, "dev123" ]
-      is_active: true
-      path: users
-
-  - model: authentik_core.user
-    id: registry-user-unverified
-    identifiers:
-      username: unverified
-    attrs:
-      name: Nina VOGEL
-      attributes:
-        given_name: Nina
-        family_name: VOGEL
-      email: unverified@sgdf.fr
       password: !Env [ AU_PASS, "dev123" ]
       is_active: true
       path: users

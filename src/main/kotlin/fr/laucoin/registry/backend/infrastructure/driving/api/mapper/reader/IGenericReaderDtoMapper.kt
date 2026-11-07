@@ -11,8 +11,8 @@ interface IGenericReaderDtoMapper<M, D> {
 
 	fun toDtoPage(page: PageModel<M>): PageModel<D> {
 		return PageModel(
-			page.pageNumber,
-			page.pageSize,
+			page.page,
+			page.size,
 			page.totalPages,
 			page.totalElements,
 			toDtoList(page.content),

@@ -1,24 +1,33 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.ActivityCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IActivityPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.activity.ActivityEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.ActivityEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IActivityEntityRepository
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Adaptateur Postgres du port de l'activité.
+ * Périmètre : Délègue au repository d'entités et mappe les entités vers les modèles du domaine.
+ * Limites : Ne porte aucune règle métier.
+ */
 @Service
 class ActivityModelPostgresRepository(
 	private val repository: IActivityEntityRepository,
 	private val mapper: ActivityEntityMapper,
+	private val clock: Clock,
 ): IActivityPort {
 	override fun findPage(
 		projectId: UUID,
@@ -27,17 +36,26 @@ class ActivityModelPostgresRepository(
 	): Mono<PageModel<ActivityModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.dateTimeSearched,
-			pageable.limit,
-			pageable.offset,
-		).toPageModel(pageable, ActivityEntity::fullCount, mapper::toModel)
+			searchParams.isVisible,
+			ActivityCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				at = searchParams.at,
+				minDuration = searchParams.minDuration?.toIsoString(),
+				maxDuration = searchParams.maxDuration?.toIsoString(),
+				participants = searchParams.participants,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
+		).toPageModel(pageable, clock, ActivityEntity::fullCount, mapper::toModel)
 	}
 
-	override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<ActivityModel> {
-		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched)
+	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<ActivityModel> {
+		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, isVisible)
 			.map(mapper::toModel)
 	}
 
@@ -48,11 +66,16 @@ class ActivityModelPostgresRepository(
 	): Flux<ActivityModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.dateTimeSearched,
-			limit,
+			searchParams.isVisible,
+			ActivityCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				at = searchParams.at,
+				minDuration = searchParams.minDuration?.toIsoString(),
+				maxDuration = searchParams.maxDuration?.toIsoString(),
+				participants = searchParams.participants,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 
@@ -60,8 +83,8 @@ class ActivityModelPostgresRepository(
 		return repository.findUnusedSince(dateThreshold)
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<ActivityModel> {
-		return repository.findById(projectId, id, visibilitySearched)
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<ActivityModel> {
+		return repository.findById(projectId, id, isVisible)
 			.map(mapper::toModel)
 			.switchIfEmpty(Mono.empty())
 	}

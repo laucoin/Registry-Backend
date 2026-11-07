@@ -7,15 +7,15 @@ function create_user_and_database() {
     local database=$1
     echo "  Creating user and database '$database'"
 
-    # 1. Create the user and database as the superuser, setting the user as the owner of the database
+    # 1. Créer l'utilisateur et la base en tant que superutilisateur, l'utilisateur étant propriétaire de la base
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
         CREATE USER $database WITH PASSWORD '$POSTGRES_PASSWORD';
         CREATE DATABASE $database OWNER $database;
         GRANT ALL PRIVILEGES ON DATABASE $database TO $database;
 EOSQL
 
-    # 2. Fix PostgreSQL 15+ Schema Permissions
-    # Connect directly to the newly created database and assign the public schema owner to the database user
+    # 2. Corriger les permissions du schéma pour PostgreSQL 15+
+    # Se connecter directement à la base créée et attribuer la propriété du schéma public à l'utilisateur de la base
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$database" <<-EOSQL
         ALTER SCHEMA public OWNER TO $database;
         GRANT ALL ON SCHEMA public TO $database;

@@ -1,23 +1,21 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
-import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CommunicationWriterDto
-import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.IdReferenceDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.CommunicationWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class CommunicationWriterDtoMapper: IGenericProjectWriterDtoMapper<CommunicationModel, CommunicationWriterDto> {
-	override fun toModel(dto: CommunicationWriterDto, projectId: UUID): CommunicationModel {
-		return CommunicationModel().apply {
-			dateTime = dto.dateTime!!
-			message = dto.message
-			movement = Optional.ofNullable(dto.movementId).map { MovementModel().apply { id = it } }.orElse(null)
-			alert = Optional.ofNullable(dto.alertId).map { AlertModel().apply { id = it } }.orElse(null)
-			project = ProjectModel().apply { id = projectId }
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [IdReferenceDtoMapper::class])
+interface CommunicationWriterDtoMapper: IGenericProjectWriterDtoMapper<CommunicationModel, CommunicationWriterDto> {
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "dateTime", source = "dto.dateTime")
+	@Mapping(target = "message", source = "dto.message")
+	@Mapping(target = "movement", source = "dto.movementId")
+	@Mapping(target = "alert", source = "dto.alertId")
+	@Mapping(target = "projectId", source = "projectId")
+	override fun toModel(dto: CommunicationWriterDto, projectId: UUID): CommunicationModel
 }

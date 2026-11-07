@@ -3,17 +3,13 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 import fr.laucoin.registry.backend.domain.model.GroupModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementParticipantsAndGroupsReaderDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class MovementParticipantsAndGroupsReaderDtoMapper(
-	private val participantReaderMapper: ParticipantReaderDtoMapper,
-	private val groupReaderMapper: GroupReaderDtoMapper,
-): IGenericReaderDtoMapper<Pair<List<ParticipantModel>, List<GroupModel>>, MovementParticipantsAndGroupsReaderDto> {
-	override fun toDto(model: Pair<List<ParticipantModel>, List<GroupModel>>): MovementParticipantsAndGroupsReaderDto {
-		return MovementParticipantsAndGroupsReaderDto(
-			participants = participantReaderMapper.toDtoList(model.first),
-			groups = groupReaderMapper.toDtoList(model.second),
-		)
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [ParticipantReaderDtoMapper::class, GroupReaderDtoMapper::class])
+interface MovementParticipantsAndGroupsReaderDtoMapper {
+	@Mapping(target = "participants", source = "model.first")
+	@Mapping(target = "groups", source = "model.second")
+	fun toDto(model: @JvmSuppressWildcards Pair<List<ParticipantModel>, List<GroupModel>>): MovementParticipantsAndGroupsReaderDto
 }

@@ -1,14 +1,21 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_OPTION_NAME_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProjectOptionEnum.VEHICLE
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
+import fr.laucoin.registry.backend.domain.model.ProjectCountsModel
 import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -21,8 +28,11 @@ import org.mockito.kotlin.whenever
 
 class ProjectReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val availabilityMapper: AvailabilityStatusReaderDtoMapper = mock()
-	private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapper(translateService, availabilityMapper)
+	private val statusHelper: StatusLabelMappingHelper = mock()
+	private val mapper: ProjectReaderDtoMapper = ProjectReaderDtoMapperImpl(
+		statusHelper,
+		ProjectOptionLabelReaderDtoMapperImpl(LabelMappingHelper(translateService)),
+	)
 
 	private companion object {
 		@JvmStatic
@@ -35,9 +45,10 @@ class ProjectReaderDtoMapperTest {
 						begin = CustomDateTimeModel.MIN
 						end = CustomDateTimeModel.MAX
 						options = listOf(VEHICLE)
+						counts = ProjectCountsModel(participants = 4, groups = 3, acceptedProfiles = 2, vehicles = 1)
 						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					1,
 				),
@@ -49,13 +60,39 @@ class ProjectReaderDtoMapperTest {
 						end = CustomDateTimeModel.MAX
 						options = null
 						visible = true
-						creation = HistoryModel()
-						lastEdition = HistoryModel()
+						creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+						lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 					},
 					0,
 				),
 			)
 		}
+	}
+
+	@Test
+	fun `Should toDto leave the counts empty when the project has none`() {
+		// Arrange
+		val project = ProjectModel().apply { counts = null }
+
+		// Act
+		val result = mapper.toDto(project)
+
+		// Assert
+		assertNull(result.counts)
+	}
+
+	@Test
+	fun `Should toDto convert every count when all options are enabled`() {
+		// Arrange
+		val counts = ProjectCountsModel(1, 2, 3, vehicles = 4, activities = 5, activeAlerts = 6)
+
+		// Act
+		val result = mapper.toDto(ProjectModel().apply { this.counts = counts })
+
+		// Assert
+		assertEquals(4, result.counts?.vehicles)
+		assertEquals(5, result.counts?.activities)
+		assertEquals(6, result.counts?.activeAlerts)
 	}
 
 	@ParameterizedTest
@@ -86,6 +123,12 @@ class ProjectReaderDtoMapperTest {
 			}
 		}
 		assertEquals(project.options?.size, result.options?.size)
+		assertEquals(project.counts?.participants, result.counts?.participants)
+		assertEquals(project.counts?.groups, result.counts?.groups)
+		assertEquals(project.counts?.acceptedProfiles, result.counts?.acceptedProfiles)
+		assertEquals(project.counts?.vehicles, result.counts?.vehicles)
+		assertNull(result.counts?.activities)
+		assertNull(result.counts?.activeAlerts)
 		assertEquals(project.visible, result.visible)
 		assertEquals(project.creation, result.creation)
 		assertEquals(project.lastEdition, result.lastEdition)

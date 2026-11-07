@@ -10,6 +10,8 @@ external:
     connect-timeout-millis: 2000
     response-timeout-millis: 5000
     max-connections: 20
+    allowed-redirect-uris: https://registry.test/callback
+    allowed-logout-redirect-uris: https://registry.test
     swagger:
       client-id: client-swagger
   cors:
@@ -51,14 +53,20 @@ registry:
     database: ${DATASOURCE_DATABASE}
     username: ${DATASOURCE_USERNAME}
     password: ${DATASOURCE_PASSWORD}
+    lock-timeout-ms: ${DATASOURCE_LOCK_TIMEOUT_MS:5000}
+  audit:
+    buffer-size: ${REGISTRY_AUDIT_BUFFER_SIZE:1000}
+    read-dedup-window: ${REGISTRY_AUDIT_READ_DEDUP_WINDOW:60s}
+  concurrency:
+    update-timeout: ${REGISTRY_UPDATE_TIMEOUT:10s}
   feature:
     documentation:
       enabled: true
     observability:
       enabled: true
     profile:
-      searched:
-        max-user-result: 10
+      invite-by-email:
+        enabled: true
     participant:
       searched:
         max-user-result: 10
@@ -72,6 +80,13 @@ registry:
         max-group-result: 5
         max-vehicle-result: 10
         max-activity-result: 10
+      planned:
+        max-result: 200
+      future-tolerance: 2m
+    alert:
+      criticality:
+        reinforced-after-hours: 6
+        high-after-hours: 18
     communication:
       searched:
         max-activity-result: 10
@@ -89,6 +104,9 @@ registry:
       users:
         cron: 0 0 1 * * *
         months-threshold: 12
+      audit:
+        cron: 0 0 3 * * *
+        months-threshold: 12
   information:
     name: Registry
     description: This application allows virtual registry management. This is a backend which one is called by the frontend.
@@ -101,12 +119,26 @@ registry:
       url: https://doc.laucoin.fr/registry/
   security:
     default-role: USER
+    trusted-proxies: ""
     cookie:
       secure: false
     rate-limit:
       auth:
         capacity: 10
         window-seconds: 60
+        max-tracked-clients: 10000
+      export:
+        capacity: 1000
+        window-seconds: 3600
+        max-tracked-users: 10000
+      user-search:
+        capacity: 1000
+        window-seconds: 60
+        max-tracked-users: 10000
+      project-creation:
+        capacity: 1000
+        window-seconds: 3600
+        max-tracked-users: 10000
     oauth2:
       jwks-uri: ${external.idp.jwks-uri}
       authorization-uri: ${external.idp.authorization-uri}
@@ -117,6 +149,7 @@ registry:
       claims:
         user-id: sub
         email: email
+        email-verified: email_verified
         first-name: given_name
         last-name: family_name
       cache:
@@ -132,6 +165,9 @@ server:
   port: ${registry.server.port}
 
 spring:
+  http:
+    codecs:
+      max-in-memory-size: 512KB
   application:
     name: ${registry.information.name}
   flyway:
@@ -146,7 +182,7 @@ spring:
     web-application-type: reactive
     banner-mode: off
   r2dbc:
-    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}
+    url: r2dbc:pool:postgresql://${registry.datasource.base-url}/${registry.datasource.database}?currentSchema=${registry.datasource.schemas}&options=lock_timeout=${registry.datasource.lock-timeout-ms}
     username: ${registry.datasource.username}
     password: ${registry.datasource.password}
 

@@ -4,11 +4,12 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 import java.util.Properties
 
 plugins {
-	kotlin("jvm") version "2.4.10"
-	kotlin("plugin.spring") version "2.4.10"
-	id("org.springframework.boot") version "4.1.1"
+	kotlin("jvm") version "2.4.21"
+	kotlin("plugin.spring") version "2.4.21"
+	kotlin("kapt") version "2.4.21"
+	id("org.springframework.boot") version "4.1.2"
 	id("io.spring.dependency-management") version "1.1.7"
-	id("org.jetbrains.kotlinx.kover") version "0.9.9"
+	id("org.jetbrains.kotlinx.kover") version "0.9.11"
 }
 
 group = "fr.laucoin.registry"
@@ -18,15 +19,17 @@ val versionProperties = Properties().apply {
 }
 version = versionProperties.getProperty("version", "0.0.1-SNAPSHOT")
 
-// External libraries 📚
+// Bibliothèques externes 📚
 val apacheTextVersion = "1.15.0"
-val swaggerVersion = "3.1.0"
-val caffeineVersion = "3.2.4"
+val swaggerVersion = "3.2.0"
+val caffeineVersion = "3.3.1"
+val scramVersion = "3.4"
+val mapstructVersion = "1.6.3"
 
-// Testing 🧪
-val mockWebServer = "5.5.0"
-val testArch = "1.5.0"
-val mockitoKotlinVersion = "6.3.0"
+// Tests 🧪
+val mockWebServer = "5.5.1"
+val testArch = "1.5.1"
+val mockitoKotlinVersion = "6.4.0"
 val testContainerVersion = "2.0.5"
 
 kotlin {
@@ -44,7 +47,7 @@ repositories {
 }
 
 dependencies {
-	// Security 🔒
+	// Sécurité 🔒
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 
@@ -56,17 +59,21 @@ dependencies {
 	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-	// Monitoring & Observability 👀
+	// Supervision et observabilité 👀
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("io.micrometer:micrometer-registry-prometheus")
 
-	// Reactive context propagation (e.g. LocaleContext across WebFlux thread hops) 🔀
+	// Propagation du contexte réactif (p. ex. LocaleContext entre les changements de thread WebFlux) 🔀
 	implementation("io.micrometer:context-propagation")
 
 	// Documentation 📚
 	implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:$swaggerVersion")
 
-	// Data 💾
+	// Mapping 🔁
+	implementation("org.mapstruct:mapstruct:$mapstructVersion")
+	kapt("org.mapstruct:mapstruct-processor:$mapstructVersion")
+
+	// Données 💾
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("com.github.ben-manes.caffeine:caffeine:$caffeineVersion")
@@ -88,11 +95,35 @@ dependencies {
 	testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
 	testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+	constraints {
+		runtimeOnly("com.ongres.scram:scram-client:$scramVersion") { because("GHSA-p9jg-fcr6-3mhf") }
+		runtimeOnly("com.ongres.scram:scram-common:$scramVersion") { because("GHSA-p9jg-fcr6-3mhf") }
+	}
+}
+
+kapt {
+	arguments {
+		arg("mapstruct.defaultComponentModel", "spring")
+		arg("mapstruct.unmappedTargetPolicy", "ERROR")
+		arg("mapstruct.suppressGeneratorTimestamp", "true")
+	}
+}
+
+kover {
+	reports {
+		verify {
+			rule {
+				minBound(93)
+			}
+		}
+	}
 }
 
 tasks.withType<Test>().configureEach {
 	useJUnitPlatform()
 	maxParallelForks = Runtime.getRuntime().availableProcessors()
+	jvmArgs("-Duser.timezone=UTC")
 	testLogging {
 		events = setOf(FAILED, SKIPPED)
 		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
@@ -107,3 +138,18 @@ tasks.withType<BootJar>().configureEach {
 	isPreserveFileTimestamps = false
 	isReproducibleFileOrder = true
 }
+// Pointe git vers les hooks versionnés de .githooks (remplace le script "prepare" de husky)
+val installGitHooks by tasks.registering {
+	val gitDir = layout.projectDirectory.dir(".git").asFile
+	onlyIf { gitDir.exists() && System.getenv("CI") == null }
+	doLast {
+		runCatching {
+			ProcessBuilder("git", "config", "core.hooksPath", ".githooks")
+				.directory(projectDir)
+				.start()
+				.waitFor()
+		}
+	}
+}
+
+tasks.matching { it.name == "compileKotlin" }.configureEach { dependsOn(installGitHooks) }

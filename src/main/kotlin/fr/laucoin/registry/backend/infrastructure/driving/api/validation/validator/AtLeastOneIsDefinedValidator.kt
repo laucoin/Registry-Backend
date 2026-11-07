@@ -1,0 +1,35 @@
+package fr.laucoin.registry.backend.infrastructure.driving.api.validation.validator
+
+import fr.laucoin.registry.backend.domain.extension.ListExt.isIterable
+import fr.laucoin.registry.backend.domain.extension.ListExt.isNotEmpty
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.AtLeastOneIsDefined
+import jakarta.validation.ConstraintValidatorContext
+import java.util.Objects
+
+/**
+ * Objectif : Validateur de la contrainte AtLeastOneIsDefined.
+ * Périmètre : Valide lorsqu'au moins un des deux champs configurés n'est pas null.
+ * Limites : Lit les champs par réflexion ; aucune autre vérification.
+ */
+class AtLeastOneIsDefinedValidator: GenericValidator<AtLeastOneIsDefined, Any>() {
+	private lateinit var firstField: String
+	private lateinit var secondField: String
+
+	override fun initialize(constraintAnnotation: AtLeastOneIsDefined) {
+		firstField = constraintAnnotation.first
+		secondField = constraintAnnotation.second
+	}
+
+	override fun isValid(value: Any, context: ConstraintValidatorContext): Boolean {
+		val firstValue = extractValue(firstField, value)
+		val secondValue = extractValue(secondField, value)
+
+		if (firstValue.isIterableOrNull() && secondValue.isIterableOrNull()) {
+			return firstValue.isNotEmpty() || secondValue.isNotEmpty()
+		}
+
+		return Objects.nonNull(firstValue) || Objects.nonNull(secondValue)
+	}
+
+	private fun Any?.isIterableOrNull(): Boolean = isIterable() || Objects.isNull(this)
+}

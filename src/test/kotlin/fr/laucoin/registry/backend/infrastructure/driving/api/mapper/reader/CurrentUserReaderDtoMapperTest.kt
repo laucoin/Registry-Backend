@@ -1,19 +1,17 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.AuthorityMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PreferencesModel
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CurrentUserReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PreferenceReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.userId
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.stream.Stream
-import kotlin.test.assertEquals
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -25,15 +23,24 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import java.time.ZoneOffset
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
 class CurrentUserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
 	private val preferenceMapper: PreferenceReaderDtoMapper = mock()
-	private val mapper = CurrentUserReaderDtoMapper(translateService, preferenceMapper)
+	private val mapper = CurrentUserReaderDtoMapperImpl(
+		AuthorityMappingHelper(),
+		preferenceMapper,
+		UserRoleReaderDtoMapperImpl(LabelMappingHelper(translateService)),
+	)
 
 	private companion object {
 		private const val TRANSLATED = "TRANSLATED"
-		private val now = ZonedDateTime.now()
+		private val now = ZonedDateTime.now(ZoneOffset.UTC)
 		private val preferenceDto = PreferenceReaderDto()
 
 		private val model = CurrentUserModel(
@@ -46,11 +53,10 @@ class CurrentUserReaderDtoMapperTest {
 			birthday = LocalDate.of(1980, 1, 1)
 			lastLogin = now
 			role = "ROLE"
-			purged = false
-			id = userId
+			id = defaultUserId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		private val dto = CurrentUserReaderDto(
@@ -62,12 +68,11 @@ class CurrentUserReaderDtoMapperTest {
 			birthday = LocalDate.of(1980, 1, 1),
 			lastLogin = now,
 			role = LabelDto(value = "ROLE", label = TRANSLATED),
-			purged = false,
 		).apply {
-			id = userId
+			id = defaultUserId
 			visible = true
-			creation = HistoryModel()
-			lastEdition = HistoryModel()
+			creation = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
+			lastEdition = HistoryModel(ZonedDateTime.now(ZoneOffset.UTC))
 		}
 
 		@JvmStatic
@@ -76,7 +81,7 @@ class CurrentUserReaderDtoMapperTest {
 				Arguments.of(model, dto, 1, 1),
 				Arguments.of(
 					CurrentUserModel().apply { lastLogin = now },
-					CurrentUserReaderDto(authorities = emptyList(), lastLogin = now, purged = false),
+					CurrentUserReaderDto(authorities = emptyList(), lastLogin = now),
 					0,
 					0,
 				),
@@ -146,15 +151,15 @@ class CurrentUserReaderDtoMapperTest {
 	) {
 		// Arrange
 		val modelPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(model),
 		)
 		val dtoPage = PageModel(
-			pageNumber = 0,
-			pageSize = 10,
+			page = 0,
+			size = 10,
 			totalPages = 1,
 			totalElements = 1,
 			content = listOf(dto),

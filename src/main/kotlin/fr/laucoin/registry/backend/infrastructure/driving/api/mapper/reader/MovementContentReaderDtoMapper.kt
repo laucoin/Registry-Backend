@@ -2,19 +2,10 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.MovementReaderDto.MovementContentReaderDto
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
 
-@Component
-class MovementContentReaderDtoMapper(
-	private val participantMapper: ParticipantReaderDtoMapper,
-	private val vehicleMapper: VehicleReaderDtoMapper,
-): IGenericReaderDtoMapper<MovementContentModel, MovementContentReaderDto> {
-	override fun toDto(model: MovementContentModel): MovementContentReaderDto {
-		return MovementContentReaderDto(
-			poolName = model.poolName,
-			participant = Optional.ofNullable(model.participant).map(participantMapper::toDto).orElse(null),
-			vehicle = Optional.ofNullable(model.vehicle).map(vehicleMapper::toDto).orElse(null),
-		)
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [ParticipantReaderDtoMapper::class, VehicleReaderDtoMapper::class])
+interface MovementContentReaderDtoMapper: IGenericReaderDtoMapper<MovementContentModel, MovementContentReaderDto> {
+	override fun toDto(model: MovementContentModel): MovementContentReaderDto
 }

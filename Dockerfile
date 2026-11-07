@@ -2,7 +2,7 @@
 
 # ---- Build stage -------------------------------------------------------
 # Use an appropriate base image that has Java and Gradle installed
-FROM gradle:9.7-jdk25-alpine AS build
+FROM gradle:9.8-jdk25-alpine AS build
 
 # Set the working directory inside the container
 ENV APP_HOME=/usr/app
@@ -16,7 +16,7 @@ COPY . .
 # dependency + build cache warm across image builds (persists on a stable
 # builder; see the CI caching note in the README/PR description).
 RUN --mount=type=cache,target=/home/gradle/.gradle \
-    gradle build -x test -PtargetName="$APP_ARTIFACT_NAME"
+    gradle bootJar -PtargetName="$APP_ARTIFACT_NAME"
 
 # ---- Runtime stage (distroless) ---------------------------------------
 # Use distroless image for the final stage

@@ -9,6 +9,11 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Port driven donnant au domaine l'accès à la persistance du groupe.
+ * Périmètre : Déclare les lectures, recherches et écritures du groupe dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
+ */
 interface IGroupPort {
 	fun findPage(
 		projectId: UUID,
@@ -19,19 +24,21 @@ interface IGroupPort {
 	fun findByIdWithContent(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?,
-		memberVisibilitySearched: Boolean?,
-		memberAvailabilitySearched: Boolean?
+		isVisible: Boolean?,
+		memberIsVisible: Boolean?,
+		memberIsAvailable: Boolean?
 	): Mono<GroupModel>
 
 	fun findContent(
 		projectId: UUID,
 		groupIds: List<UUID>,
-		visibilitySearched: Boolean?,
-		availabilitySearched: Boolean?,
+		isVisible: Boolean?,
+		isAvailable: Boolean?,
 	): Flux<Pair<UUID, List<ParticipantModel>>>
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<GroupModel>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<GroupModel>
+	fun findSummaryById(projectId: UUID, id: UUID): Mono<GroupModel>
+	fun lockByIds(ids: List<UUID>): Flux<UUID>
 	fun findWithLimit(limit: Int, projectId: UUID, searchParams: GroupSearchParamModel): Flux<GroupModel>
 	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
 	fun create(element: GroupModel): Mono<GroupModel>

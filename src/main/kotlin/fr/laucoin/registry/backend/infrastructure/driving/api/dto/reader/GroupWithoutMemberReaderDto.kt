@@ -11,4 +11,8 @@ open class GroupWithoutMemberReaderDto(
 	var membersCount: Long? = null,
 	var insideMembersCount: Long? = null,
 	var outsideMembersCount: Long? = null,
-): GenericProjectReaderDto()
+	var onSiteMembersCount: Long? = null,
+	var inMembersCount: Long? = null,
+	var outMembersCount: Long? = null,
+	var overdueMembersCount: Long? = null,
+): GenericReaderDto()

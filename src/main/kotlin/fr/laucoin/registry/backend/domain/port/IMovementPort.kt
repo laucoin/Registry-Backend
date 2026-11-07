@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.domain.port
 
 import fr.laucoin.registry.backend.domain.model.ActivitySearchParamModel
+import fr.laucoin.registry.backend.domain.model.ActivityStatisticsModel
+import fr.laucoin.registry.backend.domain.model.MovementEventModel
 import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.MovementModel.MovementContentModel
 import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
@@ -11,8 +13,13 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Port driven donnant au domaine l'accès à la persistance du mouvement.
+ * Périmètre : Déclare les lectures, recherches et écritures du mouvement dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
+ */
 interface IMovementPort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<MovementModel>
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<MovementModel>
 	fun findPage(
 		projectId: UUID,
 		pageable: PageableModel,
@@ -42,6 +49,9 @@ interface IMovementPort {
 		searchParams: MovementSearchParamModel,
 	): Mono<PageModel<MovementModel>>
 
+	fun findEventsByParticipantId(projectId: UUID, participantId: UUID): Flux<MovementEventModel>
+	fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventModel>
+	fun findStatisticsByActivityId(projectId: UUID, activityId: UUID): Mono<ActivityStatisticsModel>
 	fun findPageByVehicleId(
 		projectId: UUID,
 		vehicleId: UUID,

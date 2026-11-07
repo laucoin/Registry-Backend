@@ -1,29 +1,37 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository
 
-import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.AlertCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertFields.ALERT_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_CRITICALITY_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_DATE_IN_DATES_RANGE_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_LAST_COMMUNICATION_JOIN
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_RESOLUTION_JOIN
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_SORT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_STATUS_SEARCH_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.ALERT_TEXT_SEARCH_CLAUSE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_CRITICALITY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_LAST_COMMUNICATION
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_SEARCH
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertQueries.SELECT_ALERT_STATISTICS
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertStatisticsEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.VISIBLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.CREATOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.LAST_EDITOR_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_CLAUSE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.PROJECT_JOIN
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LINKED_PROJECT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
 import java.time.LocalDate
-import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -31,56 +39,68 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Repository d'entités réactif de la table de l'alerte.
+ * Périmètre : Porte les requêtes SQL paramétrées de l'alerte (filtres, tri, pagination, verrous).
+ * Limites : Utilisé uniquement par l'adaptateur Postgres ; renvoie des entités, jamais des modèles du domaine.
+ */
 @Repository
 interface IAlertEntityRepository: ReactiveCrudRepository<AlertEntity, UUID> {
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
-        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
-        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
-        ORDER BY similarity_score DESC, t.$ALERT_DATE_TIME DESC
-        LIMIT :limit OFFSET :offset
+        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_ALERT_CRITICALITY, $SELECT_ALERT_LAST_COMMUNICATION, $SELECT_CREATOR, $SELECT_LAST_EDITOR, COUNT(*) OVER() AS $FULL_COUNT
+        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN $ALERT_LAST_COMMUNICATION_JOIN
+        WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_CRITICALITY_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
+        ORDER BY $ALERT_SORT similarity_score DESC, t.$ALERT_DATE_TIME DESC, t.$ID
+        LIMIT :#{#page.limit} OFFSET :#{#page.offset}
         """
 	)
 	fun findAll(
 		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
-		limit: Int,
-		offset: Int,
+		isVisible: Boolean?,
+		c: AlertCriteria,
+		page: PageQuery,
 	): Flux<AlertEntity>
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        SELECT t.*, $SELECT_ALERT_SEARCH, $SELECT_CREATOR, $SELECT_LAST_EDITOR
         FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND $ALERT_TEXT_SEARCH_CLAUSE AND $ALERT_STATUS_SEARCH_CLAUSE AND $ALERT_DATE_IN_DATES_RANGE_CLAUSE
         ORDER BY similarity_score DESC, t.$ALERT_DATE_TIME DESC
-        LIMIT :limit
+        LIMIT :#{#page.limit}
         """
 	)
 	fun findWithLimit(
 		projectId: UUID,
-		textSearched: String?,
-		statusSearched: List<AlertStatusEnum>?,
-		visibilitySearched: Boolean?,
-		startDateTimeSearched: ZonedDateTime?,
-		endDateTimeSearched: ZonedDateTime?,
-		limit: Int,
+		isVisible: Boolean?,
+		c: AlertCriteria,
+		page: PageQuery,
 	): Flux<AlertEntity>
 
 
 	@Query(
 		"""
-        SELECT t.*, $SELECT_LINKED_PROJECT, $SELECT_CREATOR, $SELECT_LAST_EDITOR
-        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN
+        SELECT t.*, $SELECT_ALERT_CRITICALITY, $SELECT_ALERT_LAST_COMMUNICATION, $SELECT_CREATOR, $SELECT_LAST_EDITOR
+        FROM $ALERT_TABLE t $PROJECT_JOIN $CREATOR_JOIN $LAST_EDITOR_JOIN $ALERT_LAST_COMMUNICATION_JOIN
         WHERE $PROJECT_CLAUSE AND $VISIBLE_CLAUSE AND t.$ID = :id
         """
 	)
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<AlertEntity>
+	fun findById(
+		projectId: UUID,
+		id: UUID,
+		isVisible: Boolean?,
+		c: AlertCriteria,
+	): Mono<AlertEntity>
+
+	@Query(
+		"""
+        SELECT $SELECT_ALERT_STATISTICS
+        FROM $ALERT_TABLE t $ALERT_RESOLUTION_JOIN
+        WHERE $PROJECT_CLAUSE AND t.$VISIBLE = TRUE
+        """
+	)
+	fun findStatistics(projectId: UUID): Mono<AlertStatisticsEntity>
 
 	@Query(
 		"""

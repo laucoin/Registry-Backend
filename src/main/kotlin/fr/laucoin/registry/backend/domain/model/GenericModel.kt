@@ -2,7 +2,6 @@ package fr.laucoin.registry.backend.domain.model
 
 import fr.laucoin.registry.backend.domain.model.HistoryModel.HistoryUserModel
 import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
 import java.util.Objects
 import java.util.UUID
 
@@ -15,9 +14,9 @@ abstract class GenericModel(
 ) {
 	fun isNotVisible() = !visible
 
-	fun create(currentUser: CurrentUserModel, dateTime: ZonedDateTime = now()) {
+	fun create(currentUser: CurrentUserModel, dateTime: ZonedDateTime) {
 		if (Objects.isNull(creation)) {
-			creation = HistoryModel()
+			creation = HistoryModel(dateTime)
 		}
 		creation!!.user = HistoryUserModel(
 			id = currentUser.id,
@@ -29,9 +28,9 @@ abstract class GenericModel(
 		this.update(currentUser, dateTime)
 	}
 
-	fun update(currentUser: CurrentUserModel, dateTime: ZonedDateTime = now()) {
+	fun update(currentUser: CurrentUserModel, dateTime: ZonedDateTime) {
 		if (Objects.isNull(lastEdition)) {
-			lastEdition = HistoryModel()
+			lastEdition = HistoryModel(dateTime)
 		}
 		lastEdition!!.user = HistoryUserModel(
 			id = currentUser.id,

@@ -11,6 +11,10 @@ data class GroupModel(
 	var membersCount: Long? = null,
 	var insideMembersCount: Long? = null,
 	var outsideMembersCount: Long? = null,
+	var onSiteMembersCount: Long? = null,
+	var inMembersCount: Long? = null,
+	var outMembersCount: Long? = null,
+	var overdueMembersCount: Long? = null,
 	var members: List<ParticipantModel> = emptyList(),
 ): GenericProjectModel() {
 	fun getNewMembers(group: GroupModel): List<ParticipantModel> {

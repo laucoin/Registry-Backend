@@ -1,27 +1,35 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_LOWER_THAN_ZERO
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_LOWER_THAN_ONE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_FORMAT_INVALID
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_ROLE_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_START_ACCESS_LATER_THAN_END_ACCESS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ProjectProfileError.PROJECT_PROFILE_USERS_EMPTY
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.RESOURCE_MODIFIED_SINCE_READ
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_C
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_METADATA_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_R
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_RESTORE
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_SOFT_DELETE
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PROFILE_U
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.BLOCKED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.INVITED
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.REJECTED
+import fr.laucoin.registry.backend.domain.model.HistoryModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileModel
 import fr.laucoin.registry.backend.domain.model.ProjectProfileSearchParamModel
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.IProjectProfileService
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectProfileUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CreatedProjectProfilesReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PartialUserReaderDto
@@ -36,20 +44,13 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.Proj
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectProfileStatusReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfileWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.ProjectProfilesWriterDtoMapper
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
 import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.time.OffsetTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.stream.Stream
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -57,22 +58,32 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.MULTI_STATUS
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpStatus.PRECONDITION_FAILED
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.time.OffsetTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.stream.Stream
+import kotlin.test.assertEquals
 
-class ProjectProfileControllerTest: TestContext() {
+class ProjectProfileControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var service: IProjectProfileService
+	private lateinit var useCase: IProjectProfileUseCase
 
 	@MockitoBean
 	private lateinit var readerMapper: ProjectProfileReaderDtoMapper
@@ -99,7 +110,7 @@ class ProjectProfileControllerTest: TestContext() {
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/projects/{projectId}/profiles"
+		private const val BASE_URL = "/api/v2/projects/{projectId}/profiles"
 
 		@JvmStatic
 		fun `Should findProjectProfiles return 200`(): Stream<Arguments> = Stream.of(
@@ -120,6 +131,7 @@ class ProjectProfileControllerTest: TestContext() {
 		fun `Should findProjectProfiles throw due to wrong params`(): Stream<Arguments> {
 			return Stream.of(
 				Arguments.of(-1, null, PAGE_NUMBER_IS_LOWER_THAN_ZERO),
+				Arguments.of(1_000_001, null, PAGE_NUMBER_IS_UPPER_THAN_MAX_PAGE),
 				Arguments.of(null, 0, PAGE_SIZE_IS_LOWER_THAN_ONE),
 				Arguments.of(null, 201, PAGE_SIZE_IS_UPPER_THAN_MAX_PAGE_SIZE),
 			)
@@ -128,12 +140,12 @@ class ProjectProfileControllerTest: TestContext() {
 		@JvmStatic
 		fun `Should createProjectProfiles return 400`(): Stream<Arguments> = Stream.of(
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = null, role = "ROLE"),
+				ProjectProfilesWriterDto(emails = null, role = "ROLE"),
 				PROJECT_PROFILE_USERS_EMPTY,
 				PROJECT_PROFILE_USERS_EMPTY,
 			),
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = emptyList(), role = "ROLE"),
+				ProjectProfilesWriterDto(emails = emptyList(), role = "ROLE"),
 				PROJECT_PROFILE_USERS_EMPTY,
 			),
 			Arguments.of(
@@ -141,16 +153,24 @@ class ProjectProfileControllerTest: TestContext() {
 				PROJECT_PROFILE_USERS_EMPTY,
 			),
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID()), role = ""),
+				ProjectProfilesWriterDto(emails = listOf("not-an-email"), role = "ROLE"),
+				PARAMETER_FORMAT_INVALID,
+			),
+			Arguments.of(
+				ProjectProfilesWriterDto(emails = listOf("${"a".repeat(320)}@sgdf.fr"), role = "ROLE"),
+				PARAMETER_FORMAT_INVALID,
+			),
+			Arguments.of(
+				ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = ""),
 				PROJECT_PROFILE_ROLE_BLANK,
 			),
 			Arguments.of(
-				ProjectProfilesWriterDto(userIds = listOf(UUID.randomUUID())),
+				ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr")),
 				PROJECT_PROFILE_ROLE_BLANK,
 			),
 			Arguments.of(
 				ProjectProfilesWriterDto(
-					userIds = listOf(UUID.randomUUID()),
+					emails = listOf("invited@sgdf.fr"),
 					role = "ROLE",
 					startAccess = CustomDateTimeWriterDto(LocalDate.MAX, OffsetTime.MAX),
 					endAccess = CustomDateTimeWriterDto(LocalDate.MIN, OffsetTime.MIN),
@@ -180,29 +200,42 @@ class ProjectProfileControllerTest: TestContext() {
 		)
 	}
 
-	@ParameterizedTest
-	@MethodSource
-	fun `Should findProjectProfiles return 200`(
-		requestedLocale: String?,
-		pageNumber: Int?,
-		pageSize: Int?,
-		textSearched: String?,
-		availabilitySearched: Boolean?,
-		statusSearched: ProfileStatusEnum?,
-		dateTimeSearched: String?,
-	) {
+	@Test
+	fun `Should findProjectProfiles pass the visibility filter independently of the status`() {
 		// Arrange
-		val expectedPageNumber = pageNumber ?: 0
-		val expectedPageSize = pageSize ?: 20
-		val pageable = PageableModel(expectedPageNumber * expectedPageSize, expectedPageSize)
-		val searchParams = ProjectProfileSearchParamModel(
-			textSearched = textSearched,
-			availabilitySearched = availabilitySearched,
-			statusSearched = statusSearched,
-			dateTimeSearched = dateTimeSearched?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+		val pageable = PageableModel(0, 20)
+		val searchParams = ProjectProfileSearchParamModel(status = ProfileStatusEnum.ACCEPTED, isVisible = false)
+		whenever(useCase.findProjectProfilesPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
 		)
-		val page = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
-		whenever(service.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(page))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
+			.get()
+			.uri(
+				uriBuilder(
+					BASE_URL,
+					listOf(defaultProjectId),
+					listOf(Pair("status", ProfileStatusEnum.ACCEPTED), Pair("isVisible", false)),
+				)
+			)
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+		verify(useCase).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
+	}
+
+	@Test
+	fun `Should findProjectProfiles only return visible profiles without the restore permission`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val searchParams = ProjectProfileSearchParamModel(isVisible = true)
+		whenever(useCase.findProjectProfilesPage(any(), any(), any()))
+			.thenReturn(Mono.just(PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))))
 		whenever(readerMapper.toDtoPage(any())).thenReturn(
 			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
 		)
@@ -211,17 +244,56 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
 			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("isVisible", false))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+		verify(useCase).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should findProjectProfiles return 200`(
+		requestedLocale: String?,
+		page: Int?,
+		size: Int?,
+		query: String?,
+		isAvailable: Boolean?,
+		status: ProfileStatusEnum?,
+		at: String?,
+	) {
+		// Arrange
+		val expectedPageNumber = page ?: 0
+		val expectedPageSize = size ?: 20
+		val pageable = PageableModel(expectedPageNumber.toLong() * expectedPageSize, expectedPageSize)
+		val searchParams = ProjectProfileSearchParamModel(
+			query = query,
+			isAvailable = isAvailable,
+			status = status,
+			at = at?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) },
+		)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
+		whenever(useCase.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
+			.get()
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
-						Pair("textSearched", textSearched),
-						Pair("availabilitySearched", availabilitySearched),
-						Pair("statusSearched", statusSearched),
-						Pair("dateTimeSearched", dateTimeSearched),
+						Pair("page", page),
+						Pair("size", size),
+						Pair("q", query),
+						Pair("isAvailable", isAvailable),
+						Pair("status", status),
+						Pair("at", at),
 					),
 				)
 			)
@@ -231,7 +303,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Assert
 		result.body<PageModel<*>>(OK)
 
-		verify(service).findProjectProfilesPage(projectId, pageable, searchParams)
+		verify(useCase).findProjectProfilesPage(defaultProjectId, pageable, searchParams)
 		verify(readerMapper).toDtoPage(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -243,8 +315,8 @@ class ProjectProfileControllerTest: TestContext() {
 	@ParameterizedTest
 	@MethodSource
 	fun `Should findProjectProfiles throw due to wrong params`(
-		pageNumber: Int?,
-		pageSize: Int?,
+		page: Int?,
+		size: Int?,
 		expectedMessage: String,
 	) {
 		// Act
@@ -254,10 +326,10 @@ class ProjectProfileControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					BASE_URL,
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
-						Pair("pageNumber", pageNumber),
-						Pair("pageSize", pageSize),
+						Pair("page", page),
+						Pair("size", size),
 					),
 				)
 			)
@@ -266,7 +338,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, expectedMessage)
 
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -276,24 +348,45 @@ class ProjectProfileControllerTest: TestContext() {
 	}
 
 	@Test
-	fun `Should findProjectProfileById return 200`() {
+	fun `Should findProjectProfileById only look for a visible profile without the restore permission`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
 		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
 		result.body<ProjectProfileReaderDto>(OK)
 
-		verify(service).findProjectProfileById(projectId, uuid, visibilitySearched = null)
+		verify(useCase).findProjectProfileById(defaultProjectId, uuid, isVisible = true)
+	}
+
+	@Test
+	fun `Should findProjectProfileById return 200`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
+			.get()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.exchange()
+
+		// Assert
+		result.body<ProjectProfileReaderDto>(OK)
+
+		verify(useCase).findProjectProfileById(defaultProjectId, uuid, isVisible = null)
 		verify(readerMapper).toDto(any())
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -308,7 +401,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val searched = "John"
 		val user = UserModel()
 
-		whenever(service.searchUsers(anyOrNull())).thenReturn(Flux.just(user))
+		whenever(useCase.searchUsers(anyOrNull())).thenReturn(Flux.just(user))
 		whenever(partialUserReaderMapper.toDto(any())).thenReturn(PartialUserReaderDto())
 
 		// Act
@@ -316,14 +409,14 @@ class ProjectProfileControllerTest: TestContext() {
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_METADATA_R))
 			.get()
 			.uri(
-				uriBuilder("${BASE_URL}/search/users", listOf(projectId), listOf(Pair("textSearched", searched)))
+				uriBuilder("${BASE_URL}/search/users", listOf(defaultProjectId), listOf(Pair("q", searched)))
 			)
 			.exchange()
 
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(service).searchUsers(searched)
+		verify(useCase).searchUsers(searched)
 		verifyNoInteractions(readerMapper)
 		verify(partialUserReaderMapper).toDto(any())
 		verifyNoInteractions(projectProfileRoleReaderMapper)
@@ -335,14 +428,14 @@ class ProjectProfileControllerTest: TestContext() {
 	@Test
 	fun `Should getAssignableProjectProfileRoles return 200`() {
 		// Arrange
-		whenever(service.getAssignableProjectRoles(any(), any())).thenReturn(Flux.just("role"))
+		whenever(useCase.getAssignableProjectRoles(any(), any())).thenReturn(Flux.just("role"))
 		whenever(projectProfileRoleReaderMapper.toDto(any())).thenReturn(LabelDto("value", "label"))
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_METADATA_R))
 			.get()
-			.uri(uriBuilder("$BASE_URL/roles", listOf(projectId), emptyList()))
+			.uri(uriBuilder("$BASE_URL/roles", listOf(defaultProjectId), emptyList()))
 			.exchange()
 
 		// Assert
@@ -354,16 +447,15 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).getAssignableProjectRoles(any(), eq(projectId))
+		verify(useCase).getAssignableProjectRoles(any(), eq(defaultProjectId))
 	}
 
 	@Test
 	fun `Should createProjectProfiles return 200`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val profiles = ProjectProfilesWriterDto(userIds = listOf(uuid), role = "ROLE")
-		whenever(service.createProjectProfiles(any(), any(), any(), any())).thenReturn(
-			Mono.just(Pair(listOf(UUID.randomUUID()), emptyList()))
+		val profiles = ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = "ROLE")
+		whenever(useCase.createProjectProfiles(any(), any(), any())).thenReturn(
+			Mono.just(Pair(listOf("invited@sgdf.fr"), emptyList()))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
 		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
@@ -377,7 +469,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profiles)
 			.exchange()
 
@@ -388,38 +480,26 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(profilesWriterMapper).toModels(profiles, projectId)
+		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
 		verify(createdProjectProfilesReaderMapper).toDto(any())
-		verify(service).createProjectProfiles(
-			any(),
-			eq(projectId),
-			eq(profiles.userIds!!),
-			any()
-		)
+		verify(useCase).createProjectProfiles(any(), eq(defaultProjectId), any())
 	}
 
 	@Test
 	fun `Should createProjectProfiles return 207`() {
 		// Arrange
-		val uuid = UUID.randomUUID()
-		val uuid2 = UUID.randomUUID()
-		val profiles = ProjectProfilesWriterDto(userIds = listOf(uuid, uuid2), role = "ROLE")
+		val email = "first@sgdf.fr"
+		val email2 = "second@sgdf.fr"
+		val profiles = ProjectProfilesWriterDto(emails = listOf(email, email2), role = "ROLE")
 
-		whenever(
-			service.createProjectProfiles(
-				any(),
-				any(),
-				any(),
-				any()
-			)
-		).thenReturn(
-			Mono.just(Pair(listOf(uuid2), listOf(uuid)))
+		whenever(useCase.createProjectProfiles(any(), any(), any())).thenReturn(
+			Mono.just(Pair(listOf(email2), listOf(email)))
 		)
 		whenever(profilesWriterMapper.toModels(any(), any())).thenReturn(emptyList())
 		whenever(createdProjectProfilesReaderMapper.toDto(any())).thenReturn(
 			CreatedProjectProfilesReaderDto(
-				listOf(uuid2),
-				listOf(uuid)
+				listOf(email2),
+				listOf(email)
 			)
 		)
 
@@ -427,27 +507,22 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profiles)
 			.exchange()
 
 		// Assert
 		val body = result.body<CreatedProjectProfilesReaderDto>(MULTI_STATUS)
-		assertEquals(uuid2, body?.createdUserIds?.first())
-		assertEquals(uuid, body?.notCreatedUserIds?.first())
+		assertEquals(email2, body?.createdEmails?.first())
+		assertEquals(email, body?.notCreatedEmails?.first())
 
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
-		verify(profilesWriterMapper).toModels(profiles, projectId)
-		verify(service).createProjectProfiles(
-			any(),
-			eq(projectId),
-			eq(profiles.userIds!!),
-			any()
-		)
+		verify(profilesWriterMapper).toModels(profiles, defaultProjectId)
+		verify(useCase).createProjectProfiles(any(), eq(defaultProjectId), any())
 	}
 
 	@ParameterizedTest
@@ -458,9 +533,9 @@ class ProjectProfileControllerTest: TestContext() {
 	) {
 		// Act
 		val result = webClient
-			.authenticate()
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
 			.post()
-			.uri(uriBuilder(BASE_URL, listOf(projectId), emptyList()))
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -473,7 +548,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -483,7 +558,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val profile = ProjectProfileWriterDto(role = "ROLE")
 
 		whenever(
-			service.updateProjectProfileById(
+			useCase.updateProjectProfileById(
 				any(),
 				any(),
 				any(),
@@ -497,7 +572,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -507,9 +582,87 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
-		verify(writerMapper).toModel(profile, projectId)
+		verify(writerMapper).toModel(profile, defaultProjectId)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).updateProjectProfileById(any(), eq(projectId), eq(uuid), any())
+		verify(useCase).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
+	}
+
+	@Test
+	fun `Should updateProjectProfile accept the matching If-Match`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val profile = ProjectProfileWriterDto(role = "ROLE")
+
+		whenever(
+			useCase.updateProjectProfileById(
+				any(),
+				any(),
+				any(),
+				any()
+			)
+		).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
+		whenever(readerMapper.toDto(any())).thenReturn(ProjectProfileReaderDto())
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(ProjectProfileModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.header("If-Match", "\"1791885731000\"")
+			.bodyValue(profile)
+			.exchange()
+
+		// Assert
+		result.body<ProjectProfileReaderDto>(OK)
+		verify(readerMapper).toDto(any())
+		verifyNoInteractions(partialUserReaderMapper)
+		verifyNoInteractions(projectProfileRoleReaderMapper)
+		verifyNoInteractions(projectProfileStatusReaderMapper)
+		verify(writerMapper).toModel(profile, defaultProjectId)
+		verifyNoInteractions(profilesWriterMapper)
+		verify(useCase).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
+	}
+
+	@Test
+	fun `Should updateProjectProfileById throw when the element changed since it was read`() {
+		// Arrange
+		val uuid = UUID.randomUUID()
+		val profile = ProjectProfileWriterDto(role = "ROLE")
+
+		whenever(
+			useCase.updateProjectProfileById(
+				any(),
+				any(),
+				any(),
+				any()
+			)
+		).thenReturn(Mono.just(ProjectProfileModel()))
+		whenever(writerMapper.toModel(any(), any())).thenReturn(ProjectProfileModel())
+		whenever(useCase.findProjectProfileById(any(), any(), anyOrNull())).thenReturn(
+			Mono.just(ProjectProfileModel().apply {
+				lastEdition = HistoryModel(dateTime = ZonedDateTime.parse("2026-10-13T10:02:11Z"))
+			}),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
+			.header("If-Match", "\"1\"")
+			.bodyValue(profile)
+			.exchange()
+
+		// Assert
+		result.assertError(PRECONDITION_FAILED, RESOURCE_MODIFIED_SINCE_READ)
+
+		verify(useCase, never()).updateProjectProfileById(any(), eq(defaultProjectId), eq(uuid), any())
 	}
 
 	@ParameterizedTest
@@ -525,7 +678,7 @@ class ProjectProfileControllerTest: TestContext() {
 		val result = webClient
 			.authenticate()
 			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.bodyValue(profile)
 			.exchange()
 
@@ -537,7 +690,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verifyNoInteractions(service)
+		verifyNoInteractions(useCase)
 	}
 
 	@Test
@@ -545,7 +698,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.blockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(
+		whenever(useCase.blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				ProjectProfileModel()
 			)
@@ -554,9 +707,9 @@ class ProjectProfileControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
-			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}/block", listOf(projectId, uuid), emptyList()))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_SOFT_DELETE))
+			.post()
+			.uri(uriBuilder("$BASE_URL/{id}/block", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -567,7 +720,7 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).blockProjectProfileById(any(), eq(projectId), eq(uuid))
+		verify(useCase).blockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
@@ -575,7 +728,7 @@ class ProjectProfileControllerTest: TestContext() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.unblockProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(
+		whenever(useCase.unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(
 			Mono.just(
 				ProjectProfileModel()
 			)
@@ -584,9 +737,9 @@ class ProjectProfileControllerTest: TestContext() {
 
 		// Act
 		val result = webClient
-			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
-			.patch()
-			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(projectId, uuid), emptyList()))
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
+			.post()
+			.uri(uriBuilder("$BASE_URL/{id}/unblock", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
@@ -597,31 +750,176 @@ class ProjectProfileControllerTest: TestContext() {
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).unblockProjectProfileById(any(), eq(projectId), eq(uuid))
+		verify(useCase).unblockProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
 	}
 
 	@Test
-	fun `Should deleteProjectProfileById return 200`() {
+	fun `Should deleteProjectProfileById return 204`() {
 		// Arrange
 		val uuid = UUID.randomUUID()
 
-		whenever(service.deleteProjectProfileById(any(), eq(projectId), eq(uuid))).thenReturn(Mono.empty())
+		whenever(useCase.deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))).thenReturn(Mono.empty())
 
 		// Act
 		val result = webClient
 			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_D))
 			.delete()
-			.uri(uriBuilder("$BASE_URL/{id}", listOf(projectId, uuid), emptyList()))
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, uuid), emptyList()))
 			.exchange()
 
 		// Assert
-		result.body<Void>(OK)
+		result.body<Void>(NO_CONTENT)
 		verifyNoInteractions(readerMapper)
 		verifyNoInteractions(partialUserReaderMapper)
 		verifyNoInteractions(projectProfileRoleReaderMapper)
 		verifyNoInteractions(projectProfileStatusReaderMapper)
 		verifyNoInteractions(writerMapper)
 		verifyNoInteractions(profilesWriterMapper)
-		verify(service).deleteProjectProfileById(any(), eq(projectId), eq(uuid))
+		verify(useCase).deleteProjectProfileById(any(), eq(defaultProjectId), eq(uuid))
+	}
+
+	@Test
+	fun `Should findProjectProfiles forward the role filter to the service`() {
+		// Arrange
+		val pageable = PageableModel(0, 20)
+		val expectedPage = PageModel(pageable, totalElements = 1, listOf(ProjectProfileModel()))
+		whenever(useCase.findProjectProfilesPage(any(), any(), any())).thenReturn(Mono.just(expectedPage))
+		whenever(readerMapper.toDtoPage(any())).thenReturn(
+			PageModel(pageable, totalElements = 1, listOf(ProjectProfileReaderDto())),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R), buildAuthority(REGISTRY_PROJECT_PROFILE_RESTORE))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("role", "PROJECT_ADMINISTRATOR"))))
+			.exchange()
+
+		// Assert
+		result.body<PageModel<*>>(OK)
+
+		verify(useCase).findProjectProfilesPage(
+			defaultProjectId,
+			pageable,
+			ProjectProfileSearchParamModel(query = null, role = "PROJECT_ADMINISTRATOR"),
+		)
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse more than 200 users`() {
+		// Arrange
+		val profiles = ProjectProfilesWriterDto(emails = List(201) { "invited$it@sgdf.fr" }, role = "ROLE")
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
+			.bodyValue(profiles)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(useCase)
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse a role over 50 characters`() {
+		// Arrange
+		val profiles = ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = "R".repeat(51))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
+			.bodyValue(profiles)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(useCase)
+	}
+
+	@Test
+	fun `Should updateProjectProfile refuse a role over 50 characters`() {
+		// Arrange
+		val profile = ProjectProfileWriterDto(role = "R".repeat(51))
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
+			.bodyValue(profile)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(useCase)
+	}
+
+	@Test
+	fun `Should findProjectProfiles refuse a role filter over 50 characters`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("role", "R".repeat(51)))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_TOO_LONG)
+		verifyNoInteractions(useCase)
+	}
+
+	@Test
+	fun `Should createProjectProfiles refuse a role with forbidden characters`() {
+		// Arrange
+		val profiles = ProjectProfilesWriterDto(emails = listOf("invited@sgdf.fr"), role = "ROLE';--")
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
+			.bodyValue(profiles)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(useCase)
+	}
+
+	@Test
+	fun `Should updateProjectProfile refuse a role with forbidden characters`() {
+		// Arrange
+		val profile = ProjectProfileWriterDto(role = "ROLE';--")
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_U))
+			.patch()
+			.uri(uriBuilder("$BASE_URL/{id}", listOf(defaultProjectId, UUID.randomUUID()), emptyList()))
+			.bodyValue(profile)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(useCase)
+	}
+
+	@Test
+	fun `Should findProjectProfiles refuse a role filter with forbidden characters`() {
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_PROFILE_R))
+			.get()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), listOf(Pair("role", "ROLE';--"))))
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, PARAMETER_FORMAT_INVALID)
+		verifyNoInteractions(useCase)
 	}
 }

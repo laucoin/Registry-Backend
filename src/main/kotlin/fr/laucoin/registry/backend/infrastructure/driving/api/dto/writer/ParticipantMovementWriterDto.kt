@@ -1,18 +1,23 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
-import fr.laucoin.registry.backend.domain.annotation.BothCannotBeDefined
-import fr.laucoin.registry.backend.domain.annotation.MovementReason
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_AND_REASON_ARE_DEFINED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_AND_REASON_ARE_INCOMPATIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_NULL
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.PARAMETER_TOO_LONG
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.MOVEMENT_POOL_NAME_MAX
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PARTICIPANT_MOVEMENT_CONTENT_MAX
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum.REGISTERED
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.BothCannotBeDefined
+import fr.laucoin.registry.backend.infrastructure.driving.api.validation.annotation.MovementReason
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -27,11 +32,13 @@ data class ParticipantMovementWriterDto(
 	var activityId: UUID?,
 	@field:Valid
 	@field:NotEmpty(message = MOVEMENT_CONTENT_EMPTY)
+	@field:Size(max = PARTICIPANT_MOVEMENT_CONTENT_MAX, message = LIST_TOO_LARGE)
 	var content: List<ParticipantMovementContentWriterDto>?,
 ) {
 	data class ParticipantMovementContentWriterDto(
 		override var participantId: UUID? = null,
 		var vehicleId: UUID? = null,
+		@field:Size(max = MOVEMENT_POOL_NAME_MAX, message = PARAMETER_TOO_LONG)
 		var poolName: String? = null,
 	): MovementContentWriterDto(participantId = participantId)
 }

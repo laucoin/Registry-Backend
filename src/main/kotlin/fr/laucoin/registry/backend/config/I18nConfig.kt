@@ -11,6 +11,11 @@ import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver
 import reactor.core.publisher.Hooks
 import java.util.Locale
 
+/**
+ * Objectif : Expose les sources de messages (messages et erreurs) et le résolveur de locale de la requête.
+ * Périmètre : Fixe la locale par défaut, charge les bundles `i18n` et propage la locale dans le contexte réactif.
+ * Limites : Ne traduit rien lui-même ; la traduction relève de TranslateService.
+ */
 @Configuration
 class I18nConfig(
 	@param:Value($$"${registry.information.locale.default}") val defaultLocale: Locale,
@@ -18,35 +23,30 @@ class I18nConfig(
 ) {
 
 	init {
+		Locale.setDefault(defaultLocale)
 		Hooks.enableAutomaticContextPropagation()
 		ContextRegistry.getInstance().registerThreadLocalAccessor(LocaleContextThreadLocalAccessor())
 	}
 
 	@Bean(name = ["messagesSource"])
-	fun messagesSource(): MessageSource {
-		Locale.setDefault(defaultLocale)
-		val messageSource = ReloadableResourceBundleMessageSource()
-		messageSource.setBasename("classpath:i18n/messages")
-		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
-		messageSource.setDefaultLocale(defaultLocale)
-		return messageSource
-	}
+	fun messagesSource(): MessageSource = messageSource("classpath:i18n/messages")
 
 	@Bean(name = ["errorsSource"])
-	fun errorsSource(): MessageSource {
-		Locale.setDefault(defaultLocale)
-		val messageSource = ReloadableResourceBundleMessageSource()
-		messageSource.setBasename("classpath:i18n/errors")
-		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
-		messageSource.setDefaultLocale(defaultLocale)
-		return messageSource
-	}
+	fun errorsSource(): MessageSource = messageSource("classpath:i18n/errors")
 
 	@Bean
 	fun localeContextResolver(): AcceptHeaderLocaleContextResolver {
 		val resolver = AcceptHeaderLocaleContextResolver()
 		resolver.setSupportedLocales(supportedLocales)
-		resolver.defaultLocale = Locale.getDefault()
+		resolver.defaultLocale = defaultLocale
 		return resolver
+	}
+
+	private fun messageSource(basename: String): MessageSource {
+		val messageSource = ReloadableResourceBundleMessageSource()
+		messageSource.setBasename(basename)
+		messageSource.setDefaultEncoding(Charsets.UTF_8.name())
+		messageSource.setDefaultLocale(defaultLocale)
+		return messageSource
 	}
 }
