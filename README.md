@@ -145,6 +145,12 @@ non voulue.
 | `REGISTRY_PRINCIPAL_CACHE_TTL_SECONDS` | `60` | Durée de vie, en secondes, du principal (utilisateur et autorités) mis en cache après la validation du JWT ; un changement de droits est visible au plus tard à l'expiration, ou immédiatement s'il passe par l'API |
 
 
+> [!WARNING]
+> **Première purge de contenu et de configuration des projets.** Chaque balayage (`ProjectContentPurgeUseCase`,
+> `ProjectConfigurationPurgeUseCase`) s'exécute dans **une seule transaction** : la première exécution supprime tout
+> l'arriéré d'un coup et peut tenir des verrous longtemps sur une grosse base. Mesurer d'abord avec `dryRun=true`, puis
+> déclencher la première purge à la main (`/api/v2/purge/**`, permission `REGISTRY_JOB_C`) hors des heures d'usage.
+
 > [!NOTE]
 > L'application navigateur s'authentifie via deux cookies `HttpOnly`, `SameSite=Lax` (`registry_access_token`, `registry_refresh_token`)
 > posés par `/api/v2/authentication/token` et `/token/refresh`, effacés par `/logout/uri`. L'en-tête `Authorization: Bearer`
