@@ -50,29 +50,34 @@ class PreferencesService(
 		currentUser: CurrentUserModel,
 		theme: ThemeEnum
 	): Mono<PreferencesModel> {
-		return findByUser(currentUser).flatMap { saveIfChanged(currentUser, it, it.theme !== theme) { it.theme = theme } }
+		return findByUser(currentUser).flatMap { changeTheme(currentUser, it, theme) }
 	}
 
 	override fun updateLanguage(
 		currentUser: CurrentUserModel,
 		language: String
 	): Mono<PreferencesModel> {
-		val supportedLanguage = supportedLocales.firstOrNull { it.startsWith(language) }
+		val supportedLanguage = supportedLocales.firstOrNull { it.equals(language, ignoreCase = true) }
 			?: return Mono.error(RegistryException(BAD_REQUEST, PARAMETER_FORMAT_INVALID))
 
-		return findByUser(currentUser).flatMap {
-			saveIfChanged(currentUser, it, it.language != supportedLanguage) { it.language = supportedLanguage }
-		}
+		return findByUser(currentUser).flatMap { changeLanguage(currentUser, it, supportedLanguage) }
 	}
 
 	override fun updateRefreshMode(
 		currentUser: CurrentUserModel,
 		refreshMode: RefreshModeEnum
 	): Mono<PreferencesModel> {
-		return findByUser(currentUser).flatMap {
-			saveIfChanged(currentUser, it, it.refreshMode !== refreshMode) { it.refreshMode = refreshMode }
-		}
+		return findByUser(currentUser).flatMap { changeRefreshMode(currentUser, it, refreshMode) }
 	}
+
+	private fun changeTheme(currentUser: CurrentUserModel, preferences: PreferencesModel, theme: ThemeEnum) =
+		saveIfChanged(currentUser, preferences, preferences.theme !== theme) { preferences.theme = theme }
+
+	private fun changeLanguage(currentUser: CurrentUserModel, preferences: PreferencesModel, language: String) =
+		saveIfChanged(currentUser, preferences, preferences.language != language) { preferences.language = language }
+
+	private fun changeRefreshMode(currentUser: CurrentUserModel, preferences: PreferencesModel, refreshMode: RefreshModeEnum) =
+		saveIfChanged(currentUser, preferences, preferences.refreshMode !== refreshMode) { preferences.refreshMode = refreshMode }
 
 	private fun saveIfChanged(
 		currentUser: CurrentUserModel,
