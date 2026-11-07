@@ -30,13 +30,13 @@ import reactor.core.publisher.Flux
 interface IProjectProfileMetadataV2Controller {
 	@Operation(
 		summary = "Search Users",
-		description = "Search Users to invite to an Project",
+		description = "Find the User to invite to a Project from their exact email address",
 	)
 	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_PROFILE_METADATA_R')")
 	@GetMapping("/search/users")
 	fun searchUsers(
 		@PathVariable projectId: UUID,
-		@Parameter(description = "Text matched against the user first name, last name and email")
+		@Parameter(description = "Exact email address of the user (case-insensitive); partial text matches nothing")
 		@RequestParam("q") @Valid @Size(max = SEARCH_QUERY_MAX, message = PARAMETER_TOO_LONG) query: String?,
 	): Flux<PartialUserReaderDto>
 

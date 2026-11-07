@@ -122,7 +122,7 @@ non voulue.
 | `REGISTRY_EXPORT_RATE_LIMIT_CAPACITY` | `5` | Nombre maximal de demandes d'export de données personnelles (`.../export`, utilisateur ou participant, tous endpoints confondus) par utilisateur authentifié et par fenêtre ; au-delà, `429` et événement `RATE_LIMITED` dans l'audit. En mémoire (par instance, remis à zéro au redémarrage) |
 | `REGISTRY_EXPORT_RATE_LIMIT_WINDOW_SECONDS` | `3600` | Durée en secondes de la fenêtre de limitation des exports |
 | `REGISTRY_EXPORT_RATE_LIMIT_MAX_TRACKED_USERS` | `10000` | Nombre maximal d'utilisateurs suivis simultanément par le limiteur d'export ; les entrées les moins récemment utilisées sont évincées au-delà |
-| `REGISTRY_USER_SEARCH_RATE_LIMIT_CAPACITY` | `30` | Nombre maximal de recherches d'utilisateurs à inviter (`GET /projects/{projectId}/profiles/search/users`, tous projets confondus) par utilisateur authentifié et par fenêtre ; au-delà, `429`. Freine l'extraction de l'annuaire de la plateforme. En mémoire (par instance, remis à zéro au redémarrage) |
+| `REGISTRY_USER_SEARCH_RATE_LIMIT_CAPACITY` | `30` | Nombre maximal de recherches d'utilisateurs à inviter (par email exact) (`GET /projects/{projectId}/profiles/search/users`, tous projets confondus) par utilisateur authentifié et par fenêtre ; au-delà, `429`. Freine l'extraction de l'annuaire de la plateforme. En mémoire (par instance, remis à zéro au redémarrage) |
 | `REGISTRY_USER_SEARCH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Durée en secondes de la fenêtre de limitation de la recherche d'utilisateurs |
 | `REGISTRY_USER_SEARCH_RATE_LIMIT_MAX_TRACKED_USERS` | `10000` | Nombre maximal d'utilisateurs suivis simultanément par le limiteur de recherche ; les entrées les moins récemment utilisées sont évincées au-delà |
 | `REGISTRY_PROJECT_CREATION_RATE_LIMIT_CAPACITY` | `10` | Nombre maximal de créations de projet (`POST /projects`) par utilisateur authentifié et par fenêtre ; au-delà, `429`. En mémoire (par instance, remis à zéro au redémarrage) |
@@ -135,7 +135,7 @@ non voulue.
 | `registry.feature.purge.projects.configuration.cron` / `registry.feature.purge.projects.configuration.months-threshold` | `0 30 2 * * *` / `12` | Balayage de rétention de la configuration des projets (véhicules, participants, activités, puis groupes devenus vides). Déclenchable à la main via `POST /api/v2/purge/projects/configurations` |
 | `registry.feature.alert.criticality.reinforced-after-hours` / `registry.feature.alert.criticality.high-after-hours` | `6` / `18` | Ancienneté, en heures, à partir de laquelle une alerte passe en criticité `REINFORCED`, puis `HIGH` |
 | `registry.feature.movement.planned.max-result` | `200` | Nombre maximal de participants planifiés renvoyés pour une date |
-| `registry.feature.{profile,participant,group,movement,communication}.searched.max-*-result` | `10` (`5` pour `movement.searched.max-group-result`) | Plafond du nombre de résultats renvoyés par chaque endpoint de recherche `/search/**` |
+| `registry.feature.{participant,group,movement,communication}.searched.max-*-result` | `10` (`5` pour `movement.searched.max-group-result`) | Plafond du nombre de résultats renvoyés par chaque endpoint de recherche `/search/**` |
 | `REGISTRY_TRUSTED_PROXIES` | _(vide)_ | Liste, séparée par des virgules, d'IP ou de CIDR des reverse proxies de confiance (ex. `10.0.0.0/8,192.168.1.5`). Seuls leurs en-têtes `X-Forwarded-For` sont crus pour déterminer l'IP du client tracée dans l'audit et comptée par la limitation de débit des endpoints de token ; vide, seule l'adresse de la connexion est utilisée (signalé au démarrage). **À renseigner derrière un reverse proxy**, sinon tous les clients partagent l'IP du proxy et la limite de débit devient globale |
 | `REGISTRY_MOVEMENT_FUTURE_TOLERANCE` | `2m` | Décalage d'horloge toléré entre un client et le serveur lorsqu'un mouvement est daté légèrement dans le futur ; une date plus éloignée est rejetée |
 | `REGISTRY_CODEC_MAX_IN_MEMORY_SIZE` | `512KB` | Taille maximale d'un corps de requête mis en mémoire tampon ; les corps plus volumineux sont rejetés |
@@ -143,6 +143,7 @@ non voulue.
 | `REGISTRY_AUDIT_BUFFER_SIZE` | `1000` | Taille de la file en mémoire des événements d'audit écrits de façon asynchrone ; une file pleine rejette (et journalise) l'événement, un arrêt brutal perd les événements en attente |
 | `REGISTRY_AUDIT_READ_DEDUP_WINDOW` | `60s` | Fenêtre pendant laquelle les lectures de liste d'un même utilisateur sur une même ressource et un même projet ne produisent qu'un événement d'audit ; les lectures d'une fiche sont toujours tracées. En mémoire (par instance, remis à zéro au redémarrage) |
 | `REGISTRY_PRINCIPAL_CACHE_TTL_SECONDS` | `60` | Durée de vie, en secondes, du principal (utilisateur et autorités) mis en cache après la validation du JWT ; un changement de droits est visible au plus tard à l'expiration, ou immédiatement s'il passe par l'API |
+
 
 > [!NOTE]
 > L'application navigateur s'authentifie via deux cookies `HttpOnly`, `SameSite=Lax` (`registry_access_token`, `registry_refresh_token`)
