@@ -1,10 +1,8 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller
 
 import org.springdoc.core.annotations.ParameterObject
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.CommunicationQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.AlertQueryDto
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_C
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_COMMUNICATION_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_D
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_R
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_RESTORE
@@ -16,7 +14,6 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertStatisticsReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
 import io.swagger.v3.oas.annotations.Operation
@@ -80,19 +77,6 @@ interface IAlertV2Controller {
 		@PathVariable projectId: UUID,
 		@PathVariable id: UUID,
 	): Mono<AlertReaderDto>
-
-	@Operation(
-		summary = "Find Alert Communications",
-		description = "Find or get paginated alert communications",
-	)
-	@PreAuthorize("hasPermission(#projectId, '$REGISTRY_PROJECT_OPTION_ALERT') && hasPermission(#projectId, '$REGISTRY_PROJECT_ALERT_COMMUNICATION_R')")
-	@GetMapping("/{id}/communications")
-	fun findAlertCommunications(
-		@AuthenticationPrincipal currentUser: CurrentUserModel,
-		@PathVariable projectId: UUID,
-		@PathVariable id: UUID,
-		@Valid @ParameterObject search: CommunicationQueryDto,
-	): Mono<PageModel<CommunicationReaderDto>>
 
 	@Operation(
 		summary = "Create Alert",

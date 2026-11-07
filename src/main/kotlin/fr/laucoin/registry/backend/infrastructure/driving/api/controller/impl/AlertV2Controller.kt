@@ -1,28 +1,22 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.CommunicationQueryDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.AlertQueryDto
 import fr.laucoin.registry.backend.domain.enumeration.LockableResourceEnum
 import fr.laucoin.registry.backend.domain.service.support.IConcurrencyService
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
-import fr.laucoin.registry.backend.domain.extension.SortExt.toSortModel
-import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
-import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
 import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import fr.laucoin.registry.backend.domain.model.PageModel
-import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.service.usecase.IAlertUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IAlertV2Controller
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.AlertStatisticsReaderDto
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.CommunicationReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertWriterDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.ETagExt.expectedLastEditions
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocationExt.created
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.AlertQueryDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.AlertStatisticsReaderDtoMapper
-import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.CommunicationReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertCreationWriterDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer.AlertWriterDtoMapper
 import java.util.UUID
@@ -31,7 +25,6 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_ALERT_RESTORE
-import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_COMMUNICATION_RESTORE
 
 /**
  * Objectif : Adaptateur REST des endpoints de l'alerte.
@@ -44,9 +37,9 @@ class AlertV2Controller(
 	private val concurrencyService: IConcurrencyService,
 	private val readerMapper: AlertReaderDtoMapper,
 	private val statisticsReaderMapper: AlertStatisticsReaderDtoMapper,
-	private val communicationReaderMapper: CommunicationReaderDtoMapper,
 	private val writerMapper: AlertWriterDtoMapper,
 	private val creationWriterMapper: AlertCreationWriterDtoMapper,
+	private val queryMapper: AlertQueryDtoMapper,
 ): IAlertV2Controller {
 	override fun findAlerts(
 		currentUser: CurrentUserModel,
@@ -54,18 +47,9 @@ class AlertV2Controller(
 		search: AlertQueryDto,
 	): Mono<PageModel<AlertReaderDto>> {
 		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_ALERT_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = AlertSearchParamModel(
-			search.query,
-			visibility,
-			search.status,
-			search.from,
-			search.to,
-			search.criticality,
-			sort = search.sort.toSortModel(AlertSearchParamModel.SORT_FIELDS),
-		)
+		val searchParams = queryMapper.toSearchParams(search, visibility)
 
-		return service.findAlertsPage(currentUser, projectId, pageable, searchParams).map(readerMapper::toDtoPage)
+		return service.findAlertsPage(currentUser, projectId, queryMapper.toPageable(search), searchParams).map(readerMapper::toDtoPage)
 	}
 
 	override fun findAlertStatistics(currentUser: CurrentUserModel, projectId: UUID): Mono<AlertStatisticsReaderDto> {
@@ -74,23 +58,6 @@ class AlertV2Controller(
 
 	override fun findAlertById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<AlertReaderDto> {
 		return service.findAlertForUser(currentUser, projectId, id).map(readerMapper::toDto)
-	}
-
-	override fun findAlertCommunications(
-		currentUser: CurrentUserModel,
-		projectId: UUID,
-		id: UUID,
-		search: CommunicationQueryDto,
-	): Mono<PageModel<CommunicationReaderDto>> {
-		val visibility = currentUser.visibilityFor(search.isVisible, projectId, REGISTRY_PROJECT_COMMUNICATION_RESTORE)
-		val pageable = PageableModel(search.page * search.size, search.size)
-		val searchParams = CommunicationSearchParamModel(
-			search.query, visibility, search.from, search.to,
-			sort = search.sort.toSortModel(CommunicationSearchParamModel.SORT_FIELDS),
-		)
-
-		return service.findAlertCommunicationsPage(projectId, id, pageable, searchParams)
-			.map(communicationReaderMapper::toDtoPage)
 	}
 
 	override fun createAlert(

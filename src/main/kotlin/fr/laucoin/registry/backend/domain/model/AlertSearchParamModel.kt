@@ -1,10 +1,10 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import fr.laucoin.registry.backend.domain.enumeration.AlertCriticalityEnum
 import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum
 import fr.laucoin.registry.backend.domain.extension.DateExt.requireOrderedRange
 import java.time.ZonedDateTime
-import java.util.Objects
 
 data class AlertSearchParamModel(
 	var isVisible: Boolean? = null,
@@ -20,6 +20,7 @@ data class AlertSearchParamModel(
 
 	var query: String? = null
 
+	@Default
 	constructor(
 		query: String? = null,
 		isVisible: Boolean? = null,
@@ -30,7 +31,7 @@ data class AlertSearchParamModel(
 		sort: SortModel? = null,
 	): this(
 		isVisible,
-		if (Objects.nonNull(status)) listOf(status!!) else AlertStatusEnum.entries.toList(),
+		if (status != null) listOf(status) else AlertStatusEnum.entries.toList(),
 		from,
 		to,
 		criticality,
