@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Purge la configuration des projets (véhicules, participants, activités, groupes vides) au-delà de sa durée de rétention.
- * Périmètre : Supprime véhicules, participants et activités anciens puis les groupes devenus vides, dans une même transaction.
+ * Périmètre : Supprime véhicules, participants et activités anciens puis les groupes vides non modifiés depuis le même seuil, dans une même transaction.
  * Limites : Ne purge pas le contenu des projets ; il a son propre balayage, exécuté avant.
  */
 @Service
@@ -39,7 +39,7 @@ class ProjectConfigurationPurgeUseCase(
 		val purgeActivities = activityService.purgeActivitiesIfNecessary(deleteOlderThan, dryRun).collectList()
 
 		return Mono.zip(purgeVehicles, purgeParticipants, purgeActivities)
-			.flatMap { purgeEmptyGroups(it.t1, it.t2, it.t3, dryRun) }
+			.flatMap { purgeEmptyGroups(it.t1, it.t2, it.t3, deleteOlderThan, dryRun) }
 			.`as`(transactionalOperator::transactional)
 	}
 
@@ -47,9 +47,10 @@ class ProjectConfigurationPurgeUseCase(
 		vehicles: List<UUID>,
 		participants: List<UUID>,
 		activities: List<UUID>,
+		dateThreshold: LocalDate,
 		dryRun: Boolean,
 	): Mono<ProjectConfigurationPurgeModel> {
-		return groupService.purgeEmptyGroups(participants, dryRun)
+		return groupService.purgeEmptyGroups(participants, dateThreshold, dryRun)
 			.collectList()
 			.map { ProjectConfigurationPurgeModel(vehicles, participants, activities, it) }
 	}

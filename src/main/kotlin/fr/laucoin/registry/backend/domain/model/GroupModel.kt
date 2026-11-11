@@ -16,6 +16,7 @@ data class GroupModel(
 	var outMembersCount: Long? = null,
 	var overdueMembersCount: Long? = null,
 	var members: List<ParticipantModel> = emptyList(),
+	var membersUnchanged: Boolean = false,
 ): GenericProjectModel() {
 	fun getNewMembers(group: GroupModel): List<ParticipantModel> {
 		val currentParticipants = members.mapNotNull { it.id }

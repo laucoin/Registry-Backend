@@ -19,6 +19,7 @@ interface GroupEntityMapper: IEntityMapper<GroupModel, GroupEntity> {
 	@Mapping(target = "outMembersCount", ignore = true)
 	@Mapping(target = "overdueMembersCount", ignore = true)
 	@Mapping(target = "members", ignore = true)
+	@Mapping(target = "membersUnchanged", ignore = true)
 	override fun toModel(entity: GroupEntity): GroupModel
 
 	@IgnoreEntityAudit

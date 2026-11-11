@@ -1,7 +1,6 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_ALREADY_ADDED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_FOUND_IN_GROUP_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_NOT_VISIBLE
@@ -24,8 +23,8 @@ import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.service.GenericService
 import fr.laucoin.registry.backend.domain.service.core.IGroupService
 import java.time.Clock
+import java.time.LocalDate
 import java.util.UUID
-import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
@@ -35,7 +34,7 @@ import reactor.core.publisher.Mono
 
 /**
  * Objectif : Gère les groupes d'un projet et leur composition.
- * Périmètre : CRUD des groupes, ajout/retrait de membres et règles de sécurité du dernier membre.
+ * Périmètre : CRUD des groupes, y compris sans membre, et ajout/retrait de membres.
  * Limites : Ne déplace pas les groupes ; les mouvements relèvent de MovementService.
  */
 @Service
@@ -107,7 +106,7 @@ class GroupService(
 			group.endAvailability,
 			GROUP_PRESENCE_DATES_OUT_OF_PROJECT_DATE_RANGE,
 		)
-			.flatMap { validateMembers(group.projectId!!, group, group.members.mapNotNull { p -> p.id }) }
+			.flatMap { validateMembersOfCreation(group) }
 			.flatMap { port.create(group.apply { create(currentUser, now()) }) }
 	}
 
@@ -130,6 +129,12 @@ class GroupService(
 			.`as`(transactionalOperator::transactional)
 	}
 
+	private fun validateMembersOfCreation(group: GroupModel): Mono<GroupModel> {
+		val memberIds = group.members.mapNotNull { it.id }
+		return if (memberIds.isEmpty()) Mono.just(group)
+		else validateMembers(group.projectId!!, group, memberIds)
+	}
+
 	private fun validateNewMembers(projectId: UUID, existing: GroupModel, group: GroupModel): Mono<GroupModel> {
 		val newMemberIds: List<UUID> = existing.getNewMemberIds(group)
 		return if (newMemberIds.isEmpty()) Mono.just(existing)
@@ -141,7 +146,7 @@ class GroupService(
 			name = group.name
 			startAvailability = group.startAvailability
 			endAvailability = group.endAvailability
-			members = group.members
+			if (!group.membersUnchanged) members = group.members
 		}
 	}
 
@@ -185,17 +190,12 @@ class GroupService(
 	): Mono<GroupModel> {
 		return findLockedGroup(projectId, id)
 			.map { it.apply { members = members.filter { m -> m.id != memberId } } }
-			.handle { group, sink -> sink.nextOrError(group, lastMemberError(group)) }
 			.updateGroup(currentUser)
 			.`as`(transactionalOperator::transactional)
 	}
 
 	private fun alreadyAddedError(newMemberIds: List<UUID>): RegistryException? {
 		return if (newMemberIds.isEmpty()) RegistryException(UNPROCESSABLE_CONTENT, GROUP_MEMBERS_ALREADY_ADDED) else null
-	}
-
-	private fun lastMemberError(group: GroupModel): RegistryException? {
-		return if (group.members.isEmpty()) RegistryException(CONFLICT, GROUP_LAST_MEMBERS_CANNOT_BE_REMOVED) else null
 	}
 
 	private fun membersError(members: List<ParticipantModel>, newMemberIds: List<UUID>): RegistryException? = when {
@@ -252,10 +252,11 @@ class GroupService(
 
 	override fun purgeEmptyGroups(
 		participantToExclude: List<UUID>,
+		dateThreshold: LocalDate,
 		dryRun: Boolean
 	): Flux<UUID> {
-		log.info("Purging empty groups")
-		return port.findEmpty(participantToExclude)
+		log.info("Purging empty groups unused since {}", dateThreshold)
+		return port.findEmpty(participantToExclude, dateThreshold)
 			.purgeEach("group", dryRun, port::deleteById)
 	}
 }

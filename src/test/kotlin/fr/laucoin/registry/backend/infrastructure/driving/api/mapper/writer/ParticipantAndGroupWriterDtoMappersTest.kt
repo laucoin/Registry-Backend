@@ -7,7 +7,9 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.IdReference
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class ParticipantAndGroupWriterDtoMappersTest {
@@ -67,5 +69,32 @@ class ParticipantAndGroupWriterDtoMappersTest {
 		assertEquals("Wolves", result.name)
 		assertEquals(listOf(first, second), result.members.map { it.id })
 		assertEquals(defaultProjectId, result.projectId)
+		assertFalse(result.membersUnchanged)
+	}
+
+	@Test
+	fun `Should map a group without members list as keeping its current members`() {
+		// Arrange
+		val dto = GroupWriterDto(name = "Wolves", members = null)
+
+		// Act
+		val result = groupMapper.toModel(dto, defaultProjectId)
+
+		// Assert
+		assertTrue(result.membersUnchanged)
+		assertTrue(result.members.isEmpty())
+	}
+
+	@Test
+	fun `Should map a group with an empty members list as emptying the group`() {
+		// Arrange
+		val dto = GroupWriterDto(name = "Wolves", members = emptyList())
+
+		// Act
+		val result = groupMapper.toModel(dto, defaultProjectId)
+
+		// Assert
+		assertFalse(result.membersUnchanged)
+		assertTrue(result.members.isEmpty())
 	}
 }

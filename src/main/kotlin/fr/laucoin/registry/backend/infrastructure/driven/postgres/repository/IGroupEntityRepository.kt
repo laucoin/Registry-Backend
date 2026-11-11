@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQ
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.GroupCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.FULL_COUNT
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.LAST_MODIFIER_DATE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_GROUP_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_CONTENT_PARTICIPANT_ID
@@ -29,6 +30,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.Gen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_CREATOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.SELECT_LAST_EDITOR
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.VISIBLE_CLAUSE
+import java.time.LocalDate
 import java.util.UUID
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -119,8 +121,8 @@ interface IGroupEntityRepository: ReactiveCrudRepository<GroupEntity, UUID> {
             WHERE t.$GROUP_CONTENT_PARTICIPANT_ID NOT IN (:participantToExclude)
             GROUP BY t.$GROUP_CONTENT_GROUP_ID
         ) gc ON t.$ID = gc.$GROUP_CONTENT_GROUP_ID
-        WHERE gc.count IS NULL OR gc.count = 0
+        WHERE (gc.count IS NULL OR gc.count = 0) AND t.$LAST_MODIFIER_DATE < :dateThreshold
         """
 	)
-	fun findEmpty(participantToExclude: List<UUID>): Flux<UUID>
+	fun findEmpty(participantToExclude: List<UUID>, dateThreshold: LocalDate): Flux<UUID>
 }

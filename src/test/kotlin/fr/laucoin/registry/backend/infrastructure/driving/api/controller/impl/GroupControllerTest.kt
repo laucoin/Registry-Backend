@@ -1,6 +1,5 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_MEMBERS_TOO_MANY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_NULL_OR_BLANK
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.GroupError.GROUP_NAME_TOO_LONG
@@ -175,14 +174,12 @@ class GroupControllerTest : TestContext() {
 				),
 				GROUP_START_LATER_THAN_END,
 			),
-			Arguments.of(
-				GroupWriterDto().apply { name = "name"; members = null },
-				GROUP_MEMBERS_EMPTY,
-			),
-			Arguments.of(
-				GroupWriterDto().apply { name = "name"; members = emptyList() },
-				GROUP_MEMBERS_EMPTY,
-			),
+		)
+
+		@JvmStatic
+		fun `Group without members`(): Stream<Arguments> = Stream.of(
+			Arguments.of(GroupWriterDto(name = "name", members = null)),
+			Arguments.of(GroupWriterDto(name = "name", members = emptyList())),
 		)
 	}
 
@@ -485,6 +482,29 @@ class GroupControllerTest : TestContext() {
 		verify(lightReaderMapper).toDto(any())
 		verifyNoInteractions(participantReaderMapper)
 		verify(writerMapper).toModel(any(), eq(defaultProjectId))
+	}
+
+	@ParameterizedTest
+	@MethodSource("Group without members")
+	fun `Should createGroup return 201 for a group without members`(group: GroupWriterDto) {
+		// Arrange
+		val createdId = UUID.randomUUID()
+		whenever(service.createGroup(any(), any())).thenReturn(Mono.just(GroupModel()))
+		whenever(writerMapper.toModel(any(), any())).thenReturn(GroupModel())
+		whenever(lightReaderMapper.toDto(any())).thenReturn(GroupReaderDto().apply { id = createdId })
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_GROUP_C))
+			.post()
+			.uri(uriBuilder(BASE_URL, listOf(defaultProjectId), emptyList()))
+			.bodyValue(group)
+			.exchange()
+
+		// Assert
+		result.body<GroupReaderDto>(CREATED)
+		verify(writerMapper).toModel(eq(group), eq(defaultProjectId))
+		verify(service).createGroup(any(), any())
 	}
 
 	@ParameterizedTest

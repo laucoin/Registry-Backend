@@ -36,6 +36,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -361,6 +362,38 @@ class GroupModelPostgresRepositoryTest : TestContext() {
 
 		@Test
 		@Order(4)
+		fun `Should findByIdWithContent return a group without members`() {
+			// Act
+			val result = repository.findByIdWithContent(defaultProjectId, uuid, null, null, null).block()
+
+			// Assert
+			assertNotNull(result)
+			assertEquals(0L, result.membersCount)
+			assertTrue(result.members.isEmpty())
+		}
+
+		@Test
+		@Order(5)
+		fun `Should findEmpty return an empty group not modified since the threshold`() {
+			// Act
+			val result = repository.findEmpty(emptyList(), LocalDate.of(9999, 12, 31)).collectList().block()
+
+			// Assert
+			assertTrue(result!!.contains(uuid))
+		}
+
+		@Test
+		@Order(6)
+		fun `Should findEmpty ignore an empty group modified since the threshold`() {
+			// Act
+			val result = repository.findEmpty(emptyList(), LocalDate.of(2000, 1, 1)).collectList().block()
+
+			// Assert
+			assertFalse(result!!.contains(uuid))
+		}
+
+		@Test
+		@Order(7)
 		fun `Should deleteById call repository deleteById`() {
 			// Act
 			repository.deleteById(uuid).block()

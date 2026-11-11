@@ -16,6 +16,7 @@ interface GroupWriterDtoMapper: IGenericProjectWriterDtoMapper<GroupModel, Group
 	@Mapping(target = "startAvailability", source = "dto.startAvailability")
 	@Mapping(target = "endAvailability", source = "dto.endAvailability")
 	@Mapping(target = "members", source = "dto.members")
+	@Mapping(target = "membersUnchanged", expression = "java(dto.getMembers() == null)")
 	@Mapping(target = "projectId", source = "projectId")
 	override fun toModel(dto: GroupWriterDto, projectId: UUID): GroupModel
 }
