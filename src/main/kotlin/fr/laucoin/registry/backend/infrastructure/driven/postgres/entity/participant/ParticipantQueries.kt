@@ -267,14 +267,16 @@ object ParticipantQueries {
         (
             :#{#c.at} IS NULL OR (
                 (
-                    fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
-                    OR (fg.available_groups_on_date IS NOT NULL AND json_array_length(fg.available_groups_on_date) > 0)
-                ) AND
-                (
-                    (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{#c.at} AS TIMESTAMPTZ)
-                ) AND
-                (
-                    (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{#c.at} AS TIMESTAMPTZ)
+                    (
+                        (t.$PARTICIPANT_START_AVAILABILITY_DATE IS NOT NULL OR t.$PARTICIPANT_END_AVAILABILITY_DATE IS NOT NULL) AND
+                        (COALESCE(t.$PARTICIPANT_START_AVAILABILITY_DATE, '-infinity'::DATE) + COALESCE(t.$PARTICIPANT_START_AVAILABILITY_TIME, '00:00:00.000000'::TIMETZ)) <= CAST(:#{#c.at} AS TIMESTAMPTZ) AND
+                        (COALESCE(t.$PARTICIPANT_END_AVAILABILITY_DATE, '+infinity'::DATE) + COALESCE(t.$PARTICIPANT_END_AVAILABILITY_TIME, '23:59:59.999999'::TIMETZ)) >= CAST(:#{#c.at} AS TIMESTAMPTZ)
+                    ) OR (
+                        t.$PARTICIPANT_START_AVAILABILITY_DATE IS NULL AND t.$PARTICIPANT_END_AVAILABILITY_DATE IS NULL AND (
+                            fg.$PARTICIPANT_GROUPS IS NULL OR json_array_length(fg.$PARTICIPANT_GROUPS) = 0
+                            OR (fg.available_groups_on_date IS NOT NULL AND json_array_length(fg.available_groups_on_date) > 0)
+                        )
+                    )
                 ) AND
                 (t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL OR t.$PARTICIPANT_EFFECTIVE_DEPARTURE > CAST(:#{#c.at} AS TIMESTAMPTZ))
             )

@@ -190,4 +190,25 @@ class DateClausesTest : TestContext() {
 			}
 		}
 	}
+
+	@TestFactory
+	fun `Should give priority to the dates of a participant over the availability of its groups`(): Stream<DynamicTest> {
+		val participants = WINDOWS.first { it.name == "participants" }
+		return Stream.of(
+			Triple("own dates covering the instant, no group available", "'2024-04-30'", "CAST('[]' AS JSON)") to true,
+			Triple("own dates not covering the instant, a group available", "'2024-05-02'", "CAST('[{}]' AS JSON)") to false,
+		).map { (case, expected) ->
+			dynamicTest("participants with ${case.first}") {
+				// Arrange
+				val fixture = fixtureOf(participants, case.second, "NULL", "'2024-05-03'", "NULL")
+				val sql = "SELECT 1 FROM ($fixture) t CROSS JOIN (SELECT CAST('[{}]' AS JSON) AS groups, ${case.third} AS available_groups_on_date) fg WHERE ${participants.clause}"
+
+				// Act
+				val result = databaseClient.sql(sql.withNamedParameters()).bind("at", parse("2024-05-01T12:00:00Z")).fetch().all().collectList().block()!!
+
+				// Assert
+				assertEquals(expected, result.isNotEmpty())
+			}
+		}
+	}
 }
