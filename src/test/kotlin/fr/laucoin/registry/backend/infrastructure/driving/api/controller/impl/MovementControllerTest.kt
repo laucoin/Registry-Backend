@@ -95,6 +95,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.testcontainers.shaded.com.google.common.net.HttpHeaders.ACCEPT_LANGUAGE
 import reactor.core.publisher.Flux
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.springframework.context.i18n.LocaleContextHolder
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuples
 import java.time.LocalDate
@@ -539,6 +541,33 @@ class MovementControllerTest : TestContext() {
 		verify(activityReasonReaderMapper).toDto(any())
 		verify(reasonReaderMapper, atLeastOnce()).toDto(any())
 		verifyNoInteractions(writerMapper)
+	}
+
+	@Test
+	fun `Should searchReasonsAndActivities translate the reasons in the language of the request`() {
+		// Arrange
+		whenever(service.searchActivitiesByText(any(), any(), any(), anyOrNull())).thenReturn(Flux.empty())
+		whenever(service.searchReasonsByText(any(), any())).thenReturn(Flux.just(OTHER))
+		whenever(reasonReaderMapper.toDto(any())).thenAnswer {
+			MovementReasonsReaderDto(value = "value", label = LocaleContextHolder.getLocale().language, kind = REASON, type = OUT)
+		}
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_METADATA_R))
+			.get()
+			.uri(
+				uriBuilder(
+					"$BASE_URL/search/reasons",
+					listOf(defaultProjectId),
+					listOf(Pair("type", OUT), Pair("contentType", REGISTERED)),
+				)
+			)
+			.headers { headers -> headers.add(ACCEPT_LANGUAGE, "fr") }
+			.exchange()
+
+		// Assert
+		assertEquals(listOf("fr"), result.body<List<Map<String, Any>>>(OK)?.map { it["label"] })
 	}
 
 	@Test
