@@ -1,6 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.LIST_TOO_LARGE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CONTENT_EMPTY
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_NULL
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ODD_GUEST_CONTENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_TYPE_AND_REASON_ARE_INCOMPATIBLE
@@ -38,6 +39,7 @@ data class GuestMovementWriterDto(
 	var type: MovementTypeEnum?,
 	var reason: MovementReasonEnum?,
 	@field:Valid
+	@field:NotNull(message = MOVEMENT_CONTENT_EMPTY)
 	@field:Size(max = GUEST_MOVEMENT_CONTENT_MAX, message = LIST_TOO_LARGE)
 	var content: List<MovementContentWriterDto>?,
 	@field:Valid

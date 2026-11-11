@@ -1215,7 +1215,7 @@ class MovementControllerTest : TestContext() {
 			dateTime = now(),
 			type = IN,
 			reason = MovementReasonEnum.VISIT,
-			content = null,
+			content = emptyList(),
 			guests = guests
 		)
 
@@ -1229,6 +1229,35 @@ class MovementControllerTest : TestContext() {
 
 		// Assert
 		result.assertError(BAD_REQUEST, LIST_TOO_LARGE)
+		verifyNoInteractions(service)
+	}
+
+	@Test
+	fun `Should createGuestsMovement return 400 without content`() {
+		// Arrange
+		val guest = GuestMovementWriterDto.GuestWriterDto(
+			firstName = "Ada",
+			lastName = "Lovelace",
+			birthday = LocalDate.of(2010, 1, 1),
+		)
+		val body = GuestMovementWriterDto(
+			dateTime = now(),
+			type = IN,
+			reason = MovementReasonEnum.VISIT,
+			content = null,
+			guests = listOf(guest),
+		)
+
+		// Act
+		val result = webClient
+			.authenticate(buildAuthority(REGISTRY_PROJECT_MOVEMENT_C))
+			.post()
+			.uri(uriBuilder("$BASE_URL/guests", listOf(defaultProjectId), emptyList()))
+			.bodyValue(body)
+			.exchange()
+
+		// Assert
+		result.assertError(BAD_REQUEST, MOVEMENT_CONTENT_EMPTY)
 		verifyNoInteractions(service)
 	}
 
