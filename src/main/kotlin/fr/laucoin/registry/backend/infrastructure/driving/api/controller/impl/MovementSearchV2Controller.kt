@@ -12,20 +12,18 @@ import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.Movemen
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.PlannedMovementReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.VehicleReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LabelSearchExt.matchesQuery
+import fr.laucoin.registry.backend.infrastructure.driving.api.ext.LocaleFluxExt.mapInRequestLocale
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementActivityReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementParticipantsAndGroupsReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.MovementReasonReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.PlannedMovementReaderDtoMapper
 import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.VehicleReaderDtoMapper
-import io.micrometer.context.ContextSnapshotFactory
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
-import org.springframework.context.i18n.LocaleContextThreadLocalAccessor
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.util.context.ContextView
 
 /**
  * Objectif : Adaptateur REST de la recherche des éléments d'un mouvement, des mouvements planifiés et des communications.
@@ -49,7 +47,7 @@ class MovementSearchV2Controller(
 		query: String?,
 	): Flux<MovementReasonsReaderDto> {
 		return service.searchActivitiesByText(currentUser, projectId, contentType, query)
-			.translate(activityReasonReaderMapper::toDto)
+			.mapInRequestLocale(activityReasonReaderMapper::toDto)
 			.mergeWith(searchReasons(query, type, contentType))
 	}
 
@@ -59,18 +57,8 @@ class MovementSearchV2Controller(
 		contentType: ParticipantTypeEnum,
 	): Flux<MovementReasonsReaderDto> {
 		return service.searchReasonsByText(contentType, type)
-			.translate(reasonReaderMapper::toDto)
+			.mapInRequestLocale(reasonReaderMapper::toDto)
 			.filter { it.label.matchesQuery(query) }
-	}
-
-	private fun <T : Any> Flux<T>.translate(toDto: (T) -> MovementReasonsReaderDto): Flux<MovementReasonsReaderDto> =
-		handle { element, sink ->
-			CONTEXT_SNAPSHOTS.setThreadLocalsFrom<ContextView>(sink.contextView(), LocaleContextThreadLocalAccessor.KEY)
-				.use { sink.next(toDto(element)) }
-		}
-
-	private companion object {
-		val CONTEXT_SNAPSHOTS: ContextSnapshotFactory = ContextSnapshotFactory.builder().build()
 	}
 
 	override fun searchParticipantsAndGroups(
