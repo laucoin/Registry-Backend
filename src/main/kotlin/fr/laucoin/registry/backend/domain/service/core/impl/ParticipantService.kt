@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_USER_LINK_FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_USER_NOT_PROJECT_MEMBER
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
 import fr.laucoin.registry.backend.domain.extension.ReactiveExt.nextOrError
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
@@ -40,6 +42,7 @@ import fr.laucoin.registry.backend.domain.service.core.IParticipantService
 import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import org.springframework.stereotype.Service
@@ -237,16 +240,34 @@ class ParticipantService(
 			.flatMap { rowLockPort.lock(PARTICIPANT, id) }
 			.flatMap { findParticipantById(projectId, id, isVisible = null) }
 			.flatMap { validateNoMovementConflict(participant, it) }
-			.flatMap { validateUserLink(it, participant) }
+			.flatMap { validateUserLink(currentUser, it, participant) }
 			.flatMap { validateNewGroups(it, participant) }
 			.map { applyUpdate(it, participant) }
 			.updateParticipant(currentUser)
 	}
 
-	private fun validateUserLink(toUpdate: ParticipantModel, participant: ParticipantModel): Mono<ParticipantModel> {
+	private fun validateUserLink(
+		currentUser: CurrentUserModel,
+		toUpdate: ParticipantModel,
+		participant: ParticipantModel,
+	): Mono<ParticipantModel> {
 		val userId = participant.user?.id
-		if (userId == null || userId == toUpdate.user?.id) return Mono.just(toUpdate)
-		return validateLinkableUser(participant.projectId!!, userId).map { toUpdate }
+		return when {
+			userId == toUpdate.user?.id -> Mono.just(toUpdate)
+			!canChangeUserLink(currentUser, toUpdate, userId) -> Mono.error(userLinkForbidden(currentUser, toUpdate))
+			userId == null -> Mono.just(toUpdate)
+			else -> validateLinkableUser(participant.projectId!!, userId).map { toUpdate }
+		}
+	}
+
+	private fun canChangeUserLink(currentUser: CurrentUserModel, toUpdate: ParticipantModel, userId: UUID?): Boolean {
+		val unlinksItself = userId == null && toUpdate.user?.id == currentUser.id
+		return unlinksItself || currentUser.hasAuthority(toUpdate.projectId!!, REGISTRY_PROJECT_PARTICIPANT_HISTORY_R)
+	}
+
+	private fun userLinkForbidden(currentUser: CurrentUserModel, participant: ParticipantModel): RegistryException {
+		log.warn("The user {} cannot change the user linked to the participant {}", currentUser.id, participant.id)
+		return RegistryException(FORBIDDEN, PARTICIPANT_USER_LINK_FORBIDDEN)
 	}
 
 	private fun validateNewGroups(toUpdate: ParticipantModel, participant: ParticipantModel): Mono<ParticipantModel> {

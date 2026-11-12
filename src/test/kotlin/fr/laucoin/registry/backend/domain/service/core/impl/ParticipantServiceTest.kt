@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_USER_LINK_FORBIDDEN
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.ParticipantError.PARTICIPANT_USER_NOT_PROJECT_MEMBER
+import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_PARTICIPANT_HISTORY_R
 import reactor.test.StepVerifier
 import java.time.ZonedDateTime
 import java.time.ZoneOffset
@@ -31,6 +33,8 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
+import org.junit.jupiter.api.Assertions.assertNull
+import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.ParticipantSearchParamModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IGroupPort
@@ -43,6 +47,8 @@ import fr.laucoin.registry.backend.test.ModelExt.defaultParticipant
 import fr.laucoin.registry.backend.test.ModelExt.defaultParticipantId
 import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.ModelExt.defaultUser
+import fr.laucoin.registry.backend.test.ModelExt.defaultUserId
+import fr.laucoin.registry.backend.test.WebTestClientExt.buildAuthority
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -256,6 +262,20 @@ class ParticipantServiceTest {
 					0,
 					2,
 				),
+			)
+		}
+
+		@JvmStatic
+		fun `Should updateParticipantById refuse a user link change without the participant history permission`(): Stream<Arguments> {
+			val currentUserAsLinked = UserModel().apply { id = defaultUserId }
+			val anotherProjectAuthority = "${UUID.randomUUID()}_$REGISTRY_PROJECT_PARTICIPANT_HISTORY_R"
+			return Stream.of(
+				Arguments.of(null, defaultUser(), emptyArray<String>()),
+				Arguments.of(null, currentUserAsLinked, emptyArray<String>()),
+				Arguments.of(currentUserAsLinked, defaultUser(), emptyArray<String>()),
+				Arguments.of(defaultUser(), null, emptyArray<String>()),
+				Arguments.of(defaultUser(), currentUserAsLinked, emptyArray<String>()),
+				Arguments.of(null, defaultUser(), arrayOf(anotherProjectAuthority)),
 			)
 		}
 
@@ -479,10 +499,11 @@ class ParticipantServiceTest {
 			.thenReturn(Mono.just(defaultProjectId))
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(existing))
 		whenever(port.isProjectMember(any(), any())).thenReturn(Mono.just(false))
+		val coordinator = currentUser(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateParticipantById(currentUser(), defaultProjectId, existing.id!!, participant).block()
+			service.updateParticipantById(coordinator, defaultProjectId, existing.id!!, participant).block()
 		}) as RegistryException
 
 		// Assert
@@ -566,8 +587,10 @@ class ParticipantServiceTest {
 		whenever(groupPort.findAllByIds(any(), any(), anyOrNull()))
 			.thenReturn(Flux.just(*newGroups.toTypedArray()))
 
+		val coordinator = currentUser(buildAuthority(REGISTRY_PROJECT_PARTICIPANT_HISTORY_R))
+
 		// Act
-		service.updateParticipantById(currentUser(), defaultProjectId, defaultParticipantId, newParticipant).block()
+		service.updateParticipantById(coordinator, defaultProjectId, defaultParticipantId, newParticipant).block()
 
 		// Assert
 		verify(projectDates).validateDateTimes(
@@ -581,6 +604,69 @@ class ParticipantServiceTest {
 		verify(movementPort, times(expectedMovementVerification))
 			.countAllByParticipantId(eq(defaultProjectId), eq(defaultParticipantId), any())
 		verify(port).update(any())
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should updateParticipantById refuse a user link change without the participant history permission`(
+		oldUser: UserModel?,
+		newUser: UserModel?,
+		authorities: Array<String>,
+	) {
+		// Arrange
+		val existing = defaultParticipant().apply { user = oldUser }
+		val participant = defaultParticipant().apply { user = newUser }
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(existing))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateParticipantById(currentUser(*authorities), defaultProjectId, existing.id!!, participant).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(FORBIDDEN, result.status)
+		assertEquals(PARTICIPANT_USER_LINK_FORBIDDEN, result.code)
+		verify(port, never()).findByUserId(any(), any())
+		verify(port, never()).update(any())
+	}
+
+	@Test
+	fun `Should updateParticipantById let a user without the participant history permission remove its own link`() {
+		// Arrange
+		val existing = defaultParticipant().apply { user = UserModel().apply { id = defaultUserId } }
+		val participant = defaultParticipant()
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(existing))
+		whenever(port.update(any())).thenAnswer { Mono.just(it.getArgument<ParticipantModel>(0)) }
+
+		// Act
+		val result = service.updateParticipantById(currentUser(), defaultProjectId, existing.id!!, participant).block()!!
+
+		// Assert
+		assertNull(result.user)
+		verify(port, never()).findByUserId(any(), any())
+	}
+
+	@Test
+	fun `Should updateParticipantById let a user without the participant history permission keep the current link`() {
+		// Arrange
+		val existing = defaultParticipant().apply { user = defaultUser() }
+		val participant = defaultParticipant().apply { user = defaultUser(); firstName = "Jordan" }
+		whenever(projectDates.validateDateTimes(any(), anyOrNull(), anyOrNull(), any()))
+			.thenReturn(Mono.just(defaultProjectId))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(existing))
+		whenever(port.update(any())).thenAnswer { Mono.just(it.getArgument<ParticipantModel>(0)) }
+
+		// Act
+		val result = service.updateParticipantById(currentUser(), defaultProjectId, existing.id!!, participant).block()!!
+
+		// Assert
+		assertEquals("Jordan", result.firstName)
+		assertEquals(defaultUser().id, result.user?.id)
+		verify(port, never()).findByUserId(any(), any())
 	}
 
 	@ParameterizedTest
