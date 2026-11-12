@@ -15,6 +15,8 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.G
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.group.GroupFields.GROUP_TABLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_BIRTHDAY
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_ARRIVAL
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_EFFECTIVE_DEPARTURE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_MOVEMENT_DATE_TIME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_LAST_NAME
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.participant.ParticipantFields.PARTICIPANT_TABLE
@@ -133,6 +135,8 @@ interface IParticipantEntityRepository : ReactiveCrudRepository<ParticipantEntit
         WHERE $PROJECT_CLAUSE
             AND EXTRACT(MONTH FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(MONTH FROM CAST(:#{now} AS DATE))
             AND EXTRACT(DAY FROM t.$PARTICIPANT_BIRTHDAY) = EXTRACT(DAY FROM CAST(:#{now} AS DATE))
+            AND t.$PARTICIPANT_EFFECTIVE_ARRIVAL IS NOT NULL
+            AND t.$PARTICIPANT_EFFECTIVE_DEPARTURE IS NULL
             AND $VISIBLE_CLAUSE
         LIMIT $MAX_UNPAGINATED_RESULT
         """

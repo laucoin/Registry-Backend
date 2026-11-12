@@ -37,6 +37,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.r2dbc.core.DatabaseClient
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.ZoneOffset
 import java.time.LocalDate
@@ -60,6 +61,9 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 
 	@Autowired
 	private lateinit var repository: IParticipantPort
+
+	@Autowired
+	private lateinit var databaseClient: DatabaseClient
 
 	private companion object {
 		@JvmStatic
@@ -395,60 +399,67 @@ class ParticipantModelPostgresRepositoryTest : TestContext() {
 	@TestInstance(PER_CLASS)
 	@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 	inner class BirthdayTests {
-		private lateinit var matchingId: UUID
-		private lateinit var nonMatchingId: UUID
+		private lateinit var presentId: UUID
+		private lateinit var notArrivedId: UUID
+		private lateinit var departedId: UUID
+		private lateinit var anotherDayId: UUID
+
+		private fun bornOn(lastName: String, birthday: LocalDate, arrival: ZonedDateTime?, departure: ZonedDateTime?): UUID {
+			val participant = ParticipantModel().apply {
+				firstName = "birthday"
+				this.lastName = lastName
+				this.birthday = birthday
+				type = REGISTERED
+				this.projectId = defaultProjectId
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
+			}
+			val id = repository.create(participant).block()!!.id!!
+			databaseClient.sql("UPDATE tb_participant SET effective_arrival = :arrival, effective_departure = :departure WHERE id = :id")
+				.bind("id", id)
+				.let { if (arrival == null) it.bindNull("arrival", ZonedDateTime::class.java) else it.bind("arrival", arrival) }
+				.let { if (departure == null) it.bindNull("departure", ZonedDateTime::class.java) else it.bind("departure", departure) }
+				.fetch().rowsUpdated().block()
+			return id
+		}
 
 		@Test
 		@Order(1)
-		fun `Should create a participant born today's month-day in a past year and one born on another day`() {
+		fun `Should create participants born today's month-day, present, not arrived or departed, and one born another day`() {
 			// Arrange
-			val bornToday = ParticipantModel().apply {
-				firstName = "birthday"
-				lastName = "match"
-				birthday = LocalDate.now(ZoneOffset.UTC).minusYears(30)
-				type = REGISTERED
-				this.projectId = defaultProjectId
-				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
-			}
-			val bornAnotherDay = ParticipantModel().apply {
-				firstName = "birthday"
-				lastName = "no-match"
-				birthday = LocalDate.now(ZoneOffset.UTC).minusYears(30).minusDays(1)
-				type = REGISTERED
-				this.projectId = defaultProjectId
-				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
-			}
+			val today = LocalDate.now(ZoneOffset.UTC).minusYears(30)
+			val yesterday = ZonedDateTime.now(ZoneOffset.UTC).minusDays(1)
 
 			// Act
-			matchingId = repository.create(bornToday).block()!!.id!!
-			nonMatchingId = repository.create(bornAnotherDay).block()!!.id!!
+			presentId = bornOn("present", today, yesterday, null)
+			notArrivedId = bornOn("not-arrived", today, null, null)
+			departedId = bornOn("departed", today, yesterday, yesterday.plusHours(1))
+			anotherDayId = bornOn("another-day", today.minusDays(1), yesterday, null)
 
 			// Assert
-			assertNotNull(matchingId)
-			assertNotNull(nonMatchingId)
+			assertNotNull(presentId)
 		}
 
 		@Test
 		@Order(2)
-		fun `Should findBirthdays match on month-day regardless of birth year`() {
+		fun `Should findBirthdays keep only the participants born today who arrived and did not leave`() {
 			// Act
-			val result = repository.findBirthdays(defaultProjectId, isVisible = null).collectList().block()!!
+			val ids = repository.findBirthdays(defaultProjectId, isVisible = null).collectList().block()!!.map { it.id }
 
 			// Assert
-			assertTrue(result.any { it.id == matchingId })
-			assertFalse(result.any { it.id == nonMatchingId })
+			assertTrue(ids.contains(presentId))
+			assertFalse(ids.contains(notArrivedId))
+			assertFalse(ids.contains(departedId))
+			assertFalse(ids.contains(anotherDayId))
 		}
 
 		@Test
 		@Order(3)
 		fun `Should deleteById clean up the birthday test participants`() {
 			// Act
-			repository.deleteById(matchingId).block()
-			repository.deleteById(nonMatchingId).block()
+			listOf(presentId, notArrivedId, departedId, anotherDayId).forEach { repository.deleteById(it).block() }
 
 			// Assert
-			assertNull(repository.findById(defaultProjectId, matchingId, isVisible = null).block())
-			assertNull(repository.findById(defaultProjectId, nonMatchingId, isVisible = null).block())
+			assertNull(repository.findById(defaultProjectId, presentId, isVisible = null).block())
 		}
 	}
 
