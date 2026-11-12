@@ -54,7 +54,7 @@ $$
                 'blocked-user@sgdf.fr', 'USER_ADMINISTRATOR', '1970-01-01', '2025-03-01 15:28:51.144372 +00:00',
                 global_blocked_user_id, global_blocked_user_id, FALSE),
                (global_blocked_profile_id, NULL, 'USER', 'Emil', 'BRADFORD',
-                'blocked-profile@sgdf.fr', 'USER_ADMINISTRATOR', '1960-01-01', '2025-03-01 15:28:51.144372 +00:00',
+                'blocked-profile@sgdf.fr', 'USER', '1960-01-01', '2025-03-01 15:28:51.144372 +00:00',
                 global_blocked_profile_id, global_blocked_profile_id, TRUE);
 
         -- Insertion des préférences des utilisateurs
