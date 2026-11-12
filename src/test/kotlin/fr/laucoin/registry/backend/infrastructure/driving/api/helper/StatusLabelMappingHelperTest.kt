@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.AVA
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilityStatusEnum.UNAVAILABLE
 import fr.laucoin.registry.backend.domain.enumeration.AvailabilitySubjectEnum
 import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.OVERDUE
+import fr.laucoin.registry.backend.domain.enumeration.PresenceStatusEnum.UNAVAILABLE as UNAVAILABLE_PRESENCE
 import fr.laucoin.registry.backend.domain.model.ActivityModel
 import fr.laucoin.registry.backend.domain.model.CustomDateTimeModel
 import fr.laucoin.registry.backend.domain.model.GroupModel
@@ -17,11 +18,15 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
@@ -40,6 +45,16 @@ class StatusLabelMappingHelperTest {
 		private const val NO_MORE = "availability.status.profile.duration.NO_MORE"
 		private const val AVAILABLE_SINCE = "availability.status.profile.duration.AVAILABLE"
 		private const val UNAVAILABLE_PLAIN = "availability.status.profile.UNAVAILABLE"
+
+		private fun dayFromToday(offset: Long) = CustomDateTimeModel(LocalDate.now(ZoneOffset.UTC).plusDays(offset))
+
+		@JvmStatic
+		fun `Should label a presence not begun, ended or under way according to the planned dates`(): Stream<Arguments> =
+			Stream.of(
+				Arguments.of(dayFromToday(5), dayFromToday(10), "presence.status.duration.ARRIVE"),
+				Arguments.of(dayFromToday(-10), dayFromToday(-5), "presence.status.duration.LEFT"),
+				Arguments.of(dayFromToday(-1), dayFromToday(1), "presence.status.NOT_ARRIVED_YET"),
+			)
 	}
 
 	init {
@@ -189,5 +204,23 @@ class StatusLabelMappingHelperTest {
 		assertEquals("OVERDUE", vehicleLabel?.value)
 		assertEquals("presence.status.OVERDUE", vehicleLabel?.label)
 		assertEquals("presence.status.OVERDUE", participantLabel?.label)
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should label a presence not begun, ended or under way according to the planned dates`(
+		start: CustomDateTimeModel?,
+		end: CustomDateTimeModel?,
+		expectedKey: String,
+	) {
+		// Arrange
+		val participant = ParticipantModel(status = UNAVAILABLE_PRESENCE, startAvailability = start, endAvailability = end)
+
+		// Act
+		val label = helper.participantStatus(participant)!!.label
+
+		// Assert
+		assertTrue(label.startsWith("$expectedKey|"), label)
+		assertFalse(label.contains("-"), label)
 	}
 }

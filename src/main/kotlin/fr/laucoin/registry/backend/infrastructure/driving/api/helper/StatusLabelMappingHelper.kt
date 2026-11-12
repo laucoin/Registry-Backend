@@ -122,10 +122,10 @@ class StatusLabelMappingHelper(
 					Duration.between(lastMovement, now.toZonedDateTime()),
 				)
 
-			Objects.nonNull(startAvailability) && now.asStartIsAfterOther(startAvailability) ->
+			Objects.nonNull(startAvailability) && startAvailability.asStartIsAfterOther(now) ->
 				durationHelper.durationMessage("${PRESENCE_STATUS_DURATION_PREFIX}ARRIVE", durationHelper.untilStart(now, startAvailability))
 
-			Objects.nonNull(endAvailability) && now.asEndIsBeforeOther(endAvailability) ->
+			Objects.nonNull(endAvailability) && endAvailability.asEndIsBeforeOther(now) ->
 				durationHelper.durationMessage("${PRESENCE_STATUS_DURATION_PREFIX}LEFT", durationHelper.sinceEnd(now, endAvailability))
 
 			Objects.isNull(lastMovement) -> translateService.getMessage(code = "${PRESENCE_STATUS_PREFIX}NOT_ARRIVED_YET")
