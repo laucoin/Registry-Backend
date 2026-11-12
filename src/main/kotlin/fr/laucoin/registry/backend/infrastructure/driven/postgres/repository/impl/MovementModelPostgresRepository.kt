@@ -20,6 +20,7 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.Movemen
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IMovementEntityRepository
 import java.time.Clock
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.reactive.TransactionalOperator
@@ -110,6 +111,26 @@ class MovementModelPostgresRepository(
 
 	override fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventModel> {
 		return repository.findEventsByVehicleId(projectId, vehicleId).map(eventMapper::toModel)
+	}
+
+	override fun existsLaterByParticipantIds(
+		projectId: UUID,
+		participantIds: List<UUID>,
+		dateTime: ZonedDateTime,
+		excludedId: UUID?,
+	): Mono<Boolean> {
+		return if (participantIds.isEmpty()) Mono.just(false)
+		else repository.existsLaterByParticipantIds(projectId, participantIds, dateTime, excludedId)
+	}
+
+	override fun existsDepartureBetween(
+		projectId: UUID,
+		participantIds: List<UUID>,
+		from: ZonedDateTime?,
+		to: ZonedDateTime,
+	): Mono<Boolean> {
+		return if (participantIds.isEmpty()) Mono.just(false)
+		else repository.existsDepartureBetween(projectId, participantIds, from, to)
 	}
 
 	override fun findPageByParticipantId(

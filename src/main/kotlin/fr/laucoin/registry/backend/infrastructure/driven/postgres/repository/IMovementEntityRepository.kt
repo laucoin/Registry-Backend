@@ -140,6 +140,33 @@ interface IMovementEntityRepository: ReactiveCrudRepository<MovementEntity, UUID
 	)
 	fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventEntity>
 
+	@Query(
+		"""
+        SELECT EXISTS (
+            SELECT 1
+            FROM $MOVEMENT_CONTENT_TABLE mct
+            INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+            WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID IN (:participantIds) AND t.$VISIBLE = TRUE
+                AND (CAST(:excludedId AS UUID) IS NULL OR t.$ID <> CAST(:excludedId AS UUID)) AND t.$MOVEMENT_DATE_TIME > :dateTime
+        )
+        """
+	)
+	fun existsLaterByParticipantIds(projectId: UUID, participantIds: List<UUID>, dateTime: ZonedDateTime, excludedId: UUID?): Mono<Boolean>
+
+	@Query(
+		"""
+        SELECT EXISTS (
+            SELECT 1
+            FROM $MOVEMENT_CONTENT_TABLE mct
+            INNER JOIN $MOVEMENT_TABLE t ON mct.$MOVEMENT_CONTENT_MOVEMENT_ID = t.$ID
+            WHERE $PROJECT_CLAUSE AND mct.$MOVEMENT_CONTENT_PARTICIPANT_ID IN (:participantIds) AND t.$VISIBLE = TRUE
+                AND t.$MOVEMENT_TYPE = 'OUT' AND t.$MOVEMENT_DATE_TIME > COALESCE(CAST(:from AS TIMESTAMPTZ), '-infinity'::TIMESTAMPTZ)
+                AND t.$MOVEMENT_DATE_TIME <= :to
+        )
+        """
+	)
+	fun existsDepartureBetween(projectId: UUID, participantIds: List<UUID>, from: ZonedDateTime?, to: ZonedDateTime): Mono<Boolean>
+
 	@Query(ACTIVITY_STATISTICS)
 	fun findStatisticsByActivityId(projectId: UUID, activityId: UUID): Mono<ActivityStatisticsEntity>
 

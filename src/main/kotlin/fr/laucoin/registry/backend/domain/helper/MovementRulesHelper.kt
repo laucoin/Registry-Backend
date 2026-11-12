@@ -8,6 +8,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_OUT_OF_PROJECT_DATE_RANGE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_REMOVE_GUEST_CONTENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_GUEST_DEPARTURE_CONTENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_TYPE
 import fr.laucoin.registry.backend.domain.helper.ProjectDateHelper
 import fr.laucoin.registry.backend.domain.model.CommunicationSearchParamModel
@@ -23,8 +24,8 @@ import org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT
 import reactor.core.publisher.Mono
 
 /**
- * Objectif : Porte les règles de validité d'un mouvement : date, modifiabilité et cohérence avec les communications.
- * Périmètre : Refuse un mouvement dans le futur ou hors projet, une modification de champs figés et un conflit avec les communications.
+ * Objectif : Porte les règles de validité d'un mouvement : date, champs modifiables et cohérence avec les communications.
+ * Périmètre : Refuse un mouvement dans le futur ou hors projet, une modification de champs figés (dont le contenu d'une sortie d'invité) et un conflit avec les communications.
  * Limites : Ne modifie aucune donnée.
  */
 @Component
@@ -85,13 +86,10 @@ class MovementRulesHelper(
 		movement.atLeastOldGuestIfGuestsEntrance(newMovement) ->
 			RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_REMOVE_GUEST_CONTENT)
 
+		// Un invité n'a qu'une arrivée et un départ : seule la date de son départ a un sens à être corrigée
+		movement.isGuestDeparture() && !movement.keepsContentOf(newMovement) ->
+			RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_UPDATE_CHANGE_GUEST_DEPARTURE_CONTENT)
+
 		else -> null
-	}
-
-	fun validateIsAlterable(movement: MovementModel, errorMessage: String): Mono<MovementModel> =
-		Mono.just(movement).handle<MovementModel> { it, sink -> sink.nextOrError(it, alterableError(it, errorMessage)) }
-
-	private fun alterableError(movement: MovementModel, errorMessage: String): RegistryException? {
-		return if (movement.isLastParticipantMovement()) RegistryException(UNPROCESSABLE_CONTENT, errorMessage) else null
 	}
 }

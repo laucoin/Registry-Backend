@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.model.MovementSearchParamModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -51,6 +52,8 @@ interface IMovementPort {
 
 	fun findEventsByParticipantId(projectId: UUID, participantId: UUID): Flux<MovementEventModel>
 	fun findEventsByVehicleId(projectId: UUID, vehicleId: UUID): Flux<MovementEventModel>
+	fun existsLaterByParticipantIds(projectId: UUID, participantIds: List<UUID>, dateTime: ZonedDateTime, excludedId: UUID?): Mono<Boolean>
+	fun existsDepartureBetween(projectId: UUID, participantIds: List<UUID>, from: ZonedDateTime?, to: ZonedDateTime): Mono<Boolean>
 	fun findStatisticsByActivityId(projectId: UUID, activityId: UUID): Mono<ActivityStatisticsModel>
 	fun findPageByVehicleId(
 		projectId: UUID,

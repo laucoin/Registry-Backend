@@ -9,6 +9,7 @@ import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_GUEST_ARRIVAL_AFTER_DEPARTURE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
@@ -18,9 +19,11 @@ import fr.laucoin.registry.backend.domain.model.MovementModel
 import fr.laucoin.registry.backend.domain.model.ParticipantModel
 import fr.laucoin.registry.backend.domain.model.RegistryException
 import fr.laucoin.registry.backend.domain.port.IActivityPort
+import fr.laucoin.registry.backend.domain.port.IMovementPort
 import fr.laucoin.registry.backend.domain.port.IParticipantPort
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import java.time.Clock
+import java.time.ZonedDateTime
 import java.util.Objects
 import java.util.UUID
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -30,7 +33,7 @@ import reactor.core.publisher.Mono.zip
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 /**
- * Objectif : Valide le contenu d'un mouvement : participants, véhicules, activité et départ définitif.
+ * Objectif : Valide le contenu d'un mouvement : participants, véhicules, activité, départ définitif et entrée d'invités.
  * Périmètre : Vérifie l'existence, la visibilité et l'aptitude (conducteurs majeurs) des éléments référencés par le mouvement.
  * Limites : Ne modifie aucune donnée.
  */
@@ -39,6 +42,7 @@ class MovementContentHelper(
 	private val participantPort: IParticipantPort,
 	private val vehiclePort: IVehiclePort,
 	private val activityPort: IActivityPort,
+	private val movementPort: IMovementPort,
 	private val clock: Clock,
 ) {
 	fun validateNewMovementContent(movement: MovementModel): Mono<*> {
@@ -147,16 +151,52 @@ class MovementContentHelper(
 		else next(movement)
 	}
 
-	fun validateNoLaterMovementForLastDeparture(movement: MovementModel): Mono<MovementModel> {
-		if (!movement.isLastParticipantMovement()) return Mono.just(movement)
+	/**
+	 * Vérifie qu'aucun autre mouvement des participants n'est postérieur à un départ définitif, créé, modifié ou restauré.
+	 * À la modification et à la restauration, le mouvement lui-même est exclu, puisque sa version enregistrée est remplacée ;
+	 * à la création, rien n'est exclu.
+	 */
+	fun validateNoLaterMovementForLastDeparture(
+		oldMovement: MovementModel,
+		movement: MovementModel = oldMovement,
+		excludedId: UUID? = oldMovement.id,
+	): Mono<MovementModel> {
+		if (!movement.isLastParticipantMovement()) return Mono.just(oldMovement)
 
-		return participantPort.findAllByIds(movement.projectId!!, movement.participantIds(), isVisible = true)
-			.collectList()
-			.handle { found, sink -> sink.nextIfNoLaterMovement(found, movement) }
+		return movementPort.existsLaterByParticipantIds(oldMovement.projectId!!, movement.participantIds(), movement.dateTime, excludedId)
+			.handle { exists, sink -> sink.nextOrError(oldMovement, laterMovementError(exists)) }
 	}
 
-	private fun SynchronousSink<MovementModel>.nextIfNoLaterMovement(found: List<ParticipantModel>, movement: MovementModel) {
-		if (found.none { it.lastMovement?.isAfter(movement.dateTime) == true }) return next(movement)
-		error(RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS))
+	/**
+	 * Vérifie qu'une entrée d'invités modifiée n'est pas repoussée après le départ de l'un de ses invités.
+	 * Les invités ne peuvent pas être retirés d'une entrée et ceux ajoutés n'ont pas encore de départ : le contenu enregistré suffit.
+	 */
+	fun validateGuestArrivalBeforeDeparture(oldMovement: MovementModel, movement: MovementModel): Mono<MovementModel> {
+		if (!oldMovement.isGuestArrival() || !movement.dateTime.isAfter(oldMovement.dateTime)) return Mono.just(oldMovement)
+		return validateNoGuestDepartureBetween(oldMovement, oldMovement.dateTime, movement.dateTime)
+	}
+
+	/**
+	 * Vérifie qu'une entrée d'invités restaurée ne se situe pas après le départ de l'un de ses invités,
+	 * quelle que soit la date de ce départ, puisque l'entrée était masquée quand il a été enregistré.
+	 */
+	fun validateRestoredGuestArrivalBeforeDeparture(movement: MovementModel): Mono<MovementModel> {
+		if (!movement.isGuestArrival()) return Mono.just(movement)
+		return validateNoGuestDepartureBetween(movement, from = null, to = movement.dateTime)
+	}
+
+	private fun validateNoGuestDepartureBetween(movement: MovementModel, from: ZonedDateTime?, to: ZonedDateTime): Mono<MovementModel> {
+		return movementPort.existsDepartureBetween(movement.projectId!!, movement.participantIds(), from, to)
+			.handle { exists, sink -> sink.nextOrError(movement, guestArrivalError(exists)) }
+	}
+
+	private fun guestArrivalError(exists: Boolean): RegistryException? {
+		if (!exists) return null
+		return RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_GUEST_ARRIVAL_AFTER_DEPARTURE)
+	}
+
+	private fun laterMovementError(exists: Boolean): RegistryException? {
+		if (!exists) return null
+		return RegistryException(UNPROCESSABLE_CONTENT, MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS)
 	}
 }

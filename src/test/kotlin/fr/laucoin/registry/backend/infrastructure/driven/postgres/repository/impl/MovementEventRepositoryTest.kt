@@ -10,6 +10,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset.UTC
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -34,6 +35,7 @@ class MovementEventRepositoryTest : TestContext() {
 	private val driverId = UUID.randomUUID()
 	private val vehicleId = UUID.randomUUID()
 	private val base = OffsetDateTime.of(2026, 7, 1, 8, 0, 0, 0, UTC)
+	private lateinit var definitiveDepartureId: UUID
 
 	@BeforeAll
 	fun setup() {
@@ -44,7 +46,7 @@ class MovementEventRepositoryTest : TestContext() {
 		insertMovement("OUT", "SHOPPING", 1, participantId)
 		insertMovement("IN", null, 3, participantId)
 		insertMovement("OUT", "MEDICAL", 4, participantId, visible = false)
-		insertMovement("OUT", "DEFINITIVE_DEPARTURE", 6, participantId)
+		definitiveDepartureId = insertMovement("OUT", "DEFINITIVE_DEPARTURE", 6, participantId)
 		insertMovement("OUT", "SHOPPING", 2, otherParticipantId)
 		insertVehicle()
 		insertMovement("OUT", "SHOPPING", 1, driverId, vehicle = vehicleId)
@@ -104,6 +106,90 @@ class MovementEventRepositoryTest : TestContext() {
 		assertTrue(events.isEmpty())
 	}
 
+	@Test
+	fun `Should find a later visible movement of the participants`() {
+		// Arrange
+		val at = base.plusHours(5).toZonedDateTime()
+
+		// Act
+		val exists = movementPort.existsLaterByParticipantIds(projectId, listOf(participantId), at, UUID.randomUUID()).block()!!
+
+		// Assert
+		assertTrue(exists)
+	}
+
+	@Test
+	fun `Should ignore the excluded movement and the hidden ones when looking for a later movement`() {
+		// Arrange
+		val at = base.plusHours(2).plusMinutes(30).toZonedDateTime()
+
+		// Act
+		val exists = movementPort.existsLaterByParticipantIds(projectId, listOf(participantId), base.plusHours(3).toZonedDateTime(), definitiveDepartureId).block()!!
+		val earlier = movementPort.existsLaterByParticipantIds(projectId, listOf(participantId), at, definitiveDepartureId).block()!!
+
+		// Assert
+		assertFalse(exists)
+		assertTrue(earlier)
+	}
+
+	@Test
+	fun `Should find no later movement for participants looked up in another project or without participants`() {
+		// Arrange
+		val at = base.toZonedDateTime()
+
+		// Act
+		val otherProject = movementPort.existsLaterByParticipantIds(otherProjectId, listOf(participantId), at, UUID.randomUUID()).block()!!
+		val noParticipant = movementPort.existsLaterByParticipantIds(projectId, emptyList(), at, UUID.randomUUID()).block()!!
+
+		// Assert
+		assertFalse(otherProject)
+		assertFalse(noParticipant)
+	}
+
+	@Test
+	fun `Should find a later movement without excluding any when creating`() {
+		// Arrange
+		val at = base.plusHours(5).toZonedDateTime()
+
+		// Act
+		val exists = movementPort.existsLaterByParticipantIds(projectId, listOf(participantId), at, null).block()!!
+		val afterAll = movementPort.existsLaterByParticipantIds(projectId, listOf(participantId), base.plusHours(6).toZonedDateTime(), null).block()!!
+
+		// Assert
+		assertTrue(exists)
+		assertFalse(afterAll)
+	}
+
+	@Test
+	fun `Should find a visible departure of the participants within the range only`() {
+		// Arrange
+		val from = base.toZonedDateTime()
+
+		// Act
+		val within = movementPort.existsDepartureBetween(projectId, listOf(participantId), from, base.plusHours(1).toZonedDateTime()).block()!!
+		val hiddenOnly = movementPort.existsDepartureBetween(projectId, listOf(participantId), base.plusHours(3).toZonedDateTime(), base.plusHours(5).toZonedDateTime()).block()!!
+		val otherProject = movementPort.existsDepartureBetween(otherProjectId, listOf(participantId), from, base.plusHours(8).toZonedDateTime()).block()!!
+
+		// Assert
+		assertTrue(within)
+		assertFalse(hiddenOnly)
+		assertFalse(otherProject)
+	}
+
+	@Test
+	fun `Should find a visible departure of the participants without lower bound`() {
+		// Arrange
+		val beforeAll = base.toZonedDateTime()
+
+		// Act
+		val untilFirst = movementPort.existsDepartureBetween(projectId, listOf(participantId), null, base.plusHours(1).toZonedDateTime()).block()!!
+		val none = movementPort.existsDepartureBetween(projectId, listOf(participantId), null, beforeAll).block()!!
+
+		// Assert
+		assertTrue(untilFirst)
+		assertFalse(none)
+	}
+
 	private fun insertParticipant(id: UUID) {
 		execute(
 			"INSERT INTO tb_participant (id, first_name, last_name, birthday, type, project_id) VALUES (:id, 'event', 'participant', CURRENT_DATE, 'REGISTERED', :p)",
@@ -125,7 +211,7 @@ class MovementEventRepositoryTest : TestContext() {
 		participant: UUID,
 		visible: Boolean = true,
 		vehicle: UUID? = null,
-	) {
+	): UUID {
 		val id = UUID.randomUUID()
 		execute(
 			"INSERT INTO tb_movement (id, date_time, type, reason, project_id, visible) VALUES (:id, :at, :type, NULLIF(:reason, ''), :p, :visible)",
@@ -135,6 +221,7 @@ class MovementEventRepositoryTest : TestContext() {
 			"INSERT INTO tb_movement_content (movement_id, participant_id, vehicle_id) VALUES (:m, :s, CAST(NULLIF(:v, '') AS uuid))",
 			"m" to id, "s" to participant, "v" to (vehicle?.toString() ?: ""),
 		)
+		return id
 	}
 
 	private fun execute(sql: String, vararg binds: Pair<String, Any>) {

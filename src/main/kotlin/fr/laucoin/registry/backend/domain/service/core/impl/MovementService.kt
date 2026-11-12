@@ -1,9 +1,5 @@
 package fr.laucoin.registry.backend.domain.service.core.impl
 
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DELETED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DISABLED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_ENABLED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
 import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGISTRY_PROJECT_OPTION_VEHICLE
 import fr.laucoin.registry.backend.domain.helper.MovementContentHelper
 import fr.laucoin.registry.backend.domain.helper.MovementParticipantHelper
@@ -85,7 +81,7 @@ class MovementService(
 			participants.saveGuestsIfNecessary(currentUser, movement, movement, newGuests),
 		)
 			.flatMap { content.validateNewMovementContent(movement) }
-			.flatMap { content.validateNoLaterMovementForLastDeparture(movement) }
+			.flatMap { content.validateNoLaterMovementForLastDeparture(movement, excludedId = null) }
 	}
 
 	private fun createMovement(currentUser: CurrentUserModel, movement: MovementModel): Mono<MovementModel> {
@@ -103,7 +99,8 @@ class MovementService(
 			.flatMap { findLockedMovement(projectId, id, isVisible = null) }
 			.flatMap { validateAddedOptions(currentUser, it, movement) }
 			.flatMap { rules.validateUpdatableFields(it, movement) }
-			.flatMap { rules.validateIsAlterable(it, MOVEMENT_CANNOT_BE_UPDATED) }
+			.flatMap { content.validateNoLaterMovementForLastDeparture(it, movement) }
+			.flatMap { content.validateGuestArrivalBeforeDeparture(it, movement) }
 			.flatMap { rules.validateNoCommunicationConflict(movement, it) }
 			.flatMap { validateActivityAndGuests(currentUser, movement, it, newGuests) }
 			.flatMap { content.validateUpdatedContent(projectId, it, movement).thenReturn(it) }
@@ -150,7 +147,6 @@ class MovementService(
 
 	override fun disableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
 		return findLockedMovement(projectId, id, isVisible = true)
-			.flatMap { rules.validateIsAlterable(it, MOVEMENT_CANNOT_BE_DISABLED) }
 			.updateVisibility(visibility = false)
 			.updateMovement(currentUser)
 			.flatMap { participants.refreshEffectiveDates(it) }
@@ -159,7 +155,8 @@ class MovementService(
 
 	override fun enableMovementById(currentUser: CurrentUserModel, projectId: UUID, id: UUID): Mono<MovementModel> {
 		return findLockedMovement(projectId, id, isVisible = false)
-			.flatMap { rules.validateIsAlterable(it, MOVEMENT_CANNOT_BE_ENABLED) }
+			.flatMap { content.validateNoLaterMovementForLastDeparture(it) }
+			.flatMap { content.validateRestoredGuestArrivalBeforeDeparture(it) }
 			.updateVisibility(visibility = true)
 			.updateMovement(currentUser)
 			.flatMap { participants.refreshEffectiveDates(it) }
@@ -168,7 +165,6 @@ class MovementService(
 
 	override fun deleteMovementById(projectId: UUID, id: UUID): Mono<Unit> {
 		return findLockedMovement(projectId, id, isVisible = null)
-			.flatMap { rules.validateIsAlterable(it, MOVEMENT_CANNOT_BE_DELETED) }
 			.flatMap { deleteAndRefresh(id, it) }
 			.`as`(transactionalOperator::transactional)
 	}

@@ -6,18 +6,16 @@ import fr.laucoin.registry.backend.domain.constant.ProjectPermissionConst.REGIST
 import org.mockito.kotlin.verifyNoMoreInteractions
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_ACTIVITY_NOT_VISIBLE
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DELETED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_DISABLED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_ENABLED
-import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_CANNOT_BE_UPDATED
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_COMMUNICATION_OUT_OF_MOVEMENT_DATETIME
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DATETIME_IN_FUTURE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_DRIVERS_NOT_MAJOR
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_GUEST_ARRIVAL_AFTER_DEPARTURE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_PARTICIPANTS_NOT_VISIBLE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_REMOVE_GUEST_CONTENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_CONTENT_TYPE
+import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_GUEST_DEPARTURE_CONTENT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_UPDATE_CHANGE_TYPE
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_FOUND_IN_MOVEMENT_PROJECT
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.MovementError.MOVEMENT_VEHICLES_NOT_VISIBLE
@@ -110,7 +108,7 @@ class MovementServiceTest {
 		MovementFeatureModel.Planned(MAX_PLANNED),
 		FUTURE_TOLERANCE,
 	)),
-		MovementContentHelper(participantPort, vehiclePort, activityPort, clock),
+		MovementContentHelper(participantPort, vehiclePort, activityPort, port, clock),
 		MovementParticipantHelper(participantPort, clock),
 		MovementPersistenceHelper(port, historyPort, rowLockPort),
 		transactionalOperator,
@@ -184,6 +182,16 @@ class MovementServiceTest {
 		@JvmStatic
 		fun `Should updateMovementById throw on changing movement structure`(): Stream<Arguments> = Stream.of(
 			Arguments.of(
+				guestDeparture(),
+				guestDeparture().apply { content = emptyList() },
+				MOVEMENT_UPDATE_CHANGE_GUEST_DEPARTURE_CONTENT,
+			),
+			Arguments.of(
+				guestDeparture(),
+				guestDeparture().apply { content = listOf(MovementContentModel().apply { participant = defaultParticipant(); poolName = "Pool" }) },
+				MOVEMENT_UPDATE_CHANGE_GUEST_DEPARTURE_CONTENT,
+			),
+			Arguments.of(
 				defaultMovement().apply { type = IN },
 				defaultMovement().apply { type = OUT },
 				MOVEMENT_UPDATE_CHANGE_TYPE,
@@ -209,10 +217,33 @@ class MovementServiceTest {
 		)
 
 		@JvmStatic
-		fun `Should updateMovementById throw on lastParticipantMovement`(): Stream<Arguments> = Stream.of(
-			Arguments.of(defaultMovement().apply { reason = DEFINITIVE_DEPARTURE }),
-			Arguments.of(defaultMovement().apply { type = OUT; contentType = GUEST }),
+		fun `Should updateMovementById a last participant movement`(): Stream<Arguments> = Stream.of(
+			Arguments.of(definitiveDeparture(), definitiveDeparture().apply { dateTime = dateTime.minusHours(1) }),
+			Arguments.of(guestDeparture(), guestDeparture().apply { dateTime = dateTime.minusHours(1) }),
 		)
+
+		@JvmStatic
+		fun `Should updateMovementById throw on a last participant movement before a later movement`(): Stream<Arguments> = Stream.of(
+			Arguments.of(definitiveDeparture(), definitiveDeparture().apply { dateTime = dateTime.minusHours(1) }),
+			Arguments.of(guestDeparture(), guestDeparture().apply { dateTime = dateTime.minusHours(1) }),
+			Arguments.of(
+				definitiveDeparture().apply { reason = null },
+				definitiveDeparture(),
+			),
+		)
+
+		private fun definitiveDeparture() = defaultMovement().apply {
+			type = OUT
+			contentType = REGISTERED
+			reason = DEFINITIVE_DEPARTURE
+			content = listOf(MovementContentModel().apply { participant = defaultParticipant() })
+		}
+
+		private fun guestDeparture() = defaultMovement().apply {
+			type = OUT
+			contentType = GUEST
+			content = listOf(MovementContentModel().apply { participant = defaultParticipant() })
+		}
 
 		@JvmStatic
 		fun `Should updateMovementById with guest participant`(): Stream<Arguments> = Stream.of(
@@ -221,21 +252,21 @@ class MovementServiceTest {
 		)
 
 		@JvmStatic
-		fun `Should disableMovementById throw on lastParticipantMovement`(): Stream<Arguments> = Stream.of(
-			Arguments.of(defaultMovement().apply { reason = DEFINITIVE_DEPARTURE }),
-			Arguments.of(defaultMovement().apply { type = OUT; contentType = GUEST }),
+		fun `Should disableMovementById a last participant movement`(): Stream<Arguments> = Stream.of(
+			Arguments.of(definitiveDeparture()),
+			Arguments.of(guestDeparture()),
 		)
 
 		@JvmStatic
-		fun `Should enableMovementById throw on lastParticipantMovement`(): Stream<Arguments> = Stream.of(
-			Arguments.of(defaultMovement().apply { reason = DEFINITIVE_DEPARTURE }),
-			Arguments.of(defaultMovement().apply { type = OUT; contentType = GUEST }),
+		fun `Should enableMovementById a last participant movement`(): Stream<Arguments> = Stream.of(
+			Arguments.of(definitiveDeparture()),
+			Arguments.of(guestDeparture()),
 		)
 
 		@JvmStatic
-		fun `Should deleteMovementById throw on lastParticipantMovement`(): Stream<Arguments> = Stream.of(
-			Arguments.of(defaultMovement().apply { reason = DEFINITIVE_DEPARTURE }),
-			Arguments.of(defaultMovement().apply { type = OUT; contentType = GUEST }),
+		fun `Should deleteMovementById a last participant movement`(): Stream<Arguments> = Stream.of(
+			Arguments.of(definitiveDeparture()),
+			Arguments.of(guestDeparture()),
 		)
 	}
 
@@ -258,7 +289,6 @@ class MovementServiceTest {
 	@Test
 	fun `Should createMovement throw on a definitive departure before a later movement`() {
 		// Arrange
-		val laterMovementParticipant = defaultParticipant().apply { lastMovement = searchAt.plusDays(1) }
 		val participantContent = MovementContentModel().apply { participant = defaultParticipant() }
 		val movement = defaultMovement().apply {
 			type = OUT
@@ -267,8 +297,8 @@ class MovementServiceTest {
 			content = listOf(participantContent)
 			dateTime = searchAt
 		}
-		whenever(participantPort.findAllByIds(any(), any(), anyOrNull()))
-			.thenReturn(Flux.just(defaultParticipant()), Flux.just(laterMovementParticipant))
+		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(port.existsLaterByParticipantIds(any(), any(), any(), anyOrNull())).thenReturn(Mono.just(true))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -278,6 +308,7 @@ class MovementServiceTest {
 		// Assert
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
 		assertEquals(MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS, result.code)
+		verify(port).existsLaterByParticipantIds(defaultProjectId, listOf(defaultParticipantId), searchAt, null)
 		verify(port, never()).create(any())
 	}
 
@@ -522,6 +553,7 @@ class MovementServiceTest {
 		}
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(port.existsLaterByParticipantIds(any(), any(), any(), anyOrNull())).thenReturn(Mono.just(false))
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
@@ -548,6 +580,7 @@ class MovementServiceTest {
 		}
 
 		whenever(participantPort.findAllByIds(any(), any(), anyOrNull())).thenReturn(Flux.just(defaultParticipant()))
+		whenever(port.existsLaterByParticipantIds(any(), any(), any(), anyOrNull())).thenReturn(Mono.just(false))
 		whenever(port.create(any())).thenReturn(Mono.just(movement))
 
 		// Act
@@ -617,22 +650,117 @@ class MovementServiceTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should updateMovementById throw on lastParticipantMovement`(movement: MovementModel) {
+	fun `Should updateMovementById a last participant movement`(oldMovement: MovementModel, updatedMovement: MovementModel) {
 		// Arrange
-		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+		whenever(port.existsLaterByParticipantIds(any(), any(), any(), anyOrNull())).thenReturn(Mono.just(false))
+		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
+
+		// Act
+		service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
+
+		// Assert
+		verify(port).existsLaterByParticipantIds(defaultProjectId, listOf(defaultParticipantId), updatedMovement.dateTime, defaultMovementId)
+		verify(historyPort).archiveMovement(any())
+		verify(port).update(any())
+		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
+	}
+
+	@ParameterizedTest
+	@MethodSource
+	fun `Should updateMovementById throw on a last participant movement before a later movement`(
+		oldMovement: MovementModel,
+		updatedMovement: MovementModel,
+	) {
+		// Arrange
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+		whenever(port.existsLaterByParticipantIds(any(), any(), any(), anyOrNull())).thenReturn(Mono.just(true))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, movement).block()
+			service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
 		}) as RegistryException
 
 		// Assert
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
-		assertEquals(MOVEMENT_CANNOT_BE_UPDATED, result.code)
-
-		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
+		assertEquals(MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS, result.code)
 		verify(port, never()).update(any())
 		verify(historyPort, never()).archiveMovement(any())
+	}
+
+	@Test
+	fun `Should updateMovementById throw on a guest arrival moved after a departure of its guests`() {
+		// Arrange
+		val oldMovement = guestArrival()
+		val updatedMovement = guestArrival().apply { dateTime = dateTime.plusHours(2); content = emptyList() }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+		whenever(port.existsDepartureBetween(any(), any(), any(), any())).thenReturn(Mono.just(true))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
+		assertEquals(MOVEMENT_GUEST_ARRIVAL_AFTER_DEPARTURE, result.code)
+		verify(port).existsDepartureBetween(defaultProjectId, listOf(defaultParticipantId), oldMovement.dateTime, updatedMovement.dateTime)
+		verify(port, never()).update(any())
+	}
+
+	@Test
+	fun `Should updateMovementById a guest arrival moved later without departure in between`() {
+		// Arrange
+		val oldMovement = guestArrival()
+		val updatedMovement = guestArrival().apply { dateTime = dateTime.plusHours(2); content = emptyList() }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+		whenever(port.existsDepartureBetween(any(), any(), any(), any())).thenReturn(Mono.just(false))
+		whenever(communicationPort.countAllByMovementId(any(), any(), any())).thenReturn(Mono.just(0L))
+		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
+
+		// Act
+		service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
+
+		// Assert
+		verify(port).update(any())
+	}
+
+	@Test
+	fun `Should updateMovementById not look for departures on a guest arrival moved earlier`() {
+		// Arrange
+		val oldMovement = guestArrival()
+		val updatedMovement = guestArrival().apply { dateTime = dateTime.minusHours(2); content = emptyList() }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
+
+		// Act
+		service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
+
+		// Assert
+		verify(port, never()).existsDepartureBetween(any(), any(), any(), any())
+		verify(port).update(any())
+	}
+
+	private fun guestArrival() = defaultMovement().apply {
+		type = IN
+		contentType = GUEST
+		content = listOf(MovementContentModel().apply { participant = defaultParticipant() })
+	}
+
+	@Test
+	fun `Should updateMovementById not look for later movements on a regular movement`() {
+		// Arrange
+		val oldMovement = defaultMovement().apply { type = IN; contentType = REGISTERED }
+		val updatedMovement = defaultMovement().apply { type = IN; contentType = REGISTERED }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(oldMovement))
+		whenever(port.update(any())).thenReturn(Mono.just(updatedMovement))
+
+		// Act
+		service.updateMovementById(optionHolder(), defaultProjectId, defaultMovementId, updatedMovement).block()
+
+		// Assert
+		verify(port, never()).existsLaterByParticipantIds(any(), any(), any(), anyOrNull())
+		verify(port).update(any())
 	}
 
 	@ParameterizedTest
@@ -912,21 +1040,17 @@ class MovementServiceTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should disableMovementById throw on lastParticipantMovement`(movement: MovementModel) {
+	fun `Should disableMovementById a last participant movement`(movement: MovementModel) {
 		// Arrange
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.update(any())).thenReturn(Mono.just(movement))
 
 		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
-		}) as RegistryException
+		service.disableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
 
 		// Assert
-		assertEquals(UNPROCESSABLE_CONTENT, result.status)
-		assertEquals(MOVEMENT_CANNOT_BE_DISABLED, result.code)
-
-		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = true)
-		verify(port, never()).update(any())
+		verify(port).update(movement.apply { visible = false })
+		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 	}
 
 	@Test
@@ -948,9 +1072,28 @@ class MovementServiceTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should enableMovementById throw on lastParticipantMovement`(movement: MovementModel) {
+	fun `Should enableMovementById a last participant movement`(movement: MovementModel) {
 		// Arrange
+		movement.visible = false
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.existsLaterByParticipantIds(any(), any(), any(), anyOrNull())).thenReturn(Mono.just(false))
+		whenever(port.update(any())).thenReturn(Mono.just(movement))
+
+		// Act
+		service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+
+		// Assert
+		verify(port).existsLaterByParticipantIds(defaultProjectId, listOf(defaultParticipantId), movement.dateTime, defaultMovementId)
+		verify(port).update(movement.apply { visible = true })
+		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
+	}
+
+	@Test
+	fun `Should enableMovementById throw on a guest arrival after a departure of its guests`() {
+		// Arrange
+		val movement = guestArrival().apply { visible = false }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.existsDepartureBetween(any(), any(), anyOrNull(), any())).thenReturn(Mono.just(true))
 
 		// Act
 		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
@@ -959,9 +1102,48 @@ class MovementServiceTest {
 
 		// Assert
 		assertEquals(UNPROCESSABLE_CONTENT, result.status)
-		assertEquals(MOVEMENT_CANNOT_BE_ENABLED, result.code)
+		assertEquals(MOVEMENT_GUEST_ARRIVAL_AFTER_DEPARTURE, result.code)
+		verify(port).existsDepartureBetween(defaultProjectId, listOf(defaultParticipantId), null, movement.dateTime)
+		verify(port, never()).update(any())
+	}
 
-		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = false)
+	@Test
+	fun `Should enableMovementById a guest arrival before any departure of its guests`() {
+		// Arrange
+		val movement = guestArrival().apply { visible = false }
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.existsDepartureBetween(any(), any(), anyOrNull(), any())).thenReturn(Mono.just(false))
+		whenever(port.update(any())).thenReturn(Mono.just(movement))
+
+		// Act
+		service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+
+		// Assert
+		verify(port).update(movement.apply { visible = true })
+		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
+	}
+
+	@Test
+	fun `Should enableMovementById throw on a definitive departure before a later movement`() {
+		// Arrange
+		val movement = defaultMovement().apply {
+			type = OUT
+			contentType = REGISTERED
+			reason = DEFINITIVE_DEPARTURE
+			visible = false
+			content = listOf(MovementContentModel().apply { participant = defaultParticipant() })
+		}
+		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.existsLaterByParticipantIds(any(), any(), any(), anyOrNull())).thenReturn(Mono.just(true))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.enableMovementById(currentUser(), defaultProjectId, defaultMovementId).block()
+		}) as RegistryException
+
+		// Assert
+		assertEquals(UNPROCESSABLE_CONTENT, result.status)
+		assertEquals(MOVEMENT_DEFINITIVE_DEPARTURE_BEFORE_LATER_MOVEMENTS, result.code)
 		verify(port, never()).update(any())
 	}
 
@@ -983,21 +1165,17 @@ class MovementServiceTest {
 
 	@ParameterizedTest
 	@MethodSource
-	fun `Should deleteMovementById throw on lastParticipantMovement`(movement: MovementModel) {
+	fun `Should deleteMovementById a last participant movement`(movement: MovementModel) {
 		// Arrange
 		whenever(port.findById(any(), any(), anyOrNull())).thenReturn(Mono.just(movement))
+		whenever(port.deleteById(any())).thenReturn(Mono.empty())
 
 		// Act
-		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
-			service.deleteMovementById(defaultProjectId, defaultMovementId).block()
-		}) as RegistryException
+		service.deleteMovementById(defaultProjectId, defaultMovementId).block()
 
 		// Assert
-		assertEquals(UNPROCESSABLE_CONTENT, result.status)
-		assertEquals(MOVEMENT_CANNOT_BE_DELETED, result.code)
-
-		verify(port, times(2)).findById(defaultProjectId, defaultMovementId, isVisible = null)
-		verify(port, never()).deleteById(any())
+		verify(port).deleteById(defaultMovementId)
+		verify(participantPort).refreshEffectiveDates(listOf(defaultParticipantId))
 	}
 
 	@Test

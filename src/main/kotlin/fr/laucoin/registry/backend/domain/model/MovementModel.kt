@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.constant.DateTimeConst.EPOCH_UTC
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import java.time.ZonedDateTime
@@ -46,7 +47,19 @@ data class MovementModel(
 	}
 
 	fun isLastParticipantMovement(): Boolean {
-		return reason === DEFINITIVE_DEPARTURE || (type === OUT && isGuestsMovement())
+		return reason === DEFINITIVE_DEPARTURE || isGuestDeparture()
+	}
+
+	fun isGuestDeparture(): Boolean {
+		return type === OUT && isGuestsMovement()
+	}
+
+	fun isGuestArrival(): Boolean {
+		return type === IN && isGuestsMovement()
+	}
+
+	fun keepsContentOf(movement: MovementModel): Boolean {
+		return getNewContent(movement).isEmpty() && movement.getNewContent(this).isEmpty()
 	}
 
 	private fun isGuestsMovement(): Boolean {
