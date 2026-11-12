@@ -252,6 +252,28 @@ class TokenConverterServiceTest {
 	}
 
 	@Test
+	fun `Should convert refuse a blocked user on the first sign-in that links it by email`() {
+		// Arrange
+		val blockedUser = currentUser().apply { role = USER_ROLE; oidcId = null; visible = false }
+		whenever(jwt.hasClaim(any())).thenCallRealMethod()
+		whenever(userUseCase.findUserByOidcId(any(), anyOrNull())).thenReturn(Mono.empty())
+		whenever(userUseCase.findUserByEmail(any(), anyOrNull())).thenReturn(Flux.just(blockedUser))
+		whenever(jwt.getClaimAsBoolean(EMAIL_VERIFIED_KEY)).thenReturn(true)
+		whenever(userUseCase.linkUserToOidcId(any(), any())).thenReturn(Mono.just(blockedUser))
+
+		// Act
+		val result = Exceptions.unwrap(assertThrows(Exception::class.java) {
+			service.convert(jwt).block()
+		}) as JwtConversionException
+
+		// Assert
+		assertEquals(LOCKED, result.status)
+		assertEquals(AUTH_BLOCKED_ACCOUNT, result.message)
+		verify(userUseCase).linkUserToOidcId(blockedUser, defaultUserOidcId)
+		verifyNoInteractions(roleService)
+	}
+
+	@Test
 	fun `Should convert refuse to link an existing user when the email is not verified`() {
 		// Arrange
 		val existingUser = currentUser().apply { role = USER_ROLE }

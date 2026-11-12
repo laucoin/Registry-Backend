@@ -103,7 +103,7 @@ class TokenConverterService(
 
 			matches.size == 1 && token.emailVerified && matches.first().oidcId == null -> {
 				log.info("Linking existing user with the given email to OIDC ID \"{}\"", token.oidcId)
-				userUseCase.linkUserToOidcId(matches.first(), token.oidcId)
+				userUseCase.linkUserToOidcId(matches.first(), token.oidcId).throwOnBlockedUser()
 			}
 
 			else -> {
