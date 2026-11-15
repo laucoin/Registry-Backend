@@ -1,7 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.domain.model.RoleModel
+import org.junit.jupiter.api.Assertions.assertEquals
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.role.RoleEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.RoleEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.RoleEntityMapperImpl
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IRoleEntityRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -12,7 +15,7 @@ import reactor.core.publisher.Flux
 
 class RoleModelPostgresRepositoryTest {
 	private val repository: IRoleEntityRepository = mock()
-	private val mapper: RoleEntityMapper = spy()
+	private val mapper: RoleEntityMapper = spy(RoleEntityMapperImpl())
 	private val modelRepository: RoleModelPostgresRepository =
 		RoleModelPostgresRepository(repository, mapper)
 
@@ -23,9 +26,10 @@ class RoleModelPostgresRepositoryTest {
 		whenever(repository.findUserRoles()).thenReturn(Flux.just(role))
 
 		// Act
-		modelRepository.findUserRoles().blockFirst()
+		val result = modelRepository.findUserRoles().blockFirst()
 
 		// Assert
+		assertEquals(RoleModel(role = "ROLE_USER", level = 0, permissions = emptyList()), result)
 		verify(repository).findUserRoles()
 		verify(mapper).toModel(role)
 	}
@@ -37,9 +41,10 @@ class RoleModelPostgresRepositoryTest {
 		whenever(repository.findProjectRoles()).thenReturn(Flux.just(role))
 
 		// Act
-		modelRepository.findProjectRoles().blockFirst()
+		val result = modelRepository.findProjectRoles().blockFirst()
 
 		// Assert
+		assertEquals(RoleModel(role = "ROLE_PROJECT", level = 0, permissions = emptyList()), result)
 		verify(repository).findProjectRoles()
 		verify(mapper).toModel(role)
 	}

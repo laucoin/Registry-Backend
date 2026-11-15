@@ -1,8 +1,9 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.PROJECT_PROFILE_STATUS_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum.ACCEPTED
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -13,7 +14,7 @@ import org.mockito.kotlin.whenever
 
 class ProjectProfileStatusReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper: ProjectProfileStatusReaderDtoMapper = ProjectProfileStatusReaderDtoMapper(translateService)
+	private val mapper: ProjectProfileStatusReaderDtoMapper = ProjectProfileStatusReaderDtoMapperImpl(LabelMappingHelper(translateService))
 
 	@Test
 	fun `Should toDto convert status as String to LabelDto`() {

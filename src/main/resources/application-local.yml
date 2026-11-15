@@ -1,4 +1,8 @@
 registry:
+  feature:
+    profile:
+      invite-by-email:
+        enabled: true
   security:
     cookie:
       secure: false

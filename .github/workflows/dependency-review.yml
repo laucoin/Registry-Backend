@@ -1,15 +1,15 @@
 name: Dependency Review
 
-# Scans the dependency changes introduced by a PR and fails if any pull in a
-# known vulnerability (or a disallowed license). Requires the Dependency Graph
-# to be enabled (Settings → Code security).
+# Analyse les changements de dépendances introduits par une PR et échoue si l'un d'eux apporte une
+# vulnérabilité connue (ou une licence interdite). Nécessite que le Dependency Graph
+# soit activé (Settings → Code security).
 on:
   pull_request:
     branches: [main]
 
 permissions:
   contents: read
-  pull-requests: write # post the summary comment
+  pull-requests: write # publier le commentaire de synthèse
 
 jobs:
   dependency-review:

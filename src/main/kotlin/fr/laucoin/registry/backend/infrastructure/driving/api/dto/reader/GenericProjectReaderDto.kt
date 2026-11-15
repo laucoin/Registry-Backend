@@ -1,5 +1,7 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader
 
+import java.util.UUID
+
 abstract class GenericProjectReaderDto(
-	var project: ProjectReaderDto? = null,
+	var projectId: UUID? = null,
 ): GenericReaderDto()

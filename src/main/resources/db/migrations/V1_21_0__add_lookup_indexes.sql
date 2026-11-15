@@ -1,0 +1,3 @@
+CREATE INDEX tb_movement_content_index_participant_and_movement_id ON tb_movement_content (participant_id, movement_id);
+
+CREATE INDEX tb_group_content_index_participant_and_group_id ON tb_group_content (participant_id, group_id);

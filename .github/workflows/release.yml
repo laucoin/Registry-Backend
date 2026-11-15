@@ -1,8 +1,8 @@
 name: Release
 
-# Runs on every merge to main. main is the DEV baseline; tests are intentionally
-# NOT run here (branch protection "Require branches to be up to date before
-# merging" guarantees the PR pipeline already validated this exact tree).
+# S'exécute à chaque merge sur main. main est la base DEV ; les tests ne sont volontairement
+# PAS exécutés ici (la protection de branche « Require branches to be up to date before
+# merging » garantit que le pipeline de la PR a déjà validé exactement cet arbre).
 on:
   push:
     branches: [main]
@@ -24,8 +24,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7
-      # The Dockerfile is a self-contained multi-stage build (compiles the jar
-      # in its build stage), so no Gradle setup is needed here.
+      # Le Dockerfile est un build multi-étapes autonome (il compile le jar
+      # dans son étape de build), aucune configuration Gradle n'est donc nécessaire ici.
       - uses: ./.github/actions/docker-publish
         with:
           registry: ${{ env.REGISTRY }}
@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0          # semantic-release needs full history + tags
+          fetch-depth: 0          # semantic-release a besoin de tout l'historique et des tags
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -64,10 +64,10 @@ jobs:
             @semantic-release/release-notes-generator@14.1.1
             conventional-changelog-conventionalcommits@9.3.1
         env:
-          # Must be able to push the CHANGELOG/version.properties bump to the
-          # protected main branch (GITHUB_TOKEN cannot bypass branch protection).
-          # Use a PAT or GitHub App token allowed to bypass. Falls back to the
-          # default token if the secret is unset.
+          # Doit pouvoir pousser la mise à jour de CHANGELOG/version.properties sur la
+          # branche main protégée (GITHUB_TOKEN ne peut pas contourner la protection de branche).
+          # Utiliser un PAT ou un token GitHub App autorisé à la contourner. Se rabat sur le
+          # token par défaut si le secret n'est pas défini.
           GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
   release-image:
@@ -81,9 +81,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main             # pick up the version.properties bump just pushed
-      # version.properties is written into the build context; the Dockerfile's
-      # build stage reads it, so the jar embeds the released version.
+          ref: main             # récupérer la mise à jour de version.properties qui vient d'être poussée
+      # version.properties est écrit dans le contexte de build ; l'étape de build
+      # du Dockerfile le lit, donc le jar embarque la version publiée.
       - name: Pin build to released version
         run: echo "version=${{ needs.release.outputs.version }}" > version.properties
       - uses: ./.github/actions/docker-publish

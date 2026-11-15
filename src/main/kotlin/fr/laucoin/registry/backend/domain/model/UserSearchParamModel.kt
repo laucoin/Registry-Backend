@@ -1,15 +1,31 @@
 package fr.laucoin.registry.backend.domain.model
 
-data class UserSearchParamModel(
-	var visibilitySearched: Boolean? = null,
-) {
-	var textSearched: String? = null
+import fr.laucoin.registry.backend.domain.annotation.Default
+import java.util.UUID
 
+
+data class UserSearchParamModel(
+	var isVisible: Boolean? = null,
+	var role: String? = null,
+	var sort: SortModel? = null,
+) {
+	var query: String? = null
+
+	var memberOfProjectId: UUID? = null
+
+	@Default
 	constructor(
-		textSearched: String? = null,
-		visibilitySearched: Boolean? = null,
-	): this(visibilitySearched) {
-		this.textSearched = if (textSearched.isNullOrBlank()) null else textSearched
+		query: String? = null,
+		isVisible: Boolean? = null,
+		role: String? = null,
+		sort: SortModel? = null,
+	): this(isVisible, role?.takeUnless { it.isBlank() }, sort = sort) {
+		this.query = if (query.isNullOrBlank()) null else query
+	}
+
+	companion object {
+		val SORT_FIELDS = setOf(
+			"firstName", "lastName", "email", "role", "birthday", "lastLogin",
+		)
 	}
 }
-

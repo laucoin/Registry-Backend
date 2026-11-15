@@ -1,24 +1,33 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.VehicleCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.VehicleModel
 import fr.laucoin.registry.backend.domain.model.VehicleSearchParamModel
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IVehiclePort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.vehicle.VehicleEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.VehicleEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IVehicleEntityRepository
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Adaptateur Postgres du port du véhicule.
+ * Périmètre : Délègue au repository d'entités et mappe les entités vers les modèles du domaine.
+ * Limites : Ne porte aucune règle métier.
+ */
 @Service
 class VehicleModelPostgresRepository(
 	private val repository: IVehicleEntityRepository,
 	private val mapper: VehicleEntityMapper,
+	private val clock: Clock,
 ): IVehiclePort {
 	override fun findPage(
 		projectId: UUID,
@@ -27,14 +36,22 @@ class VehicleModelPostgresRepository(
 	): Mono<PageModel<VehicleModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
-			pageable.limit,
-			pageable.offset,
-		).toPageModel(pageable, VehicleEntity::fullCount, mapper::toModel)
+			searchParams.isVisible,
+			VehicleCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+				brand = searchParams.brand,
+				model = searchParams.model,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
+		).toPageModel(pageable, clock, VehicleEntity::fullCount, mapper::toModel)
 	}
 
 	override fun countAll(
@@ -43,28 +60,36 @@ class VehicleModelPostgresRepository(
 	): Mono<Long> {
 		return repository.countAll(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
+			searchParams.isVisible,
+			VehicleCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+				brand = searchParams.brand,
+				model = searchParams.model,
+			),
 		)
 	}
 
-	override fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<VehicleModel> {
-		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, visibilitySearched)
+	override fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<VehicleModel> {
+		return if (ids.isEmpty()) Flux.empty() else repository.findAllByIds(projectId, ids, isVisible)
 			.map(mapper::toModel)
 	}
 
 	override fun findWithLimit(limit: Int, projectId: UUID, searchParams: VehicleSearchParamModel): Flux<VehicleModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.visibilitySearched,
-			searchParams.availabilitySearched,
-			searchParams.presenceSearched,
-			searchParams.dateTimeSearched,
-			limit,
+			searchParams.isVisible,
+			VehicleCriteria(
+				query = searchParams.query,
+				isAvailable = searchParams.isAvailable,
+				isPresent = searchParams.isPresent,
+				at = searchParams.at,
+				brand = searchParams.brand,
+				model = searchParams.model,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
 	}
 
@@ -72,8 +97,8 @@ class VehicleModelPostgresRepository(
 		return repository.findUnusedSince(dateThreshold)
 	}
 
-	override fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<VehicleModel> {
-		return repository.findById(projectId, id, visibilitySearched).map(mapper::toModel)
+	override fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<VehicleModel> {
+		return repository.findById(projectId, id, isVisible).map(mapper::toModel)
 	}
 
 	override fun create(element: VehicleModel): Mono<VehicleModel> {

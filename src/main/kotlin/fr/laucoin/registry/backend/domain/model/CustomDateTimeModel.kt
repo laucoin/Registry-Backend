@@ -1,6 +1,8 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.annotation.Default
 import com.fasterxml.jackson.annotation.JsonIgnore
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
@@ -13,7 +15,7 @@ import java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME
 import java.util.Objects
 
 
-data class CustomDateTimeModel(
+data class CustomDateTimeModel @Default constructor(
 	var date: LocalDate,
 	var time: OffsetTime? = null,
 ) {
@@ -25,8 +27,8 @@ data class CustomDateTimeModel(
 		val EPOCH = CustomDateTimeModel(LocalDate.EPOCH)
 
 		@JsonIgnore
-		fun now(): CustomDateTimeModel {
-			return CustomDateTimeModel(ZonedDateTime.now(ZoneId.of("UTC")))
+		fun now(clock: Clock): CustomDateTimeModel {
+			return CustomDateTimeModel(ZonedDateTime.now(clock.withZone(ZoneOffset.UTC)))
 		}
 	}
 
@@ -56,8 +58,8 @@ data class CustomDateTimeModel(
 	private fun clampOffsetTimeToPostgresRange(time: OffsetTime): OffsetTime {
 		val offsetSeconds = time.offset.totalSeconds
 
-		// Postgres only supports a range of -14 to +14 hours for offsets
-		// (OffsetTime.MIN/MAX are outside this range (e.g., -18 hours))
+		// Postgres ne supporte qu'une plage de -14 à +14 heures pour les décalages
+		// (OffsetTime.MIN/MAX sont hors de cette plage (p. ex. -18 heures))
 		val minOffsetSeconds = ZoneOffset.ofHours(-14).totalSeconds
 		val maxOffsetSeconds = ZoneOffset.ofHours(14).totalSeconds
 
@@ -86,9 +88,7 @@ data class CustomDateTimeModel(
 	}
 
 	fun plusHours(hours: Long): CustomDateTimeModel {
-		if (Objects.nonNull(time)) {
-			time = time!!.plusHours(hours)
-		}
-		return this
+		val shifted = time?.atDate(date)?.plusHours(hours) ?: return copy()
+		return CustomDateTimeModel(shifted.toLocalDate(), shifted.toOffsetTime())
 	}
 }

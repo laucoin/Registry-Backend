@@ -1,35 +1,29 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.writer
 
-import fr.laucoin.registry.backend.domain.enumeration.AlertStatusEnum.IN_PROGRESS
 import fr.laucoin.registry.backend.domain.model.AlertModel
-import fr.laucoin.registry.backend.domain.model.CommunicationModel
-import fr.laucoin.registry.backend.domain.model.MovementModel
-import fr.laucoin.registry.backend.domain.model.ProjectModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
-import java.util.Optional
 import java.util.UUID
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.domain.model.CommunicationModel
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.IdReferenceDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.writer.AlertCreationWriterDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.BeanMapping
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class AlertCreationWriterDtoMapper: IGenericProjectWriterDtoMapper<AlertModel, AlertCreationWriterDto> {
-	override fun toModel(
-		dto: AlertCreationWriterDto,
-		projectId: UUID
-	): AlertModel {
-		return AlertModel().apply {
-			title = dto.title
-			dateTime = dto.dateTime!!
-			status = IN_PROGRESS
-			communications = listOf(
-				CommunicationModel().apply {
-					dateTime = dto.dateTime!!
-					message = dto.message
-					movement = Optional.ofNullable(dto.movementId).map { MovementModel().apply { id = dto.movementId } }
-						.orElse(null)
-					project = ProjectModel().apply { id = projectId }
-				}
-			)
-			project = ProjectModel().apply { id = projectId }
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [IdReferenceDtoMapper::class])
+interface AlertCreationWriterDtoMapper: IGenericProjectWriterDtoMapper<AlertModel, AlertCreationWriterDto> {
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "title", source = "dto.title")
+	@Mapping(target = "dateTime", source = "dto.dateTime")
+	@Mapping(target = "status", constant = "IN_PROGRESS")
+	@Mapping(target = "communications", expression = "java(java.util.List.of(toCommunication(dto, projectId)))")
+	@Mapping(target = "projectId", source = "projectId")
+	override fun toModel(dto: AlertCreationWriterDto, projectId: UUID): AlertModel
+
+	@BeanMapping(ignoreByDefault = true)
+	@Mapping(target = "dateTime", source = "dto.dateTime")
+	@Mapping(target = "message", source = "dto.message")
+	@Mapping(target = "movement", source = "dto.movementId")
+	@Mapping(target = "projectId", source = "projectId")
+	fun toCommunication(dto: AlertCreationWriterDto, projectId: UUID): CommunicationModel
 }

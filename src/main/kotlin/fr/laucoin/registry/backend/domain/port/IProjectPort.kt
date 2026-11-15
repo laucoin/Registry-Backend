@@ -10,8 +10,13 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Port driven donnant au domaine l'accès à la persistance du projet.
+ * Périmètre : Déclare les lectures, recherches et écritures du projet dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
+ */
 interface IProjectPort {
-	fun findById(id: UUID, visibilitySearched: Boolean?): Mono<ProjectModel>
+	fun findById(id: UUID, isVisible: Boolean?): Mono<ProjectModel>
 	fun findPage(
 		pageable: PageableModel,
 		searchParams: ProjectSearchParamModel,

@@ -1,19 +1,19 @@
-## 📝 Summary
+## 📝 Résumé
 
-<!-- What does this change do, and why? -->
+<!-- Que fait ce changement, et pourquoi ? -->
 
 ## 🏗️ Type
 
-- [ ] Feature
-- [ ] Fix
-- [ ] Refactor
-- [ ] Breaking change
-- [ ] Chore / CI / deps
+- [ ] Fonctionnalité
+- [ ] Correctif
+- [ ] Refactorisation
+- [ ] Changement cassant
+- [ ] Chore / CI / dépendances
 
-## 💥 Breaking changes
+## 💥 Changements cassants
 
-<!-- delete if none -->
+<!-- supprimer s'il n'y en a pas -->
 
-## 💬️ Notes for reviewers
+## 💬️ Notes pour les relecteurs
 
-<!-- focus areas, tradeoffs, follow-ups -->
+<!-- points d'attention, compromis, suites à donner -->

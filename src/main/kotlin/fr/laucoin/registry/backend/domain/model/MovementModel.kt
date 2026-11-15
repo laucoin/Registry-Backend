@@ -1,8 +1,10 @@
 package fr.laucoin.registry.backend.domain.model
 
+import fr.laucoin.registry.backend.domain.constant.DateTimeConst.EPOCH_UTC
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum
 import fr.laucoin.registry.backend.domain.enumeration.MovementReasonEnum.DEFINITIVE_DEPARTURE
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
+import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.IN
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum.OUT
 import fr.laucoin.registry.backend.domain.enumeration.ParticipantTypeEnum
 import java.time.ZonedDateTime
@@ -10,9 +12,10 @@ import java.util.Objects
 import java.util.UUID
 
 data class MovementModel(
-	var dateTime: ZonedDateTime = ZonedDateTime.now(),
+	var dateTime: ZonedDateTime = EPOCH_UTC,
 	var type: MovementTypeEnum? = null,
 	var reason: MovementReasonEnum? = null,
+	var lastCommunicationDateTime: ZonedDateTime? = null,
 	var activity: ActivityModel? = null,
 	var contentType: ParticipantTypeEnum = ParticipantTypeEnum.REGISTERED,
 	var content: List<MovementContentModel> = emptyList(),
@@ -23,6 +26,8 @@ data class MovementModel(
 		var participant: ParticipantModel? = null,
 		var vehicle: VehicleModel? = null,
 	)
+
+	fun participantIds(): List<UUID> = content.mapNotNull { it.participant?.id }.distinct()
 
 	fun getNewContent(movement: MovementModel): List<MovementContentModel> {
 		return movement.content
@@ -42,7 +47,19 @@ data class MovementModel(
 	}
 
 	fun isLastParticipantMovement(): Boolean {
-		return reason === DEFINITIVE_DEPARTURE || (type === OUT && isGuestsMovement())
+		return reason === DEFINITIVE_DEPARTURE || isGuestDeparture()
+	}
+
+	fun isGuestDeparture(): Boolean {
+		return type === OUT && isGuestsMovement()
+	}
+
+	fun isGuestArrival(): Boolean {
+		return type === IN && isGuestsMovement()
+	}
+
+	fun keepsContentOf(movement: MovementModel): Boolean {
+		return getNewContent(movement).isEmpty() && movement.getNewContent(this).isEmpty()
 	}
 
 	private fun isGuestsMovement(): Boolean {

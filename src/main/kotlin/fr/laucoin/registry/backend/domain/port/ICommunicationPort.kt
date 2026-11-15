@@ -8,19 +8,18 @@ import java.util.UUID
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Port driven donnant au domaine l'accès à la persistance de la communication.
+ * Périmètre : Déclare les lectures, recherches et écritures de la communication dont dépendent les services.
+ * Limites : Contrat uniquement ; l'adaptateur Postgres porte le SQL, les entités et le mapping.
+ */
 interface ICommunicationPort {
-	fun findById(projectId: UUID, id: UUID, visibilitySearched: Boolean?): Mono<CommunicationModel>
-	fun findPage(
-		projectId: UUID,
-		pageable: PageableModel,
-		searchParams: CommunicationSearchParamModel,
-	): Mono<PageModel<CommunicationModel>>
-
+	fun findById(projectId: UUID, id: UUID, isVisible: Boolean?): Mono<CommunicationModel>
 	fun findByMovementIdsWithLimit(
 		limit: Int,
 		projectId: UUID,
 		movementIds: List<UUID>,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 	): Flux<Pair<UUID, List<CommunicationModel>>>
 
 	fun findPageByMovementId(
@@ -34,7 +33,7 @@ interface ICommunicationPort {
 		limit: Int,
 		projectId: UUID,
 		alertIds: List<UUID>,
-		visibilitySearched: Boolean?,
+		isVisible: Boolean?,
 	): Flux<Pair<UUID, List<CommunicationModel>>>
 
 	fun findPageByAlertId(
@@ -44,7 +43,7 @@ interface ICommunicationPort {
 		searchParams: CommunicationSearchParamModel
 	): Mono<PageModel<CommunicationModel>>
 
-	fun findAllByIds(projectId: UUID, ids: List<UUID>, visibilitySearched: Boolean?): Flux<CommunicationModel>
+	fun findAllByIds(projectId: UUID, ids: List<UUID>, isVisible: Boolean?): Flux<CommunicationModel>
 	fun countAllByMovementId(projectId: UUID, movementId: UUID, searchParams: CommunicationSearchParamModel): Mono<Long>
 	fun countAllByAlertId(projectId: UUID, alertId: UUID, searchParams: CommunicationSearchParamModel): Mono<Long>
 

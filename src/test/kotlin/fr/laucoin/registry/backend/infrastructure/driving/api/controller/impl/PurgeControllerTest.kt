@@ -2,29 +2,26 @@ package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
 
 import fr.laucoin.registry.backend.domain.constant.ErrorConst.PurgeError.PURGE_DATE_THRESHOLD_IN_FUTURE
 import fr.laucoin.registry.backend.domain.constant.UserPermissionConst.REGISTRY_JOB_C
-import fr.laucoin.registry.backend.domain.service.IActivityService
-import fr.laucoin.registry.backend.domain.service.IAlertService
-import fr.laucoin.registry.backend.domain.service.ICommunicationService
-import fr.laucoin.registry.backend.domain.service.IGroupService
-import fr.laucoin.registry.backend.domain.service.IMovementService
-import fr.laucoin.registry.backend.domain.service.IParticipantService
-import fr.laucoin.registry.backend.domain.service.IProjectService
-import fr.laucoin.registry.backend.domain.service.IUserService
-import fr.laucoin.registry.backend.domain.service.IVehicleService
+import fr.laucoin.registry.backend.domain.constant.ValidationLimitsConst.PURGE_REPORTED_IDS_MAX
+import fr.laucoin.registry.backend.domain.model.ProjectConfigurationPurgeModel
+import fr.laucoin.registry.backend.domain.model.ProjectContentPurgeModel
+import fr.laucoin.registry.backend.domain.service.usecase.IPlatformPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectConfigurationPurgeUseCase
+import fr.laucoin.registry.backend.domain.service.usecase.IProjectContentPurgeUseCase
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectConfigurationPurgeReaderDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectContentPurgeReaderDto
-import fr.laucoin.registry.backend.test.ModelExt.projectId
+import fr.laucoin.registry.backend.test.ModelExt.defaultProjectId
 import fr.laucoin.registry.backend.test.TestContext
-import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.assertError
+import fr.laucoin.registry.backend.test.WebTestClientExt.authenticate
 import fr.laucoin.registry.backend.test.WebTestClientExt.body
 import fr.laucoin.registry.backend.test.WebTestClientExt.uriBuilder
-import java.time.LocalDate
-import java.util.UUID
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
@@ -34,46 +31,32 @@ import org.springframework.http.HttpStatus.OK
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import java.time.ZoneOffset
+import java.time.LocalDate
+import java.util.UUID
 
-class PurgeControllerTest: TestContext() {
+class PurgeControllerTest : TestContext() {
 	@MockitoBean
-	private lateinit var userService: IUserService
-
-	@MockitoBean
-	private lateinit var projectService: IProjectService
-
-	@MockitoBean
-	private lateinit var movementService: IMovementService
+	private lateinit var platform: IPlatformPurgeUseCase
 
 	@MockitoBean
-	private lateinit var alertService: IAlertService
+	private lateinit var content: IProjectContentPurgeUseCase
 
 	@MockitoBean
-	private lateinit var communicationService: ICommunicationService
-
-	@MockitoBean
-	private lateinit var activityService: IActivityService
-
-	@MockitoBean
-	private lateinit var vehicleService: IVehicleService
-
-	@MockitoBean
-	private lateinit var participantService: IParticipantService
-
-	@MockitoBean
-	private lateinit var groupService: IGroupService
+	private lateinit var configuration: IProjectConfigurationPurgeUseCase
 
 	@Autowired
 	private lateinit var webClient: WebTestClient
 
 	private companion object {
-		private const val BASE_URL = "/api/v1/purge"
+		private const val BASE_URL = "/api/v2/purge"
 	}
 
 	@Test
 	fun `Should purgeUsersIfNecessary should return 200`() {
 		// Arrange
-		whenever(userService.purgeUsersIfNecessary(any(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeUsers(any(), any())).thenReturn(Flux.empty())
 
 		// Act
 		val result = webClient
@@ -82,7 +65,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/users",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -94,21 +77,31 @@ class PurgeControllerTest: TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(userService).purgeUsersIfNecessary(any(), any())
-		verifyNoInteractions(projectService)
-		verifyNoInteractions(movementService)
-		verifyNoInteractions(alertService)
-		verifyNoInteractions(communicationService)
-		verifyNoInteractions(activityService)
-		verifyNoInteractions(vehicleService)
-		verifyNoInteractions(participantService)
-		verifyNoInteractions(groupService)
+		verify(platform).purgeUsers(any(), any())
+	}
+
+	@Test
+	fun `Should purgeUsersIfNecessary report at most 1000 identifiers`() {
+		// Arrange
+		val ids = List(PURGE_REPORTED_IDS_MAX + 1) { UUID.randomUUID() }
+		whenever(platform.purgeUsers(anyOrNull(), any())).thenReturn(Flux.fromIterable(ids))
+
+		// Act
+		val result = webClient
+			.authenticate(REGISTRY_JOB_C)
+			.post()
+			.uri(uriBuilder("$BASE_URL/users", listOf(defaultProjectId), listOf(Pair("dryRun", true))))
+			.exchange()
+
+		// Assert
+		val body = result.body<List<*>>(OK)
+		assertEquals(PURGE_REPORTED_IDS_MAX, body!!.size)
 	}
 
 	@Test
 	fun `Should purgeProjectsIfNecessary should return 200`() {
 		// Arrange
-		whenever(projectService.purgeProjectsIfNecessary(any(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeProjects(any(), any())).thenReturn(Flux.empty())
 
 		// Act
 		val result = webClient
@@ -117,7 +110,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/projects",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -129,29 +122,14 @@ class PurgeControllerTest: TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verifyNoInteractions(userService)
-		verify(projectService).purgeProjectsIfNecessary(any(), any())
-		verifyNoInteractions(movementService)
-		verifyNoInteractions(alertService)
-		verifyNoInteractions(communicationService)
-		verifyNoInteractions(activityService)
-		verifyNoInteractions(vehicleService)
-		verifyNoInteractions(participantService)
-		verifyNoInteractions(groupService)
+		verify(platform).purgeProjects(any(), any())
 	}
 
 	@Test
 	fun `Should purgeProjectsContentsIfNecessary should return 200`() {
 		// Arrange
-		whenever(movementService.purgeMovementsIfNecessary(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
-		whenever(alertService.purgeAlertsIfNecessary(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
-		whenever(
-			communicationService.purgeOrphanCommunications(
-				any(),
-				any(),
-				any()
-			)
-		).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(content.purgeProjectsContents(any(), any()))
+			.thenReturn(Mono.just(ProjectContentPurgeModel(listOf(UUID.randomUUID()), emptyList(), emptyList())))
 
 		// Act
 		val result = webClient
@@ -160,7 +138,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/projects/contents",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -172,24 +150,14 @@ class PurgeControllerTest: TestContext() {
 		// Assert
 		result.body<ProjectContentPurgeReaderDto>(OK)
 
-		verifyNoInteractions(userService)
-		verifyNoInteractions(projectService)
-		verify(movementService).purgeMovementsIfNecessary(any(), any())
-		verify(alertService).purgeAlertsIfNecessary(any(), any())
-		verify(communicationService).purgeOrphanCommunications(any(), any(), any())
-		verifyNoInteractions(activityService)
-		verifyNoInteractions(vehicleService)
-		verifyNoInteractions(participantService)
-		verifyNoInteractions(groupService)
+		verify(content).purgeProjectsContents(any(), any())
 	}
 
 	@Test
 	fun `Should purgeProjectsConfigurationsIfNecessary should return 200`() {
 		// Arrange
-		whenever(activityService.purgeActivitiesIfNecessary(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
-		whenever(vehicleService.purgeVehiclesIfNecessary(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
-		whenever(participantService.purgeParticipantsIfNecessary(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
-		whenever(groupService.purgeEmptyGroups(any(), any())).thenReturn(Flux.just(UUID.randomUUID()))
+		whenever(configuration.purgeProjectsConfigurations(any(), any()))
+			.thenReturn(Mono.just(ProjectConfigurationPurgeModel(emptyList(), emptyList(), emptyList(), emptyList())))
 
 		// Act
 		val result = webClient
@@ -198,7 +166,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/projects/configurations",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", "2023-01-01"),
 						Pair("dryRun", true),
@@ -210,22 +178,14 @@ class PurgeControllerTest: TestContext() {
 		// Assert
 		result.body<ProjectConfigurationPurgeReaderDto>(OK)
 
-		verifyNoInteractions(userService)
-		verifyNoInteractions(projectService)
-		verifyNoInteractions(movementService)
-		verifyNoInteractions(alertService)
-		verifyNoInteractions(communicationService)
-		verify(activityService).purgeActivitiesIfNecessary(any(), any())
-		verify(vehicleService).purgeVehiclesIfNecessary(any(), any())
-		verify(participantService).purgeParticipantsIfNecessary(any(), any())
-		verify(groupService).purgeEmptyGroups(any(), any())
+		verify(configuration).purgeProjectsConfigurations(any(), any())
 	}
 
 	@ParameterizedTest
 	@ValueSource(strings = ["/users", "/projects", "/projects/contents", "/projects/configurations"])
 	fun `Should reject a purge threshold in the future`(endpoint: String) {
 		// Arrange
-		val tomorrow = LocalDate.now().plusDays(1)
+		val tomorrow = LocalDate.now(ZoneOffset.UTC).plusDays(1)
 
 		// Act
 		val result = webClient
@@ -234,7 +194,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL$endpoint",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", tomorrow.toString()),
 						Pair("dryRun", false),
@@ -246,29 +206,22 @@ class PurgeControllerTest: TestContext() {
 		// Assert
 		result.assertError(BAD_REQUEST, PURGE_DATE_THRESHOLD_IN_FUTURE)
 
-		verifyNoInteractions(userService)
-		verifyNoInteractions(projectService)
-		verifyNoInteractions(movementService)
-		verifyNoInteractions(alertService)
-		verifyNoInteractions(communicationService)
-		verifyNoInteractions(activityService)
-		verifyNoInteractions(vehicleService)
-		verifyNoInteractions(participantService)
-		verifyNoInteractions(groupService)
+		verifyNoInteractions(platform, content, configuration)
+
 	}
 
 	/**
-	 * Purging more aggressively than the configured retention window is a legitimate operation, so
-	 * the constraint must reject future dates only — never dates that are merely more recent than
-	 * the threshold in configuration.
+	 * Purger plus agressivement que la fenêtre de rétention configurée est une opération légitime ;
+	 * la contrainte ne doit donc rejeter que les dates futures — jamais des dates simplement plus récentes que
+	 * le seuil de configuration.
 	 */
 	@ParameterizedTest
 	@ValueSource(ints = [0, -1])
 	fun `Should accept a purge threshold more recent than the configured retention window`(daysFromToday: Long) {
 		// Arrange
-		val threshold = LocalDate.now().plusDays(daysFromToday)
+		val threshold = LocalDate.now(ZoneOffset.UTC).plusDays(daysFromToday)
 
-		whenever(userService.purgeUsersIfNecessary(any(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeUsers(any(), any())).thenReturn(Flux.empty())
 
 		// Act
 		val result = webClient
@@ -277,7 +230,7 @@ class PurgeControllerTest: TestContext() {
 			.uri(
 				uriBuilder(
 					"$BASE_URL/users",
-					listOf(projectId),
+					listOf(defaultProjectId),
 					listOf(
 						Pair("dateThreshold", threshold.toString()),
 						Pair("dryRun", true),
@@ -289,6 +242,75 @@ class PurgeControllerTest: TestContext() {
 		// Assert
 		result.body<List<*>>(OK)
 
-		verify(userService).purgeUsersIfNecessary(threshold, true)
+		verify(platform).purgeUsers(threshold, true)
+	}
+
+	@Test
+	fun `Should purgeAuditsIfNecessary return 200 with the count and default to a dry run`() {
+		// Arrange
+		whenever(platform.purgeAudits(anyOrNull(), any())).thenReturn(Mono.just(4L))
+
+		// Act
+		val result = webClient.authenticate(REGISTRY_JOB_C).post()
+			.uri(uriBuilder("$BASE_URL/audits", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isOk
+			.expectBody().jsonPath("$.count").isEqualTo(4)
+		verify(platform).purgeAudits(null, true)
+	}
+
+	@Test
+	fun `Should purgeAuditsIfNecessary return 403 without the job permission`() {
+		// Act
+		val result = webClient.authenticate().post()
+			.uri(uriBuilder("$BASE_URL/audits", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isForbidden
+		verifyNoInteractions(platform, content, configuration)
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["/users", "/projects", "/projects/contents", "/projects/configurations", "/audits"])
+	fun `Should every purge endpoint run as a dry run when dryRun is omitted`(endpoint: String) {
+		// Arrange
+		whenever(platform.purgeUsers(anyOrNull(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeProjects(anyOrNull(), any())).thenReturn(Flux.empty())
+		whenever(platform.purgeAudits(anyOrNull(), any())).thenReturn(Mono.just(0L))
+		whenever(content.purgeProjectsContents(anyOrNull(), any()))
+			.thenReturn(Mono.just(ProjectContentPurgeModel(emptyList(), emptyList(), emptyList())))
+		whenever(configuration.purgeProjectsConfigurations(anyOrNull(), any()))
+			.thenReturn(Mono.just(ProjectConfigurationPurgeModel(emptyList(), emptyList(), emptyList(), emptyList())))
+
+		// Act
+		val result = webClient.authenticate(REGISTRY_JOB_C).post()
+			.uri(uriBuilder("$BASE_URL$endpoint", emptyList(), emptyList()))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isOk
+		when (endpoint) {
+			"/users" -> verify(platform).purgeUsers(null, true)
+			"/projects" -> verify(platform).purgeProjects(null, true)
+			"/projects/contents" -> verify(content).purgeProjectsContents(null, true)
+			"/projects/configurations" -> verify(configuration).purgeProjectsConfigurations(null, true)
+			else -> verify(platform).purgeAudits(null, true)
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["/users", "/projects", "/projects/contents", "/projects/configurations", "/audits"])
+	fun `Should every purge endpoint refuse a caller without the job permission`(endpoint: String) {
+		// Act
+		val result = webClient.authenticate().post()
+			.uri(uriBuilder("$BASE_URL$endpoint", emptyList(), listOf(Pair("dryRun", false))))
+			.exchange()
+
+		// Assert
+		result.expectStatus().isForbidden
+		verifyNoInteractions(platform, content, configuration)
 	}
 }

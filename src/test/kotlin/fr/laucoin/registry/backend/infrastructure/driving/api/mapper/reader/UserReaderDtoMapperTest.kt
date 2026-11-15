@@ -1,8 +1,10 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
 import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.USER_ROLE_PREFIX
 import fr.laucoin.registry.backend.domain.model.UserModel
-import fr.laucoin.registry.backend.domain.service.ITranslateService
+import fr.laucoin.registry.backend.domain.service.support.ITranslateService
+import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -20,7 +22,7 @@ import org.mockito.kotlin.whenever
 
 class UserReaderDtoMapperTest {
 	private val translateService: ITranslateService = mock()
-	private val mapper: UserReaderDtoMapper = UserReaderDtoMapper(translateService)
+	private val mapper: UserReaderDtoMapper = UserReaderDtoMapperImpl(UserRoleReaderDtoMapperImpl(LabelMappingHelper(translateService)))
 
 	private companion object {
 		@JvmStatic
@@ -33,9 +35,8 @@ class UserReaderDtoMapperTest {
 						lastName = "DOE"
 						email = "john.doe@test.com"
 						role = "ADMIN"
-						birthday = LocalDate.now()
-						lastLogin = ZonedDateTime.now()
-						purged = false
+						birthday = LocalDate.now(ZoneOffset.UTC)
+						lastLogin = ZonedDateTime.now(ZoneOffset.UTC)
 					},
 					1,
 				),
@@ -45,9 +46,8 @@ class UserReaderDtoMapperTest {
 						firstName = "John"
 						lastName = "DOE"
 						email = "john.doe@test.com"
-						birthday = LocalDate.now()
-						lastLogin = ZonedDateTime.now()
-						purged = false
+						birthday = LocalDate.now(ZoneOffset.UTC)
+						lastLogin = ZonedDateTime.now(ZoneOffset.UTC)
 					},
 					0,
 				),
@@ -79,6 +79,5 @@ class UserReaderDtoMapperTest {
 		assertEquals(user.role, result.role?.value)
 		assertEquals(user.birthday, result.birthday)
 		assertEquals(user.lastLogin, result.lastLogin)
-		assertEquals(user.purged, result.purged)
 	}
 }

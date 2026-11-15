@@ -3,37 +3,14 @@ package fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.infrastructure.driven.IEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.user.UserEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithEntity
-import fr.laucoin.registry.backend.infrastructure.driven.postgres.extension.GenericExt.fillWithModel
-import org.springframework.stereotype.Component
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
-	override fun toModel(entity: UserEntity): UserModel {
-		return UserModel().apply {
-			oidcId = entity.oidcId
-			type = entity.type ?: type
-			firstName = entity.firstName
-			lastName = entity.lastName
-			email = entity.email
-			role = entity.role
-			birthday = entity.birthday
-			lastLogin = entity.lastLogin
-			purged = entity.purged ?: purged
-		}.fillWithEntity(entity)
-	}
+@Mapper(config = PostgresMapperConfig::class)
+interface UserEntityMapper: IEntityMapper<UserModel, UserEntity> {
+	@IgnoreModelAudit
+	override fun toModel(entity: UserEntity): UserModel
 
-	override fun toEntity(model: UserModel): UserEntity {
-		return UserEntity().apply {
-			oidcId = model.oidcId
-			type = model.type
-			firstName = model.firstName
-			lastName = model.lastName
-			email = model.email
-			role = model.role
-			birthday = model.birthday
-			lastLogin = model.lastLogin
-			purged = model.purged
-		}.fillWithModel(model)
-	}
+	@IgnoreEntityAudit
+	override fun toEntity(model: UserModel): UserEntity
 }

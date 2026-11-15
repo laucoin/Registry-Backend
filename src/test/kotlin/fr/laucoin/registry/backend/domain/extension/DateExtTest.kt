@@ -1,5 +1,12 @@
 package fr.laucoin.registry.backend.domain.extension
 
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+import java.time.Clock
+import java.time.Instant
+import fr.laucoin.registry.backend.domain.extension.DateExt.isMajor
+import kotlin.test.assertNull
+import org.junit.jupiter.api.Test
 import fr.laucoin.registry.backend.domain.extension.DateExt.asEndIsBeforeOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.asStartIsAfterOther
 import fr.laucoin.registry.backend.domain.extension.DateExt.isInRange
@@ -150,5 +157,37 @@ class DateExtTest {
 
 		// Assert
 		assertEquals(expected, result)
+	}
+
+	@Test
+	fun `Should isInRange not modify the compared dates`() {
+		// Arrange
+		val challenger = CustomDateTimeModel(LocalDate.of(2024, 1, 2))
+		val start = CustomDateTimeModel(LocalDate.of(2024, 1, 1))
+		val end = CustomDateTimeModel(LocalDate.of(2024, 1, 3))
+
+		// Act
+		challenger.isInRange(start, end)
+
+		// Assert
+		assertNull(challenger.time)
+		assertNull(start.time)
+		assertNull(end.time)
+	}
+
+	@Test
+	fun `Should isMajor use the injected clock on the eighteenth birthday`() {
+		// Arrange
+		val birthday = LocalDate.of(2012, 6, 15)
+		val dayBefore = Clock.fixed(Instant.parse("2030-06-14T12:00:00Z"), ZoneOffset.UTC)
+		val birthdayDay = Clock.fixed(Instant.parse("2030-06-15T12:00:00Z"), ZoneOffset.UTC)
+
+		// Act
+		val minorTheDayBefore = birthday.isMajor(dayBefore)
+		val majorOnBirthday = birthday.isMajor(birthdayDay)
+
+		// Assert
+		assertFalse(minorTheDayBefore)
+		assertTrue(majorOnBirthday)
 	}
 }

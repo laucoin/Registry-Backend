@@ -1,24 +1,41 @@
 package fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.impl
 
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.AlertCriteria
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.model.AlertModel
 import fr.laucoin.registry.backend.domain.model.AlertSearchParamModel
+import fr.laucoin.registry.backend.domain.model.AlertStatisticsModel
 import fr.laucoin.registry.backend.domain.model.PageModel
 import fr.laucoin.registry.backend.domain.model.PageableModel
-import fr.laucoin.registry.backend.domain.extension.ReactiveExt.toPageModel
 import fr.laucoin.registry.backend.domain.port.IAlertPort
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.alert.AlertEntity
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.AlertEntityMapper
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.AlertStatisticsEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IAlertEntityRepository
+import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * Objectif : Adaptateur Postgres du port de l'alerte.
+ * Périmètre : Délègue au repository d'entités et mappe les entités vers les modèles du domaine.
+ * Limites : Ne porte aucune règle métier.
+ */
 @Service
 class AlertModelPostgresRepository(
 	private val repository: IAlertEntityRepository,
 	private val mapper: AlertEntityMapper,
+	private val statisticsMapper: AlertStatisticsEntityMapper,
+	@param:Value($$"${registry.feature.alert.criticality.reinforced-after-hours}")
+	private val reinforcedAfterHours: Long,
+	@param:Value($$"${registry.feature.alert.criticality.high-after-hours}")
+	private val highAfterHours: Long,
+	private val clock: Clock,
 ): IAlertPort {
 	override fun findPage(
 		projectId: UUID,
@@ -27,14 +44,23 @@ class AlertModelPostgresRepository(
 	): Mono<PageModel<AlertModel>> {
 		return repository.findAll(
 			projectId,
-			searchParams.textSearched,
-			searchParams.statusSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
-			pageable.limit,
-			pageable.offset,
-		).toPageModel(pageable, AlertEntity::fullCount, mapper::toModel)
+			searchParams.isVisible,
+			AlertCriteria(
+				query = searchParams.query,
+				status = searchParams.status,
+				criticality = searchParams.criticality,
+				reinforcedAfterHours = reinforcedAfterHours,
+				highAfterHours = highAfterHours,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(
+				sortField = searchParams.sort?.field,
+				isDescending = searchParams.sort?.isDescending,
+				limit = pageable.limit,
+				offset = pageable.offset,
+			),
+		).toPageModel(pageable, clock, AlertEntity::fullCount, mapper::toModel)
 	}
 
 	override fun findWithLimit(
@@ -44,13 +70,19 @@ class AlertModelPostgresRepository(
 	): Flux<AlertModel> {
 		return repository.findWithLimit(
 			projectId,
-			searchParams.textSearched,
-			searchParams.statusSearched,
-			searchParams.visibilitySearched,
-			searchParams.startDateTimeSearched,
-			searchParams.endDateTimeSearched,
-			limit,
+			searchParams.isVisible,
+			AlertCriteria(
+				query = searchParams.query,
+				status = searchParams.status,
+				from = searchParams.from,
+				to = searchParams.to,
+			),
+			PageQuery(limit = limit),
 		).map(mapper::toModel)
+	}
+
+	override fun findStatistics(projectId: UUID): Mono<AlertStatisticsModel> {
+		return repository.findStatistics(projectId).map(statisticsMapper::toModel)
 	}
 
 	override fun findOlderThanAndUncommentedSince(dateThreshold: LocalDate): Flux<UUID> {
@@ -60,12 +92,16 @@ class AlertModelPostgresRepository(
 	override fun findById(
 		projectId: UUID,
 		id: UUID,
-		visibilitySearched: Boolean?
+		isVisible: Boolean?
 	): Mono<AlertModel> {
 		return repository.findById(
 			projectId,
 			id,
-			visibilitySearched,
+			isVisible,
+			AlertCriteria(
+				reinforcedAfterHours = reinforcedAfterHours,
+				highAfterHours = highAfterHours,
+			),
 		).map(mapper::toModel)
 	}
 
@@ -78,7 +114,17 @@ class AlertModelPostgresRepository(
 	}
 
 	private fun save(element: AlertModel): Mono<AlertModel> {
-		return repository.save(mapper.toEntity(element)).map(mapper::toModel)
+		return repository.save(mapper.toEntity(element))
+			.flatMap { repository.findById(
+				it.projectId!!,
+				it.id!!,
+				null,
+				AlertCriteria(
+					reinforcedAfterHours = reinforcedAfterHours,
+					highAfterHours = highAfterHours,
+				),
+			) }
+			.map(mapper::toModel)
 	}
 
 	override fun deleteById(id: UUID): Mono<Unit> {

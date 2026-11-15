@@ -15,6 +15,11 @@ import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
 
+/**
+ * Objectif : Repository R2DBC des contenus de mouvement.
+ * Périmètre : Requêtes SQL de lecture du contenu (participants, groupes, véhicules) par mouvement.
+ * Limites : Ne porte aucune règle métier ; les écritures passent par les méthodes CRUD héritées.
+ */
 @Repository
 interface IMovementContentEntityRepository: ReactiveCrudRepository<MovementContentEntity, UUID> {
 	@Query(

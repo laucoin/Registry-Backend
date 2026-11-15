@@ -4,14 +4,21 @@ import fr.laucoin.registry.backend.domain.model.PageableModel
 import fr.laucoin.registry.backend.domain.model.UserModel
 import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
 import fr.laucoin.registry.backend.domain.port.IUserPort
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.PageQuery
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.criteria.UserCriteria
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.CurrentUserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.mapper.UserEntityMapper
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.IUserEntityRepository
 import fr.laucoin.registry.backend.test.TestContext
+import org.junit.jupiter.api.Assertions.assertFalse
 import fr.laucoin.registry.backend.test.WebTestClientExt.currentUser
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
@@ -51,17 +58,33 @@ class UserModelPostgresRepositoryTest: TestContext() {
 
 		// Assert
 		assertNotNull(result)
-		assertEquals(0, result.pageNumber)
-		assertEquals(10, result.pageSize)
+		assertEquals(0, result.page)
+		assertEquals(10, result.size)
 		assertEquals(5, result.totalElements)
 		assertEquals(1, result.totalPages)
 		verify(postgresRepository).findAll(
-			textSearched = null,
-			visibilitySearched = null,
-			pageable.limit,
-			pageable.offset,
+			isVisible = null,
+			c = UserCriteria(),
+			page = PageQuery(limit = pageable.limit, offset = pageable.offset),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
+	}
+
+	@Test
+	fun `Should findPage keep only the users with the requested role`() {
+		// Arrange
+		val pageable = PageableModel(0, 200)
+		val all = repository.findPage(pageable, UserSearchParamModel()).block()!!.content
+		val role = all.mapNotNull { it.role }.first()
+
+		// Act
+		val result = repository.findPage(pageable, UserSearchParamModel(query = null, role = role)).block()!!
+
+		// Assert
+		assertTrue(result.content.isNotEmpty())
+		assertTrue(result.content.size < all.size)
+		assertEquals(all.count { it.role == role }, result.content.size)
+		assertTrue(result.content.all { it.role == role })
 	}
 
 	@Test
@@ -77,23 +100,44 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		assertNotNull(result)
 		assertEquals(5, result.size)
 		verify(postgresRepository).findWithLimit(
-			textSearched = null,
-			visibilitySearched = null,
-			size,
+			isVisible = null,
+			c = UserCriteria(),
+			page = PageQuery(limit = size),
 		)
 		verify(mapper, atLeastOnce()).toModel(any())
 	}
 
 	@Test
+	fun `Should findByEmails match the stored emails ignoring their case`() {
+		// Arrange
+		val emails = listOf("administrator@sgdf.fr", "unknown@sgdf.fr")
+
+		// Act
+		val result = repository.findByEmails(emails, null).collectList().block()
+
+		// Assert
+		assertEquals(listOf("administrator@sgdf.fr"), result!!.map { it.email })
+	}
+
+	@Test
+	fun `Should findByEmail ignore the case of the email`() {
+		// Act
+		val result = repository.findByEmail("ADMINISTRATOR@SGDF.FR", null).collectList().block()
+
+		// Assert
+		assertEquals(1, result!!.size)
+	}
+
+	@Test
 	fun `Should findById call repository findById`() {
 		// Act
-		val result = repository.findById(currentUser().id!!, visibilitySearched = null).block()
+		val result = repository.findById(currentUser().id!!, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findById(
 			currentUser().id!!,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper).toModel(any())
 	}
@@ -104,13 +148,13 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findById(uuid, visibilitySearched = null).block()
+		val result = repository.findById(uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findById(
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -118,13 +162,13 @@ class UserModelPostgresRepositoryTest: TestContext() {
 	@Test
 	fun `Should findByOidcId call repository findByOidcId`() {
 		// Act
-		val result = repository.findByOidcId(currentUser().oidcId!!, visibilitySearched = null).block()
+		val result = repository.findByOidcId(currentUser().oidcId!!, isVisible = null).block()
 
 		// Assert
 		assertNotNull(result)
 		verify(postgresRepository).findByOidcId(
 			currentUser().oidcId!!,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(currentUserMapper, atLeastOnce()).toModel(any())
 	}
@@ -135,13 +179,13 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		val uuid = UUID.randomUUID()
 
 		// Act
-		val result = repository.findByOidcId(uuid, visibilitySearched = null).block()
+		val result = repository.findByOidcId(uuid, isVisible = null).block()
 
 		// Assert
 		assertNull(result)
 		verify(postgresRepository).findByOidcId(
 			uuid,
-			visibilitySearched = null,
+			isVisible = null,
 		)
 		verify(mapper, never()).toModel(any())
 	}
@@ -152,15 +196,25 @@ class UserModelPostgresRepositoryTest: TestContext() {
 		val level = 0
 
 		// Act
-		val result = repository.findByRoleLevel(level, visibilitySearched = null).collectList().block()
+		val result = repository.findByRoleLevel(level, isVisible = null).collectList().block()
 
 		// Assert
 		assertEquals(3, result?.size)
 		assertEquals(currentUser().id, result?.first()?.id)
 		verify(postgresRepository).findByRoleLevel(
 			level,
-			visibilitySearched = null,
+			isVisible = null,
 		)
+	}
+
+	@Test
+	fun `Should lockLevel0Users call repository lockLevel0Users`() {
+		// Act
+		val result = repository.lockLevel0Users().collectList().block()
+
+		// Assert
+		assertFalse(result.isNullOrEmpty())
+		verify(postgresRepository).lockLevel0Users()
 	}
 
 	@Test
@@ -185,7 +239,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 			val user = UserModel().apply {
 				firstName = "test"
 				lastName = "test"
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -207,7 +261,7 @@ class UserModelPostgresRepositoryTest: TestContext() {
 				id = uuid
 				firstName = "test update"
 				lastName = "test update"
-				create(currentUser())
+				create(currentUser(), ZonedDateTime.now(ZoneOffset.UTC))
 			}
 
 			// Act
@@ -222,11 +276,44 @@ class UserModelPostgresRepositoryTest: TestContext() {
 
 		@Test
 		@Order(3)
+		fun `Should findPage and findWithLimit exclude the users not linked to the IDP`() {
+			// Arrange
+			val linkedUsers = 5L
+
+			// Act
+			val page = repository.findPage(PageableModel(0, 200), UserSearchParamModel()).block()!!
+			val limited = repository.findWithLimit(200, UserSearchParamModel()).collectList().block()!!
+
+			// Assert
+			assertEquals(linkedUsers, page.totalElements)
+			assertTrue(page.content.none { it.id == uuid })
+			assertTrue(limited.none { it.id == uuid })
+		}
+
+		@Test
+		@Order(4)
+		fun `Should findUserIdsOlderThanLastLogin select a user never logged in from its creation date`() {
+			// Arrange
+			val future = LocalDate.now().plusDays(1)
+			val past = LocalDate.now().minusDays(1)
+
+			// Act
+			val beforeFuture = repository.findUserIdsOlderThanLastLogin(future).collectList().block()!!
+			val beforePast = repository.findUserIdsOlderThanLastLogin(past).collectList().block()!!
+
+			// Assert
+			assertTrue(beforeFuture.contains(uuid))
+			assertFalse(beforePast.contains(uuid))
+		}
+
+		@Test
+		@Order(5)
 		fun `Should deleteById call repository deleteById`() {
 			// Act
 			repository.deleteById(uuid).block()
 
 			// Assert
+			assertFalse(rowExists("tb_user", uuid))
 			verify(postgresRepository).deleteById(uuid)
 		}
 	}

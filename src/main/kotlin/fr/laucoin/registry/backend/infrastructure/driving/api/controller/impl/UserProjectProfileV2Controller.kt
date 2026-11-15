@@ -1,0 +1,65 @@
+package fr.laucoin.registry.backend.infrastructure.driving.api.controller.impl
+
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.query.UserProjectProfileQueryDto
+import fr.laucoin.registry.backend.domain.enumeration.ProfileStatusEnum
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.service.usecase.IUserProjectProfileUseCase
+import fr.laucoin.registry.backend.infrastructure.driving.api.controller.IUserProjectProfileV2Controller
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ProjectWithProfileReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.UserInvitationReaderDto
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.query.ProjectProfileQueryDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.ProjectWithProfileReaderDtoMapper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader.UserInvitationReaderDtoMapper
+import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Mono
+import java.util.UUID
+
+/**
+ * Objectif : Adaptateur REST des endpoints du profil de projet de l'utilisateur.
+ * Périmètre : Mappe les paramètres de requête et les DTO, et délègue aux cas d'usage du profil de projet de l'utilisateur.
+ * Limites : Ne porte aucune règle métier ; l'autorisation est déclarée sur le contrat.
+ */
+@RestController
+class UserProjectProfileV2Controller(
+	private val service: IUserProjectProfileUseCase,
+	private val readerMapper: UserInvitationReaderDtoMapper,
+	private val queryMapper: ProjectProfileQueryDtoMapper,
+	private val projectReaderMapper: ProjectWithProfileReaderDtoMapper,
+) : IUserProjectProfileV2Controller {
+	override fun findUserProjectProfiles(
+		currentUser: CurrentUserModel,
+		search: UserProjectProfileQueryDto,
+	): Mono<PageModel<UserInvitationReaderDto>> {
+		val searchParams = queryMapper.toSearchParams(search)
+
+		return service.findProjectProfilesPage(currentUser.id!!, queryMapper.toPageable(search), searchParams).map(readerMapper::toDtoPage)
+	}
+
+	override fun findUserProjectProfileById(
+		currentUser: CurrentUserModel,
+		id: UUID
+	): Mono<UserInvitationReaderDto> {
+		return service.findProjectProfilesById(currentUser, id).map(readerMapper::toDto)
+	}
+
+	override fun manageUserProjectProfileAcceptance(
+		currentUser: CurrentUserModel,
+		id: UUID,
+		accepted: Boolean,
+	): Mono<UserInvitationReaderDto> {
+		val status = if (accepted) ProfileStatusEnum.ACCEPTED else ProfileStatusEnum.REJECTED
+		return service.updateUserProjectProfileStatusById(currentUser, id, status).map(readerMapper::toDto)
+	}
+
+	override fun createSupportProjectProfile(
+		currentUser: CurrentUserModel,
+		projectId: UUID
+	): Mono<ProjectWithProfileReaderDto> {
+		return service.createSupportProjectProfile(currentUser, projectId).map(projectReaderMapper::toDto)
+	}
+
+	override fun deleteUserProfileById(currentUser: CurrentUserModel, id: UUID): Mono<Unit> {
+		return service.deleteUserProjectProfileById(currentUser, id)
+	}
+}

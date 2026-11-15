@@ -1,19 +1,15 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
-import fr.laucoin.registry.backend.domain.constant.TranslationKeyConst.MOVEMENT_TYPE_PREFIX
 import fr.laucoin.registry.backend.domain.enumeration.MovementTypeEnum
-import fr.laucoin.registry.backend.domain.service.ITranslateService
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.LabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class MovementTypeReaderDtoMapper(
-	private val translateService: ITranslateService,
-): IGenericReaderDtoMapper<MovementTypeEnum, LabelDto> {
-	override fun toDto(model: MovementTypeEnum): LabelDto {
-		return LabelDto(
-			model.name,
-			translateService.getMessage(code = "$MOVEMENT_TYPE_PREFIX$model"),
-		)
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [LabelMappingHelper::class])
+interface MovementTypeReaderDtoMapper: IGenericReaderDtoMapper<MovementTypeEnum, LabelDto> {
+	@Mapping(target = "value", expression = "java(model.name())")
+	@Mapping(target = "label", source = "model", qualifiedByName = ["movementTypeLabel"])
+	override fun toDto(model: MovementTypeEnum): LabelDto
 }

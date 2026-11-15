@@ -1,0 +1,42 @@
+package fr.laucoin.registry.backend.domain.service.core
+
+import fr.laucoin.registry.backend.domain.model.CurrentUserModel
+import fr.laucoin.registry.backend.domain.model.PageModel
+import fr.laucoin.registry.backend.domain.model.PageableModel
+import fr.laucoin.registry.backend.domain.model.UserModel
+import fr.laucoin.registry.backend.domain.model.UserSearchParamModel
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import java.time.LocalDate
+import java.util.UUID
+
+/**
+ * Objectif : Contrat de cas d'usage de l'utilisateur.
+ * Périmètre : Déclare ce que les contrôleurs et les autres services peuvent demander à propos de l'utilisateur.
+ * Limites : Contrat uniquement ; les règles métier vivent dans l'implémentation.
+ */
+interface IUserService {
+	fun findUsersPage(pageable: PageableModel, searchParams: UserSearchParamModel): Mono<PageModel<UserModel>>
+	fun findUserById(id: UUID, isVisible: Boolean?): Mono<UserModel>
+	fun findUserByOidcId(id: UUID, isVisible: Boolean?): Mono<CurrentUserModel>
+	fun findUserByEmail(email: String, isVisible: Boolean?): Flux<CurrentUserModel>
+	fun resolveUsersByEmail(emails: List<String>): Mono<Map<String, UserModel>>
+	fun serviceAccount(): UserModel
+	fun assignableUserRoles(currentUser: CurrentUserModel): Flux<String>
+	fun createUser(oidcId: UUID, email: String, firstName: String?, lastName: String?): Mono<CurrentUserModel>
+	fun updateUserIfPersonalDataChanged(
+		user: CurrentUserModel,
+		email: String,
+		firstName: String?,
+		lastName: String?
+	): Mono<CurrentUserModel>
+
+	fun linkUserToOidcId(user: CurrentUserModel, oidcId: UUID): Mono<CurrentUserModel>
+	fun recordLoginByOidcId(oidcId: UUID): Mono<Void>
+	fun updateUserRoleById(currentUser: CurrentUserModel, id: UUID, role: String?): Mono<UserModel>
+	fun blockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+	fun unblockUserById(currentUser: CurrentUserModel, id: UUID): Mono<UserModel>
+	fun deleteUserById(currentUser: CurrentUserModel, id: UUID): Mono<Unit>
+	fun deleteCurrentUser(currentUser: CurrentUserModel): Mono<Unit>
+	fun purgeUsersIfNecessary(dateThreshold: LocalDate, dryRun: Boolean): Flux<UUID>
+}

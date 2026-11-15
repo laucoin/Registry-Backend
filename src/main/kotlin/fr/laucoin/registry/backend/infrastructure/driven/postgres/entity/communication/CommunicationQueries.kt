@@ -29,20 +29,22 @@ import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communi
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_STATUS
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_ALERT_TITLE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_DATE_TIME
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_MESSAGE
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.communication.CommunicationFields.COMMUNICATION_MOVEMENT_ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.generic.GenericFields.ID
 import fr.laucoin.registry.backend.infrastructure.driven.postgres.entity.movement.MovementFields.MOVEMENT_TABLE
+import fr.laucoin.registry.backend.infrastructure.driven.postgres.repository.GenericQueries.TEXT_SEARCH_MIN_SCORE
 
 object CommunicationQueries {
 	const val SELECT_COMMUNICATION_SEARCH = """
         CASE
-            WHEN :textSearched IS NULL THEN 1
-            ELSE similarity(t.search_text, :textSearched)
+            WHEN :#{#c.query} IS NULL THEN 1
+            ELSE word_similarity(:#{#c.query}, t.search_text)
         END AS similarity_score
     """
 
 	const val COMMUNICATION_TEXT_SEARCH_CLAUSE =
-		"(:textSearched IS NULL OR similarity(t.search_text, :textSearched) > 0)"
+		"(:#{#c.query} IS NULL OR word_similarity(:#{#c.query}, t.search_text) >= $TEXT_SEARCH_MIN_SCORE)"
 
 	private const val LINKED_MOVEMENT_TABLE = "movement_tb"
 	private const val LINKED_ACTIVITY_TABLE = "activity_tb"
@@ -76,8 +78,15 @@ object CommunicationQueries {
 
 	const val COMMUNICATION_DATE_IN_DATES_RANGE_CLAUSE = """
         (
-            COALESCE(:startDateTimeSearched, '-infinity'::TIMESTAMP) <= t.$COMMUNICATION_DATE_TIME AND
-            COALESCE(:endDateTimeSearched, '+infinity'::TIMESTAMP) >= t.$COMMUNICATION_DATE_TIME
+            COALESCE(:#{#c.from}, '-infinity'::TIMESTAMP) <= t.$COMMUNICATION_DATE_TIME AND
+            COALESCE(:#{#c.to}, '+infinity'::TIMESTAMP) >= t.$COMMUNICATION_DATE_TIME
         )
+    """
+
+	const val COMMUNICATION_SORT = """
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_DATE_TIME END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'dateTime' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_DATE_TIME END DESC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'message' AND NOT COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_MESSAGE END ASC NULLS LAST,
+        CASE WHEN CAST(:#{#page.sortField} AS TEXT) = 'message' AND COALESCE(CAST(:#{#page.isDescending} AS BOOLEAN), FALSE) THEN t.$COMMUNICATION_MESSAGE END DESC NULLS LAST,
     """
 }

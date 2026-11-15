@@ -1,38 +1,16 @@
 package fr.laucoin.registry.backend.infrastructure.driving.api.mapper.reader
 
 import fr.laucoin.registry.backend.domain.model.ActivityModel
-import fr.laucoin.registry.backend.infrastructure.driving.api.dto.LabelDto
 import fr.laucoin.registry.backend.infrastructure.driving.api.dto.reader.ActivityReaderDto
-import java.util.Optional
-import org.springframework.stereotype.Component
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.ActivityLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.helper.StatusLabelMappingHelper
+import fr.laucoin.registry.backend.infrastructure.driving.api.mapper.DtoMapperConfig
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 
-@Component
-class ActivityReaderDtoMapper(
-	private val projectMapper: ProjectReaderDtoMapper,
-	private val availabilityStatusMapper: AvailabilityStatusReaderDtoMapper,
-): IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
-	override fun toDto(model: ActivityModel): ActivityReaderDto {
-		return ActivityReaderDto(
-			name = model.name,
-			status = Optional.ofNullable(model.status)
-				.map { availabilityStatusMapper.toDto(it, model.startAvailability, model.endAvailability) }
-				.orElse(null),
-			description = model.description,
-			duration = Optional.ofNullable(model.duration).map {
-				LabelDto(
-					label = it.toString(),
-					value = it.toIsoString()
-				)
-			}.orElse(null),
-			allowedParticipants = model.allowedParticipants,
-			startAvailability = model.startAvailability,
-			endAvailability = model.endAvailability,
-		).apply {
-			id = model.id
-			project = Optional.ofNullable(model.project).map(projectMapper::toDto).orElse(null)
-			visible = model.visible
-			creation = model.creation
-			lastEdition = model.lastEdition
-		}
-	}
+@Mapper(config = DtoMapperConfig::class, uses = [StatusLabelMappingHelper::class, ActivityLabelMappingHelper::class])
+interface ActivityReaderDtoMapper: IGenericReaderDtoMapper<ActivityModel, ActivityReaderDto> {
+	@Mapping(target = "status", source = "model", qualifiedByName = ["activityStatus"])
+	@Mapping(target = "duration", source = "model", qualifiedByName = ["activityDuration"])
+	override fun toDto(model: ActivityModel): ActivityReaderDto
 }
