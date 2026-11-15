@@ -33,6 +33,7 @@ import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.ServerWebInputException
 import org.springframework.web.server.i18n.LocaleContextResolver
 import reactor.core.publisher.Mono
+import reactor.netty.channel.AbortedException
 
 /**
  * Objectif : Transforme les exceptions en réponses d'erreur localisées.
@@ -120,7 +121,16 @@ class RegistryControllerAdvice(
 		if (isConcurrencyConflict(exception)) {
 			return buildError(exchange, status = CONFLICT, code = CONCURRENT_UPDATE_CONFLICT, exception = exception)
 		}
+		if (isClientDisconnection(exception)) {
+			// Le client a fermé la connexion : aucune réponse ne peut lui parvenir, inutile d'en construire une ni de journaliser une erreur serveur.
+			log.info("The client disconnected before receiving the response to {}", exchange.request.path.value())
+			return Mono.empty()
+		}
 		return buildError(exchange, status = INTERNAL_SERVER_ERROR, code = "500", exception = exception)
+	}
+
+	private fun isClientDisconnection(exception: Throwable): Boolean {
+		return generateSequence(exception) { it.cause }.take(MAX_CAUSE_DEPTH).any { it is AbortedException }
 	}
 
 	private fun isConcurrencyConflict(exception: Throwable): Boolean {

@@ -5,6 +5,7 @@ import fr.laucoin.registry.backend.domain.service.support.ITranslateService
 import io.r2dbc.spi.R2dbcNonTransientResourceException
 import java.util.Locale
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -19,6 +20,7 @@ import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.r2dbc.UncategorizedR2dbcException
 import org.springframework.web.server.i18n.LocaleContextResolver
 import org.springframework.context.i18n.SimpleLocaleContext
+import reactor.netty.channel.AbortedException
 
 class RegistryControllerAdviceTest {
 	private val translateService: ITranslateService = mock()
@@ -72,5 +74,17 @@ class RegistryControllerAdviceTest {
 		// Assert
 		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result?.statusCode)
 		assertEquals("500", result?.body?.code)
+	}
+
+	@Test
+	fun `Should handleException answer nothing when the client disconnected before the response`() {
+		// Arrange
+		val exception = IllegalStateException("write", AbortedException("closed"))
+
+		// Act
+		val result = advice.handleException(exception, exchange).block()
+
+		// Assert
+		assertNull(result)
 	}
 }
