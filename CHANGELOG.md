@@ -1,3 +1,55 @@
+## [2.0.0](https://github.com/laucoin/Registry-Backend/compare/1.16.0...2.0.0) (2026-11-15)
+
+### ⚠ BREAKING CHANGES
+
+* **v2:** GET /api/v2/projects/{projectId}/profiles/search/users now returns only the visible user whose email matches the query exactly (case-insensitive); partial text no longer matches. The unused registry.feature.profile.searched.max-user-result setting is removed.
+
+* docs(purge): document the first project content and configuration purge procedure
+
+* chore(skills): rewrite the git-issue-creation skill
+
+* ci(dependabot): align comments with the release rules and scan local composite actions
+
+* refactor(config): use OidcScopes constants for the swagger oauth2 scopes
+
+* fix(groups): accept groups without members and purge only the empty groups unchanged past the retention threshold
+
+* fix(movements): refuse a guest movement without content with a 400 instead of failing with a 500
+
+* fix(movements): translate the movement reasons in the language of the request
+
+* fix(movements): offer a participant according to their own dates first, then those of their groups
+
+* fix(authentication): refuse a blocked user on the first sign-in that links their account by email
+
+* chore(seed): make the blocked-profile persona a plain user so that the administrator is the last one
+
+* refactor(movements): map the reasons in the request locale through a reusable extension, tested against the thread locale
+
+* fix(participants): label a presence not begun as arriving and an ended one as left, instead of the opposite
+
+* fix(movements): let a definitive departure be corrected, a guest exit on its date only, and never place a guest entry after its departure
+
+- A definitive departure and a guest exit can now be updated, hidden, restored and deleted; the effective dates are refreshed as before.
+- A guest exit only accepts a new date: changing its content is refused (MOVEMENT_UPDATE_CHANGE_GUEST_DEPARTURE_CONTENT).
+- A definitive departure, created, updated or restored, is refused before a later movement of its participants, through one SQL query that excludes the altered movement.
+- A guest entry pushed back or restored after a departure of its guests is refused (MOVEMENT_GUEST_ARRIVAL_AFTER_DEPARTURE).
+- The MOVEMENT_CANNOT_BE_* errors are removed.
+
+* fix(participants): wish a happy birthday only to the participants arrived and not gone
+
+* fix(participants): reserve changing the user linked to a participant to the holders of its history, except removing one's own link
+
+* fix(authentication): ignore the access token cookie on the public authentication endpoints so a stale one no longer breaks the login
+
+* fix(authentication): keep serving the other requests of a user when one of them is cancelled while their principal loads
+
+* fix(errors): log a client that disconnected before its response at info instead of answering a 500 error
+
+### Features
+
+* **v2:** create endpoint v2 and increase security and best practicies ([#69](https://github.com/laucoin/Registry-Backend/issues/69)) ([772e52c](https://github.com/laucoin/Registry-Backend/commit/772e52c6befa5bc50955205c86d795a632930b90))
+
 ## [1.16.0](https://github.com/laucoin/Registry-Backend/compare/1.15.0...1.16.0) (2026-09-22)
 
 ### 🧹 Améliorations
