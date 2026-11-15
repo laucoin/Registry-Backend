@@ -6,13 +6,15 @@ import org.springframework.security.oauth2.server.resource.authentication.Bearer
 import org.springframework.security.oauth2.server.resource.web.server.authentication.ServerBearerTokenAuthenticationConverter
 import org.springframework.security.web.server.authentication.ServerAuthenticationConverter
 import org.springframework.stereotype.Component
+import org.springframework.util.AntPathMatcher
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 /**
  * Objectif : Lit le bearer token depuis l'en-tête Authorization ou le cookie d'accès.
- * Périmètre : Privilégie l'en-tête et se rabat sur le cookie du token d'accès.
+ * Périmètre : Privilégie l'en-tête et se rabat sur le cookie du token d'accès, sauf sur les endpoints publics
+ * d'authentification où un cookie périmé ferait échouer la connexion.
  * Limites : Ne valide pas le token.
  */
 @Component
@@ -25,8 +27,20 @@ class CookieBearerTokenHandler : ServerAuthenticationConverter {
 	}
 
 	private fun convertFromCookie(exchange: ServerWebExchange): Mono<Authentication> {
+		val path = exchange.request.path.value()
+		if (COOKIE_FREE_PATHS.any { pathMatcher.match(it, path) }) return Mono.empty()
 		val accessToken = exchange.request.cookies.getFirst(ACCESS_TOKEN_COOKIE)?.value
 			?: return Mono.empty()
 		return Mono.just(BearerTokenAuthenticationToken(accessToken))
+	}
+
+	private companion object {
+		val pathMatcher = AntPathMatcher()
+		val COOKIE_FREE_PATHS = listOf(
+			"/api/*/authentication/login/uri",
+			"/api/*/authentication/logout/uri",
+			"/api/*/authentication/token",
+			"/api/*/authentication/token/refresh",
+		)
 	}
 }

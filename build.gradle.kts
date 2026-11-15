@@ -83,6 +83,7 @@ dependencies {
 	implementation("org.flywaydb:flyway-database-postgresql")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.postgresql:r2dbc-postgresql")
+	developmentOnly("org.springframework.boot:spring-boot-devtools")
 
 	// Test 🧪
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

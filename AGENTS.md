@@ -197,7 +197,7 @@ A change must not silently violate any of these:
   `api-reference.md` (`.../profiles/{id}/accept/{accepted}`, `.../alerts/{id}/status/{status}`, the `impersonate`
   naming) are **frozen**.
 - **Retention purges are irreversible and gated.** `/api/v2/purge/**` requires `REGISTRY_JOB_C`; `dryRun` **defaults to
-  `true`**; thresholds are configuration, not code; the four sweeps are staggered content-before-configuration. No
+  `true`**; thresholds are configuration, not code; the five sweeps are staggered content-before-configuration. No
   export before deletion. (ADR 011)
 - **Last-administrator safety.** Never remove or demote the last *permanent* (no end date) level-0 administrator of the
   platform or of a project. A temporary/support profile never counts.

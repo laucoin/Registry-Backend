@@ -94,6 +94,21 @@ class SecurityChainIntegrationTest : TestContext() {
 	}
 
 	@Test
+	fun `Should ignore a stale access token cookie on the token exchange endpoint`() {
+		// Act
+		val result = webClient
+			.post()
+			.uri("/api/v2/authentication/token")
+			.cookie(ACCESS_TOKEN_COOKIE, "stale-session")
+			.contentType(APPLICATION_JSON)
+			.bodyValue("{}")
+			.exchange()
+
+		// Assert
+		result.expectStatus().isBadRequest
+	}
+
+	@Test
 	fun `Should write the defensive security headers on every api response`() {
 		// Act
 		val result = webClient
