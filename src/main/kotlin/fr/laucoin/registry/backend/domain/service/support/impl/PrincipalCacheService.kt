@@ -27,7 +27,7 @@ class PrincipalCacheService(
 		.buildAsync()
 
 	override fun get(oidcId: UUID, loader: () -> Mono<CurrentUserModel>): Mono<CurrentUserModel> {
-		return Mono.fromFuture { cache.get(oidcId) { _, _ -> load(loader) } }
+		return Mono.fromFuture({ cache.get(oidcId) { _, _ -> load(loader) } }, SUPPRESS_CANCEL)
 	}
 
 	private fun load(loader: () -> Mono<CurrentUserModel>): CompletableFuture<CurrentUserModel> {
@@ -48,5 +48,6 @@ class PrincipalCacheService(
 
 	private companion object {
 		const val MAX_CACHED_PRINCIPALS = 10_000L
+		const val SUPPRESS_CANCEL = true
 	}
 }

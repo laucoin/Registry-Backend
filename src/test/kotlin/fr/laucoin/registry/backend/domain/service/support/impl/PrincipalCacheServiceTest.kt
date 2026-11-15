@@ -4,6 +4,7 @@ import fr.laucoin.registry.backend.domain.model.CurrentUserModel
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Sinks
 import reactor.test.StepVerifier
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -83,6 +84,23 @@ class PrincipalCacheServiceTest {
 
 		// Assert
 		assertEquals(CurrentUserModel(), principal)
+	}
+
+	@Test
+	fun `Should get keep serving a waiting subscriber when another one cancels during the load`() {
+		// Arrange
+		val oidcId = UUID.randomUUID()
+		val principal = Sinks.one<CurrentUserModel>()
+		val loader = { principal.asMono() }
+		val cancelled = service.get(oidcId, loader).subscribe()
+		val waiting = service.get(oidcId, loader).toFuture()
+
+		// Act
+		cancelled.dispose()
+		principal.tryEmitValue(CurrentUserModel())
+
+		// Assert
+		assertEquals(CurrentUserModel(), waiting.getNow(null))
 	}
 
 	@Test
