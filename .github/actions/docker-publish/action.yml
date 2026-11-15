@@ -52,7 +52,7 @@ runs:
         password: ${{ inputs.password }}
 
     - name: Build & push ${{ inputs.image }}:${{ inputs.tag }}
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: ${{ inputs.context }}
         file: ${{ inputs.file }}
